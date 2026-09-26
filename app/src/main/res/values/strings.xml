@@ -1128,7 +1128,12 @@
     <!-- Changelog Screen -->
     <string name="changelog_latest">LATEST</string>
     <string name="changelog_latest_release">Latest release</string>
-    <string name="changelog_release_history">Release history</string>
+    <string name="changelog_heading">Release notes</string>
+    <string name="changelog_intro">What changed in each version, newest first.</string>
+    <string name="changelog_older_title">Older releases</string>
+    <string name="changelog_older_subtitle">Every earlier version and what it changed</string>
+    <string name="changelog_about_title">About CallShield</string>
+    <string name="changelog_about_body">CallShield checks calls and texts on this phone. A number or link only leaves it when you turn on an online check or send a report.</string>
 
     <!-- Onboarding Screen -->
     <string name="onboarding_enable_notifications">Enable Notifications</string>

@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.more
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,25 +9,49 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
 fun ChangelogScreen() {
+    // The release history runs to dozens of versions, so it starts folded and
+    // the latest release gets the page.
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    val historyState =
+        stringResource(if (showHistory) R.string.accessibility_state_expanded else R.string.accessibility_state_collapsed)
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.changelog_heading),
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
+            Text(stringResource(R.string.changelog_intro), style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+        }
+        Spacer(Modifier.height(16.dp))
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
@@ -45,682 +70,741 @@ fun ChangelogScreen() {
                 ),
         )
         Spacer(Modifier.height(14.dp))
-        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
-        Spacer(Modifier.height(12.dp))
-        VersionEntry(
-            "1.8.0",
-            "Answer & hang up, outgoing call check and signed protection data",
-            date = "September 25, 2026",
-            summary = "New ways to stop spam before it rings and after, plus protection data the app can verify.",
-            changes =
-                listOf(
-                    "Answer & hang up drops a blocked call before it reaches voicemail (opt-in)",
-                    "A call you dial to a flagged number is held with a notification first",
-                    "Meeting mode, telemarketing ranges, and region rules outside North America",
-                    "Signed protection feeds, a feed mirror, and fixed certificate pins",
-                    "Chinese covers every line of system text",
-                ),
-        )
-        VersionEntry(
-            "1.7.38",
-            "A clearer CallShield",
-            date = "August 29, 2026",
-            summary = "Every core screen now shares one calm, readable protection system.",
-            changes =
-                listOf(
-                    "Protection status is easier to read at a glance",
-                    "Activity, lookup, and rules use consistent rows",
-                    "Settings and diagnostics are less dense",
-                ),
-        )
-        VersionEntry(
-            "1.7.37",
-            "Simplified Chinese translation and installable signed releases",
-            date = "August 24, 2026",
-            changes =
-                listOf(
-                    "Simplified Chinese (zh-CN) translation contributed by wj-on-git, selectable per app",
-                    "Release APKs are signed again; earlier unsigned release downloads would not install",
-                    "Community spam database updated with a reported robocall number",
-                ),
-        )
-        VersionEntry(
-            "1.7.36",
-            "Bounded exports, deterministic ML contracts, and verifiable releases",
-            changes =
-                listOf(
-                    "CSV and portable backup paths stream Room rows without materializing full logs",
-                    "Kotlin and Python share a versioned 20-feature ML contract with golden vectors",
-                    "Release artifacts carry SBOM, provenance, SHA-256, and tag-attestation evidence",
-                    "The detection pipeline's spam verdict path has an executable 50 ms p99 benchmark",
-                ),
-        )
-        VersionEntry(
-            "1.7.35",
-            "Bounded data surfaces, feed rollback protection, and release gates",
-            changes =
-                listOf(
-                    "Database and activity rows load in pages while statistics use SQL aggregates",
-                    "Replayed, downgraded, malformed, and mutated feed manifests cannot replace newer data",
-                    "Pull requests and scheduled runs verify dependencies, provenance, and release metadata",
-                ),
-        )
-        VersionEntry(
-            "1.7.34",
-            "Explainable protection, RTT safety, and assistive action coverage",
-            changes =
-                listOf(
-                    "RTT calls receive an explicit allow before screening or caller-ID overlay work",
-                    "TalkBack and switch access expose equivalent delete, block, and unblock actions",
-                    "Block reasons are spoken as complete plain-English sentences",
-                    "Protection Test shows background-worker stop reasons and quota recovery guidance",
-                ),
-        )
-        VersionEntry(
-            "1.7.33",
-            "Broader public spam coverage and fail-open screening reliability",
-            changes =
-                listOf(
-                    "Saracroche, PhoneBlock, Nomorobo IRS, FCC advertiser numbers, and bounded FTC retries expand public source coverage",
-                    "Idempotent source merges preserve provenance without duplicating numbers",
-                    "Lazy screening-service initialization failures now return an explicit allow response",
-                ),
-        )
-        VersionEntry(
-            "1.7.32",
-            "Guided first-run setup with verified Android permission handoffs",
-            changes =
-                listOf(
-                    "First launch now guides every permission and special-access step separately",
-                    "Each action opens the exact Android control and explains how to return",
-                    "CallShield automatically verifies a grant before moving to the next step",
-                    "All supported capabilities must be ready before setup can finish",
-                ),
-        )
-        VersionEntry(
-            "1.7.31",
-            "A cleaner CallShield identity across every app and distribution surface",
-            changes =
-                listOf(
-                    "A luminous cyan shield, white handset, and coral block badge form the new mark",
-                    "Launcher, themed, splash, shortcut, in-app, Play Store, and README art now match",
-                    "Notifications use the CallShield silhouette as their small app icon",
-                    "The deep-navy tile fills launcher masks while the compact mark stays legible",
-                ),
-        )
-        VersionEntry(
-            "1.7.30",
-            "Light-first themes and a calmer five-destination visual system",
-            changes =
-                listOf(
-                    "Light is now the default; System, Graphite, and AMOLED remain available",
-                    "Recent calls and blocked activity now share persistent Activity tabs",
-                    "Manual protection tools are grouped under the clearer Rules destination",
-                    "Larger type, filled controls, shorter copy, and fewer borders improve readability",
-                    "More includes a compact Appearance shortcut with theme previews",
-                ),
-        )
-        VersionEntry(
-            "1.7.29",
-            "Report-pipeline integrity, and CallShield is now open to translation",
-            changes =
-                listOf(
-                    "Numbers reported in local dialling format are stored so they actually match the caller",
-                    "One person can no longer push a number onto the trending list by reporting it repeatedly",
-                    "Repeated \"not spam\" votes from one reporter can't remove a genuine entry",
-                    "Removed 145 unused text resources, including 70 stray accessibility labels",
-                    "Translations are now welcome and checked automatically. See docs/TRANSLATING.md",
-                ),
-        )
-        VersionEntry(
-            "1.7.28",
-            "Roadmap drain: model and data-feed integrity, recoverable deletions, and screen-reader support",
-            changes =
-                listOf(
-                    "Spam scores no longer change with the time of day (the shipped model was clock-sensitive)",
-                    "A failed hot-list refresh keeps your current protection instead of reverting to the bundled snapshot",
-                    "Undo actually restores a swiped-away log entry or blocked number",
-                    "Opening a number's details no longer resets the app back to Home",
-                    "Lookup results stay attached to the number you checked, so you can't block the wrong one",
-                    "Deleting a rule or trusted number can be undone; add-rule schedules survive rotation",
-                    "Recent calls announce their direction, and secondary text meets AA contrast in every theme",
-                ),
-        )
-        VersionEntry(
-            "1.7.27",
-            "Cross-boundary audit: report-pipeline integrity, quiet-hours SMS fix, and state that survives rotation",
-            changes =
-                listOf(
-                    "Stopped international community reports being republished as fabricated US numbers",
-                    "Fixed prefix rows that hard-blocked Auckland, Norwegian, and Eswatini callers",
-                    "Quiet hours no longer cancels legitimate night-time SMS/RCS notifications",
-                    "\"Allow temporarily\" now recovers prefix-blocked callers; added 23 missing area codes",
-                    "Rotation keeps your tab, dialogs, filters, and typed input; overlay warnings stay visible",
-                ),
-        )
-        VersionEntry(
-            "1.7.26",
-            "Deep-audit drain: crash guards, theming, localization, and post-call security",
-            changes =
-                listOf(
-                    "Crash-guarded every external, dial, and settings intent on browserless devices",
-                    "\"Block area code\" now confirms first; cold starts and the widget follow the real theme",
-                    "Density-scaled the caller ID overlay and stopped list rows re-animating on scroll",
-                    "Localized schedule labels and rule descriptions; unified Settings capitalization",
-                    "Verified a real recent call before post-call community reports; capped backup exports",
-                ),
-        )
-        VersionEntry(
-            "1.7.25",
-            "Follow-up polish, verified on-device",
-            changes =
-                listOf(
-                    "Made the repeat-caller auto-block threshold adjustable in Settings",
-                    "Unified the trusted-numbers wording across the add flow",
-                    "Replaced raw error text in lookup/block/report with clear localized messages",
-                    "Made the detection-trace verdict labels translatable",
-                ),
-        )
-        VersionEntry(
-            "1.7.24",
-            "Deep-audit fixes across detection, data, backups, and accessibility",
-            changes =
-                listOf(
-                    "Community reports validate every number and can't be used to remove trusted database entries",
-                    "Backups keep all data under release optimization; restore refreshes range rules and keeps temporary blocks",
-                    "Fixed SMS URL matching, whitelisted-sender protection, a wildcard slowdown, and international number formatting",
-                    "Corrected the spam count, onboarding, Recent call types, search, and locale-aware timestamps",
-                    "Labeled toggles for TalkBack, blocked-log actions, and honest notification state below Android 13",
-                ),
-        )
-        VersionEntry(
-            "1.7.23",
-            "Deep-audit hardening across screening, backups, and accessibility",
-            changes =
-                listOf(
-                    "Fixed roaming corrupting number matching. Identities now canonicalize under the SIM's home region",
-                    "Hardened screening edge cases: unknown-direction calls, duplicate-row urgency, and lettered SMS sender IDs",
-                    "Made exports crash-free, blocklist imports transactional, and passphrase restores reject plaintext files",
-                    "Fixed the caller ID overlay leaking telephony watchers and the role-loss alert lingering after recovery",
-                    "Made settings toggles fully tappable TalkBack nodes and raised caption contrast in every theme",
-                ),
-        )
-        VersionEntry(
-            "1.7.22",
-            "Safer trust controls, protected backups, and stronger release gates",
-            changes =
-                listOf(
-                    "Added selected contact-group trust and category-specific call handling",
-                    "Added passphrase-protected portable backups with atomic restore rollback",
-                    "Added optional local-only warnings for known-risk outgoing calls",
-                    "Added call-screening role-loss detection with actionable recovery guidance",
-                    "Removed static-analysis baselines and hardened release metadata and signing preflight",
-                ),
-        )
-        VersionEntry(
-            "1.7.21",
-            "Professional themes and a calmer, denser interface",
-            changes =
-                listOf(
-                    "Added persistent System, Light, Graphite, and true-black AMOLED themes",
-                    "Tightened typography, spacing, borders, and control density across shared components",
-                    "Shortened onboarding and settings copy while preserving accessible action targets",
-                    "Consolidated nested More destinations under one compact app header",
-                    "Added automated contrast and theme-preference regression coverage",
-                ),
-        )
-        VersionEntry(
-            "1.7.20",
-            "Privacy, recovery, and interaction hardening",
-            changes =
-                listOf(
-                    "Excluded private call and message history from Android cloud backup and trimmed " +
-                        "repository-only APK assets",
-                    "Hardened caller-ID, deep-link, external-feed, backup-restore, repeated-call, and " +
-                        "crash-log trust boundaries",
-                    "Made temporary decisions and notification-source choices survive portable backup round trips",
-                    "Preserved nested navigation across language changes and refined secondary " +
-                        "settings, log, and statistics states",
-                    "Restored the local report-pipeline regression test and warning-free Kotlin compilation",
-                ),
-        )
-        VersionEntry(
-            "1.7.19",
-            "Roadmap completion: stronger detection, platform integrations, and release proof",
-            changes =
-                listOf(
-                    "Added region and carrier-name trust/block rules with explicit priority safeguards",
-                    "Improved on-device GBT recall while retaining the precision guard and legacy-model compatibility",
-                    "Added notification-source controls, Android 16 sync progress, and an optional " +
-                        "Android post-call review",
-                    "Expanded call/SMS entrypoint, screening-deadline, accessibility, RTL, and API 35/37 " +
-                        "device coverage",
-                    "Surfaced ML health, rule conflicts, app language selection, and premium " +
-                        "setup/navigation refinements",
-                ),
-        )
-        VersionEntry(
-            "1.7.17",
-            "Reliability: self-healing sync, recovery, and boot survival",
-            changes =
-                listOf(
-                    "RCS listener re-binds itself after the system disconnects it",
-                    "Detects and rebuilds a corrupt on-disk database, then re-syncs the spam data",
-                    "Reschedules work and re-binds the listener after a reboot or app update",
-                    "Daily digest counts use bounded aggregate queries instead of full-window scans",
-                ),
-        )
-        VersionEntry(
-            "1.7.16",
-            "Bounded imports and clearer model health",
-            changes =
-                listOf(
-                    "Capped import/restore size and row counts to keep large files responsive",
-                    "Aligned Android 16 grouped-notification alert behavior",
-                    "Exposed typed ML model-health states for diagnostics",
-                ),
-        )
-        VersionEntry(
-            "1.7.13",
-            "Fully free and keyless: the optional API key entry is gone",
-            changes =
-                listOf(
-                    "Removed the optional AbstractAPI key field from Settings, so CallShield now needs no API keys at all",
-                    "Every lookup and enrichment source the app uses is free and requires no sign-up or credentials",
-                    "Any key stored by an earlier version is purged from the device on first launch",
-                    "Dropped the unused carrier/line-type network checker and its certificate pin",
-                ),
-        )
-        VersionEntry(
-            "1.7.12",
-            "Durable blocked-call logging and community-report backoff",
-            changes =
-                listOf(
-                    "Blocked-call decisions persist pending log rows before the call response",
-                    "A Hilt-backed retry worker flushes pending blocked-call rows without duplicate logs or notifications",
-                    "Room v10 adds log keys and a pending-log queue with duplicate-suppression and retry coverage",
-                    "Community report submissions now surface server retry delays after Worker rate limits",
-                    "Security-sensitive phone digit extraction now uses a shared ASCII-only utility",
-                ),
-        )
-        VersionEntry(
-            "1.7.11",
-            "Premium Compose refinement: cohesive actions, states, and trust surfaces",
-            changes =
-                listOf(
-                    "Shared premium actions, compact actions, icon tiles, and state cards unify high-traffic app flows",
-                    "Dashboard, lookup, details, logs, diagnostics, onboarding, and settings align",
-                    "Trusted notification source controls now show clearer active, disabled, and not-installed states",
-                    "Statistics now presents a calmer first-run empty state instead of zero-value charts",
-                    "README, changelog, and roadmap notes now match the v1.7.11 product surface",
-                ),
-        )
-        VersionEntry(
-            "1.7.10",
-            "Modern Android stack refresh: Compose, WorkManager, DataStore, and release integrity",
-            changes =
-                listOf(
-                    "Compose, Material 3, WorkManager, DataStore, OkHttp, AGP, Kotlin, KSP, and Room were refreshed",
-                    "Optional AbstractAPI keys moved to private no-backup storage with clearer saved-state copy",
-                    "Release builds now produce SHA256 sidecars and local guards check reproducible-build inputs",
-                    "Network hosts use centralized certificate pinning for data, reporting, URL safety, and enrichment",
-                    "Configuration-aware Compose copy keeps snackbar, toast, semantic, validation, and count text fresh",
-                ),
-        )
-        VersionEntry(
-            "1.7.9",
-            "WorkManager schedule contracts: background jobs made easier to trust",
-            changes =
-                listOf(
-                    "Sync, manual refresh, hot-list, and digest workers moved to WorkManager 2.11.2",
-                    "JVM tests now cover repeat intervals, network constraints, initial delay, and retry backoff",
-                    "Background refresh behavior stays explicit as release prep and dependency updates continue",
-                ),
-        )
-        VersionEntry(
-            "1.7.8",
-            "DataStore privacy hardening: local credentials stay out of backup scope",
-            changes =
-                listOf(
-                    "Settings moved to DataStore Preferences 1.2.1",
-                    "Optional local API credentials are stored in no-backup private storage",
-                    "Database and public preferences remain restorable for normal device transfers",
-                ),
-        )
-        VersionEntry(
-            "1.7.5",
-            "Stats and scan feedback polish: localized labels and calmer errors",
-            changes =
-                listOf(
-                    "Statistics now uses localized weekday labels for the weekly activity chart",
-                    "Detection-source labels in Statistics are routed through string resources instead of hardcoded English",
-                    "Call-log and SMS scan permission failures now use consistent resource-backed recovery copy",
-                    "Source legend counts now use a formatted string resource for cleaner localization",
-                ),
-        )
-        VersionEntry(
-            "1.7.4",
-            "Settings trust polish: safer optional API-key handling",
-            changes =
-                listOf(
-                    "Optional AbstractAPI key entry is now masked by default, with explicit show/hide control",
-                    "Settings now show clear saved, unsaved, and not-configured states before changes are committed",
-                    "The save action is disabled until the local value changes, reducing accidental credential churn",
-                    "Advanced settings copy now reinforces that the key stays on-device and only powers optional carrier enrichment",
-                ),
-        )
-        VersionEntry(
-            "1.7.3",
-            "Premium polish pass: calmer chrome, tighter states, clearer trust feedback",
-            changes =
-                listOf(
-                    "Shared visual system tightened: modest 12dp surface radius, zero negative type tracking, and no selected navigation pill backdrop",
-                    "Blocked Log empty and filtered states now explain what happened and offer a one-tap recovery path back to all activity",
-                    "Trusted notification source picker now shows installed-source coverage and skeleton loading while app labels resolve",
-                    "Lookup and Number Detail use rectangular status treatments for risk/type labels instead of default Material chip backdrops",
-                    "Report actions now use clearer flag semantics, with filter chips and action buttons brought into the same shape rhythm",
-                ),
-        )
-        VersionEntry(
-            "1.7.2",
-            "Hardening: spoof-proof normalization, DoS guards, atomic crash logs",
-            changes =
-                listOf(
-                    "ASCII-only phone-number normalization blocks homoglyph caller-ID bypasses",
-                    "SMS analysis and multipart reassembly are capped at 16 KB to protect hot paths",
-                    "Wildcard regex validation rejects catastrophic backtracking patterns before compile",
-                    "Notice gates are LRU bounded, PendingIntent request codes are separated, and crash logs write atomically",
-                    "Text-bearing pill and oval backdrops were removed from status, progress, and count treatments",
-                ),
-        )
-        VersionEntry(
-            "1.4.0",
-            "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning",
-            changes =
-                listOf(
-                    "Smart call labels (Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown), shown on the Number Detail hero and in the blocked log",
-                    "Silent voicemail mode sends blocked calls to voicemail silently instead of rejecting them, so your phone doesn't ring. It's off by default and turns on in Settings → Detection",
-                    "One-tap FTC fraud report. Any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
-                    "Emergency contacts. Whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Trusted tab (formerly Whitelist)",
-                    "\"Why was this blocked?\" Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
-                ),
-        )
-        VersionEntry(
-            "1.3.0",
-            "Crash reporter, instrumented tests, benchmark ceilings",
-            changes =
-                listOf(
-                    "Local crash reporter captures uncaught exceptions to filesDir/crashes/. Share the latest log with the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
-                    "Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine",
-                    "GitHub Actions emulator workflow runs connected tests on every PR + master push",
-                    "Hot-path microbenchmarks as unit tests enforce regression ceilings on WildcardRule.matches, CampaignDetector record/check, SpamMLScorer.score, and SpamHeuristics pure checks",
-                    "BuildConfig fields (VERSION_NAME, VERSION_CODE) re-enabled for the crash reporter header",
-                ),
-        )
-        VersionEntry(
-            "1.2.15",
-            "Audit Round 9: contact cache perf",
-            changes =
-                listOf(
-                    "Contact whitelist lookups are now cached for 60 seconds, which removes up to 4 redundant ContactsContract queries per incoming call on large contact lists (10 to 200 ms saved per call)",
-                ),
-        )
-        VersionEntry(
-            "1.2.14",
-            "Audit Round 8: stats drift, wildcard SMS match, trusted-sender perf",
-            changes =
-                listOf(
-                    "Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)",
-                    "Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization",
-                    "Trusted-sender SMS check uses a SQL WHERE pre-filter and no longer scans the entire sent/inbox folder in memory",
-                    "New unit tests for wildcard multi-normalization (glob + E.164 + raw 10-digit + wrong-area-code rejection)",
-                ),
-        )
-        VersionEntry(
-            "1.2.13",
-            "Audit Round 7: UI campaign pollution + backup rules",
-            changes =
-                listOf(
-                    "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false, so they no longer poison the campaign burst detector or pop caller-ID overlays",
-                    "Protection test no longer feeds synthetic test numbers into the campaign detector",
-                    "Backup rules referenced in manifest and properly scoped. Database + DataStore included, caches excluded",
-                    "New data_extraction_rules.xml for API 31+ cloud backup and device transfer",
-                ),
-        )
-        VersionEntry(
-            "1.2.12",
-            "Audit Round 6: DB migration guard + call screener crash",
-            changes =
-                listOf(
-                    "Database destructive migration restricted to legacy versions 1-4 only. Future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
-                    "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding), which prevents a crash on OEM ROMs that remove ROLE_CALL_SCREENING",
-                ),
-        )
-        VersionEntry(
-            "1.2.11",
-            "Audit Round 5: OkHttp response leaks + cache cleanup collision",
-            changes =
-                listOf(
-                    "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { }. Previously the Response was leaked on non-2xx paths",
-                    "Log export cleanup now filters by filename prefix and no longer nukes in-flight blocklist exports that share the same cache directory",
-                ),
-        )
-        VersionEntry(
-            "1.2.10",
-            "Audit Round 4: time windows, screener lifetime, scanner isolation",
-            changes =
-                listOf(
-                    "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor, so windows no longer freeze at app start and drift as the process stays alive",
-                    "After-call \"Was this spam?\" feedback notification now fires reliably. It moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
-                    "Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened",
-                    "Contact whitelist lookup closes its cursor on exception paths (defensive correctness)",
-                ),
-        )
-        VersionEntry(
-            "1.2.9",
-            "Audit Round 3: correctness + Compose hygiene",
-            changes =
-                listOf(
-                    "Campaign burst detector no longer learns from contacts/dialed/repeat callers (false-positive fix)",
-                    "Backup restore closes the input stream properly (file descriptor leak fix)",
-                    "Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException",
-                    "Daily digest skips silently when notification permission is revoked",
-                    "Recent Calls list now uses stable item keys, so filter changes no longer scramble per-row animation state",
-                    "Blocked Log grouped view now uses stable keys. No more scroll jumps or row-swap bugs",
-                    "Global search results use stable keys, which fixes reorder glitches when re-searching",
-                ),
-        )
-        VersionEntry(
-            "1.2.8",
-            "ML Engine + Campaign Detection + Accessibility",
-            changes =
-                listOf(
-                    "Gradient-boosted tree ML model (20 features, pure Kotlin inference)",
-                    "Campaign burst detection: auto-blocks NPA-NXX prefixes with 5+ calls in 1 hour",
-                    "After-call feedback: \"Was this spam?\" notification with one-tap Block/Trust",
-                    "378 strings extracted to strings.xml for localization support",
-                    "150 unit tests + GitHub Actions CI pipeline",
-                    "Full accessibility pass: 100 content descriptions, semantic grouping, 48dp touch targets",
-                    "Weekly bar chart + source donut chart + monthly trend in Statistics",
-                    "Signing credentials moved to local.properties (security hardening)",
-                    "Call log scanner fixed (was blocking Main thread)",
-                    "Sync freshness updates immediately after sync",
-                    "Onboarding shows grant status, notification/overlay permissions",
-                    "ANSWER_PHONE_CALLS permission for Samsung/Xiaomi compatibility",
-                ),
-        )
-        VersionEntry(
-            "1.2.7",
-            "Build Fix + Deprecation Cleanup",
-            changes =
-                listOf(
-                    "Fixed BlocklistScreen tab indicator crash (removed deprecated tabIndicatorOffset API)",
-                    "Migrated remaining deprecated icons to AutoMirrored variants (ViewList, TrendingUp/Down/Flat)",
-                    "Zero compilation warnings",
-                ),
-        )
-        VersionEntry(
-            "1.2.6",
-            "Premium Redesign + Audit",
-            changes =
-                listOf(
-                    "Complete premium UI overhaul: PremiumCard, accent glows, gradient dividers, refined typography",
-                    "12 bug fixes: race conditions, JSON injection, UI hangs, thread leaks, date grouping",
-                    "Shimmer loading skeletons replace raw spinners",
-                    "Haptic feedback on all toggles, block/unblock, profile switches, and scan buttons",
-                    "Swipe-to-delete now supports undo via snackbar",
-                    "Confirmation dialog before clearing blocked log",
-                    "Snackbar feedback for all blocklist add/delete operations",
-                    "Slide + fade tab transitions with direction awareness",
-                    "Changelog redesigned as vertical timeline with connected rail",
-                    "Protection test results with staggered entrance animations",
-                    "Caller ID overlay: rounded bottom corners, accent line, refined palette",
-                    "Widget: updated color palette, uppercase label, tighter typography",
-                    "Cloudflare Worker: type validation, body size limit, filename collision fix, rate limit handling",
-                    "Auto-clearing stale status messages (restore, contribute, import results)",
-                    "Dashboard: sync prompt when database is empty, hero entrance animation",
-                    "Stats: weekly chart now shows day labels aligned to actual calendar days with today highlighted",
-                    "Settings: standardized button heights, accent borders, icon backdrops on toggles",
-                ),
-        )
-        VersionEntry(
-            "1.2.5",
-            "Backup & Proguard",
-            changes =
-                listOf(
-                    "Backup/restore now includes SMS keyword rules (was missing)",
-                    "Backup format bumped to v2 for keyword rules support",
-                    "Added proguard keep rules for GitHubDataSource JSON models",
-                    "Added proguard keep rule for BackupKeyword data class",
-                ),
-        )
-        VersionEntry(
-            "1.2.4",
-            "README + Testing + Polish",
-            changes =
-                listOf(
-                    "Complete README rewrite for v1.2.x features",
-                    "Protection test: ML scorer, hot list data, notification access checks",
-                    "Detection icons for ML scorer, RCS, hot list, campaign ranges",
-                    "StatsScreen: type breakdown colors for all new detection methods",
-                    "Theme: added Catppuccin Teal and Lavender colors",
-                ),
-        )
-        VersionEntry(
-            "1.2.3",
-            "UX Polish + Performance",
-            changes =
-                listOf(
-                    "Onboarding: updated to reflect 15-layer detection + ML scorer",
-                    "Onboarding: permission request button on detection page",
-                    "Dashboard: engine count now includes ML scorer, RCS filter, repeat caller",
-                    "Widget: replaced full record load with efficient count query",
-                    "Recent Calls: batch spam checks per unique number (was 1 query per call)",
-                    "Recent Calls: batch contact lookups per unique number",
-                ),
-        )
-        VersionEntry(
-            "1.2.2",
-            "Audit Round 2",
-            changes =
-                listOf(
-                    "Fix CommunityContributor JSON injection",
-                    "Fix BootReceiver: schedule DigestWorker on boot",
-                    "Fix HotListSyncWorker: one bad entry no longer breaks sync",
-                    "Fix DigestWorker: database errors no longer crash worker",
-                    "Migrate all deprecated Material icons to AutoMirrored variants",
-                    "Fix extract_spam_domains.py double-slice",
-                    "Fix generate_hot_list.py missing first_seen field",
-                ),
-        )
-        VersionEntry(
-            "1.2.1",
-            "Audit Round 1",
-            changes =
-                listOf(
-                    "Fix SmsContentAnalyzer regex crash + URL loop early-exit",
-                    "Fix CallerIdOverlayService handler posts after destroy",
-                    "Fix CallShieldTileService runBlocking ANR",
-                    "Fix UrlSafetyChecker JSON injection",
-                    "Fix LogExporter CSV corruption",
-                    "Fix SpamMLScorer thread safety",
-                    "Fix NumberDetailScreen coroutine leak",
-                    "Fix BlocklistScreen: validate regex before adding",
-                    "Fix merge_community_reports.py data loss on exception",
-                ),
-        )
-        VersionEntry(
-            "1.2.0",
-            "ML Scorer + RCS + Hot List",
-            changes =
-                listOf(
-                    "On-device 15-feature ML spam scorer (logistic regression, threshold 0.7)",
-                    "RCS notification filter via NotificationListenerService",
-                    "30-minute hot list sync: trending numbers, campaign ranges, spam domains",
-                    "SIT tone player for anti-autodialer during caller ID overlay",
-                    "URL safety checker for phishing and malware notifications",
-                    "SMS context trust allows known conversations automatically",
-                    "AbstractAPI carrier/line-type enrichment (optional key)",
-                    "OpenCNAM caller name lookup in overlay",
-                    "Hot campaign range detection in heuristic engine",
-                    "Spam domain blocklist in SMS content analysis",
-                    "Weekly ML model retraining + domain extraction in CI",
-                    "30-minute hot list refresh in merge-reports workflow",
-                ),
-        )
-        VersionEntry(
-            "1.1.0",
-            "Live Caller ID + Community Database",
-            changes =
-                listOf(
-                    "Live multi-source caller ID overlay (SkipCalls, PhoneBlock, WhoCalledMe)",
-                    "Real-time spam score with parallel lookups",
-                    "Anonymous community spam reporting via Cloudflare Worker",
-                    "FCC database expanded to 32,933 confirmed spam numbers",
-                    "Expandable action buttons on log and recent entries",
-                    "False positive reporting to community database",
-                ),
-        )
-        VersionEntry(
-            "1.0.0",
-            "Initial Release",
-            isLast = true,
-            changes =
-                listOf(
-                    "11-layer detection engine with confidence scoring",
-                    "Number Lookup with animated spam score gauge",
-                    "Caller ID overlay for all incoming non-contact calls",
-                    "Smart suggestions auto-detect area code spam patterns",
-                    "Blocking profiles: Work, Personal, Sleep, Maximum, Off",
-                    "Callback detection doesn't block numbers you recently called",
-                    "Repeated call allow-through lets urgent callers get through",
-                    "330+ US/CA area code lookup with city/state",
-                    "Custom SMS keyword blocking rules",
-                    "Wildcard and regex number blocking",
-                    "Time-based quiet hours with configurable schedule",
-                    "Frequency auto-escalation (3+ calls = auto-block)",
-                    "STIR/SHAKEN carrier verification (Android 11+)",
-                    "Heuristic engine: VoIP ranges, wangiri, neighbor spoof",
-                    "30+ SMS content analysis regex patterns",
-                    "Recent calls with contact names and risk indicators",
-                    "Swipe-to-dismiss blocked log with grouping",
-                    "Call log and SMS inbox scanners",
-                    "Full backup/restore as JSON",
-                    "CSV log export for analysis",
-                    "Daily digest notification",
-                    "Auto-cleanup with configurable retention",
-                    "Quick Settings tile and app shortcuts",
-                    "Home screen widget",
-                    "After-call spam rating notifications",
-                    "Community reporting via GitHub Issues",
-                    "Reverse phone lookup via web scraping",
-                    "FTC Do Not Call complaint filing",
-                    "Statistics: weekly chart, type breakdown, top offenders, area code heatmap, hourly heatmap",
-                    "Protection test validates all layers and permissions",
-                    "Privacy-first: all detection runs on-device",
-                    "AMOLED black theme with Catppuccin Mocha accents",
-                ),
-        )
+        LedgerCard(
+            onClick = { showHistory = !showHistory },
+            modifier = Modifier.fillMaxWidth().semantics { stateDescription = historyState },
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PremiumIconTile(
+                    icon = Icons.Default.History,
+                    color = CatSubtext,
+                    size = 36.dp,
+                    iconSize = 20.dp,
+                    showContainer = true,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.changelog_older_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CatText,
+                    )
+                    Text(
+                        stringResource(R.string.changelog_older_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
+                Icon(
+                    if (showHistory) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = CatOverlay,
+                )
+            }
+        }
+        AnimatedVisibility(visible = showHistory) {
+            Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.8.0",
+                    "Answer & hang up, outgoing call check and signed protection data",
+                    date = "September 25, 2026",
+                    summary = "New ways to stop spam before it rings and after, plus protection data the app can verify.",
+                    changes =
+                        listOf(
+                            "Answer & hang up drops a blocked call before it reaches voicemail (opt-in)",
+                            "A call you dial to a flagged number is held with a notification first",
+                            "Meeting mode, telemarketing ranges, and region rules outside North America",
+                            "Signed protection feeds, a feed mirror, and fixed certificate pins",
+                            "Chinese covers every line of system text",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.38",
+                    "A clearer CallShield",
+                    date = "August 29, 2026",
+                    summary = "Every core screen now shares one calm, readable protection system.",
+                    changes =
+                        listOf(
+                            "Protection status is easier to read at a glance",
+                            "Activity, lookup, and rules use consistent rows",
+                            "Settings and diagnostics are less dense",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.37",
+                    "Simplified Chinese translation and installable signed releases",
+                    date = "August 24, 2026",
+                    changes =
+                        listOf(
+                            "Simplified Chinese (zh-CN) translation contributed by wj-on-git, selectable per app",
+                            "Release APKs are signed again; earlier unsigned release downloads would not install",
+                            "Community spam database updated with a reported robocall number",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.36",
+                    "Bounded exports, deterministic ML contracts, and verifiable releases",
+                    changes =
+                        listOf(
+                            "CSV and portable backup paths stream Room rows without materializing full logs",
+                            "Kotlin and Python share a versioned 20-feature ML contract with golden vectors",
+                            "Release artifacts carry SBOM, provenance, SHA-256, and tag-attestation evidence",
+                            "The detection pipeline's spam verdict path has an executable 50 ms p99 benchmark",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.35",
+                    "Bounded data surfaces, feed rollback protection, and release gates",
+                    changes =
+                        listOf(
+                            "Database and activity rows load in pages while statistics use SQL aggregates",
+                            "Replayed, downgraded, malformed, and mutated feed manifests cannot replace newer data",
+                            "Pull requests and scheduled runs verify dependencies, provenance, and release metadata",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.34",
+                    "Explainable protection, RTT safety, and assistive action coverage",
+                    changes =
+                        listOf(
+                            "RTT calls receive an explicit allow before screening or caller-ID overlay work",
+                            "TalkBack and switch access expose equivalent delete, block, and unblock actions",
+                            "Block reasons are spoken as complete plain-English sentences",
+                            "Protection Test shows background-worker stop reasons and quota recovery guidance",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.33",
+                    "Broader public spam coverage and fail-open screening reliability",
+                    changes =
+                        listOf(
+                            "Saracroche, PhoneBlock, Nomorobo IRS, FCC advertiser numbers, and bounded FTC retries expand public source coverage",
+                            "Idempotent source merges preserve provenance without duplicating numbers",
+                            "Lazy screening-service initialization failures now return an explicit allow response",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.32",
+                    "Guided first-run setup with verified Android permission handoffs",
+                    changes =
+                        listOf(
+                            "First launch now guides every permission and special-access step separately",
+                            "Each action opens the exact Android control and explains how to return",
+                            "CallShield automatically verifies a grant before moving to the next step",
+                            "All supported capabilities must be ready before setup can finish",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.31",
+                    "A cleaner CallShield identity across every app and distribution surface",
+                    changes =
+                        listOf(
+                            "A luminous cyan shield, white handset, and coral block badge form the new mark",
+                            "Launcher, themed, splash, shortcut, in-app, Play Store, and README art now match",
+                            "Notifications use the CallShield silhouette as their small app icon",
+                            "The deep-navy tile fills launcher masks while the compact mark stays legible",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.30",
+                    "Light-first themes and a calmer five-destination visual system",
+                    changes =
+                        listOf(
+                            "Light is now the default; System, Graphite, and AMOLED remain available",
+                            "Recent calls and blocked activity now share persistent Activity tabs",
+                            "Manual protection tools are grouped under the clearer Rules destination",
+                            "Larger type, filled controls, shorter copy, and fewer borders improve readability",
+                            "More includes a compact Appearance shortcut with theme previews",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.29",
+                    "Report-pipeline integrity, and CallShield is now open to translation",
+                    changes =
+                        listOf(
+                            "Numbers reported in local dialling format are stored so they actually match the caller",
+                            "One person can no longer push a number onto the trending list by reporting it repeatedly",
+                            "Repeated \"not spam\" votes from one reporter can't remove a genuine entry",
+                            "Removed 145 unused text resources, including 70 stray accessibility labels",
+                            "Translations are now welcome and checked automatically. See docs/TRANSLATING.md",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.28",
+                    "Roadmap drain: model and data-feed integrity, recoverable deletions, and screen-reader support",
+                    changes =
+                        listOf(
+                            "Spam scores no longer change with the time of day (the shipped model was clock-sensitive)",
+                            "A failed hot-list refresh keeps your current protection instead of reverting to the bundled snapshot",
+                            "Undo actually restores a swiped-away log entry or blocked number",
+                            "Opening a number's details no longer resets the app back to Home",
+                            "Lookup results stay attached to the number you checked, so you can't block the wrong one",
+                            "Deleting a rule or trusted number can be undone; add-rule schedules survive rotation",
+                            "Recent calls announce their direction, and secondary text meets AA contrast in every theme",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.27",
+                    "Cross-boundary audit: report-pipeline integrity, quiet-hours SMS fix, and state that survives rotation",
+                    changes =
+                        listOf(
+                            "Stopped international community reports being republished as fabricated US numbers",
+                            "Fixed prefix rows that hard-blocked Auckland, Norwegian, and Eswatini callers",
+                            "Quiet hours no longer cancels legitimate night-time SMS/RCS notifications",
+                            "\"Allow temporarily\" now recovers prefix-blocked callers; added 23 missing area codes",
+                            "Rotation keeps your tab, dialogs, filters, and typed input; overlay warnings stay visible",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.26",
+                    "Deep-audit drain: crash guards, theming, localization, and post-call security",
+                    changes =
+                        listOf(
+                            "Crash-guarded every external, dial, and settings intent on browserless devices",
+                            "\"Block area code\" now confirms first; cold starts and the widget follow the real theme",
+                            "Density-scaled the caller ID overlay and stopped list rows re-animating on scroll",
+                            "Localized schedule labels and rule descriptions; unified Settings capitalization",
+                            "Verified a real recent call before post-call community reports; capped backup exports",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.25",
+                    "Follow-up polish, verified on-device",
+                    changes =
+                        listOf(
+                            "Made the repeat-caller auto-block threshold adjustable in Settings",
+                            "Unified the trusted-numbers wording across the add flow",
+                            "Replaced raw error text in lookup/block/report with clear localized messages",
+                            "Made the detection-trace verdict labels translatable",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.24",
+                    "Deep-audit fixes across detection, data, backups, and accessibility",
+                    changes =
+                        listOf(
+                            "Community reports validate every number and can't be used to remove trusted database entries",
+                            "Backups keep all data under release optimization; restore refreshes range rules and keeps temporary blocks",
+                            "Fixed SMS URL matching, whitelisted-sender protection, a wildcard slowdown, and international number formatting",
+                            "Corrected the spam count, onboarding, Recent call types, search, and locale-aware timestamps",
+                            "Labeled toggles for TalkBack, blocked-log actions, and honest notification state below Android 13",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.23",
+                    "Deep-audit hardening across screening, backups, and accessibility",
+                    changes =
+                        listOf(
+                            "Fixed roaming corrupting number matching. Identities now canonicalize under the SIM's home region",
+                            "Hardened screening edge cases: unknown-direction calls, duplicate-row urgency, and lettered SMS sender IDs",
+                            "Made exports crash-free, blocklist imports transactional, and passphrase restores reject plaintext files",
+                            "Fixed the caller ID overlay leaking telephony watchers and the role-loss alert lingering after recovery",
+                            "Made settings toggles fully tappable TalkBack nodes and raised caption contrast in every theme",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.22",
+                    "Safer trust controls, protected backups, and stronger release gates",
+                    changes =
+                        listOf(
+                            "Added selected contact-group trust and category-specific call handling",
+                            "Added passphrase-protected portable backups with atomic restore rollback",
+                            "Added optional local-only warnings for known-risk outgoing calls",
+                            "Added call-screening role-loss detection with actionable recovery guidance",
+                            "Removed static-analysis baselines and hardened release metadata and signing preflight",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.21",
+                    "Professional themes and a calmer, denser interface",
+                    changes =
+                        listOf(
+                            "Added persistent System, Light, Graphite, and true-black AMOLED themes",
+                            "Tightened typography, spacing, borders, and control density across shared components",
+                            "Shortened onboarding and settings copy while preserving accessible action targets",
+                            "Consolidated nested More destinations under one compact app header",
+                            "Added automated contrast and theme-preference regression coverage",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.20",
+                    "Privacy, recovery, and interaction hardening",
+                    changes =
+                        listOf(
+                            "Excluded private call and message history from Android cloud backup and trimmed " +
+                                "repository-only APK assets",
+                            "Hardened caller-ID, deep-link, external-feed, backup-restore, repeated-call, and " +
+                                "crash-log trust boundaries",
+                            "Made temporary decisions and notification-source choices survive portable backup round trips",
+                            "Preserved nested navigation across language changes and refined secondary " +
+                                "settings, log, and statistics states",
+                            "Restored the local report-pipeline regression test and warning-free Kotlin compilation",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.19",
+                    "Roadmap completion: stronger detection, platform integrations, and release proof",
+                    changes =
+                        listOf(
+                            "Added region and carrier-name trust/block rules with explicit priority safeguards",
+                            "Improved on-device GBT recall while retaining the precision guard and legacy-model compatibility",
+                            "Added notification-source controls, Android 16 sync progress, and an optional " +
+                                "Android post-call review",
+                            "Expanded call/SMS entrypoint, screening-deadline, accessibility, RTL, and API 35/37 " +
+                                "device coverage",
+                            "Surfaced ML health, rule conflicts, app language selection, and premium " +
+                                "setup/navigation refinements",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.17",
+                    "Reliability: self-healing sync, recovery, and boot survival",
+                    changes =
+                        listOf(
+                            "RCS listener re-binds itself after the system disconnects it",
+                            "Detects and rebuilds a corrupt on-disk database, then re-syncs the spam data",
+                            "Reschedules work and re-binds the listener after a reboot or app update",
+                            "Daily digest counts use bounded aggregate queries instead of full-window scans",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.16",
+                    "Bounded imports and clearer model health",
+                    changes =
+                        listOf(
+                            "Capped import/restore size and row counts to keep large files responsive",
+                            "Aligned Android 16 grouped-notification alert behavior",
+                            "Exposed typed ML model-health states for diagnostics",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.13",
+                    "Fully free and keyless: the optional API key entry is gone",
+                    changes =
+                        listOf(
+                            "Removed the optional AbstractAPI key field from Settings, so CallShield now needs no API keys at all",
+                            "Every lookup and enrichment source the app uses is free and requires no sign-up or credentials",
+                            "Any key stored by an earlier version is purged from the device on first launch",
+                            "Dropped the unused carrier/line-type network checker and its certificate pin",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.12",
+                    "Durable blocked-call logging and community-report backoff",
+                    changes =
+                        listOf(
+                            "Blocked-call decisions persist pending log rows before the call response",
+                            "A Hilt-backed retry worker flushes pending blocked-call rows without duplicate logs or notifications",
+                            "Room v10 adds log keys and a pending-log queue with duplicate-suppression and retry coverage",
+                            "Community report submissions now surface server retry delays after Worker rate limits",
+                            "Security-sensitive phone digit extraction now uses a shared ASCII-only utility",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.11",
+                    "Premium Compose refinement: cohesive actions, states, and trust surfaces",
+                    changes =
+                        listOf(
+                            "Shared premium actions, compact actions, icon tiles, and state cards unify high-traffic app flows",
+                            "Dashboard, lookup, details, logs, diagnostics, onboarding, and settings align",
+                            "Trusted notification source controls now show clearer active, disabled, and not-installed states",
+                            "Statistics now presents a calmer first-run empty state instead of zero-value charts",
+                            "README, changelog, and roadmap notes now match the v1.7.11 product surface",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.10",
+                    "Modern Android stack refresh: Compose, WorkManager, DataStore, and release integrity",
+                    changes =
+                        listOf(
+                            "Compose, Material 3, WorkManager, DataStore, OkHttp, AGP, Kotlin, KSP, and Room were refreshed",
+                            "Optional AbstractAPI keys moved to private no-backup storage with clearer saved-state copy",
+                            "Release builds now produce SHA256 sidecars and local guards check reproducible-build inputs",
+                            "Network hosts use centralized certificate pinning for data, reporting, URL safety, and enrichment",
+                            "Configuration-aware Compose copy keeps snackbar, toast, semantic, validation, and count text fresh",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.9",
+                    "WorkManager schedule contracts: background jobs made easier to trust",
+                    changes =
+                        listOf(
+                            "Sync, manual refresh, hot-list, and digest workers moved to WorkManager 2.11.2",
+                            "JVM tests now cover repeat intervals, network constraints, initial delay, and retry backoff",
+                            "Background refresh behavior stays explicit as release prep and dependency updates continue",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.8",
+                    "DataStore privacy hardening: local credentials stay out of backup scope",
+                    changes =
+                        listOf(
+                            "Settings moved to DataStore Preferences 1.2.1",
+                            "Optional local API credentials are stored in no-backup private storage",
+                            "Database and public preferences remain restorable for normal device transfers",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.5",
+                    "Stats and scan feedback polish: localized labels and calmer errors",
+                    changes =
+                        listOf(
+                            "Statistics now uses localized weekday labels for the weekly activity chart",
+                            "Detection-source labels in Statistics are routed through string resources instead of hardcoded English",
+                            "Call-log and SMS scan permission failures now use consistent resource-backed recovery copy",
+                            "Source legend counts now use a formatted string resource for cleaner localization",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.4",
+                    "Settings trust polish: safer optional API-key handling",
+                    changes =
+                        listOf(
+                            "Optional AbstractAPI key entry is now masked by default, with explicit show/hide control",
+                            "Settings now show clear saved, unsaved, and not-configured states before changes are committed",
+                            "The save action is disabled until the local value changes, reducing accidental credential churn",
+                            "Advanced settings copy now reinforces that the key stays on-device and only powers optional carrier enrichment",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.3",
+                    "Premium polish pass: calmer chrome, tighter states, clearer trust feedback",
+                    changes =
+                        listOf(
+                            "Shared visual system tightened: modest 12dp surface radius, zero negative type tracking, and no selected navigation pill backdrop",
+                            "Blocked Log empty and filtered states now explain what happened and offer a one-tap recovery path back to all activity",
+                            "Trusted notification source picker now shows installed-source coverage and skeleton loading while app labels resolve",
+                            "Lookup and Number Detail use rectangular status treatments for risk/type labels instead of default Material chip backdrops",
+                            "Report actions now use clearer flag semantics, with filter chips and action buttons brought into the same shape rhythm",
+                        ),
+                )
+                VersionEntry(
+                    "1.7.2",
+                    "Hardening: spoof-proof normalization, DoS guards, atomic crash logs",
+                    changes =
+                        listOf(
+                            "ASCII-only phone-number normalization blocks homoglyph caller-ID bypasses",
+                            "SMS analysis and multipart reassembly are capped at 16 KB to protect hot paths",
+                            "Wildcard regex validation rejects catastrophic backtracking patterns before compile",
+                            "Notice gates are LRU bounded, PendingIntent request codes are separated, and crash logs write atomically",
+                            "Text-bearing pill and oval backdrops were removed from status, progress, and count treatments",
+                        ),
+                )
+                VersionEntry(
+                    "1.4.0",
+                    "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning",
+                    changes =
+                        listOf(
+                            "Smart call labels (Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown), shown on the Number Detail hero and in the blocked log",
+                            "Silent voicemail mode sends blocked calls to voicemail silently instead of rejecting them, so your phone doesn't ring. It's off by default and turns on in Settings → Detection",
+                            "One-tap FTC fraud report. Any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
+                            "Emergency contacts. Whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Trusted tab (formerly Whitelist)",
+                            "\"Why was this blocked?\" Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
+                        ),
+                )
+                VersionEntry(
+                    "1.3.0",
+                    "Crash reporter, instrumented tests, benchmark ceilings",
+                    changes =
+                        listOf(
+                            "Local crash reporter captures uncaught exceptions to filesDir/crashes/. Share the latest log with the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
+                            "Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine",
+                            "GitHub Actions emulator workflow runs connected tests on every PR + master push",
+                            "Hot-path microbenchmarks as unit tests enforce regression ceilings on WildcardRule.matches, CampaignDetector record/check, SpamMLScorer.score, and SpamHeuristics pure checks",
+                            "BuildConfig fields (VERSION_NAME, VERSION_CODE) re-enabled for the crash reporter header",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.15",
+                    "Audit Round 9: contact cache perf",
+                    changes =
+                        listOf(
+                            "Contact whitelist lookups are now cached for 60 seconds, which removes up to 4 redundant ContactsContract queries per incoming call on large contact lists (10 to 200 ms saved per call)",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.14",
+                    "Audit Round 8: stats drift, wildcard SMS match, trusted-sender perf",
+                    changes =
+                        listOf(
+                            "Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)",
+                            "Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization",
+                            "Trusted-sender SMS check uses a SQL WHERE pre-filter and no longer scans the entire sent/inbox folder in memory",
+                            "New unit tests for wildcard multi-normalization (glob + E.164 + raw 10-digit + wrong-area-code rejection)",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.13",
+                    "Audit Round 7: UI campaign pollution + backup rules",
+                    changes =
+                        listOf(
+                            "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false, so they no longer poison the campaign burst detector or pop caller-ID overlays",
+                            "Protection test no longer feeds synthetic test numbers into the campaign detector",
+                            "Backup rules referenced in manifest and properly scoped. Database + DataStore included, caches excluded",
+                            "New data_extraction_rules.xml for API 31+ cloud backup and device transfer",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.12",
+                    "Audit Round 6: DB migration guard + call screener crash",
+                    changes =
+                        listOf(
+                            "Database destructive migration restricted to legacy versions 1-4 only. Future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
+                            "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding), which prevents a crash on OEM ROMs that remove ROLE_CALL_SCREENING",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.11",
+                    "Audit Round 5: OkHttp response leaks + cache cleanup collision",
+                    changes =
+                        listOf(
+                            "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { }. Previously the Response was leaked on non-2xx paths",
+                            "Log export cleanup now filters by filename prefix and no longer nukes in-flight blocklist exports that share the same cache directory",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.10",
+                    "Audit Round 4: time windows, screener lifetime, scanner isolation",
+                    changes =
+                        listOf(
+                            "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor, so windows no longer freeze at app start and drift as the process stays alive",
+                            "After-call \"Was this spam?\" feedback notification now fires reliably. It moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
+                            "Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened",
+                            "Contact whitelist lookup closes its cursor on exception paths (defensive correctness)",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.9",
+                    "Audit Round 3: correctness + Compose hygiene",
+                    changes =
+                        listOf(
+                            "Campaign burst detector no longer learns from contacts/dialed/repeat callers (false-positive fix)",
+                            "Backup restore closes the input stream properly (file descriptor leak fix)",
+                            "Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException",
+                            "Daily digest skips silently when notification permission is revoked",
+                            "Recent Calls list now uses stable item keys, so filter changes no longer scramble per-row animation state",
+                            "Blocked Log grouped view now uses stable keys. No more scroll jumps or row-swap bugs",
+                            "Global search results use stable keys, which fixes reorder glitches when re-searching",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.8",
+                    "ML Engine + Campaign Detection + Accessibility",
+                    changes =
+                        listOf(
+                            "Gradient-boosted tree ML model (20 features, pure Kotlin inference)",
+                            "Campaign burst detection: auto-blocks NPA-NXX prefixes with 5+ calls in 1 hour",
+                            "After-call feedback: \"Was this spam?\" notification with one-tap Block/Trust",
+                            "378 strings extracted to strings.xml for localization support",
+                            "150 unit tests + GitHub Actions CI pipeline",
+                            "Full accessibility pass: 100 content descriptions, semantic grouping, 48dp touch targets",
+                            "Weekly bar chart + source donut chart + monthly trend in Statistics",
+                            "Signing credentials moved to local.properties (security hardening)",
+                            "Call log scanner fixed (was blocking Main thread)",
+                            "Sync freshness updates immediately after sync",
+                            "Onboarding shows grant status, notification/overlay permissions",
+                            "ANSWER_PHONE_CALLS permission for Samsung/Xiaomi compatibility",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.7",
+                    "Build Fix + Deprecation Cleanup",
+                    changes =
+                        listOf(
+                            "Fixed BlocklistScreen tab indicator crash (removed deprecated tabIndicatorOffset API)",
+                            "Migrated remaining deprecated icons to AutoMirrored variants (ViewList, TrendingUp/Down/Flat)",
+                            "Zero compilation warnings",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.6",
+                    "Premium Redesign + Audit",
+                    changes =
+                        listOf(
+                            "Complete premium UI overhaul: PremiumCard, accent glows, gradient dividers, refined typography",
+                            "12 bug fixes: race conditions, JSON injection, UI hangs, thread leaks, date grouping",
+                            "Shimmer loading skeletons replace raw spinners",
+                            "Haptic feedback on all toggles, block/unblock, profile switches, and scan buttons",
+                            "Swipe-to-delete now supports undo via snackbar",
+                            "Confirmation dialog before clearing blocked log",
+                            "Snackbar feedback for all blocklist add/delete operations",
+                            "Slide + fade tab transitions with direction awareness",
+                            "Changelog redesigned as vertical timeline with connected rail",
+                            "Protection test results with staggered entrance animations",
+                            "Caller ID overlay: rounded bottom corners, accent line, refined palette",
+                            "Widget: updated color palette, uppercase label, tighter typography",
+                            "Cloudflare Worker: type validation, body size limit, filename collision fix, rate limit handling",
+                            "Auto-clearing stale status messages (restore, contribute, import results)",
+                            "Dashboard: sync prompt when database is empty, hero entrance animation",
+                            "Stats: weekly chart now shows day labels aligned to actual calendar days with today highlighted",
+                            "Settings: standardized button heights, accent borders, icon backdrops on toggles",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.5",
+                    "Backup & Proguard",
+                    changes =
+                        listOf(
+                            "Backup/restore now includes SMS keyword rules (was missing)",
+                            "Backup format bumped to v2 for keyword rules support",
+                            "Added proguard keep rules for GitHubDataSource JSON models",
+                            "Added proguard keep rule for BackupKeyword data class",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.4",
+                    "README + Testing + Polish",
+                    changes =
+                        listOf(
+                            "Complete README rewrite for v1.2.x features",
+                            "Protection test: ML scorer, hot list data, notification access checks",
+                            "Detection icons for ML scorer, RCS, hot list, campaign ranges",
+                            "StatsScreen: type breakdown colors for all new detection methods",
+                            "Theme: added Catppuccin Teal and Lavender colors",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.3",
+                    "UX Polish + Performance",
+                    changes =
+                        listOf(
+                            "Onboarding: updated to reflect 15-layer detection + ML scorer",
+                            "Onboarding: permission request button on detection page",
+                            "Dashboard: engine count now includes ML scorer, RCS filter, repeat caller",
+                            "Widget: replaced full record load with efficient count query",
+                            "Recent Calls: batch spam checks per unique number (was 1 query per call)",
+                            "Recent Calls: batch contact lookups per unique number",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.2",
+                    "Audit Round 2",
+                    changes =
+                        listOf(
+                            "Fix CommunityContributor JSON injection",
+                            "Fix BootReceiver: schedule DigestWorker on boot",
+                            "Fix HotListSyncWorker: one bad entry no longer breaks sync",
+                            "Fix DigestWorker: database errors no longer crash worker",
+                            "Migrate all deprecated Material icons to AutoMirrored variants",
+                            "Fix extract_spam_domains.py double-slice",
+                            "Fix generate_hot_list.py missing first_seen field",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.1",
+                    "Audit Round 1",
+                    changes =
+                        listOf(
+                            "Fix SmsContentAnalyzer regex crash + URL loop early-exit",
+                            "Fix CallerIdOverlayService handler posts after destroy",
+                            "Fix CallShieldTileService runBlocking ANR",
+                            "Fix UrlSafetyChecker JSON injection",
+                            "Fix LogExporter CSV corruption",
+                            "Fix SpamMLScorer thread safety",
+                            "Fix NumberDetailScreen coroutine leak",
+                            "Fix BlocklistScreen: validate regex before adding",
+                            "Fix merge_community_reports.py data loss on exception",
+                        ),
+                )
+                VersionEntry(
+                    "1.2.0",
+                    "ML Scorer + RCS + Hot List",
+                    changes =
+                        listOf(
+                            "On-device 15-feature ML spam scorer (logistic regression, threshold 0.7)",
+                            "RCS notification filter via NotificationListenerService",
+                            "30-minute hot list sync: trending numbers, campaign ranges, spam domains",
+                            "SIT tone player for anti-autodialer during caller ID overlay",
+                            "URL safety checker for phishing and malware notifications",
+                            "SMS context trust allows known conversations automatically",
+                            "AbstractAPI carrier/line-type enrichment (optional key)",
+                            "OpenCNAM caller name lookup in overlay",
+                            "Hot campaign range detection in heuristic engine",
+                            "Spam domain blocklist in SMS content analysis",
+                            "Weekly ML model retraining + domain extraction in CI",
+                            "30-minute hot list refresh in merge-reports workflow",
+                        ),
+                )
+                VersionEntry(
+                    "1.1.0",
+                    "Live Caller ID + Community Database",
+                    changes =
+                        listOf(
+                            "Live multi-source caller ID overlay (SkipCalls, PhoneBlock, WhoCalledMe)",
+                            "Real-time spam score with parallel lookups",
+                            "Anonymous community spam reporting via Cloudflare Worker",
+                            "FCC database expanded to 32,933 confirmed spam numbers",
+                            "Expandable action buttons on log and recent entries",
+                            "False positive reporting to community database",
+                        ),
+                )
+                VersionEntry(
+                    "1.0.0",
+                    "Initial Release",
+                    isLast = true,
+                    changes =
+                        listOf(
+                            "11-layer detection engine with confidence scoring",
+                            "Number Lookup with animated spam score gauge",
+                            "Caller ID overlay for all incoming non-contact calls",
+                            "Smart suggestions auto-detect area code spam patterns",
+                            "Blocking profiles: Work, Personal, Sleep, Maximum, Off",
+                            "Callback detection doesn't block numbers you recently called",
+                            "Repeated call allow-through lets urgent callers get through",
+                            "330+ US/CA area code lookup with city/state",
+                            "Custom SMS keyword blocking rules",
+                            "Wildcard and regex number blocking",
+                            "Time-based quiet hours with configurable schedule",
+                            "Frequency auto-escalation (3+ calls = auto-block)",
+                            "STIR/SHAKEN carrier verification (Android 11+)",
+                            "Heuristic engine: VoIP ranges, wangiri, neighbor spoof",
+                            "30+ SMS content analysis regex patterns",
+                            "Recent calls with contact names and risk indicators",
+                            "Swipe-to-dismiss blocked log with grouping",
+                            "Call log and SMS inbox scanners",
+                            "Full backup/restore as JSON",
+                            "CSV log export for analysis",
+                            "Daily digest notification",
+                            "Auto-cleanup with configurable retention",
+                            "Quick Settings tile and app shortcuts",
+                            "Home screen widget",
+                            "After-call spam rating notifications",
+                            "Community reporting via GitHub Issues",
+                            "Reverse phone lookup via web scraping",
+                            "FTC Do Not Call complaint filing",
+                            "Statistics: weekly chart, type breakdown, top offenders, area code heatmap, hourly heatmap",
+                            "Protection test validates all layers and permissions",
+                            "Privacy-first: all detection runs on-device",
+                            "AMOLED black theme with Catppuccin Mocha accents",
+                        ),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        AboutCallShieldCard()
+    }
+}
+
+@Composable
+private fun AboutCallShieldCard() {
+    PremiumCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(stringResource(R.string.changelog_about_title), CatGreen)
+            Text(
+                stringResource(R.string.changelog_about_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CatText,
+            )
+            Text(
+                "v${BuildConfig.VERSION_NAME} · ${stringResource(R.string.more_license)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+        }
     }
 }
 

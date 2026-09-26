@@ -838,6 +838,13 @@
     <string name="permission_contract_degraded_post_notifications">在授予通知权限前，已拦截通话/短信的告警、核查操作与每日摘要可能被抑制。</string>
     <string name="permission_contract_post_notifications_not_required">此 Android 版本不需要</string>
     <string name="changelog_latest">最新</string>
+    <string name="changelog_latest_release">最新版本</string>
+    <string name="changelog_heading">版本说明</string>
+    <string name="changelog_intro">每个版本的变化，最新的在前。</string>
+    <string name="changelog_older_title">更早的版本</string>
+    <string name="changelog_older_subtitle">所有早期版本及其变化</string>
+    <string name="changelog_about_title">关于 CallShield</string>
+    <string name="changelog_about_body">CallShield 在本机检查来电和短信。只有在你开启在线检查或提交举报时，号码或链接才会离开手机。</string>
     <string name="onboarding_enable_notifications">启用通知</string>
     <string name="onboarding_step">第 %1$d 步 / 共 %2$d 步</string>
     <string name="onboarding_screener_unavailable_detail">你仍可使用拦截列表、扫描与查询工具，但 Android 在此未暴露原生筛查角色。</string>
