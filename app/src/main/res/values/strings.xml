@@ -183,9 +183,9 @@
     <string name="blocked_log_filter_all_reasons">All reasons</string>
     <string name="blocked_log_search_hint">Search by number</string>
     <string name="blocked_log_search_empty">No results</string>
-    <string name="blocked_log_search_empty_body">No blocked calls or texts match that number.</string>
+    <string name="blocked_log_search_empty_body">No blocked calls or flagged texts match that number.</string>
     <string name="blocked_log_empty_all_title">No blocked activity</string>
-    <string name="blocked_log_empty_all_body">Blocked calls and texts will appear here.</string>
+    <string name="blocked_log_empty_all_body">Blocked calls and flagged texts will appear here.</string>
     <string name="blocked_log_empty_filter_title">Nothing matches this filter</string>
     <string name="blocked_log_empty_filter_body">Try another filter.</string>
     <string name="blocked_log_show_all">Show all activity</string>
@@ -195,8 +195,8 @@
     <string name="blocked_log_number_blocked">%s blocked</string>
     <string name="blocked_log_clear_title">Clear blocked log?</string>
     <plurals name="blocked_log_clear_message">
-        <item quantity="one">This will permanently delete the blocked call and SMS log. Total record: %d. This cannot be undone.</item>
-        <item quantity="other">This will permanently delete the blocked call and SMS log. Total records: %d. This cannot be undone.</item>
+        <item quantity="one">This will permanently delete the log of blocked calls and flagged texts. Total record: %d. This cannot be undone.</item>
+        <item quantity="other">This will permanently delete the log of blocked calls and flagged texts. Total records: %d. This cannot be undone.</item>
     </plurals>
     <string name="blocked_log_clear_all">Clear all</string>
     <string name="blocked_log_cancel">Cancel</string>
@@ -742,7 +742,7 @@
     <string name="settings_days">%dd</string>
     <string name="settings_export">Export</string>
     <string name="settings_export_csv">Export blocked log as CSV</string>
-    <string name="settings_export_csv_desc">Export blocked calls/SMS as a CSV file. SMS message bodies are redacted by default.</string>
+    <string name="settings_export_csv_desc">Export blocked calls and flagged texts as a CSV file. Message bodies are redacted by default.</string>
     <string name="settings_export_redress_csv">Export blocked calls for redress</string>
     <string name="settings_export_redress_csv_desc">Date, time, calling number and reason only. No message bodies or contacts.</string>
     <string name="settings_export_raw_sms_csv">Export raw SMS bodies</string>
@@ -780,7 +780,7 @@
     <string name="backup_section_settings">Settings</string>
     <string name="backup_section_settings_desc">Detection preferences, no credentials</string>
     <string name="backup_section_logs">Logs</string>
-    <string name="backup_section_logs_desc">Blocked call/SMS history, may include SMS text</string>
+    <string name="backup_section_logs_desc">Blocked call and flagged text history, which may include message text</string>
     <string name="settings_external_blocklists">External blocklists</string>
     <string name="settings_external_blocklists_desc">Subscribe to HTTPS CSV, TXT, or JSON number lists. CallShield previews changes, caps imports, and stores each feed under its own removable source.</string>
     <string name="settings_external_blocklist_url">Blocklist URL</string>
@@ -1118,7 +1118,7 @@
     <string name="protection_test_capability_hint">Keep enabled access in place. CallShield does not request a default SMS or messaging role; sender and URL checks continue when data is available.</string>
     <string name="permission_contract_degraded_call_log">Recent-call scans, callback trust, frequency checks, and blocked-call history are limited without call log access.</string>
     <string name="permission_contract_degraded_contacts">Without contacts access, contact trust and local caller trust can\'t protect known callers, and Contacts only mode is paused, so anyone can ring.</string>
-    <string name="permission_contract_degraded_read_sms">SMS inbox scans and blocked-message review cannot read existing texts without SMS inbox access.</string>
+    <string name="permission_contract_degraded_read_sms">SMS inbox scans and flagged-message review cannot read existing texts without SMS inbox access.</string>
     <string name="permission_contract_degraded_receive_sms">Incoming SMS spam filtering cannot inspect new texts until incoming-SMS access is granted.</string>
     <string name="permission_contract_advisory_receive_sms">Android 16+ makes incoming-SMS interception advisory; the default SMS app may receive messages first and controls inbox delivery.</string>
     <string name="permission_contract_degraded_call_screening">Live call blocking is unavailable until CallShield is the active call screening app.</string>
@@ -1131,7 +1131,7 @@
     <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
     <string name="permission_contract_post_notifications_name">Notification permission</string>
     <string name="permission_contract_post_notifications_denied">Denied, so alerts and review actions may be hidden</string>
-    <string name="permission_contract_degraded_post_notifications">Blocked-call/SMS alerts, review actions, and daily summaries may be suppressed until notification permission is granted.</string>
+    <string name="permission_contract_degraded_post_notifications">Blocked-call and flagged-text alerts, review actions and daily summaries may be suppressed until notification permission is granted.</string>
     <string name="permission_contract_post_notifications_not_required">Not required on this Android version</string>
 
     <!-- Changelog Screen -->
@@ -1427,7 +1427,7 @@
     <string name="share_spam_warning_chooser_title">Share spam warning</string>
 
     <!-- NotificationHelper -->
-    <string name="notif_channel_blocked">Blocked calls &amp; SMS</string>
+    <string name="notif_channel_blocked">Blocked calls &amp; flagged texts</string>
     <string name="notif_channel_blocked_desc">Notifications when spam calls are blocked or spam texts are flagged</string>
     <string name="notif_channel_rating">Spam rating</string>
     <string name="notif_channel_rating_desc">Rate calls as spam after they end</string>
@@ -1473,6 +1473,7 @@
     <string name="notif_action_block_forever">Block forever</string>
     <string name="desc_allowed_from_notification">Allowed from a blocked-call alert</string>
     <string name="notif_not_spam_allowed">Calls from this number will ring for the next 24 hours.</string>
+    <string name="notif_not_spam_refused">Your own block on this number still applies, so it won\'t ring. You can remove it in CallShield.</string>
     <string name="notif_action_not_spam">Not spam</string>
     <string name="notif_action_report">Report</string>
     <!-- Kinds of unsafe link; each fills "contains a %s link" and "flagged as %s". -->
@@ -1520,7 +1521,7 @@
     <string name="feedback_whitelisted">Number marked as safe</string>
     <string name="notification_action_failed">That didn\'t work. Try again from the app.</string>
     <string name="export_share_failed">Couldn\'t create the export file. Storage may be full.</string>
-    <string name="export_log_empty">Nothing to export yet. No calls or messages have been blocked.</string>
+    <string name="export_log_empty">Nothing to export yet. No calls have been blocked and no texts flagged.</string>
     <string name="export_redress_empty">Nothing to export yet. No calls have been blocked.</string>
     <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
@@ -1629,17 +1630,30 @@
     <string name="accessibility_reason_on_device_analysis">This item was blocked because on-device protection found it likely to be spam.</string>
     <string name="accessibility_reason_meeting_mode">This call was silenced because you were in a meeting.</string>
     <string name="accessibility_reason_recent_reports">This item was blocked because recent reports identified the number as spam.</string>
-    <string name="accessibility_reason_spam_website">This item was blocked because the message contained a website linked to spam.</string>
+    <string name="accessibility_reason_spam_website">This message was flagged because it contained a website linked to spam.</string>
     <string name="accessibility_reason_push_alert">This item was blocked because a trusted alert identified it as spam.</string>
     <string name="accessibility_reason_message_trust">This item was allowed because you have an existing message history with the sender.</string>
-    <string name="accessibility_reason_message_burst">This item was blocked because the sender sent several messages in a short time.</string>
-    <string name="accessibility_reason_carrier_label">This item was blocked because your carrier labeled the sender a likely scam.</string>
-    <string name="accessibility_reason_keyword">This item was blocked because the message matched one of your keyword rules.</string>
-    <string name="accessibility_reason_message_content">This item was blocked because the message content looked like spam.</string>
-    <string name="accessibility_reason_message_filter">This item was blocked because the message matched a spam filter.</string>
+    <string name="accessibility_reason_message_burst">This message was flagged because the sender sent several messages in a short time.</string>
+    <string name="accessibility_reason_carrier_label">This message was flagged because your carrier labeled the sender a likely scam.</string>
+    <string name="accessibility_reason_keyword">This message was flagged because it matched one of your keyword rules.</string>
+    <string name="accessibility_reason_message_content">This message was flagged because its content looked like spam.</string>
+    <string name="accessibility_reason_message_filter">This message was flagged because it matched a spam filter.</string>
     <string name="accessibility_reason_category">This item was blocked because it matched one of your category rules.</string>
     <string name="accessibility_reason_degraded">This item was allowed while protection was incomplete.</string>
     <string name="accessibility_reason_unknown">This item was blocked by a CallShield protection rule.</string>
+    <string name="accessibility_message_reason_database">This message was flagged because the sender is in the spam database.</string>
+    <string name="accessibility_message_reason_prefix">This message was flagged because the sender matches a known spam number range.</string>
+    <string name="accessibility_message_reason_regulatory_prefix">This message was flagged because the sender is in a telemarketing number range you chose to block.</string>
+    <string name="accessibility_message_reason_recent_reports">This message was flagged because recent reports identified the sender as spam.</string>
+    <string name="accessibility_message_reason_user_rule">This message was flagged because you saved a rule for the sender.</string>
+    <string name="accessibility_message_reason_saved_pattern">This message was flagged because the sender matches one of your saved number patterns.</string>
+    <string name="accessibility_message_reason_system_block_list">This message was flagged because the sender is on the phone\'s block list.</string>
+    <string name="accessibility_message_reason_hidden_sender">This message was flagged because it came without a sender number.</string>
+    <string name="accessibility_message_reason_suspicious_patterns">This message was flagged because the sender matched several suspicious patterns.</string>
+    <string name="accessibility_message_reason_on_device_analysis">This message was flagged because on-device protection found it likely to be spam.</string>
+    <string name="accessibility_message_reason_campaign">This message was flagged because it matched a recent burst of spam.</string>
+    <string name="accessibility_message_reason_category">This message was flagged because it matched one of your category rules.</string>
+    <string name="accessibility_message_reason_unknown">This message was flagged by a CallShield protection rule.</string>
 
     <!-- Protection Test: v1.2.8 additions -->
     <string name="test_campaign_detection">Campaign detection</string>
@@ -1677,8 +1691,8 @@
         <item quantity="other">%1$s reports</item>
     </plurals>
     <plurals name="notif_summary_text_recent">
-        <item quantity="one">Blocked %d spam item recently</item>
-        <item quantity="other">Blocked %d spam items recently</item>
+        <item quantity="one">Caught %d spam item recently</item>
+        <item quantity="other">Caught %d spam items recently</item>
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
     <string name="settings_region_cnap_summary">Allowed regions: %1$d · Trusted names: %2$d · Blocked names: %3$d</string>
@@ -1761,7 +1775,7 @@
     <string name="reasoning_emergency_floor_headline">Emergency and public-safety numbers always ring.</string>
     <string name="reasoning_emergency_floor_detail">No rule, list or setting in CallShield can block them.</string>
     <string name="reasoning_otp_floor_headline">This looked like a verification code, so it was let through.</string>
-    <string name="reasoning_otp_floor_detail">Short messages carrying a one-time code are never blocked, so sign-ins keep working.</string>
+    <string name="reasoning_otp_floor_detail">Short messages carrying a one-time code are never flagged, so sign-ins keep working.</string>
     <string name="reasoning_emergency_contact_headline">This is one of your emergency contacts.</string>
     <string name="reasoning_emergency_contact_detail">Always rings through. It bypasses your blocklist, quiet hours and aggressive mode.</string>
     <string name="reasoning_manual_whitelist_headline">You added this number to your whitelist.</string>

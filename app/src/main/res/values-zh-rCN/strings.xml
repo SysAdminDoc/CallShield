@@ -134,7 +134,7 @@
     <string name="blocked_log_filter_calls">通话</string>
     <string name="blocked_log_filter_sms">短信</string>
     <string name="blocked_log_empty_all_title">暂无已拦截活动</string>
-    <string name="blocked_log_empty_all_body">当 CallShield 拦截一个通话或短信时，完整原因与恢复操作将显示在此处。</string>
+    <string name="blocked_log_empty_all_body">当 CallShield 拦截通话或标记短信时，完整原因与恢复操作将显示在此处。</string>
     <string name="blocked_log_empty_filter_title">无匹配此筛选的内容</string>
     <string name="blocked_log_empty_filter_body">日志有活动，但此视图已筛选至零条。</string>
     <string name="blocked_log_show_all">显示全部活动</string>
@@ -553,7 +553,7 @@
     <string name="settings_days">%d天</string>
     <string name="settings_export">导出</string>
     <string name="settings_export_csv">将拦截日志导出为 CSV</string>
-    <string name="settings_export_csv_desc">将拦截的通话/短信导出为 CSV 文件。短信正文默认已脱敏。</string>
+    <string name="settings_export_csv_desc">将已拦截的通话和已标记的短信导出为 CSV 文件。短信正文默认已脱敏。</string>
     <string name="settings_export_raw_sms_csv">导出原始短信正文</string>
     <string name="settings_export_raw_sms_csv_desc">创建一份单独的 CSV，包含被标记短信的原始文本。</string>
     <string name="settings_export_raw_sms_confirm_title">导出原始短信文本？</string>
@@ -589,7 +589,7 @@
     <string name="backup_section_settings">设置</string>
     <string name="backup_section_settings_desc">检测偏好，不含凭据</string>
     <string name="backup_section_logs">日志</string>
-    <string name="backup_section_logs_desc">已拦截通话/短信历史，可能包含短信文本</string>
+    <string name="backup_section_logs_desc">已拦截通话和已标记短信的历史，可能包含短信文本</string>
     <string name="settings_external_blocklists">外部拦截列表</string>
     <string name="settings_external_blocklists_desc">订阅 HTTPS 的 CSV、TXT 或 JSON 号码列表。CallShield 会预览变更、限制导入量，并将每个订阅源独立存储以便移除。</string>
     <string name="settings_external_blocklist_url">拦截列表 URL</string>
@@ -837,7 +837,7 @@
     <string name="protection_test_notification_access">通知访问权限（RCS）</string>
     <string name="permission_contract_degraded_call_log">无通话记录访问权限时，最近通话扫描、回拨信任、频次检查与已拦截通话历史将受限。</string>
     <string name="permission_contract_degraded_contacts">无联系人访问权限时，联系人白名单与本地主叫信任无法保护已知来电者，“仅限联系人”模式也会暂停，任何人来电都会响铃。</string>
-    <string name="permission_contract_degraded_read_sms">无短信收件箱访问权限时，短信收件箱扫描与已拦截消息核查无法读取已有文本。</string>
+    <string name="permission_contract_degraded_read_sms">无短信收件箱访问权限时，短信收件箱扫描与已标记消息核查无法读取已有文本。</string>
     <string name="permission_contract_degraded_receive_sms">在授予接收短信权限前，入站短信垃圾过滤无法检查新文本。</string>
     <string name="permission_contract_degraded_call_screening">在 CallShield 成为活跃来电筛查应用前，实时拦截不可用。</string>
     <string name="permission_contract_call_screening_unsupported">此 Android 版本未暴露默认来电筛查角色。</string>
@@ -849,7 +849,7 @@
     <string name="permission_contract_degraded_notification_access">在启用监听器权限前，RCS 过滤与推送提醒主叫信任无法读取可信消息通知。</string>
     <string name="permission_contract_post_notifications_name">通知权限</string>
     <string name="permission_contract_post_notifications_denied">已拒绝 — 告警与核查操作可能隐藏</string>
-    <string name="permission_contract_degraded_post_notifications">在授予通知权限前，已拦截通话/短信的告警、核查操作与每日摘要可能被抑制。</string>
+    <string name="permission_contract_degraded_post_notifications">在授予通知权限前，已拦截通话和已标记短信的告警、核查操作与每日摘要可能被抑制。</string>
     <string name="permission_contract_post_notifications_not_required">此 Android 版本不需要</string>
     <string name="changelog_latest">最新</string>
     <string name="changelog_latest_release">最新版本</string>
@@ -1007,7 +1007,7 @@
     <string name="share_spam_warning_type">类型：%s。</string>
     <string name="share_spam_warning_subject">垃圾号码警告：%s</string>
     <string name="share_spam_warning_chooser_title">分享垃圾警告</string>
-    <string name="notif_channel_blocked">已拦截通话与短信</string>
+    <string name="notif_channel_blocked">已拦截通话与已标记短信</string>
     <string name="notif_channel_blocked_desc">拦截垃圾通话或标记垃圾短信时发出通知</string>
     <string name="notif_channel_rating">垃圾评分</string>
     <string name="notif_channel_rating_desc">通话结束后将其评为垃圾</string>
@@ -1038,6 +1038,7 @@
     <string name="notif_action_block_forever">永久拦截</string>
     <string name="desc_allowed_from_notification">从拦截通知中放行</string>
     <string name="notif_not_spam_allowed">接下来 24 小时内，此号码的来电会正常响铃。</string>
+    <string name="notif_not_spam_refused">你对此号码设置的拦截仍然有效，因此不会响铃。可以在 CallShield 中移除。</string>
     <string name="notif_action_not_spam">不是骚扰</string>
     <string name="notif_action_report">举报</string>
     <string name="url_threat_phishing">钓鱼</string>
@@ -1262,7 +1263,7 @@
     <string name="reasoning_emergency_floor_headline">紧急和公共安全号码始终会响铃。</string>
     <string name="reasoning_emergency_floor_detail">CallShield 中的任何规则、列表或设置都无法拦截它们。</string>
     <string name="reasoning_otp_floor_headline">这看起来是验证码，所以已放行。</string>
-    <string name="reasoning_otp_floor_detail">带有一次性验证码的短消息从不拦截，登录不会受影响。</string>
+    <string name="reasoning_otp_floor_detail">带有一次性验证码的短消息从不被标记，登录不会受影响。</string>
     <string name="reasoning_emergency_contact_headline">这是你的紧急联系人之一。</string>
     <string name="reasoning_emergency_contact_detail">始终会响铃，不受拦截列表、勿扰时段和激进拦截影响。</string>
     <string name="reasoning_manual_whitelist_headline">你已将此号码加入白名单。</string>

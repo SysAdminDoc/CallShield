@@ -39,7 +39,18 @@ class EnglishTextDashTest {
         // Several strings said otherwise, and the Home counter read "Texts blocked".
         val blockedText =
             Regex(
-                """\b(?:texts?|sms|messages?)\s+(?:(?:was|were|is|are|been|got)\s+)?blocked\b|\bblocked\s+(?:sms|texts?|messages?)\b""",
+                listOf(
+                    // "texts were blocked", "messages have been blocked"
+                    """\b(?:texts?|sms|messages?)\s+(?:(?:was|were|is|are|been|got|(?:have|has|had)\s+been)\s+)?blocked\b""",
+                    // "blocked SMS", "blocked-message review", "blocked-call/SMS alerts"
+                    """\bblocked[\s-]+(?:calls?\s*/\s*)?(?:sms|texts?|messages?)\b""",
+                    // "Blocked calls and texts", "blocked call and SMS log", "Blocked calls & SMS"
+                    """\bblocked\s+calls?\s*(?:and|or|&amp;|&|/)\s*(?:sms|texts?|messages?)\b""",
+                    // "No calls or messages have been blocked", "messages ... are never blocked"
+                    """\b(?:texts?|sms|messages?)\b[^.]*\bblocked\b""",
+                    // "This item was blocked because the message contained a website"
+                    """\bblocked\s+because\b[^.]*\b(?:messages?|senders?|texts?)\b""",
+                ).joinToString("|"),
                 RegexOption.IGNORE_CASE,
             )
         val document =
@@ -56,7 +67,16 @@ class EnglishTextDashTest {
                 .map { element -> element.getAttribute("name").ifEmpty { element.textContent.take(60) } }
 
         assertEquals(emptyList<String>(), offenders)
-        listOf("Texts blocked", "Raw blocked SMS text", "spam calls/texts are blocked").forEach {
+        listOf(
+            "Texts blocked",
+            "Raw blocked SMS text",
+            "spam calls/texts are blocked",
+            "Blocked calls and texts will appear here.",
+            "Blocked calls & SMS",
+            "No calls or messages have been blocked.",
+            "Blocked-call/SMS alerts",
+            "This item was blocked because the sender sent several messages in a short time.",
+        ).forEach {
             assertEquals(it, true, blockedText.containsMatchIn(it))
         }
     }

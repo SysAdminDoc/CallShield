@@ -143,14 +143,20 @@ class SpamActionReceiver : BroadcastReceiver() {
         if (notifId >= 0) {
             notificationManager.cancel(notifId)
         }
-        Toast.makeText(appContext, appContext.getString(R.string.notif_not_spam_allowed), Toast.LENGTH_SHORT).show()
         return {
-            repo.temporaryAllowNumber(
-                number,
-                System.currentTimeMillis() + NotificationHelper.NOT_SPAM_ALLOW_MS,
-                appContext.getString(R.string.desc_allowed_from_notification),
-            )
-            if (NotificationHelper.notSpamReachesCommunity(reasonCode)) {
+            // A permanent block the user set wins over the allow, so the toast
+            // waits for the answer instead of promising a ring.
+            val allowed =
+                repo.temporaryAllowNumber(
+                    number,
+                    System.currentTimeMillis() + NotificationHelper.NOT_SPAM_ALLOW_MS,
+                    appContext.getString(R.string.desc_allowed_from_notification),
+                )
+            withContext(Dispatchers.Main) {
+                val message = if (allowed) R.string.notif_not_spam_allowed else R.string.notif_not_spam_refused
+                Toast.makeText(appContext, appContext.getString(message), Toast.LENGTH_SHORT).show()
+            }
+            if (allowed && NotificationHelper.notSpamReachesCommunity(reasonCode)) {
                 CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
             }
         }

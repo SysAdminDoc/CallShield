@@ -59,4 +59,29 @@ class SourceDescriptionsTest {
 
         assertEquals(SourceDescriptions.readable(context, stored).lines(), reasoning.bullets)
     }
+
+    @Test
+    fun `older role names read as their roles`() {
+        // 17,585 rows say "FCC caller ID" and 8,932 say "FCC advertiser" (database v49).
+        assertEquals(
+            listOf(
+                "FCC complaints about the caller ID: Robocalls, Telemarketing",
+                "FCC complaints giving it as the number to call back: Robocalls, Telemarketing",
+            ),
+            SourceDescriptions
+                .readable(
+                    context,
+                    "FCC advertiser: Robocalls; FCC caller ID: Robocalls; FCC caller ID: Telemarketing; FCC advertiser: Telemarketing",
+                ).lines(),
+        )
+    }
+
+    @Test
+    fun `an unsplit FCC subject goes when a role names it with a call type`() {
+        // +18333041447 in database v49.
+        assertEquals(
+            listOf("FCC complaints giving it as the number to call back: Unwanted Calls (Prerecorded Voice)"),
+            SourceDescriptions.readable(context, "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice)").lines(),
+        )
+    }
 }

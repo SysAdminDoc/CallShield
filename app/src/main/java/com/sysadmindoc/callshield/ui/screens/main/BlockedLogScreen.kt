@@ -747,7 +747,7 @@ fun BlockedCallItem(
                             } else {
                                 "$reasonText$confidenceText"
                             }
-                        val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode))
+                        val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode, call.isCall))
                         Text(
                             label,
                             modifier =
@@ -921,7 +921,7 @@ fun GroupedCallItem(
                     )
                 }
                 if (call.reasonCode != BlockReasonCode.UNKNOWN) {
-                    val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode))
+                    val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode, call.isCall))
                     Text(
                         friendlyMatchReasonLabel(call.reasonCode.wireValue),
                         modifier =

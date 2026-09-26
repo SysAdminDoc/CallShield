@@ -443,7 +443,13 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 if (lookupResult.description.isNotEmpty()) {
                                     DetailRow(
                                         label = stringResource(R.string.lookup_details),
-                                        value = lookupResult.description,
+                                        value =
+                                            if (lookupResult.reasonCode == com.sysadmindoc.callshield.domain.model.BlockReasonCode.DATABASE) {
+                                                com.sysadmindoc.callshield.data.SourceDescriptions
+                                                    .readable(context, lookupResult.description)
+                                            } else {
+                                                lookupResult.description
+                                            },
                                     )
                                 }
                                 if (probabilistic) {

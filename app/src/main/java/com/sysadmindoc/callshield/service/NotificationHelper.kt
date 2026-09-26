@@ -492,11 +492,16 @@ object NotificationHelper {
                 // rapid children. Alert via the summary only so a burst of blocks
                 // stays a single coherent, non-muted group.
                 .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
-                .addAction(
-                    if (isCall) android.R.drawable.ic_menu_call else android.R.drawable.ic_menu_close_clear_cancel,
-                    context.getString(if (isCall) R.string.notif_action_not_spam else R.string.notif_action_block_forever),
-                    firstIntent,
-                ).addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
+        // A day's allow can't outrank the user's own rules, so a call they
+        // blocked themselves gets no Not spam that promises it will ring.
+        if (!isCall || notSpamCanAllow(number, BlockReasonCode.fromMatchSource(reason))) {
+            builder.addAction(
+                if (isCall) android.R.drawable.ic_menu_call else android.R.drawable.ic_menu_close_clear_cancel,
+                context.getString(if (isCall) R.string.notif_action_not_spam else R.string.notif_action_block_forever),
+                firstIntent,
+            )
+        }
+        builder.addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
         builder.addSmsSafeAction(context, number, nid, isCall)
 
         safeNotify(context, nid, builder)
@@ -512,6 +517,29 @@ object NotificationHelper {
         reasonCode == BlockReasonCode.DATABASE ||
             reasonCode == BlockReasonCode.DB_PREFIX_EXPANSION ||
             reasonCode == BlockReasonCode.HOT_LIST
+
+    /**
+     * Whether Not spam can make this caller ring. The 24-hour allow runs at
+     * [com.sysadmindoc.callshield.data.checker.CheckerPriority.TEMPORARY_ALLOW],
+     * below contacts-only, a failed STIR/SHAKEN check and the user's own
+     * blocklist, system list and wildcard rules, and a hidden caller has no
+     * number to allow.
+     */
+    fun notSpamCanAllow(
+        number: String,
+        reasonCode: BlockReasonCode,
+    ): Boolean = number.isNotBlank() && reasonCode !in reasonsAboveTemporaryAllow
+
+    private val reasonsAboveTemporaryAllow =
+        setOf(
+            BlockReasonCode.CONTACTS_ONLY,
+            BlockReasonCode.STIR_SHAKEN_FAILED,
+            BlockReasonCode.USER_BLOCKLIST,
+            BlockReasonCode.SYSTEM_BLOCK_LIST,
+            BlockReasonCode.WILDCARD,
+            BlockReasonCode.HASH_WILDCARD,
+            BlockReasonCode.HIDDEN_NUMBER,
+        )
 
     private fun reasonLabelRes(reasonCode: BlockReasonCode): Int =
         when (reasonCode) {

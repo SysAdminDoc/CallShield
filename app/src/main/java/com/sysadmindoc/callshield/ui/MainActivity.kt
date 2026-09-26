@@ -524,7 +524,7 @@ fun SearchResultsView(
                             )
                             if (number.description.isNotEmpty()) {
                                 Text(
-                                    number.description,
+                                    readableNumberDescription(number),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = CatSubtext,
                                     maxLines = 1,

@@ -15,7 +15,6 @@ import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
-import com.sysadmindoc.callshield.data.SourceDescriptions
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
@@ -417,7 +416,8 @@ internal class DatabaseChecker(
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val entry = ctx.lookupForms.firstNotNullOfOrNull { form -> repo.findByNumberInternal(form)?.takeUnless { it.isUserBlocked } }
         return if (entry != null) {
-            BlockResult.block("database", entry.type, SourceDescriptions.readable(ctx.appContext, entry.description))
+            // The stored text, so a block saved from Lookup keeps it; screens format it.
+            BlockResult.block("database", entry.type, entry.description)
         } else {
             null
         }

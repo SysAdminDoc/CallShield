@@ -23,15 +23,20 @@ All notable changes to CallShield will be documented in this file.
   base domain.
 - Number details, Lookup and the block explanation describe FCC and FTC
   complaints in words, one line per kind, instead of the importer's field names
-  ("FCC callback_business") and the same complaint repeated.
+  ("FCC callback_business") and the same complaint repeated. Older rows that
+  say "caller ID" or "advertiser" read the same way, and so do the database
+  browser and search results. Your own notes are shown as you wrote them.
 - The database is also published as data/spam_numbers.txt, one number per
   line under a short header, signed like the app's feeds, for projects that
   only want the list rather than the 51 MB JSON.
 - A blocked-call alert offers Not spam, which lets the number ring for the next
   24 hours, instead of Block forever for a number that was already blocked.
   When the block came from the shared database it also tells the community
-  database it was wrong. Texts are called flagged everywhere, since they still
-  reach your messaging app, and the daily summary says "last 24 hours"
+  database it was wrong. It isn't offered when your own rule, contacts-only
+  mode or a failed caller ID check blocked the call, since a day's allow can't
+  outrank those. Texts are called flagged everywhere, including the log, the
+  export, the alert channel and what TalkBack reads for a text's reason, since
+  they still reach your messaging app. The daily summary says "last 24 hours"
   rather than "today".
 - Texts whose sender is a carrier's scam label are flagged. Singapore renames
   unregistered senders Likely-SCAM, Ireland Likely Scam and Australia

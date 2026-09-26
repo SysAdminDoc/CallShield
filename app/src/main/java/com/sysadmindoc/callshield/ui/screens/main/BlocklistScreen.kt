@@ -1010,7 +1010,12 @@ fun BlocklistItem(
             ) {
                 Text(PhoneFormatter.formatIsolated(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 if (number.description.isNotEmpty()) {
-                    Text(number.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    Text(
+                        com.sysadmindoc.callshield.ui
+                            .readableNumberDescription(number),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
                 }
                 StatusPill(
                     text = stringResource(R.string.blocklist_manual_badge),
@@ -1392,7 +1397,12 @@ fun DatabaseItem(number: SpamNumber) {
                     )
                 }
                 if (number.description.isNotEmpty()) {
-                    Text(number.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    Text(
+                        com.sysadmindoc.callshield.ui
+                            .readableNumberDescription(number),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
                 }
             }
         }

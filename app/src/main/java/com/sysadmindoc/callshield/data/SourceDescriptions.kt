@@ -13,7 +13,8 @@ import com.sysadmindoc.callshield.R
  * of complaint, and running it twice changes nothing.
  */
 internal object SourceDescriptions {
-    private val complaint = Regex("""^(FCC|FTC)(?:\s+(caller_id|callback_business|caller ID))?:\s*(.+)$""")
+    private val complaint = Regex("""^(FCC|FTC)(?:\s+(caller_id|caller ID|callback_business|advertiser))?:\s*(.+)$""")
+    private val callTypeSuffix = Regex("""\s*\([^)]*\)$""")
     private val separator = Regex("""\s*[;\n]\s*""")
     private val whitespace = Regex("""\s+""")
 
@@ -41,19 +42,24 @@ internal object SourceDescriptions {
                 continue
             }
             val (source, role, subject) = match.destructured
+            // Older imports wrote "caller ID" and "advertiser" for the roles
+            // the importer now calls caller_id and callback_business.
             val kind =
                 when {
                     source == "FTC" -> Kind.FTC_CALLER_ID
-                    role == "callback_business" -> Kind.FCC_CALLBACK
-                    role == "caller_id" -> Kind.FCC_CALLER_ID
+                    role == "callback_business" || role == "advertiser" -> Kind.FCC_CALLBACK
+                    role == "caller_id" || role == "caller ID" -> Kind.FCC_CALLER_ID
                     else -> Kind.FCC_UNSPECIFIED
                 }
             subjects.getOrPut(kind) { LinkedHashSet() } += subject
         }
         // "FCC: X" predates the importer splitting complaints by role, and it
-        // repeats a subject one of the roles already names.
-        val named = subjects[Kind.FCC_CALLER_ID].orEmpty() + subjects[Kind.FCC_CALLBACK].orEmpty()
-        subjects[Kind.FCC_UNSPECIFIED]?.removeAll(named)
+        // repeats a subject one of the roles already names, often with the
+        // call type added: "Unwanted Calls (Prerecorded Voice)".
+        val named =
+            (subjects[Kind.FCC_CALLER_ID].orEmpty() + subjects[Kind.FCC_CALLBACK].orEmpty())
+                .mapTo(HashSet()) { it.replace(callTypeSuffix, "") }
+        subjects[Kind.FCC_UNSPECIFIED]?.removeAll { it.replace(callTypeSuffix, "") in named }
         val lines =
             Kind.entries.mapNotNull { kind ->
                 subjects[kind]?.takeIf { it.isNotEmpty() }?.let { context.getString(kind.format, it.joinToString(", ")) }

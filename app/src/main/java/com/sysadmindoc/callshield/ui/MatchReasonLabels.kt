@@ -1,8 +1,12 @@
 package com.sysadmindoc.callshield.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.SourceDescriptions
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
@@ -279,6 +283,64 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.PIPELINE_DIAGNOSTIC -> R.string.accessibility_reason_degraded
         BlockReasonCode.UNKNOWN -> R.string.accessibility_reason_unknown
     }
+
+/**
+ * The spoken reason for a log row. A text is only ever flagged, never blocked,
+ * so its reasons get their own sentences; allow reasons and the message-only
+ * reasons already fit both.
+ */
+fun blockReasonAccessibilityLabelRes(
+    reasonCode: BlockReasonCode,
+    isCall: Boolean,
+): Int =
+    if (isCall) {
+        blockReasonAccessibilityLabelRes(reasonCode)
+    } else {
+        when (reasonCode) {
+            BlockReasonCode.DATABASE -> R.string.accessibility_message_reason_database
+
+            BlockReasonCode.DB_PREFIX_EXPANSION, BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK -> R.string.accessibility_message_reason_prefix
+
+            BlockReasonCode.REGULATORY_PREFIX -> R.string.accessibility_message_reason_regulatory_prefix
+
+            BlockReasonCode.HOT_LIST -> R.string.accessibility_message_reason_recent_reports
+
+            BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.accessibility_message_reason_user_rule
+
+            BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.accessibility_message_reason_saved_pattern
+
+            BlockReasonCode.SYSTEM_BLOCK_LIST -> R.string.accessibility_message_reason_system_block_list
+
+            BlockReasonCode.HIDDEN_NUMBER -> R.string.accessibility_message_reason_hidden_sender
+
+            BlockReasonCode.HEURISTIC -> R.string.accessibility_message_reason_suspicious_patterns
+
+            BlockReasonCode.ML_SCORER -> R.string.accessibility_message_reason_on_device_analysis
+
+            BlockReasonCode.CAMPAIGN_RECORDER, BlockReasonCode.CAMPAIGN_BURST -> R.string.accessibility_message_reason_campaign
+
+            BlockReasonCode.CATEGORY_POLICY -> R.string.accessibility_message_reason_category
+
+            BlockReasonCode.STIR_SHAKEN_FAILED,
+            BlockReasonCode.CALLER_NAME_BLOCK,
+            BlockReasonCode.TIME_BLOCK,
+            BlockReasonCode.FREQUENCY,
+            BlockReasonCode.PUSH_ALERT,
+            BlockReasonCode.UNKNOWN,
+            -> R.string.accessibility_message_reason_unknown
+
+            else -> blockReasonAccessibilityLabelRes(reasonCode)
+        }
+    }
+
+/** A database row's description in words. A user's own note is shown as written. */
+@Composable
+fun readableNumberDescription(number: SpamNumber): String {
+    val context = LocalContext.current
+    return remember(context, number.description, number.source) {
+        if (number.source == "user") number.description else SourceDescriptions.readable(context, number.description)
+    }
+}
 
 /**
  * Localized display label for a stored reason. Legacy rows are converted by

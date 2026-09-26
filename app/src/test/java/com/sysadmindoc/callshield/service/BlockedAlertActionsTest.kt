@@ -6,6 +6,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -72,5 +73,43 @@ class BlockedAlertActionsTest {
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HEURISTIC))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.USER_BLOCKLIST))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.ML_SCORER))
+    }
+
+    @Test
+    fun `Not spam is offered only when a day's allow can make the call ring`() {
+        // The allow runs below these checks, so it could never override them.
+        listOf(
+            CheckerPriority.CONTACTS_ONLY,
+            CheckerPriority.STIR_SHAKEN,
+            CheckerPriority.USER_BLOCKLIST,
+            CheckerPriority.SYSTEM_BLOCK_LIST,
+            CheckerPriority.WILDCARD_RULE,
+            CheckerPriority.HASH_WILDCARD_RULE,
+        ).forEach { assertTrue(it > CheckerPriority.TEMPORARY_ALLOW) }
+        listOf(
+            BlockReasonCode.CONTACTS_ONLY,
+            BlockReasonCode.STIR_SHAKEN_FAILED,
+            BlockReasonCode.USER_BLOCKLIST,
+            BlockReasonCode.SYSTEM_BLOCK_LIST,
+            BlockReasonCode.WILDCARD,
+            BlockReasonCode.HASH_WILDCARD,
+        ).forEach { assertFalse(it.name, NotificationHelper.notSpamCanAllow("+12125550113", it)) }
+        listOf(
+            BlockReasonCode.DATABASE,
+            BlockReasonCode.PREFIX,
+            BlockReasonCode.HOT_LIST,
+            BlockReasonCode.HEURISTIC,
+            BlockReasonCode.TEMPORARY_BLOCK,
+            BlockReasonCode.TIME_BLOCK,
+        ).forEach { assertTrue(it.name, NotificationHelper.notSpamCanAllow("+12125550113", it)) }
+        // A hidden caller has no number to allow.
+        assertFalse(NotificationHelper.notSpamCanAllow("", BlockReasonCode.DATABASE))
+    }
+
+    @Test
+    fun `a call blocked by the user's own wildcard gets Report only`() {
+        NotificationHelper.notifyBlocked(context, "+12125550114", "wildcard", isCall = true)
+
+        assertEquals(listOf("Report"), postedAlert().actions.map { it.title.toString() })
     }
 }

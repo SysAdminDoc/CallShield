@@ -106,4 +106,22 @@ class MatchReasonLabelsTest {
             )
         }
     }
+
+    @Test
+    fun `a text row never says the text was blocked`() {
+        // A text still reaches the messaging app, so its row is flagged. TalkBack
+        // read "This item was blocked because it is in the spam database".
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val blocked = Regex("""\bblocked\b""", RegexOption.IGNORE_CASE)
+
+        BlockReasonCode.entries.forEach { reasonCode ->
+            val sentence = context.getString(blockReasonAccessibilityLabelRes(reasonCode, isCall = false))
+            assertFalse("${reasonCode.wireValue}: $sentence", blocked.containsMatchIn(sentence))
+            assertTrue(reasonCode.wireValue, sentence.endsWith('.'))
+        }
+        assertEquals(
+            context.getString(blockReasonAccessibilityLabelRes(BlockReasonCode.DATABASE)),
+            context.getString(blockReasonAccessibilityLabelRes(BlockReasonCode.DATABASE, isCall = true)),
+        )
+    }
 }
