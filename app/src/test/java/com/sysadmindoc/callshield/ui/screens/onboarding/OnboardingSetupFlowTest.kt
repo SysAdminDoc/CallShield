@@ -35,6 +35,8 @@ class OnboardingSetupFlowTest {
 
         assertTrue(state.isReady)
         assertEquals(2, state.completedSetupCount)
+        assertEquals(2, state.requiredSetupCount)
+        assertEquals(2, state.requiredSetupTotal)
         assertFalse(state.isComplete(OnboardingSetupStep.NotificationAccess))
     }
 

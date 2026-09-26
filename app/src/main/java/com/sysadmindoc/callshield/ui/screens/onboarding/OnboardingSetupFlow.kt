@@ -44,8 +44,14 @@ internal data class OnboardingSetupState(
     val completedSetupCount: Int
         get() = setupSteps.count(::isComplete)
 
+    val requiredSetupCount: Int
+        get() = setupSteps.count { it !in optionalSetupSteps && isComplete(it) }
+
+    val requiredSetupTotal: Int
+        get() = setupSteps.count { it !in optionalSetupSteps }
+
     val isReady: Boolean
-        get() = setupSteps.filterNot { it in optionalSetupSteps }.all(::isComplete)
+        get() = requiredSetupCount == requiredSetupTotal
 }
 
 internal val onboardingSteps = OnboardingSetupStep.entries

@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Setup now counts only the two required grants in its progress header. Its
+  protection cards use tighter spacing and clearer selection styling.
 - Home now puts today's results, call and text readiness, the latest blocked
   caller and protection levels ahead of the longer checks and tools.
 - Home shows an empty recent-calls card until CallShield has stopped a call.

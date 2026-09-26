@@ -50,7 +50,6 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
@@ -72,15 +71,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -98,6 +100,7 @@ import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatPeach
+import com.sysadmindoc.callshield.ui.theme.CatRed
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatTeal
 import com.sysadmindoc.callshield.ui.theme.CatText
@@ -410,18 +413,32 @@ internal fun OnboardingScreenContent(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(R.string.onboarding_ready_count, setupState.completedSetupCount, setupSteps.size),
+                text = stringResource(R.string.onboarding_ready_count, setupState.requiredSetupCount, setupState.requiredSetupTotal),
                 style = MaterialTheme.typography.labelMedium,
                 color = if (setupState.isReady) CatGreen else CatSubtext,
             )
         }
         Spacer(Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { (currentPage + 1) / onboardingSteps.size.toFloat() },
-            modifier = Modifier.fillMaxWidth().height(4.dp),
-            color = presentation.accent,
-            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        )
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().semantics {
+                    progressBarRangeInfo = ProgressBarRangeInfo((currentPage + 1).toFloat(), 1f..onboardingSteps.size.toFloat())
+                },
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            onboardingSteps.indices.forEach { index ->
+                Box(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .background(
+                                if (index <= currentPage) presentation.accent else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                RoundedCornerShape(4.dp),
+                            ),
+                )
+            }
+        }
         Text(
             text = stringResource(R.string.onboarding_step, currentPage + 1, onboardingSteps.size),
             modifier = Modifier.padding(top = 8.dp),
@@ -755,41 +772,51 @@ private fun OnboardingProfileOptions(
         )
     options.forEach { (profile, labelRes, tag) ->
         val selected = selectedProfile == profile
+        val accent =
+            when (profile) {
+                BlockingProfiles.Profile.WORK -> CatGreen
+                BlockingProfiles.Profile.MAX -> CatRed
+                else -> CatBlue
+            }
         Surface(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .selectable(selected = selected, role = Role.RadioButton) { onChooseProfile(profile) }
                     .testTag(tag),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color =
+                if (selected) {
+                    accent.copy(alpha = 0.08f).compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerLow
+                },
             shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.35f)),
+            border = BorderStroke(1.dp, if (selected) accent else CatOverlay.copy(alpha = 0.35f)),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(
-                    imageVector = if (profile == BlockingProfiles.Profile.CONTACTS_ONLY) Icons.Default.VerifiedUser else Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = if (selected) CatGreen else CatSubtext,
-                    modifier = Modifier.size(26.dp),
-                )
+                Box(
+                    modifier = Modifier.size(38.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(19.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (profile == BlockingProfiles.Profile.CONTACTS_ONLY) Icons.Default.VerifiedUser else Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(23.dp),
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(labelRes),
-                        color = CatText,
+                        color = if (selected) accent else CatText,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(profile.descriptionRes),
-                        color = CatSubtext,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     val details =
                         listOf(
                             R.string.profile_detail_calls to
@@ -804,7 +831,7 @@ private fun OnboardingProfileOptions(
                         )
                     details.forEach { (labelRes, valueRes) ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(stringResource(labelRes), color = CatSubtext, style = MaterialTheme.typography.bodySmall)

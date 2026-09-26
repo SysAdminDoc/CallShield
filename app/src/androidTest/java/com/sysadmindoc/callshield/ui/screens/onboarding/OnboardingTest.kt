@@ -129,6 +129,7 @@ class OnboardingTest {
         repeat(3) { composeRule.onNodeWithTag(ONBOARDING_SKIP_OPTIONAL_BUTTON_TAG).performClick() }
 
         assertPage(7, "Protection is ready")
+        composeRule.onNodeWithText("2 of 2 ready").assertIsDisplayed()
         composeRule.onAllNodesWithText("Skipped")[0].assertIsDisplayed()
         composeRule
             .onNodeWithText("Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.")
