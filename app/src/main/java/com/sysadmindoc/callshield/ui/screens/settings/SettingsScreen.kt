@@ -133,7 +133,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
-    val urlhausRemoteLookup by viewModel.urlhausRemoteLookupEnabled.collectAsStateWithLifecycle()
+    val remoteUrlLookup by viewModel.remoteUrlLookupEnabled.collectAsStateWithLifecycle()
     val liveCallerEnrichment by viewModel.liveCallerEnrichmentEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
@@ -719,11 +719,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
             GradientDivider()
             SettingsToggle(
-                stringResource(R.string.settings_urlhaus_remote_lookup),
-                stringResource(R.string.settings_urlhaus_remote_lookup_desc),
+                stringResource(R.string.settings_remote_url_lookup),
+                stringResource(R.string.settings_remote_url_lookup_desc),
                 Icons.Default.Security,
-                urlhausRemoteLookup,
-            ) { viewModel.setUrlhausRemoteLookup(it) }
+                remoteUrlLookup,
+            ) { viewModel.setRemoteUrlLookup(it) }
             GradientDivider()
             SettingsToggle(
                 stringResource(R.string.settings_live_caller_enrichment),

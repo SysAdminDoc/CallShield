@@ -658,7 +658,7 @@ fun ChangelogScreen() {
                     "RCS notification filter via NotificationListenerService",
                     "30-minute hot list sync: trending numbers, campaign ranges, spam domains",
                     "SIT tone player for anti-autodialer during caller ID overlay",
-                    "URL safety checker (URLhaus) for phishing and malware notifications",
+                    "URL safety checker for phishing and malware notifications",
                     "SMS context trust allows known conversations automatically",
                     "AbstractAPI carrier/line-type enrichment (optional key)",
                     "OpenCNAM caller name lookup in overlay",

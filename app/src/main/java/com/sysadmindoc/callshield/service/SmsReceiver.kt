@@ -81,16 +81,16 @@ class SmsReceiver : BroadcastReceiver() {
         // Keep work off the main thread without spinning a raw thread per SMS.
         // goAsync() keeps the broadcast alive until pendingResult.finish() is
         // called. We use appScope rather than a short-lived one so local URL
-        // checks and the optional URLhaus lookup can continue afterward.
+        // checks and the optional link lookup can continue afterward.
         applicationScope.launch {
             var sender = ""
             var body = ""
-            var stripUrlhausQuery = true
+            var stripUrlQuery = true
             var remoteUrlLookupEnabled = false
             try {
                 val prefs = repo.readPrefsSnapshot()
-                stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
-                remoteUrlLookupEnabled = prefs[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false
+                stripUrlQuery = prefs[SpamRepository.KEY_URL_STRIP_QUERY] ?: true
+                remoteUrlLookupEnabled = prefs[SpamRepository.KEY_REMOTE_URL_LOOKUP] ?: false
                 val blockSmsEnabled = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
 
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
@@ -122,7 +122,7 @@ class SmsReceiver : BroadcastReceiver() {
 
                 // Spam classification + block logging is gated behind the
                 // Block-SMS toggle. Local phishing-URL checks below run
-                // regardless; remote URLhaus checks require their own opt-in.
+                // regardless; remote link checks require their own opt-in.
                 if (blockSmsEnabled) {
                     val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
                     if (result.isSpam) {
@@ -181,7 +181,7 @@ class SmsReceiver : BroadcastReceiver() {
                     val maliciousUrls =
                         UrlSafetyChecker.checkSmsBody(
                             body,
-                            stripQuery = stripUrlhausQuery,
+                            stripQuery = stripUrlQuery,
                             allowRemoteLookup = remoteUrlLookupEnabled,
                         )
                     if (maliciousUrls.isNotEmpty()) {

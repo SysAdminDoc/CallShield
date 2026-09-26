@@ -438,11 +438,11 @@ class MainViewModel
         val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val smsBurstEnabled = repo.smsBurstEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val urlhausStripQueryEnabled =
-            repo.urlhausStripQueryEnabled
+        val urlStripQueryEnabled =
+            repo.urlStripQueryEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val urlhausRemoteLookupEnabled =
-            repo.urlhausRemoteLookupEnabled
+        val remoteUrlLookupEnabled =
+            repo.remoteUrlLookupEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val liveCallerEnrichmentEnabled =
             repo.liveCallerEnrichmentEnabled
@@ -1186,9 +1186,9 @@ class MainViewModel
 
         fun setSmsBurst(v: Boolean) = viewModelScope.launch { repo.setSmsBurst(v) }
 
-        fun setUrlhausStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlhausStripQuery(v) }
+        fun setUrlStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlStripQuery(v) }
 
-        fun setUrlhausRemoteLookup(v: Boolean) = viewModelScope.launch { repo.setUrlhausRemoteLookup(v) }
+        fun setRemoteUrlLookup(v: Boolean) = viewModelScope.launch { repo.setRemoteUrlLookup(v) }
 
         fun setLiveCallerEnrichment(v: Boolean) = viewModelScope.launch { repo.setLiveCallerEnrichment(v) }
 

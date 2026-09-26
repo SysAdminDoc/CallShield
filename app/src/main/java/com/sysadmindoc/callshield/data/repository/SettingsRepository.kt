@@ -110,10 +110,10 @@ class SettingsRepository(
     val heuristicsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_HEURISTICS] ?: true }
     val smsContentEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_SMS_CONTENT] ?: true }
     val smsBurstEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_SMS_BURST] ?: true }
-    val urlhausStripQueryEnabled: Flow<Boolean> =
-        dataStore.data.map { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true }
-    val urlhausRemoteLookupEnabled: Flow<Boolean> =
-        dataStore.data.map { it[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false }
+    val urlStripQueryEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_URL_STRIP_QUERY] ?: true }
+    val remoteUrlLookupEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_REMOTE_URL_LOOKUP] ?: false }
     val liveCallerEnrichmentEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false }
     val contactWhitelistEnabled: Flow<Boolean> =
@@ -472,9 +472,9 @@ class SettingsRepository(
 
     suspend fun setSmsBurst(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SMS_BURST] = enabled }
 
-    suspend fun setUrlhausStripQuery(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = enabled }
+    suspend fun setUrlStripQuery(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URL_STRIP_QUERY] = enabled }
 
-    suspend fun setUrlhausRemoteLookup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] = enabled }
+    suspend fun setRemoteUrlLookup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REMOTE_URL_LOOKUP] = enabled }
 
     suspend fun setLiveCallerEnrichment(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] = enabled }
 

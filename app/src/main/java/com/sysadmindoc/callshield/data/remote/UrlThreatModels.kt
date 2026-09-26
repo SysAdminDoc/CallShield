@@ -7,8 +7,8 @@ enum class UrlThreatSource(
     val stableId: String,
     val defaultVersion: String,
 ) {
+    NONE("none", ""),
     LOCAL_SPAM_DOMAINS("local_spam_domains", "hot-domains-v1"),
-    URLHAUS("urlhaus", "community-api-v1"),
     PHISHTANK("phishtank", "lookup-api-v1"),
     OPENPHISH("openphish", "public-feed-v1"),
     SAFE_BROWSING("safe_browsing", "lookup-api-v4"),
@@ -178,12 +178,6 @@ internal object UrlThreatSourceManifest {
     val entries: List<Entry> =
         listOf(
             Entry(
-                UrlThreatSource.URLHAUS,
-                accessMode = "optional_auth_key",
-                privacyMode = "canonical_origin_only",
-                licenseNote = "abuse.ch community API; fair-use and Auth-Key terms apply",
-            ),
-            Entry(
                 UrlThreatSource.PHISHTANK,
                 accessMode = "public_low_rate_or_optional_app_key",
                 privacyMode = "canonical_origin_only",
@@ -193,7 +187,7 @@ internal object UrlThreatSourceManifest {
                 UrlThreatSource.OPENPHISH,
                 accessMode = "public_feed",
                 privacyMode = "local_feed_match",
-                licenseNote = "OpenPhish public-feed terms apply; do not redistribute the feed",
+                licenseNote = "OpenPhish public-feed terms limit use to personal or independent research; do not redistribute the feed",
             ),
             Entry(
                 UrlThreatSource.SAFE_BROWSING,
@@ -211,7 +205,6 @@ internal object UrlThreatSourceManifest {
 }
 
 internal data class UrlThreatAdapterConfig(
-    val urlhausAuthKey: String? = null,
     val phishTankAppKey: String? = null,
     val safeBrowsingApiKey: String? = null,
     val webRiskApiKey: String? = null,
@@ -220,16 +213,17 @@ internal data class UrlThreatAdapterConfig(
 
 internal object UrlThreatAdapterCatalog {
     fun all(config: UrlThreatAdapterConfig = UrlThreatAdapterConfig()): List<UrlThreatAdapter> =
-        listOf(
-            UrlhausThreatAdapter(authKey = config.urlhausAuthKey),
-            PhishTankThreatAdapter(appKey = config.phishTankAppKey),
-            OpenPhishThreatAdapter(),
-            if (config.commercialUse) {
-                WebRiskThreatAdapter(apiKey = config.webRiskApiKey)
-            } else {
-                SafeBrowsingThreatAdapter(apiKey = config.safeBrowsingApiKey)
-            },
-        )
+        buildList {
+            add(PhishTankThreatAdapter(appKey = config.phishTankAppKey))
+            if (!config.commercialUse) add(OpenPhishThreatAdapter())
+            add(
+                if (config.commercialUse) {
+                    WebRiskThreatAdapter(apiKey = config.webRiskApiKey)
+                } else {
+                    SafeBrowsingThreatAdapter(apiKey = config.safeBrowsingApiKey)
+                },
+            )
+        }
 
     fun enabled(config: UrlThreatAdapterConfig = UrlThreatAdapterConfig()): List<UrlThreatAdapter> = all(config).filter(UrlThreatAdapter::isConfigured)
 }

@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Removed the inactive URLhaus lookup and its Settings claim. Optional link
+  checks now name PhishTank and OpenPhish. The OpenPhish feed refreshes every
+  six hours and reuses its local copy when the server reports no change.
 - Cached prefix ranges now expire on time, even when no feed sync runs.
 - Frequency auto-block now counts prior incoming calls that reached the phone's
   call log as answered or missed. Calls stopped or silenced by CallShield, and

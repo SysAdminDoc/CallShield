@@ -623,8 +623,8 @@
     <string name="settings_heuristic_analysis_desc">VoIP ranges, premium rate, wangiri, rapid-fire</string>
     <string name="settings_sms_content">SMS content analysis</string>
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
-    <string name="settings_urlhaus_remote_lookup">Share link domains with threat feeds</string>
-    <string name="settings_urlhaus_remote_lookup_desc">Optional. Only the registrable domain goes to the threat feeds you turn on, never the message text.</string>
+    <string name="settings_remote_url_lookup">Check links with PhishTank and OpenPhish</string>
+    <string name="settings_remote_url_lookup_desc">PhishTank gets the domain. OpenPhish checks locally. Text stays private.</string>
     <string name="settings_sms_burst">SMS burst protection</string>
     <string name="settings_sms_burst_desc">Detect repeated unknown senders and message floods</string>
     <string name="settings_repeat_caller">Repeat caller auto-block</string>

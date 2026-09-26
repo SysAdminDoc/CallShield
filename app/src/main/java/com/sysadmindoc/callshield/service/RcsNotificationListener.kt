@@ -51,7 +51,7 @@ import kotlinx.coroutines.launch
  *  - If private-messenger/email content matches → keep the original and warn
  *  - If SMS blocking is disabled → skips spam classification/removal while
  *    retaining malicious-URL warnings
- *  - Fires URLhaus background check for URLs in RCS messages
+ *  - Checks links in RCS messages against the optional threat feeds
  *  - Logs blocked RCS to the CallShield blocked log (visible in Blocked tab)
  *
  * Google and Samsung Messages are the only screening defaults. Every other
@@ -191,8 +191,8 @@ class RcsNotificationListener : NotificationListenerService() {
         val repo = SpamRepository.getInstance(applicationContext)
         val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val prefs = repo.readPrefsSnapshot()
-        val stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
-        val remoteUrlLookupEnabled = prefs[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false
+        val stripUrlQuery = prefs[SpamRepository.KEY_URL_STRIP_QUERY] ?: true
+        val remoteUrlLookupEnabled = prefs[SpamRepository.KEY_REMOTE_URL_LOOKUP] ?: false
 
         // Notification screening owns content access; the Block SMS toggle
         // controls only spam classification/removal. URL warnings intentionally
@@ -295,7 +295,7 @@ class RcsNotificationListener : NotificationListenerService() {
                 effectiveBody,
                 sender,
                 source,
-                stripUrlhausQuery,
+                stripUrlQuery,
                 remoteUrlLookupEnabled,
             )
         }

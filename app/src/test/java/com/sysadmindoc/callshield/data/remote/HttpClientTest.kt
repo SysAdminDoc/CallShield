@@ -31,7 +31,6 @@ class HttpClientTest {
                 "raw.githubusercontent.com",
                 "callshield-reports.snafumatthew.workers.dev",
                 "spam.skipcalls.app",
-                "urlhaus-api.abuse.ch",
             ),
             HttpClient.pinnedEndpointPins.keys,
         )

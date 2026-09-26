@@ -71,12 +71,6 @@ object HttpClient {
                     "sha256/kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=",
                     "sha256/mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=",
                 ),
-            "urlhaus-api.abuse.ch" to
-                listOf(
-                    "sha256/Yz0ts4M9B9b1XBQTQtITniseuxd86RWgvl5+aekJM8Q=",
-                    "sha256/A7AXWj1rjKywVBFqQcQvoHEEWHeViDOFXrwzRs984Xc=",
-                    "sha256/68l4rg3Z5YItaxllJZb2IMk9fK76lSGRywUKYyypAF8=",
-                ),
         )
 
     internal val certificatePinner: CertificatePinner =

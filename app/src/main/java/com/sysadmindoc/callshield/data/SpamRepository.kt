@@ -182,8 +182,10 @@ class SpamRepository(
         val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         val KEY_SMS_BURST = booleanPreferencesKey("sms_burst_detection_enabled")
-        val KEY_URLHAUS_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
-        val KEY_URLHAUS_REMOTE_LOOKUP = booleanPreferencesKey("urlhaus_remote_lookup_enabled")
+
+        // Keep the old storage names so an app update preserves both settings.
+        val KEY_URL_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
+        val KEY_REMOTE_URL_LOOKUP = booleanPreferencesKey("urlhaus_remote_lookup_enabled")
         val KEY_LIVE_CALLER_ENRICHMENT = booleanPreferencesKey("live_caller_enrichment_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
@@ -393,8 +395,8 @@ class SpamRepository(
     val heuristicsEnabled: Flow<Boolean> = settingsRepository.heuristicsEnabled
     val smsContentEnabled: Flow<Boolean> = settingsRepository.smsContentEnabled
     val smsBurstEnabled: Flow<Boolean> = settingsRepository.smsBurstEnabled
-    val urlhausStripQueryEnabled: Flow<Boolean> = settingsRepository.urlhausStripQueryEnabled
-    val urlhausRemoteLookupEnabled: Flow<Boolean> = settingsRepository.urlhausRemoteLookupEnabled
+    val urlStripQueryEnabled: Flow<Boolean> = settingsRepository.urlStripQueryEnabled
+    val remoteUrlLookupEnabled: Flow<Boolean> = settingsRepository.remoteUrlLookupEnabled
     val liveCallerEnrichmentEnabled: Flow<Boolean> = settingsRepository.liveCallerEnrichmentEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
@@ -575,9 +577,9 @@ class SpamRepository(
 
     suspend fun setSmsBurst(enabled: Boolean) = settingsRepository.setSmsBurst(enabled)
 
-    suspend fun setUrlhausStripQuery(enabled: Boolean) = settingsRepository.setUrlhausStripQuery(enabled)
+    suspend fun setUrlStripQuery(enabled: Boolean) = settingsRepository.setUrlStripQuery(enabled)
 
-    suspend fun setUrlhausRemoteLookup(enabled: Boolean) = settingsRepository.setUrlhausRemoteLookup(enabled)
+    suspend fun setRemoteUrlLookup(enabled: Boolean) = settingsRepository.setRemoteUrlLookup(enabled)
 
     suspend fun setLiveCallerEnrichment(enabled: Boolean) = settingsRepository.setLiveCallerEnrichment(enabled)
 

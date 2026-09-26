@@ -147,7 +147,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
 - **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority. Area codes absent from the pinned NANP table pass through this regional rule
 - **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
-- **URL Safety**. Local spam-domain checks stay on-device. Optional URLhaus (abuse.ch) checks are off by default and disclose only the registrable domain
+- **URL Safety**. Local spam-domain checks stay on-device. Optional link checks use PhishTank and a six-hour OpenPhish feed. PhishTank receives only the site's base domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
 - **Answer & hang up**. Opt-in. A call CallShield would reject is answered without video and hung up after a delay you set (1 to 10 seconds), so spam can't leave a voicemail. Silent voicemail mode, auto-mute and a meeting-mode silence still go to voicemail, and the short answered call never counts toward trusting the caller. Contributed by tikkamasalla
@@ -342,7 +342,9 @@ scrape Nomorobo's restricted carrier feed.
 ### URL Safety (post-decision)
 | Source | What It Checks |
 |--------|---------------|
-| **URLhaus** (abuse.ch) | Optional, default-off malware-domain checks after local spam-domain matching; only the registrable domain is shared |
+| **Local spam-domain list** | Checks known spam domains on the phone |
+| **PhishTank** | Optional link lookup; receives only the site's base domain |
+| **OpenPhish** | Optional feed checked for updates after six hours of use; matches stay on the phone |
 
 ## Security
 
@@ -364,11 +366,11 @@ scrape Nomorobo's restricted carrier feed.
 
 ## Privacy
 
-All detection runs on-device. No personal data is collected. Network requests:
+Call and message decisions run on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
 - Optional live caller enrichment is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
 - Community reports to Cloudflare Worker (phone number only, no identity)
-- Local spam-domain checks don't disclose SMS/RCS links. Optional URLhaus checks are opt-in and send only the registrable domain
+- Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain, and the OpenPhish feed is downloaded for local matching. Neither receives message text
 
 No API keys. None required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
@@ -533,7 +535,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Settings | DataStore Preferences 1.2.1 |
 | Background | WorkManager 2.11.2 |
 | Community API | Cloudflare Workers |
-| URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
+| URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1556 JVM unit tests (JUnit) |
 | Strings | 1583 string resources and 38 plural groups (translation-ready) |

@@ -15,29 +15,29 @@ class UrlThreatAdaptersTest {
     fun `cache expires entries and keeps source and version isolated`() {
         var nowMillis = 1_000L
         val cache = UrlThreatCache(maxEntries = 4, clock = { nowMillis })
-        val urlhausResult =
+        val openPhishResult =
             UrlThreatResult.malicious(
-                source = UrlThreatSource.URLHAUS,
+                source = UrlThreatSource.OPENPHISH,
                 sourceVersion = "v1",
                 canonicalUrl = canonicalUrl,
                 category = UrlThreatCategory.MALWARE,
                 nowMillis = nowMillis,
             )
         val otherSourceResult =
-            urlhausResult.copy(
+            openPhishResult.copy(
                 source = UrlThreatSource.PHISHTANK,
                 sourceVersion = "v1",
-                expiresAtMillis = urlhausResult.expiresAtMillis + 1L,
+                expiresAtMillis = openPhishResult.expiresAtMillis + 1L,
             )
-        cache.put(urlhausResult)
+        cache.put(openPhishResult)
         cache.put(otherSourceResult)
 
-        assertEquals(urlhausResult, cache.get(UrlThreatSource.URLHAUS, "v1", canonicalUrl))
+        assertEquals(openPhishResult, cache.get(UrlThreatSource.OPENPHISH, "v1", canonicalUrl))
         assertEquals(otherSourceResult, cache.get(UrlThreatSource.PHISHTANK, "v1", canonicalUrl))
-        assertNull(cache.get(UrlThreatSource.URLHAUS, "v2", canonicalUrl))
+        assertNull(cache.get(UrlThreatSource.OPENPHISH, "v2", canonicalUrl))
 
-        nowMillis = urlhausResult.expiresAtMillis
-        assertNull(cache.get(UrlThreatSource.URLHAUS, "v1", canonicalUrl))
+        nowMillis = openPhishResult.expiresAtMillis
+        assertNull(cache.get(UrlThreatSource.OPENPHISH, "v1", canonicalUrl))
         assertNotNull(cache.get(UrlThreatSource.PHISHTANK, "v1", canonicalUrl))
     }
 
@@ -56,7 +56,7 @@ class UrlThreatAdaptersTest {
             nowMillis = nowMillis,
         )
 
-        val first = clean(UrlThreatSource.URLHAUS, "https://one.test/")
+        val first = clean(UrlThreatSource.LOCAL_SPAM_DOMAINS, "https://one.test/")
         val second = clean(UrlThreatSource.PHISHTANK, "https://two.test/")
         val third = clean(UrlThreatSource.OPENPHISH, "https://three.test/")
         cache.put(first)
@@ -68,41 +68,6 @@ class UrlThreatAdaptersTest {
         assertNull(cache.get(second.source, second.sourceVersion, second.canonicalUrl))
         assertNotNull(cache.get(third.source, third.sourceVersion, third.canonicalUrl))
         assertEquals(2, cache.sizeForTests())
-    }
-
-    @Test
-    fun `urlhaus parser distinguishes malware phishing clean and unknown`() {
-        val malware =
-            UrlhausThreatAdapter.parseUrlhausResponse(
-                """{"query_status":"is_malware","threat":"malware","tags":["elf","exe"]}""",
-                canonicalUrl,
-                1_000L,
-            )
-        val phishing =
-            UrlhausThreatAdapter.parseUrlhausResponse(
-                """{"query_status":"ok","threat":"phishing","url_status":"online"}""",
-                canonicalUrl,
-                1_000L,
-            )
-        val clean =
-            UrlhausThreatAdapter.parseUrlhausResponse(
-                """{"query_status":"no_results"}""",
-                canonicalUrl,
-                1_000L,
-            )
-        val unknown =
-            UrlhausThreatAdapter.parseUrlhausResponse(
-                """{"query_status":"temporarily_unavailable"}""",
-                canonicalUrl,
-                1_000L,
-            )
-
-        assertEquals(UrlThreatCategory.MALWARE, malware.category)
-        assertEquals(listOf("elf", "exe"), malware.tags)
-        assertEquals(UrlThreatVerdict.MALICIOUS, malware.verdict)
-        assertEquals(UrlThreatCategory.PHISHING, phishing.category)
-        assertEquals(UrlThreatVerdict.CLEAN, clean.verdict)
-        assertEquals(UrlThreatVerdict.UNKNOWN, unknown.verdict)
     }
 
     @Test
@@ -181,7 +146,8 @@ class UrlThreatAdaptersTest {
 
         assertTrue(UrlThreatSource.PHISHTANK in defaultSources)
         assertTrue(UrlThreatSource.OPENPHISH in defaultSources)
-        assertFalse(UrlThreatSource.URLHAUS in defaultSources)
+        assertEquals(setOf(UrlThreatSource.PHISHTANK, UrlThreatSource.OPENPHISH), defaultSources.toSet())
+        assertFalse(UrlThreatSource.OPENPHISH in commercialSources)
         assertTrue(UrlThreatSource.SAFE_BROWSING !in commercialSources)
         assertTrue(UrlThreatSource.WEB_RISK !in commercialSources)
 
@@ -200,8 +166,8 @@ class UrlThreatAdaptersTest {
     fun `source manifest records privacy and access posture for every remote source`() {
         val entries = UrlThreatSourceManifest.entries.associateBy { it.source }
 
-        assertEquals(5, entries.size)
-        assertEquals("canonical_origin_only", entries.getValue(UrlThreatSource.URLHAUS).privacyMode)
+        assertEquals(4, entries.size)
+        assertEquals("canonical_origin_only", entries.getValue(UrlThreatSource.PHISHTANK).privacyMode)
         assertEquals("local_feed_match", entries.getValue(UrlThreatSource.OPENPHISH).privacyMode)
         assertTrue(entries.getValue(UrlThreatSource.WEB_RISK).accessMode.contains("google_cloud"))
     }
