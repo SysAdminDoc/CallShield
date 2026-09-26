@@ -41,6 +41,8 @@ All notable changes to CallShield will be documented in this file.
 - The Report button opens GitHub's spam report form, so in-app reports arrive
   labelled. The tracker also has a bug report form that asks for the app
   version, Android version, phone and Protection test result.
+- Database v49 re-reads FCC's newest 500,000 complaints and adds 200 new FTC
+  ones, for 51,362 numbers.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,
