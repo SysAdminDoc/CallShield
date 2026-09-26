@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -110,6 +111,22 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
         contentWindowInsets = WindowInsets(0),
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    stringResource(R.string.blocked_log_heading),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(R.string.blocked_log_intro),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+            }
             // Filter chips
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
@@ -596,7 +613,13 @@ private fun BlockedLogEmptyState(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(SurfaceBright)
+                    .border(1.dp, CatMuted.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -665,30 +688,41 @@ fun BlockedCallItem(
             ),
     ) {
         Column {
+            val eventColor =
+                if (call.wasBlocked) {
+                    if (call.isCall) CatRed else CatMauve
+                } else {
+                    CatGreen
+                }
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector =
-                        if (call.isCall) {
-                            if (call.wasBlocked) Icons.Default.PhoneDisabled else Icons.Default.Phone
-                        } else {
-                            if (call.wasBlocked) Icons.Default.SpeakerNotesOff else Icons.Default.MarkEmailRead
-                        },
-                    contentDescription =
-                        stringResource(
-                            if (call.wasBlocked) {
-                                if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms
+                Box(
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(eventColor.copy(alpha = 0.12f))
+                            .border(1.dp, eventColor.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector =
+                            if (call.isCall) {
+                                if (call.wasBlocked) Icons.Default.PhoneDisabled else Icons.Default.Phone
                             } else {
-                                R.string.blocked_log_safety_exempted
+                                if (call.wasBlocked) Icons.Default.SpeakerNotesOff else Icons.Default.MarkEmailRead
                             },
-                        ),
-                    tint =
-                        if (call.wasBlocked) {
-                            if (call.isCall) CatRed else CatMauve
-                        } else {
-                            CatGreen
-                        },
-                    modifier = Modifier.size(32.dp),
-                )
+                        contentDescription =
+                            stringResource(
+                                if (call.wasBlocked) {
+                                    if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms
+                                } else {
+                                    R.string.blocked_log_safety_exempted
+                                },
+                            ),
+                        tint = eventColor,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(PhoneFormatter.formatIsolated(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)

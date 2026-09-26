@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Blocked activity now has a clear heading, a framed empty state and compact
+  status icons that distinguish stopped calls, flagged texts and exceptions.
 - Lookup now opens with a clear number-check prompt and a private-check card.
   Risk results group the app's actual reasons under Evidence, and checking a
   number closes the keypad so the verdict stays visible.
