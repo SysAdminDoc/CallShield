@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Frequency auto-block now counts prior incoming calls that reached the phone's
+  call log as answered or missed. Calls stopped or silenced by CallShield, and
+  diagnostic entries, no longer push a caller toward the repeat-call limit.
 - North American toll-free, VoIP, neighbor-spoof, hot-campaign and repeat-call
   checks now ignore international numbers whose last ten digits resemble a
   North American number. Other international risk checks still run.

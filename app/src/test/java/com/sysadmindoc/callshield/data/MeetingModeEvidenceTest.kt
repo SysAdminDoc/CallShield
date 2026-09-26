@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.runBlocking
@@ -51,7 +52,12 @@ class MeetingModeEvidenceTest {
     @Test
     fun `meeting silences don't count toward the repeat-caller frequency`() =
         runBlocking {
-            assertEquals(1, fixture.dao.getCallFrequencySince(number, since))
+            val frequency =
+                fixture.repository
+                    .traceRules(number)
+                    .entries
+                    .single { it.checkerName == "frequency" }
+            assertEquals(PipelineTraceVerdict.PASS, frequency.verdict)
         }
 
     @Test

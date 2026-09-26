@@ -55,16 +55,16 @@ class PendingBlockedCallLogDaoTest {
 
             assertTrue(dao.consumePendingBlockedCallLog(pending) != -1L)
             assertEquals(0, dao.getPendingBlockedCallLogCount())
-            assertEquals(1, dao.getCallFrequencySince("+15551234567", since = 0L))
+            assertEquals(1, dao.getBlockedCallTimesSince("+15551234567", since = 0L).size)
 
             assertTrue(dao.insertPendingBlockedCallLog(pending.copy(createdAt = 2_000L)) != -1L)
             assertEquals(-1L, dao.consumePendingBlockedCallLog(pending))
             assertEquals(0, dao.getPendingBlockedCallLogCount())
-            assertEquals(1, dao.getCallFrequencySince("+15551234567", since = 0L))
+            assertEquals(1, dao.getBlockedCallTimesSince("+15551234567", since = 0L).size)
         }
 
     @Test
-    fun messageLogsDoNotInflateCallFrequency() =
+    fun messageLogsDoNotEnterScreenedCallExclusions() =
         runBlocking {
             val number = "+15551234568"
             dao.insertBlockedCall(
@@ -86,7 +86,7 @@ class PendingBlockedCallLogDaoTest {
                 ),
             )
 
-            assertEquals(1, dao.getCallFrequencySince(number, since = 0L))
+            assertEquals(1, dao.getBlockedCallTimesSince(number, since = 0L).size)
         }
 
     @Test

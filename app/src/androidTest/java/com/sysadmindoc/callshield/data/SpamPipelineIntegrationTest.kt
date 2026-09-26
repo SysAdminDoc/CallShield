@@ -1,12 +1,19 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.ContentProvider
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
+import android.content.ContextWrapper
+import android.database.Cursor
+import android.database.MatrixCursor
+import android.net.Uri
+import android.provider.CallLog
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
-import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
@@ -241,15 +248,70 @@ class SpamPipelineIntegrationTest {
         runBlocking {
             repo.setFreqEscalation(true)
             val number = "+14155550123"
-            repeat(3) {
-                dao.insertBlockedCall(
-                    BlockedCall(
-                        number = number,
-                        timestamp = System.currentTimeMillis() - (it + 1) * 1_000L,
-                        matchReason = "missed_call",
-                    ),
-                )
-            }
+            val provider =
+                object : ContentProvider() {
+                    override fun onCreate() = true
+
+                    override fun query(
+                        uri: Uri,
+                        projection: Array<out String>?,
+                        selection: String?,
+                        selectionArgs: Array<out String>?,
+                        sortOrder: String?,
+                    ): Cursor {
+                        val columns = requireNotNull(projection)
+                        val result = MatrixCursor(columns)
+                        if (selection != "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} > ? AND ${CallLog.Calls.NUMBER} LIKE ?") {
+                            return result
+                        }
+                        val cutoff = requireNotNull(selectionArgs)[2].toLong()
+                        val now = System.currentTimeMillis()
+                        // Older than the urgent-allow window, still inside the seven-day frequency window.
+                        for (index in 1..3) {
+                            val calledAt = now - index * 86_400_000L
+                            if (calledAt <= cutoff) continue
+                            val values =
+                                Array<Any?>(columns.size) { column ->
+                                    when (columns[column]) {
+                                        CallLog.Calls.NUMBER -> number
+                                        CallLog.Calls.DATE -> calledAt
+                                        CallLog.Calls.TYPE -> CallLog.Calls.MISSED_TYPE
+                                        CallLog.Calls.MISSED_REASON -> 0L
+                                        else -> null
+                                    }
+                                }
+                            result.addRow(values)
+                        }
+                        return result
+                    }
+
+                    override fun getType(uri: Uri): String? = null
+
+                    override fun insert(
+                        uri: Uri,
+                        values: ContentValues?,
+                    ): Uri? = null
+
+                    override fun delete(
+                        uri: Uri,
+                        selection: String?,
+                        selectionArgs: Array<out String>?,
+                    ): Int = 0
+
+                    override fun update(
+                        uri: Uri,
+                        values: ContentValues?,
+                        selection: String?,
+                        selectionArgs: Array<out String>?,
+                    ): Int = 0
+                }
+            val fakeContext =
+                object : ContextWrapper(context) {
+                    override fun getApplicationContext(): Context = this
+
+                    override fun getContentResolver(): ContentResolver = ContentResolver.wrap(provider)
+                }
+            repo = stores.repository(fakeContext, db)
 
             val result = repo.isSpam(number)
 

@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
+import android.os.Build
+import android.provider.CallLog
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.SenderProvenance
@@ -24,6 +26,10 @@ import com.sysadmindoc.callshield.data.toSpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Suppress("TooManyFunctions", "ReturnCount")
 class SpamRepositoryImpl(
@@ -140,7 +146,65 @@ class SpamRepositoryImpl(
     internal suspend fun getCallFrequencySinceInternal(
         number: String,
         since: Long,
-    ): Int = dao.getCallFrequencySince(number, since)
+    ): Int =
+        withContext(Dispatchers.IO) {
+            val last7 = filterAsciiDigitsLast(number, 7)
+            if (last7.length != 7) return@withContext 0
+            val callerDigits = filterAsciiDigits(number)
+            val callerForms = equivalentForms(number).toSet()
+            val blockedTimes = dao.getBlockedCallTimesSince(number, since)
+            val hasMissedReason = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            val projection =
+                if (hasMissedReason) {
+                    arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.DATE, CallLog.Calls.TYPE, CallLog.Calls.MISSED_REASON)
+                } else {
+                    arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.DATE, CallLog.Calls.TYPE)
+                }
+            try {
+                val cursor =
+                    context.contentResolver.query(
+                        CallLog.Calls.CONTENT_URI,
+                        projection,
+                        "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} > ? AND ${CallLog.Calls.NUMBER} LIKE ?",
+                        arrayOf(
+                            CallLog.Calls.INCOMING_TYPE.toString(),
+                            CallLog.Calls.MISSED_TYPE.toString(),
+                            since.toString(),
+                            "%$last7",
+                        ),
+                        "${CallLog.Calls.DATE} DESC",
+                    ) ?: return@withContext 0
+                cursor.use { rows ->
+                    val numberIndex = rows.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
+                    val dateIndex = rows.getColumnIndexOrThrow(CallLog.Calls.DATE)
+                    val typeIndex = rows.getColumnIndexOrThrow(CallLog.Calls.TYPE)
+                    val missedReasonIndex = if (hasMissedReason) rows.getColumnIndexOrThrow(CallLog.Calls.MISSED_REASON) else -1
+                    val noRingReasons =
+                        CallLog.Calls.USER_MISSED_CALL_SCREENING_SERVICE_SILENCED or
+                            CallLog.Calls.USER_MISSED_DND_MODE or
+                            CallLog.Calls.AUTO_MISSED_EMERGENCY_CALL or
+                            CallLog.Calls.AUTO_MISSED_MAXIMUM_RINGING or
+                            CallLog.Calls.AUTO_MISSED_MAXIMUM_DIALING
+                    var count = 0
+                    while (rows.moveToNext()) {
+                        val rowNumber = rows.getString(numberIndex) ?: continue
+                        val timestamp = rows.getLong(dateIndex)
+                        val type = rows.getInt(typeIndex)
+                        val silenced =
+                            type == CallLog.Calls.MISSED_TYPE && hasMissedReason &&
+                                (rows.getLong(missedReasonIndex) and noRingReasons) != 0L
+                        val sameCaller = filterAsciiDigits(rowNumber) == callerDigits || normalizePhone(rowNumber) in callerForms
+                        if (silenced || !sameCaller) continue
+                        if (blockedTimes.any { kotlin.math.abs(it - timestamp) <= 10_000L }) continue
+                        count++
+                    }
+                    count
+                }
+            } catch (_: RuntimeException) {
+                // A missing or denied call-log provider cannot justify a block.
+                0
+            }
+        }
 
     internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> = dao.getRecentBlockedNumbers(since)
 

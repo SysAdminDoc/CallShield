@@ -473,15 +473,14 @@ interface SpamDao {
     @Query("SELECT * FROM call_log WHERE reasonCode = :reasonCode ORDER BY timestamp DESC")
     fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>>
 
-    // Feature 10: Frequency tracking — count how many times a number appears in
-    // the log within a time window. Unbounded counts caused false positives for
-    // legitimate callers with 3+ calls spread over months. Meeting-mode silences
-    // are left out: someone who keeps calling during your meetings is not spam.
-    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND isCall = 1 AND timestamp > :since AND reasonCode != 'meeting_mode'")
-    suspend fun getCallFrequencySince(
+    // Screened blocks and silences may appear as missed calls on some devices.
+    // The system call log supplies ringed calls; these timestamps exclude
+    // CallShield decisions that prevented ringing, including meeting mode.
+    @Query("SELECT timestamp FROM call_log WHERE number = :number AND isCall = 1 AND wasBlocked = 1 AND timestamp > :since")
+    suspend fun getBlockedCallTimesSince(
         number: String,
         since: Long,
-    ): Int
+    ): List<Long>
 
     // Wildcard rules (Feature 8)
     @Query("SELECT * FROM wildcard_rules WHERE enabled = 1")
