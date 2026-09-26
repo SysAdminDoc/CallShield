@@ -40,6 +40,7 @@ Usage:
     python train_spam_model.py --output data/spam_model_weights.json
 """
 
+import hashlib
 import json
 import math
 import random
@@ -57,6 +58,10 @@ from pipeline_io import atomic_write_json
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
 OUTPUT_FILE = DATA_DIR / "spam_model_weights.json"
+# The held-out rows beside the weights, so evaluate_model.py scores exactly the
+# rows training never saw, whatever the database holds by then.
+HOLDOUT_FILE_NAME = "spam_model_holdout.json"
+POSITIVE_CAP = 50000
 CALIBRATION_MIN_PRECISION = 0.92
 THRESHOLD_DECIMALS = 6
 
@@ -377,7 +382,7 @@ def build_dataset() -> tuple[list[list[float]], list[int], list[str], list[str]]
     random.seed(42)
     negative_numbers: list[str] = []
     spam_set = set(spam_numbers)
-    target_negatives = min(len(spam_numbers), 50000)
+    target_negatives = min(len(spam_numbers), POSITIVE_CAP)
 
     while len(negative_numbers) < target_negatives:
         npa = random.choice(LEGIT_NPAS)
@@ -388,7 +393,7 @@ def build_dataset() -> tuple[list[list[float]], list[int], list[str], list[str]]
             negative_numbers.append(num)
 
     # Cap positive examples to balance dataset
-    train_spam = spam_numbers[:50000]
+    train_spam = spam_numbers[:POSITIVE_CAP]
 
     X: list[list[float]] = []
     y: list[int] = []
@@ -400,6 +405,23 @@ def build_dataset() -> tuple[list[list[float]], list[int], list[str], list[str]]
         y.append(0)
 
     return X, y, spam_numbers, negative_numbers
+
+
+def holdout_digest(number: str) -> str:
+    """How the held-out manifest names a number: the synthetic negatives could be
+    anyone's real line, so the manifest never lists numbers themselves."""
+    return hashlib.sha256(number.encode("utf-8")).hexdigest()[:16]
+
+
+def holdout_manifest(model_generated: str, rows: list[tuple[int, str]]) -> dict:
+    """The evaluation split as (label, number) rows, for HOLDOUT_FILE_NAME."""
+    return {
+        "schema_version": 1,
+        "model_generated": model_generated,
+        "digest": "sha256 of the E.164 number, first 16 hex digits",
+        "positives": sorted(holdout_digest(number) for label, number in rows if label == 1),
+        "negatives": sorted(holdout_digest(number) for label, number in rows if label == 0),
+    }
 
 
 def main():
@@ -418,9 +440,12 @@ def main():
     print(f"Spam examples available: {len(spam_numbers):,}")
     print(f"Negative examples: {len(negative_numbers):,}")
 
-    combined = list(zip(X, y))
+    # The numbers ride along so the evaluation split can be written out. The
+    # shuffle's order depends only on the length, so it's the one it always was.
+    numbers = spam_numbers[:POSITIVE_CAP] + negative_numbers
+    combined = list(zip(X, y, numbers))
     random.shuffle(combined)
-    X, y = [c[0] for c in combined], [c[1] for c in combined]
+    X, y, numbers = [c[0] for c in combined], [c[1] for c in combined], [c[2] for c in combined]
 
     split_train = int(len(X) * 0.6)
     split_cal = int(len(X) * 0.8)
@@ -560,6 +585,10 @@ def main():
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_json(out_path, output)
+    atomic_write_json(
+        out_path.with_name(HOLDOUT_FILE_NAME),
+        holdout_manifest(output["generated"], list(zip(y[split_cal:], numbers[split_cal:]))),
+    )
 
     print(f"\nModel saved to: {out_path}")
     print(f"\n  GBT trees:  {len(trees)}")

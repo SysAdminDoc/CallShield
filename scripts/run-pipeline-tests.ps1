@@ -89,6 +89,13 @@ if ($python) {
         if ($LASTEXITCODE -ne 0) { $failures += $test }
         $ran++
     }
+    # The shipped model scored on the rows its training held out (data/spam_model_holdout.json).
+    Write-Host 'Running evaluate_model.py (held-out model gate)...'
+    Push-Location $PSScriptRoot
+    try { & $python (Join-Path $PSScriptRoot 'evaluate_model.py') --skip-cv } finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { $failures += 'evaluate_model.py' }
+    $ran++
+
     Write-Host 'Checking generated NANP area codes...'
     & $python (Join-Path $PSScriptRoot 'generate_area_codes.py') --check
     if ($LASTEXITCODE -ne 0) { $failures += 'generate_area_codes.py --check' }

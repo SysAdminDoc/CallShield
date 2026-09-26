@@ -8,8 +8,10 @@ as part of local verification (roadmap 2.6.3). Three views are produced:
   1. On-device held-out metrics — scores the SHIPPED weights with the exact
      inference the Android app runs (`SpamMLScorer.scoreGbt`: sigmoid over
      initial_score plus Σ leaf·learning_rate), at the model's own decision
-     threshold, on a 20% evaluation split that was NOT used for training or
-     threshold calibration. This is the gate metric.
+     threshold, on the 20% evaluation split training never saw. The trainer
+     writes that split's numbers (hashed) to data/spam_model_holdout.json, and
+     only those rows are scored: rebuilding the split from today's database
+     would mix in rows the model was trained on. This is the gate metric.
   2. On-device full-set metrics — the same inference on every sample. Because
      the shipped weights were trained on a subset of this data, the full-set
      figures are in-sample and therefore optimistic.
@@ -17,7 +19,11 @@ as part of local verification (roadmap 2.6.3). Three views are produced:
      an unbiased generalization estimate at sklearn's 0.5 threshold (not the
      shipped threshold).
 
-Exits non-zero when the on-device held-out F1 falls below `--min-f1`.
+Exits non-zero when the on-device held-out F1 falls below `--min-f1`, or when
+the manifest belongs to another model or no longer resolves.
+
+The negatives are synthetic: random numbers in NANP area codes with little
+spam, generated from a fixed seed. No real call history labels them.
 
 Usage:
     python evaluate_model.py
@@ -37,9 +43,39 @@ from sklearn.model_selection import StratifiedKFold
 from train_spam_model import (
     FEATURE_NAMES,
     FEATURE_SCHEMA_VERSION,
+    HOLDOUT_FILE_NAME,
     OUTPUT_FILE,
     build_dataset,
+    extract_features,
+    holdout_digest,
 )
+
+# Held-out rows the evaluator must still find in today's candidates. Spam rows
+# leave the database over time; below this the gate would measure too little.
+MIN_HOLDOUT_COVERAGE = 0.8
+
+
+def resolve_holdout(
+    manifest: dict,
+    positives: list[str],
+    negatives: list[str],
+) -> tuple[list[tuple[str, int]], dict[str, float]]:
+    """The manifest's rows as (number, label), found among today's candidates,
+    and the share of each class that was found."""
+    wanted = {1: set(manifest.get("positives", [])), 0: set(manifest.get("negatives", []))}
+    rows: list[tuple[str, int]] = []
+    found: dict[int, set[str]] = {1: set(), 0: set()}
+    for label, candidates in ((1, positives), (0, negatives)):
+        for number in candidates:
+            digest = holdout_digest(number)
+            if digest in wanted[label] and digest not in found[label]:
+                found[label].add(digest)
+                rows.append((number, label))
+    coverage = {
+        name: len(found[label]) / len(wanted[label]) if wanted[label] else 0.0
+        for name, label in (("positives", 1), ("negatives", 0))
+    }
+    return rows, coverage
 
 
 def sigmoid(x: float) -> float:
@@ -115,6 +151,32 @@ def print_metrics(label: str, m: dict) -> None:
     print(f"  TP={m['tp']:,}  FP={m['fp']:,}  TN={m['tn']:,}  FN={m['fn']:,}")
 
 
+def cross_validate(X_all, y_all, model: dict, learning_rate: float, folds: int) -> None:
+    """Stratified k-fold on the shipped GBT config, informational only."""
+    print(f"\nCross-validating GBT config ({folds}-fold stratified, informational)...")
+    X_np = np.array(X_all)
+    y_np = np.array(y_all)
+    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
+    fold_f1, fold_prec, fold_rec = [], [], []
+    for fold, (tr, te) in enumerate(skf.split(X_np, y_np), 1):
+        clf = GradientBoostingClassifier(
+            n_estimators=int(model.get("n_estimators", 50)),
+            max_depth=4, learning_rate=learning_rate,
+            min_samples_leaf=10, random_state=42,
+        )
+        clf.fit(X_np[tr], y_np[tr])
+        pred = clf.predict(X_np[te])
+        m = metrics(y_np[te].tolist(), pred.tolist())
+        fold_f1.append(m["f1"]); fold_prec.append(m["precision"]); fold_rec.append(m["recall"])
+        print(f"  fold {fold}: prec={m['precision']:.4f} rec={m['recall']:.4f} F1={m['f1']:.4f}")
+
+    mean_f1 = sum(fold_f1) / len(fold_f1)
+    mean_prec = sum(fold_prec) / len(fold_prec)
+    mean_rec = sum(fold_rec) / len(fold_rec)
+    print(f"\n[cross-validated GBT @ sklearn 0.5] mean precision={mean_prec:.4f}  "
+          f"recall={mean_rec:.4f}  F1={mean_f1:.4f}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate the CallShield spam model.")
     parser.add_argument("--model", default=str(OUTPUT_FILE),
@@ -124,6 +186,10 @@ def main() -> int:
     parser.add_argument("--min-f1", type=float, default=0.45,
                         help="Fail (exit 1) if the shipped weights' held-out F1 "
                              "at the shipped threshold is below this floor")
+    parser.add_argument("--holdout", default=None,
+                        help=f"Held-out manifest (default: {HOLDOUT_FILE_NAME} beside the model)")
+    parser.add_argument("--skip-cv", action="store_true",
+                        help="Skip the informational cross-validation (the pipeline suite does)")
     args = parser.parse_args()
 
     model_path = Path(args.model)
@@ -154,25 +220,37 @@ def main() -> int:
           f"trees={len(trees)}  threshold={threshold}  learning_rate={learning_rate}  "
           f"initial_score={initial_score:+.6f}\n")
 
+    holdout_path = Path(args.holdout) if args.holdout else model_path.with_name(HOLDOUT_FILE_NAME)
+    try:
+        manifest = json.loads(holdout_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        print(f"ERROR: held-out manifest {holdout_path} can't be read ({error}). train_spam_model.py writes it.")
+        return 1
+    if manifest.get("model_generated") != model.get("generated"):
+        print(
+            f"ERROR: {holdout_path.name} belongs to the model generated {manifest.get('model_generated')}, "
+            f"not this one ({model.get('generated')}). Retrain to write both together."
+        )
+        return 1
+
     print("Building labeled dataset (spam positives + synthetic legit negatives)...")
     X, y, spam_numbers, negative_numbers = build_dataset()
-    print(f"  positives={len(spam_numbers[:50000]):,}  negatives={len(negative_numbers):,}  "
-          f"total={len(X):,}\n")
+    print(f"  positives={len(spam_numbers):,}  negatives={len(negative_numbers):,}\n")
 
-    # Reproduce the trainer's deterministic 60/20/20 split so we can identify
-    # the evaluation slice that was never used for fitting or calibration.
-    # build_dataset calls random.seed(42) internally before generating negatives,
-    # so the RNG state after it returns is deterministic. The trainer shuffles
-    # with whatever state remains (no re-seed), so we must do the same.
-    import random as _rand
-    combined = list(zip(X, y))
-    _rand.shuffle(combined)
-    X_all = [c[0] for c in combined]
-    y_all = [c[1] for c in combined]
-    split_train = int(len(X_all) * 0.6)
-    split_cal = int(len(X_all) * 0.8)
-    X_eval = X_all[split_cal:]
-    y_eval = y_all[split_cal:]
+    held_out, coverage = resolve_holdout(manifest, spam_numbers, negative_numbers)
+    print(
+        f"Held-out manifest: {len(held_out):,} rows found "
+        f"(positives {coverage['positives']:.1%}, negatives {coverage['negatives']:.1%} of the split)"
+    )
+    if min(coverage.values()) < MIN_HOLDOUT_COVERAGE:
+        print(
+            f"FAIL: under {MIN_HOLDOUT_COVERAGE:.0%} of a held-out class is still in the database, "
+            "too little to judge the model. Retrain on the current database."
+        )
+        return 1
+    X_eval = [extract_features(number) for number, _ in held_out]
+    y_eval = [label for _, label in held_out]
+    X_all, y_all = X, y
 
     # ── 1. On-device inference on the held-out evaluation split (GATE) ──
     gate_f1 = 0.0
@@ -209,28 +287,8 @@ def main() -> int:
     print(f"OK: held-out on-device F1 {gate_f1:.4f} >= required {args.min_f1:.4f}")
 
     # ── 3. Cross-validated GBT metrics (generalization of config, informational) ──
-    print(f"\nCross-validating GBT config ({args.folds}-fold stratified, informational)...")
-    X_np = np.array(X_all)
-    y_np = np.array(y_all)
-    skf = StratifiedKFold(n_splits=args.folds, shuffle=True, random_state=42)
-    fold_f1, fold_prec, fold_rec = [], [], []
-    for fold, (tr, te) in enumerate(skf.split(X_np, y_np), 1):
-        clf = GradientBoostingClassifier(
-            n_estimators=int(model.get("n_estimators", 50)),
-            max_depth=4, learning_rate=learning_rate,
-            min_samples_leaf=10, random_state=42,
-        )
-        clf.fit(X_np[tr], y_np[tr])
-        pred = clf.predict(X_np[te])
-        m = metrics(y_np[te].tolist(), pred.tolist())
-        fold_f1.append(m["f1"]); fold_prec.append(m["precision"]); fold_rec.append(m["recall"])
-        print(f"  fold {fold}: prec={m['precision']:.4f} rec={m['recall']:.4f} F1={m['f1']:.4f}")
-
-    mean_f1 = sum(fold_f1) / len(fold_f1)
-    mean_prec = sum(fold_prec) / len(fold_prec)
-    mean_rec = sum(fold_rec) / len(fold_rec)
-    print(f"\n[cross-validated GBT @ sklearn 0.5] mean precision={mean_prec:.4f}  "
-          f"recall={mean_rec:.4f}  F1={mean_f1:.4f}")
+    if not args.skip_cv:
+        cross_validate(X_all, y_all, model, learning_rate, args.folds)
 
     # ── 4. Inference-hour invariance ────────────────────────────────────
     # build_dataset pins the time features to a single reference hour, but the

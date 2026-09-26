@@ -9,6 +9,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
 - `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
 - `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
+- `spam_model_holdout.json`: Hashed numbers of the rows the shipped model's training held out, which `evaluate_model.py` scores
 - `source-manifest.json`: Feed access, license, geography, attribution, and parser contract
 - `source-snapshot.json`: Per-run source health, checksum, accepted/rejected counts, and failures
 - `source-freshness.json`: Each upstream source's last successful import and the newest record date for FTC and FCC (the complaint date for FTC, the day FCC published it for FCC). The weekly liveness check compares those dates, rather than fetch times, with `stale_after_days`. A source with an `import_flag` in the manifest is checked once it has been imported, and the failure message names the flag
@@ -206,7 +207,7 @@ python scripts/merge_community_reports.py
 python scripts/train_spam_model.py --output data/spam_model_weights.json
 
 # 5. Evaluate the shipped model before committing (local quality gate)
-python scripts/evaluate_model.py            # exits non-zero if CV F1 regresses
+python scripts/evaluate_model.py            # exits non-zero if held-out F1 falls below the floor
 python scripts/test_ml_feature_contract.py  # once the fixture's case scores match the new
                                             # model, fails if Protection test's ML samples flip
 
@@ -227,11 +228,18 @@ Rows backed by FCC, FTC or another source aren't held by this gate.
 
 `train_spam_model.py` prints the learned per-feature weights and writes a
 version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression
-fallback). `evaluate_model.py` reports precision/recall/F1 two ways: with the
-exact **on-device** inference the app runs (so it catches export/inference
-drift the trainer's sklearn-side metrics hide) and via stratified k-fold
-cross-validation (an honest generalization estimate). It exits non-zero when the
-cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. The
+fallback) with `spam_model_holdout.json` beside it: hashes of the 20% of rows
+training held out. `evaluate_model.py` scores exactly those rows with the exact
+**on-device** inference the app runs (so it catches export/inference drift the
+trainer's sklearn-side metrics hide), and exits non-zero when that F1 drops
+below `--min-f1` (0.45), when the manifest belongs to another model, or when
+under 80% of a class can still be found. Rebuilding the split from the current
+database would mix in rows the model trained on. The pipeline suite runs it on
+every check; stratified k-fold cross-validation stays as an informational
+estimate (`--skip-cv` leaves it out). The negatives are synthetic: random
+numbers in low-spam NANP area codes from a fixed seed, not real call history,
+so the precision figure measures how the model treats ordinary-looking numbers.
+The
 import and merge scripts bump the database `version` themselves, so there's
 nothing to edit by hand. Signing is the last step: a signed file changed after
 step 6 no longer matches its `.sig`, needs `feed_signing.py sign` again, and

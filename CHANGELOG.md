@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The spam model's quality gate scores exactly the rows its training held out,
+  and the pipeline checks run it every time. It used to rebuild that split
+  from whatever the database held, which mixed in rows the model had trained
+  on, and nothing ran it. The shipped model scores F1 0.47 on its real
+  held-out rows, against a floor of 0.45.
 - A spam text from an international sender is logged once, with one alert.
   The notification listener dropped the + from the sender, so a +44 text
   the SMS receiver had already logged was logged again, and its spam check
