@@ -72,6 +72,8 @@
     <string name="dashboard_trend_fewer">Change vs last week: -%1$s</string>
     <string name="dashboard_trend_same">Same as last week</string>
     <string name="dashboard_last_blocked">Last blocked: %s</string>
+    <string name="dashboard_no_recent_blocked_calls">No recent blocked calls</string>
+    <string name="dashboard_no_recent_blocked_calls_body">Calls stopped by CallShield will appear here.</string>
     <string name="dashboard_time_just_now">Just now</string>
     <string name="dashboard_time_minutes_ago">%dm ago</string>
     <string name="dashboard_time_hours_ago">%dh ago</string>

@@ -49,6 +49,8 @@
     <string name="dashboard_trend_fewer">较上周变化：-%s</string>
     <string name="dashboard_trend_same">与上周持平</string>
     <string name="dashboard_last_blocked">最近拦截：%s</string>
+    <string name="dashboard_no_recent_blocked_calls">最近没有拦截的来电</string>
+    <string name="dashboard_no_recent_blocked_calls_body">CallShield 拦截的来电会显示在这里。</string>
     <string name="dashboard_time_just_now">刚刚</string>
     <string name="dashboard_time_minutes_ago">%d 分钟前</string>
     <string name="dashboard_time_hours_ago">%d 小时前</string>

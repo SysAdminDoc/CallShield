@@ -6,6 +6,7 @@ All notable changes to CallShield will be documented in this file.
 
 - Home now puts today's results, call and text readiness, the latest blocked
   caller and protection levels ahead of the longer checks and tools.
+- Home shows an empty recent-calls card until CallShield has stopped a call.
 - Fresh installs now open in the AMOLED theme. Its graphite cards, mint controls,
   coral warnings and thin outlines follow the new screen designs. Existing
   theme choices remain saved, including Light and System.

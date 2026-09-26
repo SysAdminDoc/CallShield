@@ -128,6 +128,7 @@ import com.sysadmindoc.callshield.ui.theme.CatTeal
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
+import com.sysadmindoc.callshield.ui.theme.HeroGradient
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
@@ -596,6 +597,28 @@ fun DashboardScreen(
                         )
                     }
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = CatOverlay, modifier = Modifier.size(16.dp))
+                }
+            }
+        } else {
+            PremiumCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    PremiumIconTile(Icons.Default.Shield, CatGreen, showContainer = true)
+                    Column {
+                        Text(
+                            stringResource(R.string.dashboard_no_recent_blocked_calls),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = CatText,
+                        )
+                        Text(
+                            stringResource(R.string.dashboard_no_recent_blocked_calls_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext,
+                        )
+                    }
                 }
             }
         }
@@ -1222,7 +1245,7 @@ internal fun DashboardHeroCard(
         }
     Column(
         modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         SectionHeader(stringResource(R.string.dashboard_live_protection), heroColor)
         Row(
@@ -1246,12 +1269,17 @@ internal fun DashboardHeroCard(
                     color = CatSubtext,
                 )
             }
-            Icon(
-                imageVector = if (dashboardStatus.heroMode == DashboardHeroMode.Active) Icons.Default.VerifiedUser else Icons.Default.Security,
-                contentDescription = null,
-                tint = heroColor,
-                modifier = Modifier.size(66.dp),
-            )
+            Box(
+                modifier = Modifier.size(82.dp).background(HeroGradient, RoundedCornerShape(40.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (dashboardStatus.heroMode == DashboardHeroMode.Active) Icons.Default.VerifiedUser else Icons.Default.Security,
+                    contentDescription = null,
+                    tint = heroColor,
+                    modifier = Modifier.size(62.dp),
+                )
+            }
         }
         heroAction?.takeIf { it.icon != Icons.Default.Sync }?.let { action ->
             PremiumActionButton(
@@ -1612,33 +1640,35 @@ internal fun DashboardStatsRow(
     blockedToday: Int,
     blockedThisWeek: Int,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.dashboard_stat_today),
-            value = blockedToday,
-            icon = Icons.Default.Today,
-            color = CatBlue,
-        )
-        Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.dashboard_stat_this_week),
-            value = blockedThisWeek,
-            icon = Icons.Default.DateRange,
-            color = CatMauve,
-        )
-        Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.dashboard_stat_total),
-            value = totalBlocked,
-            icon = Icons.Default.Block,
-            color = CatPeach,
-        )
+    PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatRed) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_today),
+                value = blockedToday,
+                icon = Icons.Default.Today,
+                color = CatRed,
+            )
+            Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_this_week),
+                value = blockedThisWeek,
+                icon = Icons.Default.DateRange,
+                color = CatMauve,
+            )
+            Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_total),
+                value = totalBlocked,
+                icon = Icons.Default.Block,
+                color = CatPeach,
+            )
+        }
     }
 }
 
