@@ -43,8 +43,7 @@ class BlockedAlertActionsTest {
         notificationManager.cancelAll()
     }
 
-    private fun postedAlert(): Notification =
-        shadowOf(notificationManager).allNotifications.single { it.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+    private fun postedAlert(): Notification = shadowOf(notificationManager).allNotifications.single { it.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
 
     @Test
     fun `a blocked call's alert offers Not spam instead of Block forever`() {

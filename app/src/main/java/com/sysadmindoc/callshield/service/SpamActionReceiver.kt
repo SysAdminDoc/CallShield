@@ -62,22 +62,8 @@ class SpamActionReceiver : BroadcastReceiver() {
                 }
 
                 NotificationHelper.ACTION_NOT_SPAM -> {
-                    val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
-                    val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
-                    val reasonCode = BlockReasonCode.fromStored(intent.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
-                    if (notifId >= 0) {
-                        notificationManager.cancel(notifId)
-                    }
-                    Toast.makeText(appContext, appContext.getString(R.string.notif_not_spam_allowed), Toast.LENGTH_SHORT).show()
-                    suspend {
-                        repo.temporaryAllowNumber(
-                            number,
-                            System.currentTimeMillis() + NotificationHelper.NOT_SPAM_ALLOW_MS,
-                            appContext.getString(R.string.desc_allowed_from_notification),
-                        )
-                        if (NotificationHelper.notSpamReachesCommunity(reasonCode)) {
-                            CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
-                        }
+                    intent.getStringExtra(NotificationHelper.EXTRA_NUMBER)?.let { number ->
+                        allowFromAlert(appContext, notificationManager, repo, intent, number)
                     }
                 }
 
@@ -140,6 +126,32 @@ class SpamActionReceiver : BroadcastReceiver() {
                 }
             } finally {
                 pendingResult.finish()
+            }
+        }
+    }
+
+    /** "Not spam" on a blocked-call alert: let the number ring for a day, and tell the community when its data was wrong. */
+    private fun allowFromAlert(
+        appContext: Context,
+        notificationManager: NotificationManager,
+        repo: SpamRepository,
+        intent: Intent,
+        number: String,
+    ): suspend () -> Unit {
+        val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+        val reasonCode = BlockReasonCode.fromStored(intent.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        if (notifId >= 0) {
+            notificationManager.cancel(notifId)
+        }
+        Toast.makeText(appContext, appContext.getString(R.string.notif_not_spam_allowed), Toast.LENGTH_SHORT).show()
+        return {
+            repo.temporaryAllowNumber(
+                number,
+                System.currentTimeMillis() + NotificationHelper.NOT_SPAM_ALLOW_MS,
+                appContext.getString(R.string.desc_allowed_from_notification),
+            )
+            if (NotificationHelper.notSpamReachesCommunity(reasonCode)) {
+                CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
             }
         }
     }
