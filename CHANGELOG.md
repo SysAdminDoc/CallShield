@@ -38,6 +38,9 @@ All notable changes to CallShield will be documented in this file.
 - A keyless FTC import stops before the shared daily request allowance runs out
   and keeps what it fetched. Running into the limit used to record the whole
   import as failed.
+- The Report button opens GitHub's spam report form, so in-app reports arrive
+  labelled. The tracker also has a bug report form that asks for the app
+  version, Android version, phone and Protection test result.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,

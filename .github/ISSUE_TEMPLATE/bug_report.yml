@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in CallShield doesn't work the way it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what CallShield did instead.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: CallShield version
+      description: The More screen shows it at the bottom, for example v1.9.0.
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      description: Settings > About phone > Software information, for example Android 16.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone
+      description: Maker and model, for example Samsung Galaxy S25.
+    validations:
+      required: true
+  - type: textarea
+    id: protection-test
+    attributes:
+      label: Protection test result
+      description: Run More > Protection test and paste its summary, or say which checks failed.
+    validations:
+      required: true

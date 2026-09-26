@@ -56,24 +56,6 @@
         <item quantity="one">举报：%d</item>
         <item quantity="other">举报：%d</item>
     </plurals>
-    <plurals name="detail_report_issue_body">
-        <item quantity="one">## 电话号码
-%1$s
-
-## 类型
-来自 CallShield 的举报
-
-## 描述
-已被看到 %2$d 次</item>
-        <item quantity="other">## 电话号码
-%1$s
-
-## 类型
-来自 CallShield 的举报
-
-## 描述
-已被看到 %2$d 次</item>
-    </plurals>
     <plurals name="detail_reports_count_plural">
         <item quantity="one">%d 条举报</item>
         <item quantity="other">%d 条举报</item>

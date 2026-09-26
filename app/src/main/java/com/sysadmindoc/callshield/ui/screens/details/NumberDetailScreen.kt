@@ -95,8 +95,7 @@ fun NumberDetailScreen(
                 stringResource(R.string.detail_block_area_code_description, code)
             }
         }
-    val reportIssueTitle = stringResource(R.string.detail_report_issue_title, number)
-    val reportIssueBody = reportIssueBody(context.resources, number, numberCalls.size)
+    val reportIssueUrl = reportIssueUrl(context.resources, number, numberCalls.size)
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
@@ -290,11 +289,7 @@ fun NumberDetailScreen(
                             label = stringResource(R.string.detail_report),
                             icon = Icons.Default.Flag,
                             color = CatRed,
-                            onClick = {
-                                val title = Uri.encode(reportIssueTitle)
-                                val body = Uri.encode(reportIssueBody)
-                                context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
-                            },
+                            onClick = { context.launchViewUrlSafely(reportIssueUrl) },
                             modifier = Modifier.weight(1f),
                             outlined = true,
                         )

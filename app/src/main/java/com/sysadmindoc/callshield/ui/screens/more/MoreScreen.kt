@@ -329,7 +329,7 @@ fun MoreHub(
             ) {
                 launchExternalLink(
                     context,
-                    "https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md",
+                    "https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.yml",
                 )
             }
         }

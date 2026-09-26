@@ -1,0 +1,22 @@
+name: Spam number report
+description: Report a phone number that calls or texts spam, so it can go in the database.
+title: "[SPAM] "
+labels: ["spam-report"]
+body:
+  - type: input
+    id: number
+    attributes:
+      label: Phone number
+      description: Include the country code, for example +18005551234.
+    validations:
+      required: true
+  - type: input
+    id: type
+    attributes:
+      label: Type
+      description: Robocall, telemarketer, scam, survey, political, debt collector or unknown.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What the call or text was about, and roughly how many times it came.

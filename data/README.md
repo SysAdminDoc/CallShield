@@ -113,7 +113,7 @@ in the `sources` array of the rows you are taking.
 ## Contributing
 
 ### Report a Spam Number
-1. [Open an Issue](../../issues/new?template=spam_report.md) with the number and details
+1. [Open an Issue](../../issues/new?template=spam_report.yml) with the number and details
 2. Or submit a PR directly editing `spam_numbers.json`
 
 ### Format
