@@ -107,6 +107,8 @@ internal const val SETTINGS_CONTACT_SCOPE_TAG = "settings_contact_scope"
 internal const val SETTINGS_REGULATORY_PREFIX_TAG_PREFIX = "settings_regulatory_prefix:"
 internal const val SETTINGS_MEETING_MODE_TOGGLE_TAG = "settings_meeting_mode_toggle"
 internal const val SETTINGS_OUTGOING_CALL_HOLD_TAG = "settings_outgoing_call_hold_toggle"
+internal const val SETTINGS_BASIC_TAB_TAG = "settings_basic_tab"
+internal const val SETTINGS_ADVANCED_TAB_TAG = "settings_advanced_tab"
 
 private val backupSectionOrder =
     listOf(
@@ -185,6 +187,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val profileFailedMessage = stringResource(R.string.profile_failed)
     val profileUndoLabel = stringResource(R.string.profile_undo)
     var profileApplying by remember { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
     fun restoreRecommended() {
         if (profileApplying) return
@@ -380,91 +383,119 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
         }
 
-        Column(modifier = Modifier.fillMaxWidth()) {
-            val setupSummary =
-                if (setupReadyCount == setupTotal) {
-                    stringResource(R.string.settings_setup_ready_summary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = !showAdvanced,
+                onClick = { showAdvanced = false },
+                label = { Text(stringResource(R.string.settings_basic)) },
+                modifier = Modifier.testTag(SETTINGS_BASIC_TAB_TAG),
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
+                border = BorderStroke(1.dp, if (!showAdvanced) CatGreen else CatMuted),
+            )
+            FilterChip(
+                selected = showAdvanced,
+                onClick = { showAdvanced = true },
+                label = { Text(stringResource(R.string.settings_advanced)) },
+                modifier = Modifier.testTag(SETTINGS_ADVANCED_TAB_TAG),
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
+                border = BorderStroke(1.dp, if (showAdvanced) CatGreen else CatMuted),
+            )
+        }
+
+        if (showAdvanced) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                val setupSummary =
+                    if (setupReadyCount == setupTotal) {
+                        stringResource(R.string.settings_setup_ready_summary)
+                    } else {
+                        stringResource(R.string.settings_setup_attention_summary)
+                    }
+                val setupColor = if (setupReadyCount == setupTotal) CatGreen else CatYellow
+                SectionHeader(stringResource(R.string.settings_permissions_access), setupColor)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    setupSummary,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(
+                        R.string.settings_setup_progress,
+                        numberFormatter.format(setupReadyCount),
+                        numberFormatter.format(setupTotal),
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = CatSubtext,
+                )
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { setupReadyCount / setupTotal.toFloat() },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = setupColor,
+                    trackColor = CatMuted.copy(alpha = 0.32f),
+                )
+                Spacer(Modifier.height(12.dp))
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_run_setup_again),
+                    value = stringResource(R.string.settings_run_setup_again_detail),
+                    icon = Icons.Default.Tune,
+                    tintColor = CatBlue,
+                    stackValue = true,
+                    onClick = viewModel::restartOnboarding,
+                )
+                Spacer(Modifier.height(12.dp))
+                if (LocalDensity.current.fontScale < 1.5f) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AccessSnapshotMetric(
+                            title = stringResource(R.string.settings_access_calls_messages),
+                            icon = Icons.Default.Security,
+                            ready = corePermissionsGranted,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Box(Modifier.width(1.dp).height(54.dp).background(CatMuted))
+                        AccessSnapshotMetric(
+                            title = stringResource(R.string.settings_access_call_screening),
+                            icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                            ready = screenerReadyForCurrentMode,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 } else {
-                    stringResource(R.string.settings_setup_attention_summary)
-                }
-            val setupColor = if (setupReadyCount == setupTotal) CatGreen else CatYellow
-            SectionHeader(stringResource(R.string.settings_permissions_access), setupColor)
-            Spacer(Modifier.height(12.dp))
-            Text(
-                setupSummary,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = CatText,
-            )
-            Text(
-                stringResource(
-                    R.string.settings_setup_progress,
-                    numberFormatter.format(setupReadyCount),
-                    numberFormatter.format(setupTotal),
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                color = CatSubtext,
-            )
-            Spacer(Modifier.height(10.dp))
-            LinearProgressIndicator(
-                progress = { setupReadyCount / setupTotal.toFloat() },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = setupColor,
-                trackColor = CatMuted.copy(alpha = 0.32f),
-            )
-            Spacer(Modifier.height(12.dp))
-            SettingsLinkRow(
-                title = stringResource(R.string.settings_run_setup_again),
-                value = stringResource(R.string.settings_run_setup_again_detail),
-                icon = Icons.Default.Tune,
-                tintColor = CatBlue,
-                stackValue = true,
-                onClick = viewModel::restartOnboarding,
-            )
-            Spacer(Modifier.height(12.dp))
-            if (LocalDensity.current.fontScale < 1.5f) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AccessSnapshotMetric(
+                    PermissionAccessRow(
                         title = stringResource(R.string.settings_access_calls_messages),
                         icon = Icons.Default.Security,
                         ready = corePermissionsGranted,
-                        modifier = Modifier.weight(1f),
+                        readyLabel = stringResource(R.string.settings_access_ready),
+                        actionLabel = stringResource(R.string.settings_access_grant),
+                        onAction = { permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray()) },
                     )
-                    Box(Modifier.width(1.dp).height(54.dp).background(CatMuted))
-                    AccessSnapshotMetric(
+                    GradientDivider()
+                    PermissionAccessRow(
                         title = stringResource(R.string.settings_access_call_screening),
                         icon = Icons.AutoMirrored.Filled.PhoneCallback,
                         ready = screenerReadyForCurrentMode,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            } else {
-                PermissionAccessRow(
-                    title = stringResource(R.string.settings_access_calls_messages),
-                    icon = Icons.Default.Security,
-                    ready = corePermissionsGranted,
-                    readyLabel = stringResource(R.string.settings_access_ready),
-                    actionLabel = stringResource(R.string.settings_access_grant),
-                    onAction = { permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray()) },
-                )
-                GradientDivider()
-                PermissionAccessRow(
-                    title = stringResource(R.string.settings_access_call_screening),
-                    icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                    ready = screenerReadyForCurrentMode,
-                    readyLabel =
-                        stringResource(
-                            if (blockCalls) R.string.settings_access_ready else R.string.settings_access_optional,
-                        ),
-                    actionLabel = stringResource(R.string.settings_access_enable),
-                    onAction = {
-                        try {
-                            if (roleManager != null) {
-                                screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-                            } else {
+                        readyLabel =
+                            stringResource(
+                                if (blockCalls) R.string.settings_access_ready else R.string.settings_access_optional,
+                            ),
+                        actionLabel = stringResource(R.string.settings_access_enable),
+                        onAction = {
+                            try {
+                                if (roleManager != null) {
+                                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                } else {
+                                    context.startActivitySafely(
+                                        Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:${context.packageName}"),
+                                        ),
+                                    )
+                                }
+                            } catch (_: Exception) {
                                 context.startActivitySafely(
                                     Intent(
                                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -472,796 +503,813 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                     ),
                                 )
                             }
-                        } catch (_: Exception) {
-                            context.startActivitySafely(
-                                Intent(
-                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    Uri.parse("package:${context.packageName}"),
-                                ),
-                            )
-                        }
-                    },
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            GradientDivider()
-            if (overlayGranted && notificationsGranted) {
-                SettingsLinkRow(
-                    title = stringResource(R.string.settings_access_optional_title),
-                    value = stringResource(R.string.settings_access_optional_ready),
-                    icon = Icons.Default.Layers,
-                    tintColor = CatGreen,
-                    stackValue = true,
-                    onClick = {
-                        context.startActivitySafely(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
-                        )
-                    },
-                )
-            } else {
-                if (!overlayGranted) {
-                    PermissionAccessRow(
-                        title = stringResource(R.string.settings_access_caller_id),
-                        icon = Icons.Default.Layers,
-                        ready = false,
-                        readyLabel = stringResource(R.string.settings_access_ready),
-                        actionLabel = stringResource(R.string.settings_access_enable),
-                        onAction = {
-                            context.startActivitySafely(
-                                Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:${context.packageName}"),
-                                ),
-                                onFailure = {
-                                    context.startActivitySafely(
-                                        Intent(
-                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                            Uri.parse("package:${context.packageName}"),
-                                        ),
-                                    )
-                                },
-                            )
                         },
                     )
                 }
-                if (!notificationsGranted) {
-                    if (!overlayGranted) GradientDivider()
-                    PermissionAccessRow(
-                        title = stringResource(R.string.settings_notifications),
-                        icon = Icons.Default.Notifications,
-                        ready = false,
-                        readyLabel = stringResource(R.string.settings_access_ready),
-                        actionLabel = stringResource(R.string.settings_access_enable),
-                        onAction = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
+                Spacer(Modifier.height(10.dp))
+                GradientDivider()
+                if (overlayGranted && notificationsGranted) {
+                    SettingsLinkRow(
+                        title = stringResource(R.string.settings_access_optional_title),
+                        value = stringResource(R.string.settings_access_optional_ready),
+                        icon = Icons.Default.Layers,
+                        tintColor = CatGreen,
+                        stackValue = true,
+                        onClick = {
+                            context.startActivitySafely(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
+                            )
+                        },
+                    )
+                } else {
+                    if (!overlayGranted) {
+                        PermissionAccessRow(
+                            title = stringResource(R.string.settings_access_caller_id),
+                            icon = Icons.Default.Layers,
+                            ready = false,
+                            readyLabel = stringResource(R.string.settings_access_ready),
+                            actionLabel = stringResource(R.string.settings_access_enable),
+                            onAction = {
                                 context.startActivitySafely(
-                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}"),
+                                    ),
+                                    onFailure = {
+                                        context.startActivitySafely(
+                                            Intent(
+                                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                                Uri.parse("package:${context.packageName}"),
+                                            ),
+                                        )
                                     },
                                 )
+                            },
+                        )
+                    }
+                    if (!notificationsGranted) {
+                        if (!overlayGranted) GradientDivider()
+                        PermissionAccessRow(
+                            title = stringResource(R.string.settings_notifications),
+                            icon = Icons.Default.Notifications,
+                            ready = false,
+                            readyLabel = stringResource(R.string.settings_access_ready),
+                            actionLabel = stringResource(R.string.settings_access_enable),
+                            onAction = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    context.startActivitySafely(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+                GradientDivider(modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+
+        if (!showAdvanced) {
+            // Appearance
+            val languageOptions = AppLanguage.options()
+            val currentLanguageTag = AppLanguage.currentLanguageTag()
+            val currentLanguage =
+                languageOptions.firstOrNull { it.languageTag == currentLanguageTag }
+                    ?: languageOptions.first()
+            SettingsCard(stringResource(R.string.settings_appearance)) {
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_theme),
+                    value = stringResource(appTheme.labelResource()),
+                    icon = Icons.Default.Palette,
+                    tintColor = CatGreen,
+                    modifier = Modifier.testTag(SETTINGS_THEME_ROW_TAG),
+                    onClick = { showThemeDialog = true },
+                )
+                GradientDivider()
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_language),
+                    value = stringResource(currentLanguage.labelRes),
+                    icon = Icons.Default.Language,
+                    tintColor = CatBlue,
+                    onClick = { showLanguageDialog = true },
+                )
+            }
+
+            // Blocking
+            SettingsCard(stringResource(R.string.settings_blocking)) {
+                SettingsToggle(stringResource(R.string.settings_block_spam_calls), stringResource(R.string.settings_block_spam_calls_desc), Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
+                MessageCapabilityStatusRow(
+                    title = stringResource(R.string.settings_sms_capability_status),
+                    status = smsMessageCapabilityStatus,
+                )
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
+                GradientDivider()
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_category_actions),
+                    value = stringResource(R.string.settings_category_actions_summary, categoryCallActions.size),
+                    icon = Icons.AutoMirrored.Filled.CallSplit,
+                    tintColor = CatBlue,
+                    stackValue = true,
+                    onClick = { showCategoryCallActions = true },
+                )
+            }
+
+            // Safety
+            SettingsCard(stringResource(R.string.settings_safety)) {
+                SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
+                if (contactWhitelist) {
+                    SettingsLinkRow(
+                        title = stringResource(R.string.settings_contact_scope),
+                        value =
+                            when {
+                                !contactsPermissionGranted -> {
+                                    stringResource(R.string.settings_permission_required)
+                                }
+
+                                selectedContactGroups.isEmpty() -> {
+                                    stringResource(R.string.settings_all_contacts)
+                                }
+
+                                else -> {
+                                    pluralStringResource(
+                                        R.plurals.settings_contact_groups_selected,
+                                        selectedContactGroups.size,
+                                        selectedContactGroups.size,
+                                    )
+                                }
+                            },
+                        icon = Icons.Default.Groups,
+                        tintColor = CatGreen,
+                        modifier = Modifier.testTag(SETTINGS_CONTACT_SCOPE_TAG),
+                        onClick = {
+                            if (contactsPermissionGranted) {
+                                viewModel.refreshContactGroups()
+                                showContactGroups = true
+                            } else {
+                                contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                             }
                         },
                     )
+                    if (!contactsPermissionGranted) {
+                        Text(
+                            stringResource(R.string.settings_contact_scope_degraded),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatPeach,
+                            modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                        )
+                    }
                 }
-            }
-            GradientDivider(modifier = Modifier.padding(top = 2.dp))
-        }
-
-        // Appearance
-        val languageOptions = AppLanguage.options()
-        val currentLanguageTag = AppLanguage.currentLanguageTag()
-        val currentLanguage =
-            languageOptions.firstOrNull { it.languageTag == currentLanguageTag }
-                ?: languageOptions.first()
-        SettingsCard(stringResource(R.string.settings_appearance)) {
-            SettingsLinkRow(
-                title = stringResource(R.string.settings_theme),
-                value = stringResource(appTheme.labelResource()),
-                icon = Icons.Default.Palette,
-                tintColor = CatGreen,
-                modifier = Modifier.testTag(SETTINGS_THEME_ROW_TAG),
-                onClick = { showThemeDialog = true },
-            )
-            GradientDivider()
-            SettingsLinkRow(
-                title = stringResource(R.string.settings_language),
-                value = stringResource(currentLanguage.labelRes),
-                icon = Icons.Default.Language,
-                tintColor = CatBlue,
-                onClick = { showLanguageDialog = true },
-            )
-        }
-
-        // Blocking
-        SettingsCard(stringResource(R.string.settings_blocking)) {
-            SettingsToggle(stringResource(R.string.settings_block_spam_calls), stringResource(R.string.settings_block_spam_calls_desc), Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
-            MessageCapabilityStatusRow(
-                title = stringResource(R.string.settings_sms_capability_status),
-                status = smsMessageCapabilityStatus,
-            )
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
-            GradientDivider()
-            SettingsLinkRow(
-                title = stringResource(R.string.settings_category_actions),
-                value = stringResource(R.string.settings_category_actions_summary, categoryCallActions.size),
-                icon = Icons.AutoMirrored.Filled.CallSplit,
-                tintColor = CatBlue,
-                stackValue = true,
-                onClick = { showCategoryCallActions = true },
-            )
-        }
-
-        // Safety
-        SettingsCard(stringResource(R.string.settings_safety)) {
-            SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
-            if (contactWhitelist) {
-                SettingsLinkRow(
-                    title = stringResource(R.string.settings_contact_scope),
-                    value =
-                        when {
-                            !contactsPermissionGranted -> {
-                                stringResource(R.string.settings_permission_required)
-                            }
-
-                            selectedContactGroups.isEmpty() -> {
-                                stringResource(R.string.settings_all_contacts)
-                            }
-
-                            else -> {
-                                pluralStringResource(
-                                    R.plurals.settings_contact_groups_selected,
-                                    selectedContactGroups.size,
-                                    selectedContactGroups.size,
-                                )
-                            }
-                        },
-                    icon = Icons.Default.Groups,
-                    tintColor = CatGreen,
-                    modifier = Modifier.testTag(SETTINGS_CONTACT_SCOPE_TAG),
-                    onClick = {
-                        if (contactsPermissionGranted) {
-                            viewModel.refreshContactGroups()
-                            showContactGroups = true
-                        } else {
-                            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
-                        }
-                    },
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_contacts_only),
+                    stringResource(R.string.settings_contacts_only_desc),
+                    Icons.Default.PhoneLocked,
+                    contactsOnly,
+                ) { viewModel.setContactsOnly(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_outgoing_risk_warning),
+                    stringResource(R.string.settings_outgoing_risk_warning_desc),
+                    Icons.Default.WarningAmber,
+                    outgoingRiskWarning,
+                    onCheckedChange = viewModel::setOutgoingRiskWarning,
                 )
-                if (!contactsPermissionGranted) {
+                if (outgoingRiskWarning && !overlayGranted) {
                     Text(
-                        stringResource(R.string.settings_contact_scope_degraded),
+                        stringResource(R.string.settings_outgoing_risk_warning_overlay_required),
                         style = MaterialTheme.typography.labelSmall,
                         color = CatPeach,
                         modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
                     )
                 }
-            }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_contacts_only),
-                stringResource(R.string.settings_contacts_only_desc),
-                Icons.Default.PhoneLocked,
-                contactsOnly,
-            ) { viewModel.setContactsOnly(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_outgoing_risk_warning),
-                stringResource(R.string.settings_outgoing_risk_warning_desc),
-                Icons.Default.WarningAmber,
-                outgoingRiskWarning,
-                onCheckedChange = viewModel::setOutgoingRiskWarning,
-            )
-            if (outgoingRiskWarning && !overlayGranted) {
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_outgoing_call_hold),
+                    stringResource(
+                        if (redirectionRoleAvailable) {
+                            R.string.settings_outgoing_call_hold_desc
+                        } else {
+                            R.string.settings_outgoing_call_hold_unavailable
+                        },
+                    ),
+                    Icons.Default.PhonePaused,
+                    outgoingCallHold && redirectionRoleHeld,
+                    toggleTag = SETTINGS_OUTGOING_CALL_HOLD_TAG,
+                    onCheckedChange = { enable ->
+                        when {
+                            !enable -> {
+                                viewModel.setOutgoingCallHold(false)
+                            }
+
+                            redirectionRoleHeld -> {
+                                viewModel.setOutgoingCallHold(true)
+                            }
+
+                            redirectionRoleAvailable && roleManager != null -> {
+                                redirectionLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION))
+                            }
+                        }
+                    },
+                )
+                if (outgoingCallHold && !redirectionRoleHeld && redirectionRoleAvailable) {
+                    Text(
+                        stringResource(R.string.settings_outgoing_call_hold_role_missing),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatPeach,
+                        modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                    )
+                }
+                GradientDivider()
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_region_cnap_rules),
+                    icon = Icons.Default.Public,
+                    color = CatBlue,
+                    onClick = { showRegionCnapRules = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
                 Text(
-                    stringResource(R.string.settings_outgoing_risk_warning_overlay_required),
+                    stringResource(
+                        R.string.settings_region_cnap_summary,
+                        if (regionBlockEnabled) allowedRegions.size else 0,
+                        cnapTrustPatterns.size,
+                        cnapBlockPatterns.size,
+                    ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = CatPeach,
-                    modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                    color = CatSubtext,
+                    modifier = Modifier.padding(start = 4.dp),
                 )
             }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_outgoing_call_hold),
-                stringResource(
-                    if (redirectionRoleAvailable) {
-                        R.string.settings_outgoing_call_hold_desc
+
+            SettingsCard(stringResource(R.string.settings_notifications)) {
+                SettingsToggle(
+                    stringResource(R.string.settings_post_call_screen),
+                    stringResource(R.string.settings_post_call_screen_desc),
+                    Icons.AutoMirrored.Filled.PhoneCallback,
+                    postCallScreen,
+                    onCheckedChange = viewModel::setPostCallScreen,
+                )
+                GradientDivider()
+                PermissionAccessRow(
+                    title = stringResource(R.string.settings_notifications),
+                    icon = Icons.Default.Notifications,
+                    ready = notificationsGranted,
+                    readyLabel = stringResource(R.string.settings_access_ready),
+                    actionLabel = stringResource(R.string.settings_access_enable),
+                    onAction = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            context.startActivitySafely(
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+
+            QuietHoursSettings(
+                enabled = timeBlock,
+                startHour = timeStart,
+                endHour = timeEnd,
+                onEnabledChange = { viewModel.setTimeBlock(it) },
+                onStartChange = { viewModel.setTimeBlockStart(it) },
+                onEndChange = { viewModel.setTimeBlockEnd(it) },
+            )
+        }
+
+        if (showAdvanced) {
+            RegulatoryPrefixSettings(
+                enabled = enabledRegulatoryPrefixes,
+                onToggle = viewModel::setRegulatoryPrefix,
+            )
+
+            // Detection engines
+            SettingsCard(stringResource(R.string.settings_detection_engines)) {
+                SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_stir_trusted_allow),
+                    stringResource(R.string.settings_stir_trusted_allow_desc),
+                    Icons.Default.VerifiedUser,
+                    stirTrustedAllow,
+                ) { viewModel.setStirTrustedAllow(it) }
+                GradientDivider()
+                AnsweredCallerTrustSettings(
+                    enabled = answeredCallerTrust,
+                    threshold = answeredCallerThreshold,
+                    windowDays = answeredCallerWindowDays,
+                    onEnabledChange = viewModel::setAnsweredCallerTrust,
+                    onThresholdChange = viewModel::setAnsweredCallerThreshold,
+                    onWindowDaysChange = viewModel::setAnsweredCallerWindowDays,
+                )
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_emergency_callback_grace),
+                    stringResource(R.string.settings_emergency_callback_grace_desc),
+                    Icons.Default.Emergency,
+                    emergencyCallbackGrace,
+                    onCheckedChange = viewModel::setEmergencyCallbackGrace,
+                )
+                if (emergencyCallbackGrace) {
+                    Spacer(Modifier.height(8.dp))
+                    SettingsNumberStepper(
+                        label = stringResource(R.string.settings_emergency_callback_window),
+                        valueText =
+                            pluralStringResource(
+                                R.plurals.settings_emergency_callback_window_value,
+                                emergencyCallbackWindowMinutes,
+                                emergencyCallbackWindowMinutes,
+                            ),
+                        value = emergencyCallbackWindowMinutes,
+                        minValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
+                        maxValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
+                        step = EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP,
+                        onValueChange = viewModel::setEmergencyCallbackWindowMinutes,
+                    )
+                }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_remote_url_lookup),
+                    stringResource(R.string.settings_remote_url_lookup_desc),
+                    Icons.Default.Security,
+                    remoteUrlLookup,
+                ) { viewModel.setRemoteUrlLookup(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_live_caller_enrichment),
+                    stringResource(R.string.settings_live_caller_enrichment_desc),
+                    Icons.Default.TravelExplore,
+                    liveCallerEnrichment,
+                ) { viewModel.setLiveCallerEnrichment(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_sms_burst),
+                    stringResource(R.string.settings_sms_burst_desc),
+                    Icons.Default.SmsFailed,
+                    smsBurst,
+                ) { viewModel.setSmsBurst(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_repeat_caller),
+                    stringResource(R.string.settings_repeat_caller_desc, freqThreshold),
+                    Icons.Default.Repeat,
+                    freqEscalation,
+                ) { viewModel.setFreqEscalation(it) }
+                if (freqEscalation) {
+                    Spacer(Modifier.height(8.dp))
+                    SettingsNumberStepper(
+                        label = stringResource(R.string.settings_repeat_caller_threshold),
+                        valueText =
+                            pluralStringResource(
+                                R.plurals.settings_repeat_caller_threshold_value,
+                                freqThreshold,
+                                freqThreshold,
+                            ),
+                        value = freqThreshold,
+                        minValue = FREQ_THRESHOLD_MIN,
+                        maxValue = FREQ_THRESHOLD_MAX,
+                        onValueChange = { viewModel.setFreqThreshold(it) },
+                    )
+                }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_db_prefix_expansion),
+                    stringResource(R.string.settings_db_prefix_expansion_desc),
+                    Icons.AutoMirrored.Filled.CallSplit,
+                    dbPrefixExpansion,
+                ) { viewModel.setDbPrefixExpansion(it) }
+                GradientDivider()
+                SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
+                if (rcsFilter) {
+                    MessageCapabilityStatusRow(
+                        title = stringResource(R.string.settings_notification_capability_status),
+                        status = notificationMessageCapabilityStatus,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    PremiumActionButton(
+                        label = stringResource(R.string.settings_notification_screening_sources),
+                        icon = Icons.Default.Tune,
+                        color = CatMauve,
+                        onClick = { showNotificationScreeningSources = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        outlined = true,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.settings_notification_screening_sources_count,
+                            notificationScreeningPackages.size,
+                            com.sysadmindoc.callshield.data.NotificationScreeningSources.catalog.size,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatSubtext,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                    PremiumActionButton(
+                        label = stringResource(R.string.settings_grant_notification_access),
+                        icon = Icons.Default.NotificationsActive,
+                        color = CatMauve,
+                        onClick = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        outlined = true,
+                    )
+                }
+                GradientDivider()
+                // A3: Push-alert bridge — notification-backed allow-through for
+                // unknown callers. Shares the notification-listener grant with
+                // the RCS filter, so we show the same "Grant notification access"
+                // shortcut when this is on without the permission.
+                SettingsToggle(
+                    stringResource(R.string.settings_push_alert),
+                    stringResource(R.string.settings_push_alert_desc),
+                    Icons.Default.NotificationsActive,
+                    pushAlertEnabled,
+                ) { viewModel.setPushAlert(it) }
+                if (pushAlertEnabled) {
+                    val totalSources = com.sysadmindoc.callshield.data.PushAlertRegistry.ALERT_SOURCE_PACKAGES.size
+                    val activeSources = totalSources - pushAlertDisabledPackages.size
+                    Spacer(Modifier.height(4.dp))
+                    PremiumActionButton(
+                        label = stringResource(R.string.settings_push_alert_sources),
+                        icon = Icons.Default.Tune,
+                        color = CatMauve,
+                        onClick = { showPushAlertSources = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        outlined = true,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.settings_push_alert_sources_count,
+                            activeSources,
+                            totalSources,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatSubtext,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                }
+                GradientDivider()
+                // Silent voicemail mode — send blocked calls to voicemail silently
+                // instead of hard-rejecting. Off by default; users who want the
+                // missed-call entry as an audit trail can keep hard reject.
+                SettingsToggle(
+                    stringResource(R.string.settings_silent_voicemail),
+                    stringResource(R.string.settings_silent_voicemail_desc),
+                    Icons.Default.Voicemail,
+                    silentVoicemail,
+                ) { viewModel.setSilentVoicemail(it) }
+                GradientDivider()
+                // v1.7.0: auto-mute low-confidence blocks. Independent from
+                // Silent Voicemail — Silent always silences; auto-mute only
+                // silences blocks scoring below the 60-confidence threshold.
+                SettingsToggle(
+                    stringResource(R.string.settings_automute_low_confidence),
+                    stringResource(R.string.settings_automute_low_confidence_desc),
+                    Icons.Default.Voicemail,
+                    autoMuteLowConfidence,
+                ) { viewModel.setAutoMuteLowConfidence(it) }
+                GradientDivider()
+                SettingsToggle(
+                    stringResource(R.string.settings_answer_hang_up),
+                    stringResource(R.string.settings_answer_hang_up_desc),
+                    Icons.Default.CallEnd,
+                    answerHangUpEnabled,
+                ) { enabled ->
+                    if (!enabled) {
+                        viewModel.setAnswerHangUpEnabled(false)
+                        return@SettingsToggle
+                    }
+                    val missingPermissions =
+                        answerHangUpPermissions.filterNot { permission ->
+                            CallShieldPermissions.isPermissionGranted(context, permission)
+                        }
+                    if (missingPermissions.isEmpty()) {
+                        viewModel.setAnswerHangUpEnabled(true)
                     } else {
-                        R.string.settings_outgoing_call_hold_unavailable
-                    },
-                ),
-                Icons.Default.PhonePaused,
-                outgoingCallHold && redirectionRoleHeld,
-                toggleTag = SETTINGS_OUTGOING_CALL_HOLD_TAG,
-                onCheckedChange = { enable ->
-                    when {
-                        !enable -> {
-                            viewModel.setOutgoingCallHold(false)
+                        answerHangUpPermissionLauncher.launch(missingPermissions.toTypedArray())
+                    }
+                }
+                if (answerHangUpEnabled) {
+                    Spacer(Modifier.height(8.dp))
+                    SettingsNumberStepper(
+                        label = stringResource(R.string.settings_hang_up_delay),
+                        valueText =
+                            pluralStringResource(
+                                R.plurals.settings_hang_up_delay_value,
+                                hangUpDelaySeconds,
+                                hangUpDelaySeconds,
+                            ),
+                        value = hangUpDelaySeconds,
+                        minValue = AnswerHangUpController.MIN_DELAY_SECONDS,
+                        maxValue = AnswerHangUpController.MAX_DELAY_SECONDS,
+                        onValueChange = viewModel::setHangUpDelaySeconds,
+                    )
+                }
+            }
+
+            MeetingModeSettings(
+                enabled = meetingModeEnabled,
+                selectedCount = meetingModeApps.size,
+                notificationAccessGranted = notificationAccessGranted,
+                onEnabledChange = { enabled ->
+                    viewModel.setMeetingMode(enabled)
+                    // Nothing happens until an app is picked, so ask right away.
+                    if (enabled && meetingModeApps.isEmpty()) showMeetingApps = true
+                },
+                onChooseApps = { showMeetingApps = true },
+                onGrantAccess = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+            )
+
+            // Power mode
+            SettingsCard(stringResource(R.string.settings_power_mode)) {
+                SettingsToggle(stringResource(R.string.settings_aggressive_blocking), stringResource(R.string.settings_aggressive_blocking_desc), Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
+            }
+
+            // Auto-cleanup
+            SettingsCard(stringResource(R.string.settings_log_cleanup)) {
+                SettingsToggle(stringResource(R.string.settings_auto_cleanup), stringResource(R.string.settings_auto_cleanup_desc), Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
+                if (autoCleanup) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.settings_keep_for), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                        listOf(7, 14, 30, 90).forEach { days ->
+                            FilterChip(
+                                selected = cleanupDays == days,
+                                onClick = { viewModel.setCleanupDays(days) },
+                                label = { Text(stringResource(R.string.settings_days, days)) },
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
+                                // The tint marks the selection; green text on it fell to 4.33:1 in Light.
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
+                            )
                         }
-
-                        redirectionRoleHeld -> {
-                            viewModel.setOutgoingCallHold(true)
-                        }
-
-                        redirectionRoleAvailable && roleManager != null -> {
-                            redirectionLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION))
-                        }
-                    }
-                },
-            )
-            if (outgoingCallHold && !redirectionRoleHeld && redirectionRoleAvailable) {
-                Text(
-                    stringResource(R.string.settings_outgoing_call_hold_role_missing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatPeach,
-                    modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
-                )
-            }
-            GradientDivider()
-            PremiumActionButton(
-                label = stringResource(R.string.settings_region_cnap_rules),
-                icon = Icons.Default.Public,
-                color = CatBlue,
-                onClick = { showRegionCnapRules = true },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-            Text(
-                stringResource(
-                    R.string.settings_region_cnap_summary,
-                    if (regionBlockEnabled) allowedRegions.size else 0,
-                    cnapTrustPatterns.size,
-                    cnapBlockPatterns.size,
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_post_call_screen),
-                stringResource(R.string.settings_post_call_screen_desc),
-                Icons.AutoMirrored.Filled.PhoneCallback,
-                postCallScreen,
-                onCheckedChange = viewModel::setPostCallScreen,
-            )
-        }
-
-        RegulatoryPrefixSettings(
-            enabled = enabledRegulatoryPrefixes,
-            onToggle = viewModel::setRegulatoryPrefix,
-        )
-
-        // Detection engines
-        SettingsCard(stringResource(R.string.settings_detection_engines)) {
-            SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_stir_trusted_allow),
-                stringResource(R.string.settings_stir_trusted_allow_desc),
-                Icons.Default.VerifiedUser,
-                stirTrustedAllow,
-            ) { viewModel.setStirTrustedAllow(it) }
-            GradientDivider()
-            AnsweredCallerTrustSettings(
-                enabled = answeredCallerTrust,
-                threshold = answeredCallerThreshold,
-                windowDays = answeredCallerWindowDays,
-                onEnabledChange = viewModel::setAnsweredCallerTrust,
-                onThresholdChange = viewModel::setAnsweredCallerThreshold,
-                onWindowDaysChange = viewModel::setAnsweredCallerWindowDays,
-            )
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_emergency_callback_grace),
-                stringResource(R.string.settings_emergency_callback_grace_desc),
-                Icons.Default.Emergency,
-                emergencyCallbackGrace,
-                onCheckedChange = viewModel::setEmergencyCallbackGrace,
-            )
-            if (emergencyCallbackGrace) {
-                Spacer(Modifier.height(8.dp))
-                SettingsNumberStepper(
-                    label = stringResource(R.string.settings_emergency_callback_window),
-                    valueText =
-                        pluralStringResource(
-                            R.plurals.settings_emergency_callback_window_value,
-                            emergencyCallbackWindowMinutes,
-                            emergencyCallbackWindowMinutes,
-                        ),
-                    value = emergencyCallbackWindowMinutes,
-                    minValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
-                    maxValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
-                    step = EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP,
-                    onValueChange = viewModel::setEmergencyCallbackWindowMinutes,
-                )
-            }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_remote_url_lookup),
-                stringResource(R.string.settings_remote_url_lookup_desc),
-                Icons.Default.Security,
-                remoteUrlLookup,
-            ) { viewModel.setRemoteUrlLookup(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_live_caller_enrichment),
-                stringResource(R.string.settings_live_caller_enrichment_desc),
-                Icons.Default.TravelExplore,
-                liveCallerEnrichment,
-            ) { viewModel.setLiveCallerEnrichment(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_sms_burst),
-                stringResource(R.string.settings_sms_burst_desc),
-                Icons.Default.SmsFailed,
-                smsBurst,
-            ) { viewModel.setSmsBurst(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_repeat_caller),
-                stringResource(R.string.settings_repeat_caller_desc, freqThreshold),
-                Icons.Default.Repeat,
-                freqEscalation,
-            ) { viewModel.setFreqEscalation(it) }
-            if (freqEscalation) {
-                Spacer(Modifier.height(8.dp))
-                SettingsNumberStepper(
-                    label = stringResource(R.string.settings_repeat_caller_threshold),
-                    valueText =
-                        pluralStringResource(
-                            R.plurals.settings_repeat_caller_threshold_value,
-                            freqThreshold,
-                            freqThreshold,
-                        ),
-                    value = freqThreshold,
-                    minValue = FREQ_THRESHOLD_MIN,
-                    maxValue = FREQ_THRESHOLD_MAX,
-                    onValueChange = { viewModel.setFreqThreshold(it) },
-                )
-            }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_db_prefix_expansion),
-                stringResource(R.string.settings_db_prefix_expansion_desc),
-                Icons.AutoMirrored.Filled.CallSplit,
-                dbPrefixExpansion,
-            ) { viewModel.setDbPrefixExpansion(it) }
-            GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
-            if (rcsFilter) {
-                MessageCapabilityStatusRow(
-                    title = stringResource(R.string.settings_notification_capability_status),
-                    status = notificationMessageCapabilityStatus,
-                )
-                Spacer(Modifier.height(4.dp))
-                PremiumActionButton(
-                    label = stringResource(R.string.settings_notification_screening_sources),
-                    icon = Icons.Default.Tune,
-                    color = CatMauve,
-                    onClick = { showNotificationScreeningSources = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = true,
-                )
-                Text(
-                    stringResource(
-                        R.string.settings_notification_screening_sources_count,
-                        notificationScreeningPackages.size,
-                        com.sysadmindoc.callshield.data.NotificationScreeningSources.catalog.size,
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatSubtext,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.settings_grant_notification_access),
-                    icon = Icons.Default.NotificationsActive,
-                    color = CatMauve,
-                    onClick = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = true,
-                )
-            }
-            GradientDivider()
-            // A3: Push-alert bridge — notification-backed allow-through for
-            // unknown callers. Shares the notification-listener grant with
-            // the RCS filter, so we show the same "Grant notification access"
-            // shortcut when this is on without the permission.
-            SettingsToggle(
-                stringResource(R.string.settings_push_alert),
-                stringResource(R.string.settings_push_alert_desc),
-                Icons.Default.NotificationsActive,
-                pushAlertEnabled,
-            ) { viewModel.setPushAlert(it) }
-            if (pushAlertEnabled) {
-                val totalSources = com.sysadmindoc.callshield.data.PushAlertRegistry.ALERT_SOURCE_PACKAGES.size
-                val activeSources = totalSources - pushAlertDisabledPackages.size
-                Spacer(Modifier.height(4.dp))
-                PremiumActionButton(
-                    label = stringResource(R.string.settings_push_alert_sources),
-                    icon = Icons.Default.Tune,
-                    color = CatMauve,
-                    onClick = { showPushAlertSources = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = true,
-                )
-                Text(
-                    stringResource(
-                        R.string.settings_push_alert_sources_count,
-                        activeSources,
-                        totalSources,
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatSubtext,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-            }
-            GradientDivider()
-            // Silent voicemail mode — send blocked calls to voicemail silently
-            // instead of hard-rejecting. Off by default; users who want the
-            // missed-call entry as an audit trail can keep hard reject.
-            SettingsToggle(
-                stringResource(R.string.settings_silent_voicemail),
-                stringResource(R.string.settings_silent_voicemail_desc),
-                Icons.Default.Voicemail,
-                silentVoicemail,
-            ) { viewModel.setSilentVoicemail(it) }
-            GradientDivider()
-            // v1.7.0: auto-mute low-confidence blocks. Independent from
-            // Silent Voicemail — Silent always silences; auto-mute only
-            // silences blocks scoring below the 60-confidence threshold.
-            SettingsToggle(
-                stringResource(R.string.settings_automute_low_confidence),
-                stringResource(R.string.settings_automute_low_confidence_desc),
-                Icons.Default.Voicemail,
-                autoMuteLowConfidence,
-            ) { viewModel.setAutoMuteLowConfidence(it) }
-            GradientDivider()
-            SettingsToggle(
-                stringResource(R.string.settings_answer_hang_up),
-                stringResource(R.string.settings_answer_hang_up_desc),
-                Icons.Default.CallEnd,
-                answerHangUpEnabled,
-            ) { enabled ->
-                if (!enabled) {
-                    viewModel.setAnswerHangUpEnabled(false)
-                    return@SettingsToggle
-                }
-                val missingPermissions =
-                    answerHangUpPermissions.filterNot { permission ->
-                        CallShieldPermissions.isPermissionGranted(context, permission)
-                    }
-                if (missingPermissions.isEmpty()) {
-                    viewModel.setAnswerHangUpEnabled(true)
-                } else {
-                    answerHangUpPermissionLauncher.launch(missingPermissions.toTypedArray())
-                }
-            }
-            if (answerHangUpEnabled) {
-                Spacer(Modifier.height(8.dp))
-                SettingsNumberStepper(
-                    label = stringResource(R.string.settings_hang_up_delay),
-                    valueText =
-                        pluralStringResource(
-                            R.plurals.settings_hang_up_delay_value,
-                            hangUpDelaySeconds,
-                            hangUpDelaySeconds,
-                        ),
-                    value = hangUpDelaySeconds,
-                    minValue = AnswerHangUpController.MIN_DELAY_SECONDS,
-                    maxValue = AnswerHangUpController.MAX_DELAY_SECONDS,
-                    onValueChange = viewModel::setHangUpDelaySeconds,
-                )
-            }
-        }
-
-        // Feature 9: Time-based blocking
-        QuietHoursSettings(
-            enabled = timeBlock,
-            startHour = timeStart,
-            endHour = timeEnd,
-            onEnabledChange = { viewModel.setTimeBlock(it) },
-            onStartChange = { viewModel.setTimeBlockStart(it) },
-            onEndChange = { viewModel.setTimeBlockEnd(it) },
-        )
-
-        MeetingModeSettings(
-            enabled = meetingModeEnabled,
-            selectedCount = meetingModeApps.size,
-            notificationAccessGranted = notificationAccessGranted,
-            onEnabledChange = { enabled ->
-                viewModel.setMeetingMode(enabled)
-                // Nothing happens until an app is picked, so ask right away.
-                if (enabled && meetingModeApps.isEmpty()) showMeetingApps = true
-            },
-            onChooseApps = { showMeetingApps = true },
-            onGrantAccess = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-        )
-
-        // Power mode
-        SettingsCard(stringResource(R.string.settings_power_mode)) {
-            SettingsToggle(stringResource(R.string.settings_aggressive_blocking), stringResource(R.string.settings_aggressive_blocking_desc), Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
-        }
-
-        // Auto-cleanup
-        SettingsCard(stringResource(R.string.settings_log_cleanup)) {
-            SettingsToggle(stringResource(R.string.settings_auto_cleanup), stringResource(R.string.settings_auto_cleanup_desc), Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
-            if (autoCleanup) {
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.settings_keep_for), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                    listOf(7, 14, 30, 90).forEach { days ->
-                        FilterChip(
-                            selected = cleanupDays == days,
-                            onClick = { viewModel.setCleanupDays(days) },
-                            label = { Text(stringResource(R.string.settings_days, days)) },
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
-                            // The tint marks the selection; green text on it fell to 4.33:1 in Light.
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
-                        )
                     }
                 }
             }
-        }
 
-        // Export log
-        SettingsCard(stringResource(R.string.settings_export)) {
-            PremiumActionButton(
-                label = stringResource(R.string.settings_export_csv),
-                icon = Icons.Default.FileDownload,
-                color = CatBlue,
-                onClick = {
-                    hapticTick(context)
-                    viewModel.exportLog()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
-            Spacer(Modifier.height(8.dp))
-            PremiumActionButton(
-                label = stringResource(R.string.settings_export_redress_csv),
-                icon = Icons.AutoMirrored.Filled.Assignment,
-                color = CatGreen,
-                onClick = {
-                    hapticTick(context)
-                    viewModel.exportRedressLog()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-            Text(
-                stringResource(R.string.settings_export_redress_csv_desc),
-                style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext,
-            )
-            Spacer(Modifier.height(8.dp))
-            PremiumActionButton(
-                label = stringResource(R.string.settings_export_raw_sms_csv),
-                icon = Icons.Default.Warning,
-                color = CatPeach,
-                onClick = {
-                    hapticTick(context)
-                    showRawSmsExportDialog = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-            Text(
-                stringResource(R.string.settings_export_raw_sms_csv_desc),
-                style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext,
-            )
-        }
-
-        // Backup/restore
-        SettingsCard(stringResource(R.string.settings_backup_restore)) {
-            // Section choices must survive recreation: the document picker is a
-            // separate activity, so rotating (or being killed in the background)
-            // while it is open otherwise silently reverts these to the defaults
-            // and restores sections the user had explicitly deselected.
-            var backupSections by
-                rememberSaveable(stateSaver = BackupSectionSetSaver) {
-                    mutableStateOf(BackupRestore.defaultExportSections)
-                }
-            var restoreSections by
-                rememberSaveable(stateSaver = BackupSectionSetSaver) {
-                    mutableStateOf(BackupRestore.defaultRestoreSections)
-                }
-            // Passphrases are deliberately NOT saved: saved instance state is
-            // persisted to disk. If recreation drops one, the restore reports
-            // "passphrase required" and the user re-enters it.
-            var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
-            var restorePassphrase by remember { mutableStateOf("") }
-            val restoreLauncher =
-                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                    uri?.let {
-                        viewModel.restore(
-                            it,
-                            restoreSections,
-                            restorePassphrase.toCharArray().takeIf(CharArray::isNotEmpty),
-                        )
-                        restorePassphrase = ""
-                    }
-                }
-            val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
-            val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
-
-            BackupSectionPicker(
-                title = stringResource(R.string.settings_backup_sections_title),
-                selectedSections = backupSections,
-                onSelectedSectionsChange = { backupSections = it },
-            )
-            Spacer(Modifier.height(8.dp))
-            BackupProtectionControls(
-                form = backupProtection,
-                onFormChange = { backupProtection = it },
-            )
-            Spacer(Modifier.height(8.dp))
-            BackupSectionPicker(
-                title = stringResource(R.string.settings_restore_sections_title),
-                selectedSections = restoreSections,
-                onSelectedSectionsChange = {
-                    restoreSections = it
-                    viewModel.clearRestorePreview()
-                },
-            )
-            Spacer(Modifier.height(8.dp))
-            RestorePassphraseField(
-                passphrase = restorePassphrase,
-                onPassphraseChange = {
-                    restorePassphrase = it.take(PortableBackupCrypto.MAX_PASSPHRASE_LENGTH)
-                    viewModel.clearRestorePreview()
-                },
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Export log
+            SettingsCard(stringResource(R.string.settings_export)) {
                 PremiumActionButton(
-                    label = stringResource(R.string.settings_backup),
-                    icon = Icons.Default.Backup,
-                    color = CatGreen,
-                    onClick = {
-                        hapticTick(context)
-                        viewModel.backup(
-                            backupSections,
-                            backupProtection.passphrase.toCharArray().takeIf { backupProtection.enabled },
-                        )
-                        backupProtection = backupProtection.copy(passphrase = "", confirmation = "")
-                    },
-                    enabled = backupSections.isNotEmpty() && backupProtection.isValid,
-                    modifier = Modifier.weight(1f),
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.settings_restore),
-                    icon = Icons.Default.Restore,
+                    label = stringResource(R.string.settings_export_csv),
+                    icon = Icons.Default.FileDownload,
                     color = CatBlue,
                     onClick = {
                         hapticTick(context)
-                        restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                        viewModel.exportLog()
                     },
-                    enabled = restoreSections.isNotEmpty(),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+                Spacer(Modifier.height(8.dp))
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_export_redress_csv),
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    color = CatGreen,
+                    onClick = {
+                        hapticTick(context)
+                        viewModel.exportRedressLog()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                     outlined = true,
                 )
+                Text(
+                    stringResource(R.string.settings_export_redress_csv_desc),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                )
+                Spacer(Modifier.height(8.dp))
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_export_raw_sms_csv),
+                    icon = Icons.Default.Warning,
+                    color = CatPeach,
+                    onClick = {
+                        hapticTick(context)
+                        showRawSmsExportDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+                Text(
+                    stringResource(R.string.settings_export_raw_sms_csv_desc),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                )
             }
-            restorePreview?.let { preview ->
-                RestorePreviewPanel(
-                    preview = preview,
-                    onMerge = {
-                        hapticTick(context)
-                        viewModel.applyRestore(BackupRestore.RestoreMode.MERGE)
-                    },
-                    onReplace = {
-                        hapticTick(context)
-                        viewModel.applyRestore(BackupRestore.RestoreMode.REPLACE)
-                    },
-                    onCancel = {
-                        hapticTick(context)
+
+            // Backup/restore
+            SettingsCard(stringResource(R.string.settings_backup_restore)) {
+                // Section choices must survive recreation: the document picker is a
+                // separate activity, so rotating (or being killed in the background)
+                // while it is open otherwise silently reverts these to the defaults
+                // and restores sections the user had explicitly deselected.
+                var backupSections by
+                    rememberSaveable(stateSaver = BackupSectionSetSaver) {
+                        mutableStateOf(BackupRestore.defaultExportSections)
+                    }
+                var restoreSections by
+                    rememberSaveable(stateSaver = BackupSectionSetSaver) {
+                        mutableStateOf(BackupRestore.defaultRestoreSections)
+                    }
+                // Passphrases are deliberately NOT saved: saved instance state is
+                // persisted to disk. If recreation drops one, the restore reports
+                // "passphrase required" and the user re-enters it.
+                var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
+                var restorePassphrase by remember { mutableStateOf("") }
+                val restoreLauncher =
+                    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        uri?.let {
+                            viewModel.restore(
+                                it,
+                                restoreSections,
+                                restorePassphrase.toCharArray().takeIf(CharArray::isNotEmpty),
+                            )
+                            restorePassphrase = ""
+                        }
+                    }
+                val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
+                val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
+
+                BackupSectionPicker(
+                    title = stringResource(R.string.settings_backup_sections_title),
+                    selectedSections = backupSections,
+                    onSelectedSectionsChange = { backupSections = it },
+                )
+                Spacer(Modifier.height(8.dp))
+                BackupProtectionControls(
+                    form = backupProtection,
+                    onFormChange = { backupProtection = it },
+                )
+                Spacer(Modifier.height(8.dp))
+                BackupSectionPicker(
+                    title = stringResource(R.string.settings_restore_sections_title),
+                    selectedSections = restoreSections,
+                    onSelectedSectionsChange = {
+                        restoreSections = it
                         viewModel.clearRestorePreview()
                     },
                 )
-            }
-            restoreResult?.let { status ->
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    status.text,
-                    // Announce the restore outcome: it is the only feedback for
-                    // a destructive, data-replacing operation, and it used to
-                    // appear and disappear silently.
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (status.success) CatGreen else CatPeach,
+                Spacer(Modifier.height(8.dp))
+                RestorePassphraseField(
+                    passphrase = restorePassphrase,
+                    onPassphraseChange = {
+                        restorePassphrase = it.take(PortableBackupCrypto.MAX_PASSPHRASE_LENGTH)
+                        viewModel.clearRestorePreview()
+                    },
                 )
-                LaunchedEffect(status) {
-                    // Long enough for a screen reader to reach and read it.
-                    kotlinx.coroutines.delay(12_000)
-                    viewModel.clearRestoreResult()
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PremiumActionButton(
+                        label = stringResource(R.string.settings_backup),
+                        icon = Icons.Default.Backup,
+                        color = CatGreen,
+                        onClick = {
+                            hapticTick(context)
+                            viewModel.backup(
+                                backupSections,
+                                backupProtection.passphrase.toCharArray().takeIf { backupProtection.enabled },
+                            )
+                            backupProtection = backupProtection.copy(passphrase = "", confirmation = "")
+                        },
+                        enabled = backupSections.isNotEmpty() && backupProtection.isValid,
+                        modifier = Modifier.weight(1f),
+                    )
+                    PremiumActionButton(
+                        label = stringResource(R.string.settings_restore),
+                        icon = Icons.Default.Restore,
+                        color = CatBlue,
+                        onClick = {
+                            hapticTick(context)
+                            restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                        },
+                        enabled = restoreSections.isNotEmpty(),
+                        modifier = Modifier.weight(1f),
+                        outlined = true,
+                    )
+                }
+                restorePreview?.let { preview ->
+                    RestorePreviewPanel(
+                        preview = preview,
+                        onMerge = {
+                            hapticTick(context)
+                            viewModel.applyRestore(BackupRestore.RestoreMode.MERGE)
+                        },
+                        onReplace = {
+                            hapticTick(context)
+                            viewModel.applyRestore(BackupRestore.RestoreMode.REPLACE)
+                        },
+                        onCancel = {
+                            hapticTick(context)
+                            viewModel.clearRestorePreview()
+                        },
+                    )
+                }
+                restoreResult?.let { status ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        status.text,
+                        // Announce the restore outcome: it is the only feedback for
+                        // a destructive, data-replacing operation, and it used to
+                        // appear and disappear silently.
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (status.success) CatGreen else CatPeach,
+                    )
+                    LaunchedEffect(status) {
+                        // Long enough for a screen reader to reach and read it.
+                        kotlinx.coroutines.delay(12_000)
+                        viewModel.clearRestoreResult()
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+                if (
+                    BackupRestore.BackupSection.LOGS in backupSections ||
+                    BackupRestore.BackupSection.LOGS in restoreSections
+                ) {
+                    Text(
+                        stringResource(R.string.settings_backup_logs_privacy),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatPeach,
+                    )
                 }
             }
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
-            if (
-                BackupRestore.BackupSection.LOGS in backupSections ||
-                BackupRestore.BackupSection.LOGS in restoreSections
-            ) {
-                Text(
-                    stringResource(R.string.settings_backup_logs_privacy),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatPeach,
-                )
-            }
-        }
 
-        // External blocklist subscriptions (Pi-hole-style URL feeds)
-        ExternalBlocklistSettings(
-            url = externalBlocklistUrl,
-            label = externalBlocklistLabel,
-            subscriptions = externalBlocklists,
-            preview = externalBlocklistPreview,
-            result = externalBlocklistResult,
-            onUrlChange = { externalBlocklistUrl = it },
-            onLabelChange = { externalBlocklistLabel = it },
-            onPreview = {
-                hapticTick(context)
-                viewModel.previewExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
-            },
-            onApply = {
-                hapticTick(context)
-                viewModel.applyExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
-            },
-            onApplyPreview = { preview ->
-                hapticTick(context)
-                viewModel.applyExternalBlocklist(preview.url, preview.label)
-            },
-            onToggle = { subscription, enabled ->
-                hapticTick(context)
-                viewModel.setExternalBlocklistEnabled(subscription, enabled)
-            },
-            onRemove = { subscription ->
-                hapticTick(context)
-                viewModel.removeExternalBlocklist(subscription)
-            },
-            canUndo = externalBlocklistUndo != null,
-            onUndo = {
-                hapticTick(context)
-                viewModel.undoRemoveExternalBlocklist()
-            },
-            onClearResult = viewModel::clearExternalBlocklistResult,
-        )
+            // External blocklist subscriptions (Pi-hole-style URL feeds)
+            ExternalBlocklistSettings(
+                url = externalBlocklistUrl,
+                label = externalBlocklistLabel,
+                subscriptions = externalBlocklists,
+                preview = externalBlocklistPreview,
+                result = externalBlocklistResult,
+                onUrlChange = { externalBlocklistUrl = it },
+                onLabelChange = { externalBlocklistLabel = it },
+                onPreview = {
+                    hapticTick(context)
+                    viewModel.previewExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
+                },
+                onApply = {
+                    hapticTick(context)
+                    viewModel.applyExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
+                },
+                onApplyPreview = { preview ->
+                    hapticTick(context)
+                    viewModel.applyExternalBlocklist(preview.url, preview.label)
+                },
+                onToggle = { subscription, enabled ->
+                    hapticTick(context)
+                    viewModel.setExternalBlocklistEnabled(subscription, enabled)
+                },
+                onRemove = { subscription ->
+                    hapticTick(context)
+                    viewModel.removeExternalBlocklist(subscription)
+                },
+                canUndo = externalBlocklistUndo != null,
+                onUndo = {
+                    hapticTick(context)
+                    viewModel.undoRemoveExternalBlocklist()
+                },
+                onClearResult = viewModel::clearExternalBlocklistResult,
+            )
 
-        FeedMirrorSettings(
-            input = feedMirrorInput,
-            savedUrl = feedMirrorUrl,
-            result = feedMirrorResult,
-            onInputChange = { feedMirrorInput = it },
-            onSave = {
-                hapticTick(context)
-                viewModel.saveFeedMirror(feedMirrorInput)
-            },
-            onRemove = {
-                hapticTick(context)
-                viewModel.removeFeedMirror()
-            },
-            onClearResult = viewModel::clearFeedMirrorResult,
-        )
+            FeedMirrorSettings(
+                input = feedMirrorInput,
+                savedUrl = feedMirrorUrl,
+                result = feedMirrorResult,
+                onInputChange = { feedMirrorInput = it },
+                onSave = {
+                    hapticTick(context)
+                    viewModel.saveFeedMirror(feedMirrorInput)
+                },
+                onRemove = {
+                    hapticTick(context)
+                    viewModel.removeFeedMirror()
+                },
+                onClearResult = viewModel::clearFeedMirrorResult,
+            )
 
-        // About
-        PremiumCard {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            // About
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+                }
             }
         }
     }
@@ -2509,14 +2557,12 @@ fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-    ) {
-        SectionHeader(title)
-        Spacer(Modifier.height(4.dp))
-        content()
-        Spacer(Modifier.height(4.dp))
-        GradientDivider()
+    PremiumCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            SectionHeader(title)
+            Spacer(Modifier.height(6.dp))
+            content()
+        }
     }
 }
 

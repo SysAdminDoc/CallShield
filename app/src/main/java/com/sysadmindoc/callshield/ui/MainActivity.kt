@@ -264,6 +264,7 @@ fun CallShieldApp(
         topBar = {
             AppChrome(
                 showSearch = showSearch,
+                showSearchAction = selectedTab != 4 || moreView != 2,
                 title = currentTitle,
                 accentColor = CatGreen,
                 searchQuery = searchQuery,
@@ -531,6 +532,7 @@ fun SearchResultsView(
 @Composable
 private fun AppChrome(
     showSearch: Boolean,
+    showSearchAction: Boolean,
     title: String,
     accentColor: Color,
     searchQuery: String,
@@ -600,13 +602,15 @@ private fun AppChrome(
                         color = CatText,
                         style = MaterialTheme.typography.headlineSmall,
                     )
-                    IconButton(onClick = onOpenSearch) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.cd_search),
-                            tint = CatText,
-                            modifier = Modifier.size(28.dp),
-                        )
+                    if (showSearchAction) {
+                        IconButton(onClick = onOpenSearch) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = stringResource(R.string.cd_search),
+                                tint = CatText,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
                     }
                 }
             }

@@ -386,6 +386,8 @@
     <string name="remote_lookup_status_unreadable_body">响应无法读取</string>
     <string name="remote_lookup_status_parse_error">解析错误</string>
     <string name="remote_lookup_status_unavailable">不可用</string>
+    <string name="settings_basic">基础</string>
+    <string name="settings_advanced">高级</string>
     <string name="settings_permissions_access">权限与访问</string>
     <string name="settings_setup_progress">访问检查就绪：%1$s/%2$s</string>
     <string name="settings_run_setup_again">重新运行设置向导</string>

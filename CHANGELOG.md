@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Settings now opens on grouped Basic controls, with detailed access, detection,
+  lists and backup options under Advanced. Cards match the dark screen design,
+  and Settings no longer opens an unrelated database search.
 - Setup now counts only the two required grants in its progress header. Its
   protection cards use tighter spacing and clearer selection styling.
 - Home now puts today's results, call and text readiness, the latest blocked

@@ -61,7 +61,9 @@ shard service is unavailable.
 3. **Sync the database.** The Home screen runs a first sync on its own. After that, background syncs check every six hours.
 4. **Recommended starting profile.** Choose Recommended for the default call and text controls. Strict adds aggressive call checks, blocks hidden callers, and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Every profile change offers Undo. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
 
-New installs use the AMOLED theme. Change it to Graphite, Light or System in Settings.
+New installs use the AMOLED theme. Settings opens on Basic controls for blocking,
+safety, notifications and appearance. Advanced holds the detailed access and
+detection options. Change the theme to Graphite, Light or System in Basic.
 
 For a full walkthrough of every toggle with its default, see [docs/getting-started.md](docs/getting-started.md).
 
@@ -540,7 +542,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1559 JVM unit tests (JUnit) |
-| Strings | 1616 string resources and 38 plural groups (translation-ready) |
+| Strings | 1618 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

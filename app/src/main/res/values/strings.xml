@@ -553,6 +553,8 @@
     <string name="remote_lookup_status_unavailable">Unavailable</string>
 
     <!-- Settings Screen -->
+    <string name="settings_basic">Basic</string>
+    <string name="settings_advanced">Advanced</string>
     <string name="settings_permissions_access">Access status</string>
     <string name="settings_setup_progress">%1$s of %2$s required checks ready</string>
     <string name="settings_run_setup_again">Run setup again</string>
