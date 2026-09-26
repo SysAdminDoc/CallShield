@@ -174,9 +174,11 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     """One message per regular-cadence source past its `stale_after_days`.
 
     `freshness` is `data/source-freshness.json`, which import_all_sources.py
-    updates with each source's last successful import and the newest complaint
-    date for FTC and FCC. A source with no record has never supplied data since
-    the record began, which is stale too.
+    updates with each source's last successful import and the newest record
+    date for FTC and FCC: the complaint date for FTC, and the day FCC published
+    the complaint for FCC, whose batches carry complaint dates years old. A
+    source with no record has never supplied data since the record began, which
+    is stale too.
 
     A source that only imports with an opt-in flag (its manifest `import_flag`)
     is held to its limit once it has been imported at all. A default import

@@ -11,7 +11,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
 - `source-manifest.json`: Feed access, license, geography, attribution, and parser contract
 - `source-snapshot.json`: Per-run source health, checksum, accepted/rejected counts, and failures
-- `source-freshness.json`: Each upstream source's last successful import and the newest complaint date for FTC and FCC. The weekly liveness check compares complaint dates, rather than fetch times, with `stale_after_days`. A source with an `import_flag` in the manifest is checked once it has been imported, and the failure message names the flag
+- `source-freshness.json`: Each upstream source's last successful import and the newest record date for FTC and FCC (the complaint date for FTC, the day FCC published it for FCC). The weekly liveness check compares those dates, rather than fetch times, with `stale_after_days`. A source with an `import_flag` in the manifest is checked once it has been imported, and the failure message names the flag
 - `spam_domains_approved.json`: Optional maintainer approval input for domain
   candidates. Add reviewed names to its `approved` array. An invalid shape
   stops the extractor.

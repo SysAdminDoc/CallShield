@@ -321,7 +321,7 @@ importer creates on its first run. They keep caller-ID and callback-business
 evidence as separate roles, and don't promote unverified complaint-only rows
 without independent caller corroboration. The importer leaves out complaints
 with missing or future dates. `data/source-freshness.json` records the newest
-complaint date, and the weekly check flags an FTC or FCC feed when that date
+complaint date (for FCC, the day FCC published it), and the weekly check flags an FTC or FCC feed when that date
 falls outside its freshness window.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
