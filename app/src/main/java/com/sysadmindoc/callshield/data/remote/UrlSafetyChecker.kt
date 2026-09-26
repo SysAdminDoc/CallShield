@@ -85,7 +85,7 @@ object UrlSafetyChecker {
                     verdict = UrlThreatVerdict.UNKNOWN,
                 )
             }
-            val evidence = lookupUrlEvidence(lookupUrl)
+            val evidence = lookupUrlEvidence(lookupUrl, normalizeOnDeviceLookupUrl(url).ifBlank { lookupUrl })
             evidence.firstOrNull(UrlThreatResult::isMalicious)?.let(::toCheckResult)
                 ?: evidence.firstOrNull()?.let(::toCheckResult)
                 ?: UrlCheckResult(
@@ -99,17 +99,21 @@ object UrlSafetyChecker {
     internal suspend fun checkUrlMatches(url: String): List<UrlCheckResult> {
         val lookupUrl = normalizeRemoteLookupUrl(url)
         if (lookupUrl.isBlank()) return emptyList()
-        return lookupUrlEvidence(lookupUrl)
+        return lookupUrlEvidence(lookupUrl, normalizeOnDeviceLookupUrl(url).ifBlank { lookupUrl })
             .filter(UrlThreatResult::isMalicious)
             .map(::toCheckResult)
     }
 
-    private suspend fun lookupUrlEvidence(lookupUrl: String): List<UrlThreatResult> {
+    private suspend fun lookupUrlEvidence(
+        remoteLookupUrl: String,
+        onDeviceLookupUrl: String = remoteLookupUrl,
+    ): List<UrlThreatResult> {
         if (enabledAdapters.isEmpty()) return emptyList()
         val nowMillis = System.currentTimeMillis()
         return coroutineScope {
             enabledAdapters
                 .map { adapter ->
+                    val lookupUrl = if (adapter.matchesOnDevice) onDeviceLookupUrl else remoteLookupUrl
                     async {
                         val cached = threatCache.get(adapter.source, adapter.sourceVersion, lookupUrl)
                         if (cached != null) {
@@ -209,6 +213,23 @@ object UrlSafetyChecker {
             .username("")
             .password("")
             .host(lookupHost)
+            .encodedPath("/")
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+    }
+
+    /**
+     * The link's scheme and full host for a list matched on the phone. The path,
+     * query, fragment and any user name or password still go.
+     */
+    internal fun normalizeOnDeviceLookupUrl(rawUrl: String): String {
+        val parsedUrl = normalizeCandidateUrl(rawUrl).toHttpUrlOrNull() ?: return ""
+        return parsedUrl
+            .newBuilder()
+            .username("")
+            .password("")
             .encodedPath("/")
             .query(null)
             .fragment(null)

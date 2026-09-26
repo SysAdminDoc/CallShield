@@ -104,6 +104,13 @@ internal interface UrlThreatAdapter {
     val sourceVersion: String
     val isConfigured: Boolean
 
+    /**
+     * True for an adapter that matches against a list downloaded to the phone.
+     * Nothing about the link leaves the phone, so it gets the link's full host;
+     * a remote service gets only the registrable domain.
+     */
+    val matchesOnDevice: Boolean get() = false
+
     suspend fun lookup(
         canonicalUrl: String,
         nowMillis: Long = System.currentTimeMillis(),

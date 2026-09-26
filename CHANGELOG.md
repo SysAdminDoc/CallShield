@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A link in a text is checked against OpenPhish by its full host, so a phishing
+  page on one subdomain is caught without flagging its sibling subdomains.
+  OpenPhish is matched on the phone. PhishTank still receives only the site's
+  base domain.
 - Number details, Lookup and the block explanation describe FCC and FTC
   complaints in words, one line per kind, instead of the importer's field names
   ("FCC callback_business") and the same complaint repeated.

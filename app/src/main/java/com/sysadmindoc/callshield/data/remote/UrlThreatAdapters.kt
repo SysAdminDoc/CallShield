@@ -141,6 +141,7 @@ internal class OpenPhishThreatAdapter(
     override val source: UrlThreatSource = UrlThreatSource.OPENPHISH
     override val sourceVersion: String = source.defaultVersion
     override val isConfigured: Boolean = true
+    override val matchesOnDevice: Boolean = true
 
     @Volatile
     private var feedSnapshot: FeedSnapshot? = null
@@ -161,7 +162,9 @@ internal class OpenPhishThreatAdapter(
                 UrlThreatCache.DEFAULT_TTL_MILLIS,
                 (snapshot.expiresAtMillis - nowMillis).coerceAtLeast(1L),
             )
-        return if (host != null && host in snapshot.hosts) {
+        // A feed entry names the host a phishing page sits on. It flags that host
+        // and anything under it, but not a sibling on the same domain.
+        return if (host != null && host.parentHosts().any { it in snapshot.hosts }) {
             UrlThreatResult.malicious(
                 source = source,
                 sourceVersion = sourceVersion,
@@ -225,6 +228,9 @@ internal class OpenPhishThreatAdapter(
             }
         }
     }
+
+    /** This host and each parent domain of it, the host first. */
+    private fun String.parentHosts(): Sequence<String> = generateSequence(this) { it.substringAfter('.', "").ifEmpty { null } }
 
     private data class FeedSnapshot(
         val hosts: Set<String>,

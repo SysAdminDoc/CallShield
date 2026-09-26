@@ -10,6 +10,41 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class OpenPhishThreatAdapterTest {
+    private fun feedOf(vararg urls: String): OkHttpClient =
+        OkHttpClient
+            .Builder()
+            .addInterceptor { chain ->
+                Response
+                    .Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(urls.joinToString("\n").toResponseBody("text/plain".toMediaType()))
+                    .build()
+            }.build()
+
+    @Test
+    fun `a feed entry on a subdomain flags that host and below it, not its siblings`() =
+        runBlocking {
+            // Links used to reach the adapter as their registrable domain, so a
+            // login.example.test entry never matched a link on login.example.test.
+            val adapter = OpenPhishThreatAdapter(feedOf("https://login.example.test/verify", "https://evil.test/"))
+
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://login.example.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://eu.login.example.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://shop.example.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://example.test/", 0L).verdict)
+            // An entry on a whole domain still covers its subdomains.
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://pay.evil.test/", 0L).verdict)
+        }
+
+    @Test
+    fun `only the on-device feed asks for the full host`() {
+        assertEquals(true, OpenPhishThreatAdapter(feedOf()).matchesOnDevice)
+        assertEquals(false, PhishTankThreatAdapter().matchesOnDevice)
+    }
+
     @Test
     fun `feed waits six hours and a 304 renews the existing hosts`() =
         runBlocking {

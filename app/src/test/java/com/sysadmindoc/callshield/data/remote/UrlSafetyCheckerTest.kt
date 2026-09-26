@@ -98,6 +98,17 @@ class UrlSafetyCheckerTest {
     }
 
     @Test
+    fun `an on-device list gets the full host and nothing else`() {
+        // OpenPhish is matched on the phone, so it can see the subdomain its feed
+        // entries name. The path, query, fragment and credentials still go.
+        assertEquals(
+            "https://login.example.test/",
+            UrlSafetyChecker.normalizeOnDeviceLookupUrl("https://alice:secret@login.example.test/pay?token=secret#frag"),
+        )
+        assertEquals("", UrlSafetyChecker.normalizeOnDeviceLookupUrl("not a link"))
+    }
+
+    @Test
     fun `remote lookup fails closed when registrable domain cannot be resolved`() {
         val normalized =
             UrlSafetyChecker.normalizeRemoteLookupUrl(
