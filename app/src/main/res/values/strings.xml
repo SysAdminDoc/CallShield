@@ -1226,6 +1226,8 @@
     <string name="detail_statistics">Statistics</string>
     <string name="detail_calls">Calls</string>
     <string name="detail_number_details">Number details</string>
+    <string name="detail_take_action">Take action</string>
+    <string name="detail_take_action_desc">Choose what happens when this number contacts you.</string>
     <string name="detail_phone_number">Phone number</string>
     <string name="detail_high_risk">High risk</string>
     <string name="detail_no_risk">No risk detected</string>

@@ -258,64 +258,66 @@ fun NumberDetailScreen(
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PremiumActionButton(
-                    label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
-                    icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
-                    color = CatRed,
-                    onClick = {
-                        if (isBlocked) {
-                            // By number, so a block saved in another spelling of it goes too.
-                            viewModel.unblockByNumber(number)
-                            hapticTick(context)
-                            Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
-                        } else {
-                            viewModel.blockNumber(number, "spam", blockedFromDetail)
-                            hapticConfirm(context)
-                            Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_report),
-                    icon = Icons.Default.Flag,
-                    color = CatRed,
-                    onClick = {
-                        val title = Uri.encode(reportIssueTitle)
-                        val body = Uri.encode(reportIssueBody)
-                        context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
-                    },
-                    modifier = Modifier.weight(1f),
-                    outlined = true,
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_call),
-                    icon = Icons.Default.Phone,
-                    color = CatText,
-                    onClick = {
-                        context.startActivitySafely(
-                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    outlined = true,
-                )
-            }
-
-            // Block area code — confirmed first: a ~7.9M-number rule from a stray
-            // tap with zero feedback is exactly what the Dashboard flow fixed in
-            // v1.7.26. Same dialog + toast here.
             var showAreaBlockConfirm by rememberSaveable { mutableStateOf(false) }
-            if (areaCode != null) {
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_block_area_code, areaCode),
-                    icon = Icons.Default.FilterAlt,
-                    color = CatYellow,
-                    onClick = { showAreaBlockConfirm = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = true,
-                )
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(stringResource(R.string.detail_take_action), CatGreen)
+                    Text(stringResource(R.string.detail_take_action_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PremiumActionButton(
+                            label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
+                            icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
+                            color = CatRed,
+                            onClick = {
+                                if (isBlocked) {
+                                    // By number, so a block saved in another spelling of it goes too.
+                                    viewModel.unblockByNumber(number)
+                                    hapticTick(context)
+                                    Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    viewModel.blockNumber(number, "spam", blockedFromDetail)
+                                    hapticConfirm(context)
+                                    Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        PremiumActionButton(
+                            label = stringResource(R.string.detail_report),
+                            icon = Icons.Default.Flag,
+                            color = CatRed,
+                            onClick = {
+                                val title = Uri.encode(reportIssueTitle)
+                                val body = Uri.encode(reportIssueBody)
+                                context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
+                            },
+                            modifier = Modifier.weight(1f),
+                            outlined = true,
+                        )
+                        PremiumActionButton(
+                            label = stringResource(R.string.detail_call),
+                            icon = Icons.Default.Phone,
+                            color = CatText,
+                            onClick = {
+                                context.startActivitySafely(
+                                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            outlined = true,
+                        )
+                    }
+                    if (areaCode != null) {
+                        PremiumActionButton(
+                            label = stringResource(R.string.detail_block_area_code, areaCode),
+                            icon = Icons.Default.FilterAlt,
+                            color = CatYellow,
+                            onClick = { showAreaBlockConfirm = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            outlined = true,
+                        )
+                    }
+                }
             }
             if (showAreaBlockConfirm && areaCode != null) {
                 val areaAddedToast = stringResource(R.string.dashboard_block_area_added, areaCode)

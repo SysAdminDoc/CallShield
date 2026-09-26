@@ -871,6 +871,8 @@
     <string name="detail_copied">已复制</string>
     <string name="detail_block_area_code">拦截所有 %s 号码</string>
     <string name="detail_statistics">统计</string>
+    <string name="detail_take_action">采取操作</string>
+    <string name="detail_take_action_desc">选择此号码联系您时要执行的操作。</string>
     <string name="detail_calls">通话</string>
     <string name="detail_sms">短信</string>
     <string name="detail_total">总计</string>
