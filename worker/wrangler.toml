@@ -30,3 +30,23 @@ namespace_id = "5001"
 [ratelimits.simple]
 limit = 5
 period = 60
+
+# A carrier gives each phone a /64 out of a shared /48, so the /48 gets a
+# larger budget of its own, and the whole Worker gets one budget per minute so
+# a flood spread across networks can't become a flood of GitHub commits. The
+# code falls back to KV counters when these bindings are missing.
+[[ratelimits]]
+name = "REPORT_GROUP_LIMITER"
+namespace_id = "5002"
+
+[ratelimits.simple]
+limit = 20
+period = 60
+
+[[ratelimits]]
+name = "REPORT_GLOBAL_LIMITER"
+namespace_id = "5003"
+
+[ratelimits.simple]
+limit = 30
+period = 60

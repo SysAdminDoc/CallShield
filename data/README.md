@@ -152,7 +152,8 @@ Use at least 32 random characters for `REPORTER_BUCKET_SECRET`. An existing
 deployment keeps its `GITHUB_TOKEN` secret. For a new Worker, first create a
 fine-grained GitHub token with Contents read and write access to this repo and
 run `npx wrangler secret put GITHUB_TOKEN`. Wrangler provisions the `RATE_LIMIT`
-KV namespace from `wrangler.toml` and binds the rate limiter. A new namespace
+KV namespace from `wrangler.toml` and binds the three rate limiters (per client,
+per /48 and Worker-wide). A new namespace
 starts with empty seven-day report-id dedup state, so previously accepted ids
 can be sent again until that window expires.
 

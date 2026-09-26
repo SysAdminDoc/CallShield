@@ -274,6 +274,86 @@ test("POST returns 429 when the atomic limiter refuses the request", async () =>
   assert.ok(Number(response.headers.get("retry-after")) > 0);
 });
 
+test("one IPv6 /48 has a budget of its own across its /64s", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+  for (let i = 1; i <= 20; i++) {
+    const rl = await checkRateLimit(`2001:db8:7:${i.toString(16)}::1`, env);
+    assert.equal(rl.allowed, true, `/64 number ${i}`);
+  }
+  const refused = await checkRateLimit("2001:db8:7:ff::1", env);
+  assert.equal(refused.allowed, false);
+  assert.ok(refused.retryAfter > 0);
+  // Another /48 has its own budget.
+  assert.equal((await checkRateLimit("2001:db8:8:1::1", env)).allowed, true);
+});
+
+test("the Worker has one per-minute budget across every network", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+  for (let i = 1; i <= 30; i++) {
+    assert.equal((await checkRateLimit(`198.51.100.${i}`, env)).allowed, true, `client ${i}`);
+  }
+  const refused = await checkRateLimit("203.0.113.200", env);
+  assert.equal(refused.allowed, false);
+  assert.ok(refused.retryAfter > 0);
+});
+
+test("POST returns 429 when the /48 or the Worker-wide limiter refuses", async () => {
+  for (const refusing of ["REPORT_GROUP_LIMITER", "REPORT_GLOBAL_LIMITER"]) {
+    const keys = { REPORT_LIMITER: [], REPORT_GROUP_LIMITER: [], REPORT_GLOBAL_LIMITER: [] };
+    const limiter = (name) => ({
+      async limit({ key }) {
+        keys[name].push(key);
+        return { success: name !== refusing };
+      },
+    });
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "2001:db8:7:1::1" },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      {
+        RATE_LIMIT: createMockKV(),
+        REPORT_LIMITER: limiter("REPORT_LIMITER"),
+        REPORT_GROUP_LIMITER: limiter("REPORT_GROUP_LIMITER"),
+        REPORT_GLOBAL_LIMITER: limiter("REPORT_GLOBAL_LIMITER"),
+        GITHUB_TOKEN: "test-token",
+        REPORTER_BUCKET_SECRET: "s".repeat(32),
+      },
+    );
+    assert.equal(response.status, 429, refusing);
+    assert.ok(Number(response.headers.get("retry-after")) > 0, refusing);
+    assert.deepEqual(keys.REPORT_LIMITER, [clientKey("2001:db8:7:1::1", 64)]);
+    assert.deepEqual(keys.REPORT_GROUP_LIMITER, [clientKey("2001:db8:7:1::1", 48)]);
+  }
+});
+
+test("an oversized body without a Content-Length is refused before it is all read", async () => {
+  let pulled = 0;
+  const chunk = new TextEncoder().encode(" ".repeat(4096));
+  const body = new ReadableStream({
+    pull(controller) {
+      pulled += 1;
+      if (pulled > 100) controller.close();
+      else controller.enqueue(chunk);
+    },
+  });
+  const request = new Request("https://reports.example", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.60" },
+    body,
+    duplex: "half",
+  });
+  assert.equal(request.headers.get("content-length"), null);
+  const response = await worker.fetch(request, {
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  });
+  assert.equal(response.status, 413);
+  assert.ok(pulled < 10, `read ${pulled} of 100 chunks`);
+});
+
 test("rate limiter fails closed when KV is not bound", async () => {
   const rl = await checkRateLimit("1.2.3.4", {});
   assert.equal(rl.allowed, false);

@@ -174,6 +174,14 @@ export function sanitizeSmsReportFields(body) {
 // expiration TTL equal to the window so stale keys self-clean.
 const RATE_LIMIT_WINDOW_S = 60;
 const RATE_LIMIT_MAX_REQUESTS = 5;
+// A carrier hands each phone its own /64 out of a shared /48, so the /48 gets
+// a larger budget than one client, and the whole Worker gets one per minute so
+// a flood spread over many networks can't turn into a flood of GitHub commits.
+const GROUP_RATE_LIMIT_MAX_REQUESTS = 20;
+const GLOBAL_RATE_LIMIT_MAX_REQUESTS = 30;
+
+// Reports are a phone number, a type and a few redacted SMS indicators.
+const MAX_BODY_BYTES = 10000;
 
 // Per-number dedup window: the same client cannot re-report the same
 // normalized number with the same type within this window. Prevents replay
@@ -310,8 +318,38 @@ async function hmacBucket(message, secret) {
 }
 
 /**
- * Check the per-IP rate limit.
- * Returns { allowed: boolean, remaining: number, retryAfter: number }.
+ * Read a request body of at most `limit` bytes, or null when it is longer.
+ * A chunked request carries no Content-Length, and request.text() would buffer
+ * all of it before its size could be checked.
+ */
+export async function readBoundedText(request, limit = MAX_BODY_BYTES) {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+/**
+ * Check the per-client, per-/48 and Worker-wide rate limits, in that order.
+ * Returns { allowed: boolean, remaining: number, retryAfter: number } for the
+ * first budget that refuses, or for the client budget when all allow.
  *
  * When the REPORT_LIMITER rate-limiting binding is bound it is authoritative:
  * the platform evaluates its counter atomically per key, so a burst of
@@ -328,11 +366,31 @@ export async function checkRateLimit(ip, env) {
     return { allowed: false, remaining: 0, retryAfter: 0, identityError: true };
   }
   const client = clientKey(ip, LIMITER_PREFIX_BITS);
+  const budgets = [
+    { limiter: env?.REPORT_LIMITER, key: client, kvKey: `rl:${client}`, max: RATE_LIMIT_MAX_REQUESTS },
+    {
+      limiter: env?.REPORT_GROUP_LIMITER,
+      key: clientKey(ip, REPORTER_PREFIX_BITS),
+      kvKey: `rlg:${clientKey(ip, REPORTER_PREFIX_BITS)}`,
+      max: GROUP_RATE_LIMIT_MAX_REQUESTS,
+    },
+    { limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS },
+  ];
+  let first;
+  for (const budget of budgets) {
+    const outcome = await consumeBudget(budget, env);
+    if (!outcome.allowed) return outcome;
+    first ??= outcome;
+  }
+  return first;
+}
 
-  if (env?.REPORT_LIMITER) {
+/** Take one request from a budget: the atomic limiter binding when bound, else a KV counter. */
+async function consumeBudget({ limiter, key: limiterKey, kvKey: key, max }, env) {
+  if (limiter) {
     let outcome;
     try {
-      outcome = await env.REPORT_LIMITER.limit({ key: client });
+      outcome = await limiter.limit({ key: limiterKey });
     } catch (error) {
       console.error("Unable to evaluate the community report rate limiter", error);
       return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
@@ -342,17 +400,16 @@ export async function checkRateLimit(ip, env) {
     }
     // The binding does not expose a remaining count; only `allowed` and
     // `retryAfter` are consumed by the request handler.
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
+    return { allowed: true, remaining: max - 1, retryAfter: 0 };
   }
 
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) {
-      return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS, retryAfter: 0 };
+      return { allowed: true, remaining: max, retryAfter: 0 };
     }
     return { allowed: false, remaining: 0, retryAfter: 0, configurationError: true };
   }
 
-  const key = `rl:${client}`;
   let raw;
   try {
     raw = await env.RATE_LIMIT.get(key);
@@ -366,7 +423,7 @@ export async function checkRateLimit(ip, env) {
     await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
       expirationTtl: RATE_LIMIT_WINDOW_S,
     });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
+    return { allowed: true, remaining: max - 1, retryAfter: 0 };
   }
 
   let state;
@@ -408,10 +465,10 @@ export async function checkRateLimit(ip, env) {
     await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
       expirationTtl: RATE_LIMIT_WINDOW_S,
     });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
+    return { allowed: true, remaining: max - 1, retryAfter: 0 };
   }
 
-  if (state.count >= RATE_LIMIT_MAX_REQUESTS) {
+  if (state.count >= max) {
     const retryAfter = Math.ceil(RATE_LIMIT_WINDOW_S - elapsed);
     return { allowed: false, remaining: 0, retryAfter };
   }
@@ -419,7 +476,7 @@ export async function checkRateLimit(ip, env) {
   state.count += 1;
   const ttl = Math.max(1, Math.ceil(RATE_LIMIT_WINDOW_S - elapsed));
   await env.RATE_LIMIT.put(key, JSON.stringify(state), { expirationTtl: ttl });
-  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - state.count, retryAfter: 0 };
+  return { allowed: true, remaining: max - state.count, retryAfter: 0 };
 }
 
 /**
@@ -592,7 +649,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // fast path; the authoritative check is on the actual body below,
       // because a chunked request carries no Content-Length at all.
       const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
-      if (contentLength > 10000) {
+      if (contentLength > MAX_BODY_BYTES) {
         return new Response(JSON.stringify({ error: "Payload too large" }), {
           status: 413, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
@@ -628,8 +685,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      const bodyText = await request.text();
-      if (bodyText.length > 10000) {
+      const bodyText = await readBoundedText(request);
+      if (bodyText === null) {
         return new Response(JSON.stringify({ error: "Payload too large" }), {
           status: 413, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });

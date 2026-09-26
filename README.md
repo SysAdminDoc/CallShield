@@ -366,7 +366,8 @@ scrape Nomorobo's restricted carrier feed.
 - **Community report abuse controls**. The Worker requires a Cloudflare client
   identity and separates malformed requests from unavailable or corrupt rate-limit state.
   It counts an IPv6 client by its /64, and trending corroboration takes at most two /64s from one /48, so one
-  subscriber can't pass as many reporters by rotating addresses
+  subscriber can't pass as many reporters by rotating addresses. Each client gets 5 reports a minute, each /48 gets
+  20 and the whole Worker gets 30, and a body over 10 KB is refused before it's read in full
 
 ## Privacy
 
