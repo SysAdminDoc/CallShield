@@ -52,6 +52,10 @@ SIGNED_FEEDS = (
     "spam_model_weights.json",
 )
 
+# Signed for downstream consumers of the data. The app doesn't download these,
+# so they aren't in GitHubDataSource.SIGNED_FEED_PATHS.
+CONSUMER_FEEDS = ("spam_numbers.txt",)
+
 # The SubjectPublicKeyInfo of every P-256 key starts with these bytes, so a
 # quoted base64 string with this prefix inside FeedSignature.TRUSTED_KEYS is a
 # trusted key.
@@ -180,7 +184,7 @@ def sign_feeds(data_dir: Path, key: ec.EllipticCurvePrivateKey, trusted: list[ec
             f"Add its public key to FeedSignature.kt first: {own}"
         )
     written = []
-    for name in SIGNED_FEEDS:
+    for name in SIGNED_FEEDS + CONSUMER_FEEDS:
         feed = Path(data_dir) / name
         if not feed.is_file():
             continue
@@ -198,7 +202,7 @@ def verify_feeds(data_dir: Path, trusted: list[ec.EllipticCurvePublicKey]) -> li
     if not trusted:
         return [f"{KOTLIN_KEYS.name} lists no trusted keys"]
     problems = []
-    for name in SIGNED_FEEDS:
+    for name in SIGNED_FEEDS + CONSUMER_FEEDS:
         feed = Path(data_dir) / name
         if not feed.is_file():
             continue

@@ -5,6 +5,7 @@ This directory contains the spam number database that the CallShield app pulls f
 ## Files
 
 - `spam_numbers.json`: Main spam number database with individual numbers and prefix patterns
+- `spam_numbers.txt`: The same numbers for downstream consumers, one E.164 number per line under a short header, signed like the feeds
 - `hot_numbers.json`: Recent community velocity feed for exact-number protection
 - `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
 - `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
@@ -89,6 +90,7 @@ delete. That distinction is the whole reason the field exists.
 | File | Regenerated | Consumers should poll |
 |---|---|---|
 | `spam_numbers.json` + shards | When the maintainer runs a merge | Every 6 hours |
+| `spam_numbers.txt` | With the shards | Every 6 hours |
 | `hot_numbers.json`, `hot_ranges.json`, `spam_domains.json` | Same run as the merge | Every 30 minutes |
 | `spam_model_weights.json` | On retrain, irregular | With the database |
 | `source-manifest.json` | On a feed change | With the database |
@@ -239,8 +241,7 @@ every check; stratified k-fold cross-validation stays as an informational
 estimate (`--skip-cv` leaves it out). The negatives are synthetic: random
 numbers in low-spam NANP area codes from a fixed seed, not real call history,
 so the precision figure measures how the model treats ordinary-looking numbers.
-The
-import and merge scripts bump the database `version` themselves, so there's
+The import and merge scripts bump the database `version` themselves, so there's
 nothing to edit by hand. Signing is the last step: a signed file changed after
 step 6 no longer matches its `.sig`, needs `feed_signing.py sign` again, and
 fails the validation run if it's pushed as it is. Commit the regenerated
@@ -254,6 +255,13 @@ Six files carry a detached signature beside them: `spam_numbers.json`,
 base64 DER ECDSA P-256 (SHA-256) signature over the file's exact bytes, line
 endings included. Shards aren't signed one by one: the signed manifest carries
 each shard's SHA-256, and the app checks every shard against it.
+
+`spam_numbers.txt` is signed the same way for anyone who takes the list
+without the app. It's written with the shards, holds every number whose
+sources allow redistribution (range prefixes stay out, since Saracroche's are
+CC BY-NC-SA), and starts with four `#` lines naming the database version, the
+sources and the licence. Check it against either public key below before you
+use it, the same way the app checks its feeds.
 
 The app compiles in the public keys it accepts
 (`app/src/main/java/com/sysadmindoc/callshield/data/remote/FeedSignature.kt`)

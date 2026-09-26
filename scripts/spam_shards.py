@@ -21,6 +21,7 @@ SHARD_COUNT = 256
 SHARD_DIRECTORY_NAME = "spam_number_shards"
 MANIFEST_FILENAME = "spam_numbers.manifest.json"
 SHARD_PATH_PREFIX = f"data/{SHARD_DIRECTORY_NAME}/"
+PLAIN_TEXT_FILENAME = "spam_numbers.txt"
 
 
 def shard_id_for(value: str) -> str:
@@ -102,6 +103,39 @@ def build_manifest(
     }
 
 
+def plain_text_export(database: dict[str, Any], manifest: dict[str, Any] | None) -> str:
+    """The database's numbers for downstream consumers, one E.164 number per line.
+
+    The 51 MB JSON carries evidence nobody downstream reads. Range prefixes are
+    left out (Saracroche's are CC BY-NC-SA), and so is any row that a source
+    the manifest marks non-redistributable backs.
+    """
+    closed = {
+        source["id"]
+        for source in (manifest or {}).get("sources", [])
+        if isinstance(source, dict) and source.get("redistributable") is False
+    }
+    numbers = sorted(
+        {
+            str(row["number"])
+            for row in database.get("numbers", [])
+            if isinstance(row, dict)
+            and str(row.get("number", "")).startswith("+")
+            and not closed.intersection(
+                evidence.get("source_id") for evidence in row.get("evidence", []) if isinstance(evidence, dict)
+            )
+        }
+    )
+    header = [
+        f"# CallShield spam numbers, database version {database.get('version', 'unknown')} "
+        f"(updated {database.get('updated', 'unknown')})",
+        "# One E.164 number per line. spam_numbers.txt.sig signs this file; data/README.md says how to check it.",
+        "# Numbers come from US FCC and FTC complaint data and CallShield community reports.",
+        "# Licence: MIT, with each source's terms in data/source-manifest.json.",
+    ]
+    return "\n".join(header + numbers) + "\n"
+
+
 def write_sharded_database(
     database: dict[str, Any],
     data_dir: Path,
@@ -126,6 +160,13 @@ def write_sharded_database(
 
     manifest = build_manifest(database, payloads)
     _write_json_if_changed(data_dir / MANIFEST_FILENAME, manifest)
+
+    source_manifest_file = data_dir / "source-manifest.json"
+    source_manifest = json.loads(source_manifest_file.read_text(encoding="utf-8")) if source_manifest_file.is_file() else None
+    text = plain_text_export(database, source_manifest).encode("utf-8")
+    text_file = data_dir / PLAIN_TEXT_FILENAME
+    if not text_file.is_file() or text_file.read_bytes() != text:
+        text_file.write_bytes(text)
 
     # Empty shards are omitted from the manifest. Stale files are harmless if
     # a process dies here, but remove only the explicit two-hex shard names on

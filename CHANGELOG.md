@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The database is also published as data/spam_numbers.txt, one number per
+  line under a short header, signed like the app's feeds, for projects that
+  only want the list rather than the 51 MB JSON.
 - A blocked-call alert offers Not spam, which lets the number ring for the next
   24 hours, instead of Block forever for a number that was already blocked.
   When the block came from the shared database it also tells the community

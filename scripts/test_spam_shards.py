@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import spam_shards
 from spam_shards import (
     MANIFEST_FILENAME,
     SHARD_DIRECTORY_NAME,
@@ -60,6 +61,34 @@ class SpamShardTests(unittest.TestCase):
 
             self.assertGreater(changed_bytes, 0)
             self.assertLess(changed_bytes / total_bytes, 0.01)
+
+    def test_plain_text_export_lists_redistributable_numbers_only(self) -> None:
+        database = {
+            "version": 49,
+            "updated": "2026-09-26",
+            "numbers": [
+                {"number": "+12125550199", "evidence": [{"source_id": "fcc_complaints"}]},
+                {"number": "+12125550101", "evidence": [{"source_id": "community_reports"}]},
+                {"number": "+12125550150", "evidence": [{"source_id": "phoneblock_bulk"}]},
+                {"number": "+12125550101", "evidence": [{"source_id": "ftc_complaints"}]},
+            ],
+            "prefixes": [{"prefix": "+33162", "evidence": [{"source_id": "saracroche_prefixes"}]}],
+        }
+        manifest = {"sources": [{"id": "phoneblock_bulk", "redistributable": False}]}
+
+        text = spam_shards.plain_text_export(database, manifest)
+
+        lines = text.splitlines()
+        self.assertTrue(lines[0].startswith("# CallShield spam numbers, database version 49"))
+        self.assertEqual(["+12125550101", "+12125550199"], [line for line in lines if not line.startswith("#")])
+        self.assertTrue(text.endswith("\n"))
+
+    def test_the_published_plain_text_export_matches_the_database(self) -> None:
+        database = json.loads((ROOT / "data" / "spam_numbers.json").read_text(encoding="utf-8"))
+        manifest = json.loads((ROOT / "data" / "source-manifest.json").read_text(encoding="utf-8"))
+        published = (ROOT / "data" / spam_shards.PLAIN_TEXT_FILENAME).read_text(encoding="utf-8")
+
+        self.assertEqual(spam_shards.plain_text_export(database, manifest), published)
 
     def test_shard_key_is_stable_and_distinguishes_values(self) -> None:
         self.assertEqual(shard_id_for("+12125550101"), shard_id_for("+12125550101"))
