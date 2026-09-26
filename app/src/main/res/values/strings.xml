@@ -507,6 +507,7 @@
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
     <string name="remote_lookup_status_found">Found</string>
     <string name="remote_lookup_status_clean">Clean / not found</string>
+    <string name="remote_lookup_status_uncategorized">Reported, no category</string>
     <string name="remote_lookup_status_disabled">Disabled</string>
     <string name="remote_lookup_status_invalid_input">Invalid input</string>
     <string name="remote_lookup_status_timeout">Timed out</string>

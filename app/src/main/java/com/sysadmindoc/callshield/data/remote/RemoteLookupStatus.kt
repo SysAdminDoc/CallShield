@@ -8,6 +8,7 @@ private const val HTTP_TOO_MANY_REQUESTS = 429
 enum class RemoteLookupStatus {
     FOUND,
     CLEAN,
+    UNCATEGORIZED,
     DISABLED,
     INVALID_INPUT,
     TIMEOUT,
@@ -21,7 +22,7 @@ enum class RemoteLookupStatus {
     ;
 
     val isFallback: Boolean
-        get() = this != FOUND && this != CLEAN
+        get() = this != FOUND && this != CLEAN && this != UNCATEGORIZED
 
     companion object {
         fun fromHttpCode(code: Int): RemoteLookupStatus =

@@ -671,6 +671,7 @@ class CallerIdOverlayService : Service() {
             val anySpam: Boolean,
             /** Sources that answered FOUND or CLEAN, as opposed to failing. */
             val definitive: Int,
+            val uncategorized: Boolean = false,
         )
 
         val spamSources = ExternalLookup.spamLookupSources()
@@ -680,6 +681,7 @@ class CallerIdOverlayService : Service() {
         var totalReports = 0
         var anySpam = false
         var definitive = 0
+        var uncategorized = false
         var warmHitShown = false
 
         fun scoreFor(snapshot: LookupSnapshot): Int =
@@ -732,7 +734,9 @@ class CallerIdOverlayService : Service() {
                 progressBar?.visibility = android.view.View.GONE
                 statusText?.text =
                     this@CallerIdOverlayService.getString(
-                        if (snapshot.definitive > 0) {
+                        if (snapshot.uncategorized && !snapshot.anySpam && snapshot.totalReports == 0) {
+                            R.string.remote_lookup_status_uncategorized
+                        } else if (snapshot.definitive > 0) {
                             R.string.overlay_status_complete
                         } else {
                             R.string.detail_no_definitive_source_result
@@ -747,9 +751,10 @@ class CallerIdOverlayService : Service() {
                 if (result != null) {
                     totalReports += result.reports
                     if (result.isSpam) anySpam = true
-                    if (!result.status.isFallback) definitive++
+                    if (result.status == RemoteLookupStatus.FOUND || result.status == RemoteLookupStatus.CLEAN) definitive++
+                    if (result.status == RemoteLookupStatus.UNCATEGORIZED) uncategorized = true
                 }
-                LookupSnapshot(completed, totalReports, anySpam, definitive)
+                LookupSnapshot(completed, totalReports, anySpam, definitive, uncategorized)
             }
 
         fun addSourceResult(result: ExternalLookup.SourceResult) {
@@ -762,6 +767,7 @@ class CallerIdOverlayService : Service() {
                         val icon =
                             when {
                                 result.isSpam -> "\u26A0"
+                                result.status == RemoteLookupStatus.UNCATEGORIZED -> "!"
                                 isFallback -> "!"
                                 else -> "\u2713"
                             }
@@ -775,6 +781,7 @@ class CallerIdOverlayService : Service() {
                         setTextColor(
                             when {
                                 result.isSpam -> palette.error
+                                result.status == RemoteLookupStatus.UNCATEGORIZED -> palette.overlay
                                 isFallback -> palette.overlay
                                 else -> palette.primary
                             },
@@ -904,6 +911,10 @@ class CallerIdOverlayService : Service() {
 
                 RemoteLookupStatus.CLEAN -> {
                     R.string.remote_lookup_status_clean
+                }
+
+                RemoteLookupStatus.UNCATEGORIZED -> {
+                    R.string.remote_lookup_status_uncategorized
                 }
 
                 RemoteLookupStatus.DISABLED -> {

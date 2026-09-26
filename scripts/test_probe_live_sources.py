@@ -46,6 +46,12 @@ class CheckTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("no longer reads as spam", detail)
 
+    def test_an_uncategorized_is_spam_answer_is_not_treated_as_a_spam_verdict(self):
+        answer = '{"number":"8333041447","is_spam":true,"status_description":"unknown"}'
+        ok, detail = probe_live_sources.check(SKIPCALLS, answering(answer))
+        self.assertFalse(ok)
+        self.assertIn("no longer reads as spam", detail)
+
     def test_a_spam_verdict_moved_to_another_field_fails(self):
         ok, _ = probe_live_sources.check(SKIPCALLS, answering('{"number":"8333041447","verdict":"spam"}'))
         self.assertFalse(ok)

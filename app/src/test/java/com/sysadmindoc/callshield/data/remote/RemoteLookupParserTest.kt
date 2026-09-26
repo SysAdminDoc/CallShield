@@ -22,14 +22,46 @@ class RemoteLookupParserTest {
     }
 
     @Test
-    fun `skipcalls parser does not print an unknown category`() {
+    fun `skipcalls unknown category is a neutral report for Apple Support`() {
         val result =
             parseSkipCallsBody(
                 """{"number":"8002752273","is_spam":true,"response_time_ms":0,"status_code":181,"status_description":"unknown"}""",
             )
 
-        assertTrue(result.isSpam)
-        assertEquals("Flagged as spam", result.detail)
+        assertFalse(result.isSpam)
+        assertEquals(RemoteLookupStatus.UNCATEGORIZED, result.status)
+        assertFalse(result.status.isFallback)
+        assertEquals(0, result.reports)
+        assertEquals("", result.detail)
+    }
+
+    @Test
+    fun `skipcalls unknown category is neutral for IRS and other labels`() {
+        val irs =
+            parseSkipCallsBody(
+                """{"number":"8008291040","is_spam":true,"response_time_ms":0,"status_code":181,"status_description":"unknown"}""",
+            )
+        assertFalse(irs.isSpam)
+        assertEquals(RemoteLookupStatus.UNCATEGORIZED, irs.status)
+
+        for (category in listOf("other", "company", "")) {
+            val result = parseSkipCallsBody("""{"is_spam":true,"status_description":"$category"}""")
+            assertFalse("$category should not be flagged", result.isSpam)
+            assertEquals(RemoteLookupStatus.UNCATEGORIZED, result.status)
+        }
+        assertEquals(
+            RemoteLookupStatus.UNCATEGORIZED,
+            parseSkipCallsBody("""{"is_spam":true}""").status,
+        )
+    }
+
+    @Test
+    fun `skipcalls explicitly categorized spam remains flagged`() {
+        for (category in listOf("scam", "robocall", "telemarketer", "fraud")) {
+            val result = parseSkipCallsBody("""{"is_spam":true,"status_description":"$category"}""")
+            assertTrue("$category should be flagged", result.isSpam)
+            assertEquals(RemoteLookupStatus.FOUND, result.status)
+        }
     }
 
     @Test

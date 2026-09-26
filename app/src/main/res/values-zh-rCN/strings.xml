@@ -342,6 +342,7 @@
     <string name="signal_list_separator">、</string>
     <string name="remote_lookup_status_found">已找到</string>
     <string name="remote_lookup_status_clean">干净 / 未找到</string>
+    <string name="remote_lookup_status_uncategorized">有举报，类别未明</string>
     <string name="remote_lookup_status_disabled">已停用</string>
     <string name="remote_lookup_status_invalid_input">输入无效</string>
     <string name="remote_lookup_status_timeout">超时</string>

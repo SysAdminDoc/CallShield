@@ -18,9 +18,9 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 EXTERNAL_LOOKUP = ROOT / "app" / "src" / "main" / "java" / "com" / "sysadmindoc" / "callshield" / "data" / "remote" / "ExternalLookup.kt"
@@ -49,7 +49,10 @@ SOURCES = (
         sample_digits="8443218090",
         marker=re.compile(r'"is_spam"\s*:\s*(true|false)'),
         spam_sample_digits="8333041447",
-        spam_marker=re.compile(r'"is_spam"\s*:\s*true'),
+        spam_marker=re.compile(
+            r'(?=.*"is_spam"\s*:\s*true)(?=.*"status_description"\s*:\s*"(?:scam|robocall|telemarketer|fraud)")',
+            re.IGNORECASE | re.DOTALL,
+        ),
     ),
 )
 

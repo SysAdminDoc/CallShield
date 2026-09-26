@@ -546,17 +546,20 @@ fun NumberDetailScreen(
                                 fontWeight = FontWeight.SemiBold,
                             )
                         } else {
-                            val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
+                            val hasUncategorizedSource = wr.sources.any { src -> src.status == RemoteLookupStatus.UNCATEGORIZED }
+                            val hasCleanSource = wr.sources.any { src -> src.status == RemoteLookupStatus.CLEAN }
                             Text(
                                 stringResource(
-                                    if (hasDefinitiveSource) {
+                                    if (hasUncategorizedSource) {
+                                        R.string.remote_lookup_status_uncategorized
+                                    } else if (hasCleanSource) {
                                         R.string.detail_clean_all_sources
                                     } else {
                                         R.string.detail_no_definitive_source_result
                                     },
                                 ),
                                 // A lookup that failed everywhere isn't a clean result.
-                                color = if (hasDefinitiveSource) CatGreen else CatSubtext,
+                                color = if (hasCleanSource && !hasUncategorizedSource) CatGreen else CatSubtext,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -567,6 +570,7 @@ fun NumberDetailScreen(
                                 Icon(
                                     when {
                                         src.isSpam -> Icons.Default.Warning
+                                        src.status == RemoteLookupStatus.UNCATEGORIZED -> Icons.Default.Info
                                         isFallback -> Icons.Default.Info
                                         else -> Icons.Default.CheckCircle
                                     },
@@ -574,6 +578,7 @@ fun NumberDetailScreen(
                                     tint =
                                         when {
                                             src.isSpam -> CatRed
+                                            src.status == RemoteLookupStatus.UNCATEGORIZED -> CatSubtext
                                             isFallback -> CatSubtext
                                             else -> CatGreen
                                         },
@@ -761,6 +766,10 @@ private fun remoteLookupStatusStringRes(status: RemoteLookupStatus): Int =
 
         RemoteLookupStatus.CLEAN -> {
             R.string.remote_lookup_status_clean
+        }
+
+        RemoteLookupStatus.UNCATEGORIZED -> {
+            R.string.remote_lookup_status_uncategorized
         }
 
         RemoteLookupStatus.DISABLED -> {

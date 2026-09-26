@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- SkipCalls answers marked "unknown" or "other" now read "Reported, no
+  category" and leave the caller ID warning unchanged. Only its named spam
+  categories can flag a caller. The number page shows the neutral result too.
 - New community-only numbers now wait for reports on two UTC days before they
   enter the shipped database. Reports with reporter buckets also need three
   distinct buckets, even when bucketed reports arrive after an earlier
