@@ -387,13 +387,20 @@ class SpamHeuristics
             threshold: Int = 3,
             numberingPlan: NumberingPlan = NumberingPlan.from(number),
         ): Boolean {
-            if (numberingPlan != NumberingPlan.NANP) return false
+            // Short codes and other unreadable senders never count: repeated 2FA
+            // texts would look like rapid fire.
+            if (numberingPlan == NumberingPlan.UNREADABLE) return false
             val now = System.currentTimeMillis()
-            val normalized = filterAsciiDigitsLast(number, 10)
+            // NANP numbers match on their last ten digits so +1 and national
+            // spellings agree. Anywhere else only the full digits identify a caller:
+            // Berlin's +49 30 1234 0101 must not match +1 301-234-0101.
+            val nanp = numberingPlan == NumberingPlan.NANP
+            val normalized = if (nanp) filterAsciiDigitsLast(number, 10) else filterAsciiDigits(number)
             val count =
                 recentNumbers.count { (num, time) ->
-                    NumberingPlan.from(num) == NumberingPlan.NANP &&
-                        filterAsciiDigitsLast(num, 10) == normalized && (now - time) < windowMs
+                    val samePlan = NumberingPlan.from(num) == numberingPlan
+                    val sameCaller = if (nanp) filterAsciiDigitsLast(num, 10) == normalized else filterAsciiDigits(num) == normalized
+                    samePlan && sameCaller && (now - time) < windowMs
                 }
             return count >= threshold
         }

@@ -19,6 +19,9 @@ All notable changes to CallShield will be documented in this file.
   date written on each one. FCC's daily batches reach back years, so once a typo
   row dated September 26 moved the old cursor, every new batch was skipped: all
   535 complaints published that day. The next import picks them up.
+- Rapid-fire detection works for callers outside North America again. There it
+  compares the whole number, so a +49 and a +1 number that share their last ten
+  digits still never match.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
 - Protection test's ML spam check no longer fails on every phone. Its sample

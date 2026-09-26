@@ -47,10 +47,15 @@ class NanpHeuristicGateTest {
         assertFalse(heuristics.isHotCampaignRange(berlin))
         assertFalse(heuristics.isTollFree(singapore))
         assertFalse(heuristics.isHighSpamVoipRange(newZealand))
-        assertFalse(heuristics.isRapidFire(history, berlin))
+        // Rapid fire is not a NANP-only rule: the same Berlin number three times in
+        // an hour is still a repeat caller. This line used to assert false, which
+        // pinned rapid fire as dead for every caller outside North America.
+        assertTrue(heuristics.isRapidFire(history, berlin))
+        // The suffix collision is what must not match: a +1 number sharing Berlin's
+        // last ten digits is a different caller.
         assertFalse(heuristics.isRapidFire(history, "+13012340101"))
 
-        for (number in listOf(berlin, singapore, newZealand)) {
+        for (number in listOf(singapore, newZealand)) {
             val result =
                 heuristics.analyze(
                     context,
