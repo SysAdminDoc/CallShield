@@ -5,6 +5,7 @@ import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.CampaignObservation
+import com.sysadmindoc.callshield.data.model.FlaggedTextSighting
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberCount
@@ -188,18 +189,18 @@ interface SpamDao {
     suspend fun insertBlockedCallIgnoringDuplicate(call: BlockedCall): Long
 
     /**
-     * Bodies of the flagged texts from [number] logged since [since], which a
-     * second sighting of one text would repeat. A row logged without a body
-     * comes back as "", so it still counts.
+     * The flagged texts from [number] logged since [since], which a second
+     * sighting of one text would repeat. A row logged without a body comes
+     * back with "", so it still counts.
      */
     @Query(
-        "SELECT COALESCE(smsBody, '') FROM call_log " +
+        "SELECT COALESCE(smsBody, '') AS body, matchReason FROM call_log " +
             "WHERE number = :number AND isCall = 0 AND wasBlocked = 1 AND timestamp >= :since",
     )
-    suspend fun flaggedTextBodiesSince(
+    suspend fun flaggedTextsSince(
         number: String,
         since: Long,
-    ): List<String>
+    ): List<FlaggedTextSighting>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPendingBlockedCallLog(log: PendingBlockedCallLog): Long

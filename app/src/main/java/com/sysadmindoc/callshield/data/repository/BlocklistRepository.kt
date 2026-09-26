@@ -34,13 +34,17 @@ internal const val TEXT_DUPLICATE_WINDOW_MS = 60_000L
 private val WHITESPACE_RUN = Regex("\\s+")
 
 /**
- * Whether two sightings of a flagged text can be the same message. A
- * notification may cut the body short or carry none at all (an encrypted RCS
- * placeholder), so a missing body, or one the other starts with, matches.
+ * Whether two sightings of a flagged text can be the same message. Only the
+ * other path's copy can be cut short or empty: the notification listener
+ * sees a body the notification may truncate or hide (an encrypted RCS
+ * placeholder), so across paths a missing body, or one the other starts
+ * with, matches. Two sightings on the same path match only when their text
+ * does, so "Hi" and a later "Hi, your parcel is held" stay two texts.
  */
 internal fun sameFlaggedText(
     first: String?,
     second: String?,
+    samePath: Boolean = false,
 ): Boolean {
     fun comparable(body: String?) =
         body
@@ -52,8 +56,12 @@ internal fun sameFlaggedText(
             .replace(WHITESPACE_RUN, " ")
     val a = comparable(first)
     val b = comparable(second)
+    if (samePath) return a == b
     return a.isEmpty() || b.isEmpty() || a.startsWith(b) || b.startsWith(a)
 }
+
+/** The notification listener logs its sightings under an rcs_ reason. */
+private fun fromListener(matchReason: String) = matchReason.startsWith("rcs_")
 
 @Suppress("TooManyFunctions", "LongParameterList")
 class BlocklistRepository(
@@ -361,8 +369,10 @@ class BlocklistRepository(
     ): Boolean =
         textLogLock.withLock {
             val sender = normalizeLogIdentity(number)
-            val recent = dao.flaggedTextBodiesSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS)
-            if (recent.any { sameFlaggedText(it, smsBody) }) return@withLock false
+            val recent = dao.flaggedTextsSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS)
+            val listener = fromListener(matchReason)
+            val repeat = recent.any { sameFlaggedText(it.body, smsBody, samePath = fromListener(it.matchReason) == listener) }
+            if (repeat) return@withLock false
             logBlockedCall(
                 number = number,
                 isCall = false,

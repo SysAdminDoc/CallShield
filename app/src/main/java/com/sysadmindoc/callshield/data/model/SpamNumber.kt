@@ -183,6 +183,12 @@ data class NumberCount(
     val cnt: Int,
 )
 
+/** A flagged text already logged, as the duplicate check sees it. */
+data class FlaggedTextSighting(
+    val body: String,
+    val matchReason: String,
+)
+
 /** A trending number from the 30-minute hot list sync. */
 data class HotNumber(
     val number: String,

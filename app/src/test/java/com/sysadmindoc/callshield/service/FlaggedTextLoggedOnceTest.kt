@@ -31,7 +31,7 @@ class FlaggedTextLoggedOnceTest {
     @After
     fun tearDown() = fixture.close()
 
-    private fun flaggedRows(number: String) = runBlocking { fixture.dao.flaggedTextBodiesSince(number, 0L).size }
+    private fun flaggedRows(number: String) = runBlocking { fixture.dao.flaggedTextsSince(number, 0L).size }
 
     @Test
     fun `a text both paths flag is logged once`() {
@@ -111,6 +111,23 @@ class FlaggedTextLoggedOnceTest {
 
         assertEquals(listOf(true, true, false), logged)
         assertEquals(2, flaggedRows("+12125550105"))
+    }
+
+    @Test
+    fun `a text that starts like an earlier one from the same path is its own text`() {
+        // Only a notification's copy can be cut short. Two receiver sightings are
+        // two texts unless their text is the same.
+        val first = 1_800_000_000_000L
+        val logged =
+            runBlocking {
+                listOf(
+                    repo.logFlaggedText("+12125550108", "Hi", "keyword", 70, timestamp = first),
+                    repo.logFlaggedText("+12125550108", "Hi, your parcel is held. Pay at bad.example", "keyword", 70, timestamp = first + 20_000L),
+                    repo.logFlaggedText("+12125550108", "Hi, your parcel is held. Pay at bad.example", "keyword", 70, timestamp = first + 21_000L),
+                )
+            }
+
+        assertEquals(listOf(true, true, false), logged)
     }
 
     @Test
