@@ -70,8 +70,10 @@ FTC_PAGE_SIZE = 50
 # 10, reset at 00:00 UTC). A run that asks for more never finishes, and a fetch
 # that fails records nothing, so the freshness gate read FTC as never imported.
 # Without a key of its own (FTC_API_KEY) a run stays inside that budget, with
-# two requests to spare, and its cursor carries on from where it stopped next
-# time.
+# two requests to spare. FTC files thousands of complaints a day, far more than
+# that budget, so a keyless run reads newest-first down to its cursor instead of
+# resuming forward from it; resuming would fall further behind every day. What
+# arrived between runs beyond the budget is skipped.
 FTC_DEMO_KEY = "DEMO_KEY"
 FTC_DEMO_KEY_REQUEST_BUDGET = 8
 FCC_PAGE_SIZE = 5000
@@ -357,6 +359,7 @@ def fetch_ftc(
     offset = 0
     records_fetched = 0
     previous_cursor = _valid_cursor(cursor)
+    newest_first = previous_cursor is None or key == FTC_DEMO_KEY
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     while records_fetched < max_records:
@@ -365,7 +368,7 @@ def fetch_ftc(
             "api_key": key,
             "items_per_page": page_size,
             "offset": offset,
-            "sort_order": "asc" if previous_cursor else "desc",
+            "sort_order": "desc" if newest_first else "asc",
         }
         if previous_cursor:
             # The FTC API requires the two date filters together. Keep the

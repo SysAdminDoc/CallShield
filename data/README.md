@@ -171,9 +171,11 @@ python scripts/import_all_sources.py                       # writes data/spam_nu
 python scripts/update_ftc.py --max 50000                   # merge recent FTC complaints
 # The FTC API is read with api.data.gov's shared DEMO_KEY unless FTC_API_KEY is
 # set. api.ftc.gov gives DEMO_KEY 10 requests a day (reset at 00:00 UTC), so a
-# run without a key fetches 400 records (800 for update_ftc.py), records the
-# import and carries on from its cursor next time. A free key from api.data.gov
-# lifts that to the full window.
+# run without a key fetches the newest 400 records (800 for update_ftc.py). FTC
+# gets thousands of complaints a day, so a keyless run reads newest-first down to
+# its cursor and skips whatever the budget can't reach. A free key from
+# api.data.gov lifts that to the full window, and a keyed run reads forward from
+# its cursor.
 # ToastedSpam serves plain HTTP only (no TLS), so it is skipped by default and a
 # poisoned response can't ship hard-blocked numbers. Include it only from a
 # trusted network: python scripts/import_all_sources.py --allow-insecure-sources

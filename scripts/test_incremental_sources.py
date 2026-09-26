@@ -199,9 +199,11 @@ def test_incremental_window_retries_and_advances_cursor():
 
         module.requests.get = fake_get
         module.time.sleep = delays.append
+        # A key of its own has the budget to read forward from its cursor.
         result = module.fetch_ftc(
             max_records=1,
             cursor={"timestamp": "2026-08-01T00:00:00Z", "id": "ftc-1"},
+            api_key="a-key-of-its-own",
         )
 
         assert result.complete
@@ -214,6 +216,46 @@ def test_incremental_window_retries_and_advances_cursor():
         assert params["created_date_from"] == '"2026-08-01T00:00:00Z"'
         assert params["created_date_to"].startswith('"')
         assert delays == [5]
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
+def test_keyless_ftc_run_reads_the_newest_window():
+    # DEMO_KEY fetches 400 records a run while FTC files thousands a day, so
+    # reading forward from the cursor fell further behind every day.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    newest = [
+        {"id": f"ftc-{9 - n}", "attributes": {"created-date": f"2026-09-26T0{9 - n}:00:00Z",
+                                            "company-phone-number": f"+1212556130{n}", "subject": "Robocall"}}
+        for n in range(3)
+    ] + [
+        # The inclusive lower bound returns the cursor's own record again.
+        {"id": "ftc-1", "attributes": {"created-date": "2026-08-01T00:00:00Z",
+                                       "company-phone-number": "+12125561399", "subject": "Robocall"}}
+    ]
+    try:
+        def fake_get(url, **kwargs):
+            requests_seen.append(kwargs["params"])
+            return FakeResponse({"data": newest})
+
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+        result = module.fetch_ftc(
+            max_records=50,
+            cursor={"timestamp": "2026-08-01T00:00:00Z", "id": "ftc-1"},
+            api_key=module.FTC_DEMO_KEY,
+        )
+
+        assert result.complete
+        assert requests_seen[0]["sort_order"] == "desc", requests_seen[0]
+        assert requests_seen[0]["created_date_from"] == '"2026-08-01T00:00:00Z"'
+        assert sorted(row["number"] for row in result) == ["+12125561300", "+12125561301", "+12125561302"]
+        assert result.cursor == {"timestamp": "2026-09-26T09:00:00Z", "id": "ftc-9"}, result.cursor
+        assert module._fetch_stats(result, "2026-09-26T10:00:00+00:00")["newest_record_date"] == "2026-09-26"
     finally:
         module.requests.get = original_get
         module.time.sleep = original_sleep
@@ -504,6 +546,7 @@ def main():
     test_future_fcc_row_cannot_poison_the_cursor()
     test_fcc_resumes_by_arrival_so_back_dated_batches_land()
     test_incremental_window_retries_and_advances_cursor()
+    test_keyless_ftc_run_reads_the_newest_window()
     test_cursors_and_snapshot_are_durable_and_attributed()
     test_source_freshness_keeps_what_a_run_did_not_fetch()
     test_merge_writes_its_records_beside_the_database()

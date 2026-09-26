@@ -29,6 +29,9 @@ All notable changes to CallShield will be documented in this file.
   move to the promotion ledger only looked at their last 30 days, so rows whose
   reports were months apart looked uncorroborated. A fourth stays out, because
   its two reports came two hours apart.
+- FTC imports without an API key now take the newest complaints each time. At
+  400 a day, reading forward from the last run fell further behind FTC's daily
+  volume.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,
