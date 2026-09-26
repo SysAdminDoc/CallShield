@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Backups now carry the outgoing-call hold, the theme, the update check and
+  the feed mirror, which a restore used to leave behind. Restoring an older
+  backup leaves those four as they are. A test now fails when a new setting
+  is neither backed up nor left out on purpose.
 - Answer and hang up works for callers whose number arrives in national format,
   such as a UK 07911 number, instead of letting them ring out silently. While
   roaming it rejects the call rather than answering, and a second call that

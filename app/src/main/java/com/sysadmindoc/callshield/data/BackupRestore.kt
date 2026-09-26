@@ -199,6 +199,13 @@ object BackupRestore {
         val enabledRegulatoryPrefixes: List<String> = emptyList(),
         val meetingModeEnabled: Boolean = false,
         val meetingModeApps: List<String> = emptyList(),
+        // Null in a backup made before these were saved, which leaves the
+        // current value alone rather than resetting it.
+        val outgoingCallHoldEnabled: Boolean? = null,
+        val appTheme: String? = null,
+        val appUpdateChecksEnabled: Boolean? = null,
+        /** "" when the backed-up phone had no mirror. */
+        val feedMirrorUrl: String? = null,
     )
 
     @Suppress("LongParameterList")

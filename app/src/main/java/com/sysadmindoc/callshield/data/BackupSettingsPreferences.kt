@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.data
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
+import com.sysadmindoc.callshield.data.remote.FeedMirror
+import com.sysadmindoc.callshield.data.repository.sanitizeAppTheme
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 
 // Settings half of a backup: reading the DataStore snapshot into a
@@ -92,6 +94,10 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
                 .sorted(),
         meetingModeEnabled = this[SpamRepository.KEY_MEETING_MODE] ?: false,
         meetingModeApps = this[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty().sorted(),
+        outgoingCallHoldEnabled = this[SpamRepository.KEY_OUTGOING_CALL_HOLD] ?: false,
+        appTheme = sanitizeAppTheme(this[SpamRepository.KEY_APP_THEME]),
+        appUpdateChecksEnabled = this[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false,
+        feedMirrorUrl = this[SpamRepository.KEY_FEED_MIRROR_URL].orEmpty(),
     )
 
 internal fun BackupSettings.sanitized(): BackupSettings =
@@ -134,6 +140,9 @@ internal fun BackupSettings.sanitized(): BackupSettings =
                 .filter { it in MeetingModeRegistry.MEETING_APPS }
                 .distinct()
                 .sorted(),
+        // A theme or mirror this version can't use is dropped, leaving the current one.
+        appTheme = appTheme?.takeIf { sanitizeAppTheme(it) == it },
+        feedMirrorUrl = feedMirrorUrl?.let { if (it.isEmpty()) it else FeedMirror.normalize(it) },
     )
 
 @Suppress("LongMethod")
@@ -217,6 +226,18 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
         preferences.remove(SpamRepository.KEY_ACTIVE_PROFILE)
     } else {
         preferences[SpamRepository.KEY_ACTIVE_PROFILE] = activeProfileName
+    }
+    outgoingCallHoldEnabled?.let { preferences[SpamRepository.KEY_OUTGOING_CALL_HOLD] = it }
+    appTheme?.let { preferences[SpamRepository.KEY_APP_THEME] = it }
+    when (appUpdateChecksEnabled) {
+        true -> preferences[SpamRepository.KEY_APP_UPDATE_CHECKS] = true
+        false -> preferences.remove(SpamRepository.KEY_APP_UPDATE_CHECKS)
+        null -> Unit
+    }
+    when (feedMirrorUrl) {
+        null -> Unit
+        "" -> preferences.remove(SpamRepository.KEY_FEED_MIRROR_URL)
+        else -> preferences[SpamRepository.KEY_FEED_MIRROR_URL] = feedMirrorUrl
     }
     if (notificationScreeningPackages == null) {
         // Backup was taken with the follow-the-defaults sentinel (or is a
