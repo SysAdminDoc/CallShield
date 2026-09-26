@@ -995,7 +995,7 @@
     <string name="protection_test_intro_permissions">Required permissions and Android roles.</string>
     <string name="protection_test_intro_engines">Spam engines, ML scoring, and local data.</string>
     <string name="protection_test_intro_integrations">Caller ID overlay and RCS monitoring.</string>
-    <string name="protection_test_summary_body_attention">Review the checks below to restore full protection and premium extras.</string>
+    <string name="protection_test_summary_body_attention">Review the checks below to restore full protection and optional extras.</string>
     <string name="protection_test_action_needed">Action needed</string>
     <string name="protection_test_working">Working as expected</string>
     <string name="protection_test_next_steps">Recommended next steps</string>
@@ -1802,7 +1802,7 @@
     <string name="reasoning_caller_name_block_detail">Every allow rule, contacts included, still wins.</string>
     <string name="reasoning_hidden_number_headline">Call came in with no phone number attached.</string>
     <string name="reasoning_hidden_number_detail">Blocked by your \"block unknown numbers\" setting.</string>
-    <string name="reasoning_database_headline">This number is in CallShield\'s community spam database.</string>
+    <string name="reasoning_database_headline">This number is in CallShield\'s spam database.</string>
     <string name="reasoning_type_on_file">Type on file: %1$s</string>
     <string name="reasoning_db_prefix_headline">This number sits next to confirmed spam numbers.</string>
     <string name="reasoning_db_prefix_detail">It shares all but its last two digits with numbers in the spam database, and database prefix expansion is on.</string>

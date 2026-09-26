@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.9.0 (2026-09-26)
+
 - Phones no longer treat the empty trending feeds as an outage. Since
   September 25 the hot list, campaign range and spam domain feeds went out empty
   without being marked cleared, so every phone kept retrying the refresh and
@@ -89,6 +91,9 @@ All notable changes to CallShield will be documented in this file.
 - The caller ID popup is fully opaque, with 12dp corners like the rest of the
   app. At 96% opacity, bright text in the app underneath showed through the
   caller's name and verdict, and its 16dp corners were off the app's scale.
+- Progress bars in Insights, Protection test and Settings are flat. Their rounded
+  ends and end dot turned the thin bars into pills. Protection test's summary
+  says optional extras, not premium ones.
 - Empty Blocklist and Blocked log screens use the app's standard outlined card.
 - More's cards keep their text centered, and the update check and crash log
   share the What's new card style. The update check's privacy note is no longer
@@ -97,6 +102,8 @@ All notable changes to CallShield will be documented in this file.
 - Lookup reads "Look up a number". Its risk gauge sits on a soft glow instead of
   a solid disc, and the evidence rows line up.
 - Home no longer shows this week's count twice.
+- The block explanation calls the database CallShield's spam database, not its
+  community spam database. Most of its numbers come from FCC and FTC complaints.
 - Settings rows share one icon tone, region and caller-name rules open from a
   regular row, and switch descriptions are no longer cut off.
 - Tapping More while inside one of its pages goes back to the More list.

@@ -764,7 +764,7 @@
     <string name="protection_test_intro_permissions">所需权限与 Android 角色。</string>
     <string name="protection_test_intro_engines">垃圾引擎、ML 评分与本地数据。</string>
     <string name="protection_test_intro_integrations">来电识别悬浮窗与 RCS 监控。</string>
-    <string name="protection_test_summary_body_attention">查看下方检查项以恢复完整防护与高级增强。</string>
+    <string name="protection_test_summary_body_attention">查看下方检查项以恢复完整防护与可选增强。</string>
     <string name="protection_test_action_needed">需要处理</string>
     <string name="protection_test_working">运行符合预期</string>
     <string name="protection_test_next_steps">建议后续步骤</string>
@@ -1304,7 +1304,7 @@
     <string name="reasoning_caller_name_block_detail">所有允许规则（包括联系人）仍然优先。</string>
     <string name="reasoning_hidden_number_headline">来电未附带电话号码。</string>
     <string name="reasoning_hidden_number_detail">已按你的“拦截未知号码”设置拦截。</string>
-    <string name="reasoning_database_headline">此号码在 CallShield 社区垃圾号码库中。</string>
+    <string name="reasoning_database_headline">此号码在 CallShield 垃圾号码库中。</string>
     <string name="reasoning_type_on_file">记录类型：%1$s</string>
     <string name="reasoning_db_prefix_headline">此号码与已确认的垃圾号码相邻。</string>
     <string name="reasoning_db_prefix_detail">除最后两位外，它与垃圾号码库中的号码完全相同，且号码库前缀扩展已开启。</string>

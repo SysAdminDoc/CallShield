@@ -13,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -520,9 +520,13 @@ private fun CheckTally(
             )
             LinearProgressIndicator(
                 progress = { if (total == 0) 1f else passed / total.toFloat() },
-                modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(ShapeXs)),
+                // Flat like every progress bar in the app: round caps on a 5dp bar are a pill.
+                modifier = Modifier.fillMaxWidth().height(5.dp),
                 color = barColor,
                 trackColor = CatMuted.copy(alpha = 0.2f),
+                strokeCap = StrokeCap.Butt,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
             )
             Text(note, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }

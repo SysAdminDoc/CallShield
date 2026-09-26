@@ -55,18 +55,18 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
-            "1.8.1",
-            "Fixes for category rules, filters and contrast",
+            "1.9.0",
+            "A new look and protection levels",
             isLatest = true,
-            date = "September 25, 2026",
-            summary = "A round of fixes a review turned up after 1.8.0.",
+            date = "September 26, 2026",
+            summary = "Every screen was redesigned, and a full review fixed what it turned up.",
             changes =
                 listOf(
-                    "Category rules no longer act on a weak ML block",
-                    "Database filters survive Android closing the app, and a new filter never shows the last one's rows",
-                    "When two outgoing calls overlap, the second one is no longer dropped",
-                    "Clearer contrast on the log cleanup chips, repeat counts and rule warnings in the light theme",
-                    "Telemarketing range names follow the app's language",
+                    "Every screen uses the darker AMOLED design, and Light and Graphite are still in Settings",
+                    "Pick Recommended, Strict or Contacts only in setup, on Home or in Settings",
+                    "Settings splits into Basic and Advanced",
+                    "Choosing Light works again, and Protection test's ML check passes on a healthy phone",
+                    "Calls from abroad no longer show US place names, and Contacts only pauses instead of blocking everyone",
                 ),
         )
         Spacer(Modifier.height(14.dp))
@@ -108,6 +108,20 @@ fun ChangelogScreen() {
         }
         AnimatedVisibility(visible = showHistory) {
             Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.8.1",
+                    "Fixes for category rules, filters and contrast",
+                    date = "September 25, 2026",
+                    summary = "A round of fixes a review turned up after 1.8.0.",
+                    changes =
+                        listOf(
+                            "Category rules no longer act on a weak ML block",
+                            "Database filters survive Android closing the app, and a new filter never shows the last one's rows",
+                            "When two outgoing calls overlap, the second one is no longer dropped",
+                            "Clearer contrast on the log cleanup chips, repeat counts and rule warnings in the light theme",
+                            "Telemarketing range names follow the app's language",
+                        ),
+                )
                 VersionEntry(
                     "1.8.0",
                     "Answer & hang up, outgoing call check and signed protection data",

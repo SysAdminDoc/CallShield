@@ -59,6 +59,17 @@ class RadiusScaleTest {
     }
 
     @Test
+    fun `progress bars are flat`() {
+        // Material's default round caps, gap and stop dot make a thin bar a pill.
+        val bars =
+            mainSources().flatMap { (name, text) ->
+                Regex("""LinearProgressIndicator\(""").findAll(text).map { name to callArguments(text, it.range.last) }.toList()
+            }
+        assertTrue("found only ${bars.size} progress bars", bars.size >= 4)
+        assertEquals(emptyList<String>(), bars.filterNot { (_, call) -> "StrokeCap.Butt" in call }.map { it.first })
+    }
+
+    @Test
     fun `the scans catch each way of writing a pill`() {
         listOf(
             "RoundedCornerShape(24.dp)",
@@ -97,6 +108,21 @@ class RadiusScaleTest {
                 val percent = "percent" in arguments || Regex("""^\s*([1-9]\d*)\s*$""").matches(arguments)
                 call.value.takeIf { tooRound || percent }
             }.toList()
+
+    /** The text between the parenthesis at [open] and the one that closes it. */
+    private fun callArguments(
+        source: String,
+        open: Int,
+    ): String {
+        var depth = 0
+        for (index in open until source.length) {
+            when (source[index]) {
+                '(' -> depth++
+                ')' -> if (--depth == 0) return source.substring(open + 1, index)
+            }
+        }
+        return source.substring(open + 1)
+    }
 
     /** Each `CircleShape` in [source] drawn on something larger than a 24dp dot or swatch. */
     private fun largeCircles(source: String): List<String> =

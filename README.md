@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C362-f38ba8?style=flat-square" alt="51,362 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1563-94e2d5?style=flat-square" alt="1563 Tests">
+  <img src="https://img.shields.io/badge/Tests-1580-94e2d5?style=flat-square" alt="1580 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -49,7 +49,7 @@ shard service is unavailable.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03-lookup.png" width="30%" alt="Explainable number lookup">
 </p>
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04-overlay.png" width="30%" alt="Live call risk overlay">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04-overlay.png" width="30%" alt="Caller ID overlay on an incoming call">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05-settings.png" width="30%" alt="Privacy and blocking settings">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
@@ -78,6 +78,16 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
+## v1.9.0 Highlights
+
+A new look for every screen, protection levels you can switch in one tap, and a round of fixes from a full review.
+
+- **A darker, calmer design.** Every page uses the AMOLED palette with outlined cards, page headings and real tabs. Light, Graphite and System themes are still in Settings.
+- **Protection levels.** Setup ends with Recommended, Strict or Contacts only, and Home and Settings switch levels with an Undo.
+- **Settings in two parts.** Basic holds the everyday switches, and Advanced keeps detection, lists and backup.
+- **Fixes from the review.** Light can be chosen again. Protection test's ML check passes on a healthy phone. Calls from abroad no longer show US place names, and Region rules block area codes that can't exist. Contacts only mode pauses, and says so, instead of blocking everyone when Contacts permission is off.
+- **Fresher data.** The FCC import picks up back-dated complaint batches it used to skip, the trending lists no longer look like an outage to phones, and community reports that three people confirmed stay published.
+
 ## v1.8.1 Highlights
 
 A fix release, from a review of the work that went into 1.8.0.
@@ -98,7 +108,7 @@ A fix release, from a review of the work that went into 1.8.0.
 - **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
 - **Community reports** go out once and wait for a connection when you're offline. A new number enters the database once two reports arrive at least 24 hours apart. Reports with reporter buckets also need three different reporters on the same UTC day, because a bucket changes every day and one person could otherwise look like three.
 
-## Detection Pipeline (v1.8.1)
+## Detection Pipeline (v1.9.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
 
@@ -500,12 +510,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1563 tests
+./gradlew testDebugUnitTest   # 1580 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1563 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1580 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -542,7 +552,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1563 JVM unit tests (JUnit) |
+| Tests | 1580 JVM unit tests (JUnit) |
 | Strings | 1656 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
