@@ -95,15 +95,15 @@ def approved_domains() -> set[str]:
         return set()
     try:
         payload = json.loads(APPROVED_FILE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return set()
-    raw_domains = payload.get("domains", []) if isinstance(payload, dict) else payload
-    if not isinstance(raw_domains, list):
-        return set()
+    except (OSError, ValueError) as error:
+        raise ValueError(f"Cannot read {APPROVED_FILE}: {error}") from error
+    raw_domains = payload.get("approved") if isinstance(payload, dict) else payload
+    if not isinstance(raw_domains, list) or any(not isinstance(raw, str) for raw in raw_domains):
+        raise ValueError(f"{APPROVED_FILE} must contain an 'approved' array of domain strings")
     return {
         domain
         for raw in raw_domains
-        if isinstance(raw, str) and (domain := normalize_domain(raw))
+        if (domain := normalize_domain(raw))
     }
 
 
@@ -213,7 +213,11 @@ def main(argv: list[str] | None = None) -> int:
         for domain, count in domain_counts.most_common()
         if count >= MIN_REPORTS and len(domain_reporters.get(domain, set())) >= MIN_REPORTERS
     ]
-    approved = approved_domains()
+    try:
+        approved = approved_domains()
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
     spam_domains = [domain for domain in candidates if domain in approved][:MAX_DOMAINS]
 
     review_output = {

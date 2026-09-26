@@ -108,7 +108,10 @@ def seed_reports(data_dir: Path) -> None:
             ],
         },
     )
-    write_json(data_dir / "spam_domains_approved.json", {"domains": ["bad.example"]})
+    write_json(
+        data_dir / "spam_domains_approved.json",
+        {"description": "Reviewed domains", "approved": ["bad.example"]},
+    )
 
     campaign_buckets = [
         BUCKETS[:5],
@@ -192,6 +195,16 @@ def assert_derived_outputs(data_dir: Path) -> None:
     review_domains = {candidate["domain"] for candidate in domain_review["candidates"]}
     if review_domains != {"unreviewed.example"}:
         raise AssertionError(f"unexpected domain review candidates: {review_domains}")
+
+
+def assert_unknown_approval_shape_fails(data_dir: Path) -> None:
+    seed_reports(data_dir)
+    write_json(data_dir / "spam_domains_approved.json", {"domains": ["bad.example"]})
+    result = run_script_result("extract_spam_domains.py", data_dir)
+    if result.returncode == 0 or "'approved' array" not in result.stderr:
+        raise AssertionError(f"unknown approval shape was accepted: {result}")
+    if (data_dir / "spam_domains.json").exists():
+        raise AssertionError("invalid approval shape published a spam domain feed")
 
 
 def assert_merge_cleanup(data_dir: Path) -> None:
@@ -828,6 +841,9 @@ def assert_fixed_clock_is_for_tests_only() -> None:
 
 def main() -> None:
     assert_fixed_clock_is_for_tests_only()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_unknown_approval_shape_fails(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_collapse_guard(Path(tmp) / "data")

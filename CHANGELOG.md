@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Reviewed domains in `spam_domains_approved.json` now reach the published
+  feed. The extractor stops with an error if the approval file has the wrong
+  shape.
 - Removed the inactive URLhaus lookup and its Settings claim. Optional link
   checks now name PhishTank and OpenPhish. The OpenPhish feed refreshes every
   six hours and reuses its local copy when the server reports no change.
