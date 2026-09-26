@@ -18,7 +18,7 @@
     <string name="dashboard_setup_progress">%1$s of %2$s complete</string>
     <string name="dashboard_outcome_title">This week</string>
     <string name="dashboard_outcome_calls">Calls blocked</string>
-    <string name="dashboard_outcome_texts">Texts blocked</string>
+    <string name="dashboard_outcome_texts">Texts flagged</string>
     <string name="dashboard_calls_and_texts_protected">Calls and texts are actively protected.</string>
     <string name="dashboard_calls_protected">Calls are actively protected.</string>
     <string name="dashboard_texts_protected">Texts are actively protected.</string>
@@ -200,7 +200,7 @@
     <string name="blocked_log_log_cleared">Log cleared</string>
     <string name="blocked_log_copied">Copied %s</string>
     <string name="blocked_log_blocked_call">Blocked call</string>
-    <string name="blocked_log_blocked_sms">Blocked SMS</string>
+    <string name="blocked_log_blocked_sms">Flagged text</string>
     <string name="blocked_log_safety_exempted">Allowed by a safety floor</string>
     <string name="blocked_log_pipeline_diagnostic">Protection warning: %s</string>
     <string name="blocked_log_google">Google</string>
@@ -741,9 +741,9 @@
     <string name="settings_export_redress_csv">Export blocked calls for redress</string>
     <string name="settings_export_redress_csv_desc">Date, time, calling number and reason only. No message bodies or contacts.</string>
     <string name="settings_export_raw_sms_csv">Export raw SMS bodies</string>
-    <string name="settings_export_raw_sms_csv_desc">Creates a separate CSV that includes original blocked SMS text.</string>
+    <string name="settings_export_raw_sms_csv_desc">Creates a separate CSV that includes the original text of flagged messages.</string>
     <string name="settings_export_raw_sms_confirm_title">Export raw SMS text?</string>
-    <string name="settings_export_raw_sms_confirm_body">Raw blocked SMS text can include OTPs, reset links, names, and per-recipient phishing tokens. Use redacted export for support unless the original message text is required.</string>
+    <string name="settings_export_raw_sms_confirm_body">The original text of flagged messages can include OTPs, reset links, names, and per-recipient phishing tokens. Use redacted export for support unless the original message text is required.</string>
     <string name="settings_export_raw_sms_confirm_action">Export raw CSV</string>
     <string name="settings_export_raw_sms_cancel">Keep redacted</string>
     <string name="settings_backup_restore">Backup &amp; restore</string>
@@ -761,7 +761,7 @@
     <string name="settings_backup_passphrase_not_saved">CallShield cannot recover this passphrase. It is cleared after export.</string>
     <string name="settings_restore_passphrase">Restore passphrase (if protected)</string>
     <string name="settings_restore_passphrase_hint">Leave blank for legacy plaintext backups.</string>
-    <string name="settings_backup_logs_privacy">Logs can include blocked SMS text; leave them off for a rules-only transfer.</string>
+    <string name="settings_backup_logs_privacy">Logs can include the text of flagged messages; leave them off for a rules-only transfer.</string>
     <string name="backup_section_blocked">Blocklist</string>
     <string name="backup_section_blocked_desc">User-added blocked numbers only</string>
     <string name="backup_section_whitelist">Trusted numbers</string>
@@ -1395,7 +1395,7 @@
     </plurals>
     <string name="backup_restore_preview_no_conflicts">No matching local items found.</string>
     <string name="backup_restore_preview_settings_privacy">Settings restore excludes external subscription URLs.</string>
-    <string name="backup_restore_preview_logs_privacy">Log restore can import blocked SMS text from this backup.</string>
+    <string name="backup_restore_preview_logs_privacy">Log restore can import the text of flagged messages from this backup.</string>
     <string name="backup_restore_replace_warning">Replace clears only the selected local sections before restore. Synced feeds stay installed.</string>
     <string name="backup_restore_merge">Merge</string>
     <string name="backup_restore_replace">Replace</string>
@@ -1418,7 +1418,7 @@
 
     <!-- NotificationHelper -->
     <string name="notif_channel_blocked">Blocked calls &amp; SMS</string>
-    <string name="notif_channel_blocked_desc">Notifications when spam calls/texts are blocked</string>
+    <string name="notif_channel_blocked_desc">Notifications when spam calls are blocked or spam texts are flagged</string>
     <string name="notif_channel_rating">Spam rating</string>
     <string name="notif_channel_rating_desc">Rate calls as spam after they end</string>
     <string name="notif_channel_status">Protection status</string>
@@ -1430,7 +1430,7 @@
     <string name="notif_channel_allowed">Allowed call decisions</string>
     <string name="notif_channel_allowed_desc">Explains calls CallShield allowed because of safety rules</string>
     <string name="notif_channel_digest">Daily digest</string>
-    <string name="notif_channel_digest_desc">Daily summary of blocked calls and messages</string>
+    <string name="notif_channel_digest_desc">Daily summary of blocked calls and flagged messages</string>
     <string name="notif_channel_message_screening">Message screening alerts</string>
     <string name="notif_channel_message_screening_desc">On-device warnings for opted-in messenger and email notifications</string>
     <string name="notif_channel_protection_health">Protection health</string>
@@ -1461,6 +1461,9 @@
     <string name="notif_type_call">call</string>
     <string name="notif_type_sms">SMS</string>
     <string name="notif_action_block_forever">Block forever</string>
+    <string name="desc_allowed_from_notification">Allowed from a blocked-call alert</string>
+    <string name="notif_not_spam_allowed">Calls from this number will ring for the next 24 hours.</string>
+    <string name="notif_action_not_spam">Not spam</string>
     <string name="notif_action_report">Report</string>
     <!-- Kinds of unsafe link; each fills "contains a %s link" and "flagged as %s". -->
     <string name="url_threat_phishing">phishing</string>
@@ -1488,8 +1491,8 @@
 
     <!-- DigestWorker -->
     <string name="digest_title">CallShield daily summary</string>
-    <string name="digest_text">Today blocked: %1$d | Calls: %2$d | Texts: %3$d</string>
-    <string name="digest_big_text">Today blocked: %1$d\nCalls: %2$d | Texts: %3$d\n%4$s</string>
+    <string name="digest_text">Last 24 hours: %1$d stopped | Calls blocked: %2$d | Texts flagged: %3$d</string>
+    <string name="digest_big_text">Last 24 hours: %1$d stopped\nCalls blocked: %2$d | Texts flagged: %3$d\n%4$s</string>
     <string name="digest_source_database">%1$d database</string>
     <string name="digest_source_heuristic">%1$d heuristic</string>
     <string name="digest_source_ml">%1$d ML</string>
@@ -1844,7 +1847,7 @@
     <string name="reasoning_carrier_label_detail">Carriers in Singapore, Ireland and Australia replace the name of a sender that didn\'t register with a warning label, and this text came in under one.</string>
     <string name="reasoning_sms_burst_detail">Multiple unknown SMS arrived from this sender or prefix in a short window.</string>
     <string name="reasoning_sms_burst_action">Use the notification actions to mark the sender safe or report the burst.</string>
-    <string name="reasoning_rcs_headline">RCS message blocked via notification filter.</string>
+    <string name="reasoning_rcs_headline">RCS message flagged by the notification filter.</string>
     <string name="reasoning_rcs_detail">Matched through the notification filter for RCS messages.</string>
     <string name="reasoning_rcs_underlying">Underlying reason: %1$s.</string>
     <string name="reasoning_rcs_filtered_content">filtered content</string>

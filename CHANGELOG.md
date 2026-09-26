@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A blocked-call alert offers Not spam, which lets the number ring for the next
+  24 hours, instead of Block forever for a number that was already blocked.
+  When the block came from the shared database it also tells the community
+  database it was wrong. Texts are called flagged everywhere, since they still
+  reach your messaging app, and the daily summary says "last 24 hours"
+  rather than "today".
 - Texts whose sender is a carrier's scam label are flagged. Singapore renames
   unregistered senders Likely-SCAM, Ireland Likely Scam and Australia
   Unverified, and the reason names the label. Unverified counts only on an

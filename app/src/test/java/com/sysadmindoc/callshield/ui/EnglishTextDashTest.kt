@@ -34,6 +34,34 @@ class EnglishTextDashTest {
     }
 
     @Test
+    fun `no English string says a text was blocked`() {
+        // A flagged text still reaches the messaging app; only calls are blocked.
+        // Several strings said otherwise, and the Home counter read "Texts blocked".
+        val blockedText =
+            Regex(
+                """\b(?:texts?|sms|messages?)\s+(?:(?:was|were|is|are|been|got)\s+)?blocked\b|\bblocked\s+(?:sms|texts?|messages?)\b""",
+                RegexOption.IGNORE_CASE,
+            )
+        val document =
+            DocumentBuilderFactory
+                .newInstance()
+                .newDocumentBuilder()
+                .parse(File("src/main/res/values/strings.xml"))
+        val offenders =
+            listOf("string", "item")
+                .flatMap { tag ->
+                    val nodes = document.getElementsByTagName(tag)
+                    (0 until nodes.length).map { index -> nodes.item(index) as Element }
+                }.filter { element -> blockedText.containsMatchIn(element.textContent) }
+                .map { element -> element.getAttribute("name").ifEmpty { element.textContent.take(60) } }
+
+        assertEquals(emptyList<String>(), offenders)
+        listOf("Texts blocked", "Raw blocked SMS text", "spam calls/texts are blocked").forEach {
+            assertEquals(it, true, blockedText.containsMatchIn(it))
+        }
+    }
+
+    @Test
     fun `release history text has no em or en dash`() {
         val source = File("src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt").readText()
         val offenders =

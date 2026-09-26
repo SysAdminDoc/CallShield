@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,6 +58,26 @@ class SpamActionReceiver : BroadcastReceiver() {
                     suspend {
                         repo.blockNumber(number, reportType, appContext.getString(R.string.desc_blocked_from_notification))
                         CommunityContributor.contribute(appContext, repo.normalizeNumber(number), reportType, smsIndicators)
+                    }
+                }
+
+                NotificationHelper.ACTION_NOT_SPAM -> {
+                    val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
+                    val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                    val reasonCode = BlockReasonCode.fromStored(intent.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+                    if (notifId >= 0) {
+                        notificationManager.cancel(notifId)
+                    }
+                    Toast.makeText(appContext, appContext.getString(R.string.notif_not_spam_allowed), Toast.LENGTH_SHORT).show()
+                    suspend {
+                        repo.temporaryAllowNumber(
+                            number,
+                            System.currentTimeMillis() + NotificationHelper.NOT_SPAM_ALLOW_MS,
+                            appContext.getString(R.string.desc_allowed_from_notification),
+                        )
+                        if (NotificationHelper.notSpamReachesCommunity(reasonCode)) {
+                            CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
+                        }
                     }
                 }
 

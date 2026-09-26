@@ -95,6 +95,22 @@ class SpamActionReceiverRobolectricTest {
     }
 
     @Test
+    fun `NOT_SPAM on a blocked-call alert cancels that alert`() {
+        val number = "+15554440001"
+        val id = postFeedbackNotification(number)
+
+        SpamActionReceiver().onReceive(
+            context,
+            Intent(NotificationHelper.ACTION_NOT_SPAM)
+                .putExtra(NotificationHelper.EXTRA_NUMBER, number)
+                .putExtra(NotificationHelper.EXTRA_NOTIF_ID, id)
+                .putExtra(NotificationHelper.EXTRA_REASON_CODE, "database"),
+        )
+
+        assertFalse(shadowOf(nm).getNotification(id) != null)
+    }
+
+    @Test
     fun `unknown action is a no-op and leaves notifications intact`() {
         val number = "+15550000000"
         val id = postFeedbackNotification(number)

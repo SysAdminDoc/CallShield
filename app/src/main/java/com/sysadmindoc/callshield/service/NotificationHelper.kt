@@ -60,10 +60,15 @@ object NotificationHelper {
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
+    const val ACTION_NOT_SPAM = "com.sysadmindoc.callshield.ACTION_NOT_SPAM"
     const val ACTION_CLEAR_SUMMARY = "com.sysadmindoc.callshield.ACTION_CLEAR_SUMMARY"
     const val EXTRA_NUMBER = "extra_number"
     const val EXTRA_NOTIF_ID = "extra_notif_id"
     const val EXTRA_IS_CALL = "extra_is_call"
+    const val EXTRA_REASON_CODE = "extra_reason_code"
+
+    /** How long "Not spam" on a blocked-call alert lets the number ring. */
+    const val NOT_SPAM_ALLOW_MS = 24 * 60 * 60 * 1000L
     const val EXTRA_SMS_DOMAINS = "extra_sms_domains"
     const val EXTRA_SMS_URL_INDICATORS = "extra_sms_url_indicators"
 
@@ -440,14 +445,17 @@ object NotificationHelper {
         // Otherwise FLAG_UPDATE_CURRENT lets the second post overwrite the first's
         // extras (notif id, isCall, indicators), so tapping the older notification
         // cancels the wrong one and reports the wrong spam type.
-        val blockIntent =
+        // A blocked call is already blocked, so its first action lets a real
+        // caller through instead. A flagged text was only flagged, and keeps Block.
+        val firstIntent =
             PendingIntent.getBroadcast(
                 context,
                 stableId(number, if (isCall) 10 else 11),
                 Intent(context, SpamActionReceiver::class.java).apply {
-                    action = ACTION_BLOCK
+                    action = if (isCall) ACTION_NOT_SPAM else ACTION_BLOCK
                     putExtra(EXTRA_NUMBER, number)
                     putExtra(EXTRA_NOTIF_ID, nid)
+                    putExtra(EXTRA_REASON_CODE, BlockReasonCode.fromMatchSource(reason).wireValue)
                     putReportExtras(isCall, smsIndicators)
                 },
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -484,13 +492,26 @@ object NotificationHelper {
                 // rapid children. Alert via the summary only so a burst of blocks
                 // stays a single coherent, non-muted group.
                 .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
-                .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
+                .addAction(
+                    if (isCall) android.R.drawable.ic_menu_call else android.R.drawable.ic_menu_close_clear_cancel,
+                    context.getString(if (isCall) R.string.notif_action_not_spam else R.string.notif_action_block_forever),
+                    firstIntent,
+                ).addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
         builder.addSmsSafeAction(context, number, nid, isCall)
 
         safeNotify(context, nid, builder)
         updateSummary(context)
     }
+
+    /**
+     * Whether "Not spam" on a block also tells the community database. Only a
+     * verdict that came from the shared data can be wrong there; a not-spam vote
+     * against the user's own rule or an on-device signal would be noise.
+     */
+    fun notSpamReachesCommunity(reasonCode: BlockReasonCode): Boolean =
+        reasonCode == BlockReasonCode.DATABASE ||
+            reasonCode == BlockReasonCode.DB_PREFIX_EXPANSION ||
+            reasonCode == BlockReasonCode.HOT_LIST
 
     private fun reasonLabelRes(reasonCode: BlockReasonCode): Int =
         when (reasonCode) {
@@ -618,6 +639,11 @@ object NotificationHelper {
     /** Reset the "blocked recently" summary counter (see [ACTION_CLEAR_SUMMARY]). */
     internal fun clearBlockedSummaryCount() {
         synchronized(lock) { blockedSinceLastNotif = 0 }
+    }
+
+    /** Lets a test post an alert without the 5-second rate limit left by an earlier one. */
+    internal fun resetRateLimitForTest() {
+        synchronized(lock) { lastNotifTime = 0L }
     }
 
     fun notifyPhishingUrl(

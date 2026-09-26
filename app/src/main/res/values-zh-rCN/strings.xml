@@ -145,7 +145,7 @@
     <string name="blocked_log_log_cleared">日志已清空</string>
     <string name="blocked_log_copied">已复制 %s</string>
     <string name="blocked_log_blocked_call">已拦截通话</string>
-    <string name="blocked_log_blocked_sms">已拦截短信</string>
+    <string name="blocked_log_blocked_sms">已标记短信</string>
     <string name="blocked_log_google">Google</string>
     <string name="blocked_log_databases">数据库</string>
     <string name="blocked_log_copy">复制</string>
@@ -550,9 +550,9 @@
     <string name="settings_export_csv">将拦截日志导出为 CSV</string>
     <string name="settings_export_csv_desc">将拦截的通话/短信导出为 CSV 文件。短信正文默认已脱敏。</string>
     <string name="settings_export_raw_sms_csv">导出原始短信正文</string>
-    <string name="settings_export_raw_sms_csv_desc">创建一份单独的 CSV，包含原始被拦截短信文本。</string>
+    <string name="settings_export_raw_sms_csv_desc">创建一份单独的 CSV，包含被标记短信的原始文本。</string>
     <string name="settings_export_raw_sms_confirm_title">导出原始短信文本？</string>
-    <string name="settings_export_raw_sms_confirm_body">原始被拦截短信文本可能包含验证码、重置链接、姓名及针对收件人的钓鱼令牌。除非确实需要原始消息文本，否则请用于支持时使用脱敏导出。</string>
+    <string name="settings_export_raw_sms_confirm_body">被标记短信的原始文本可能包含验证码、重置链接、姓名及针对收件人的钓鱼令牌。除非确实需要原始消息文本，否则请用于支持时使用脱敏导出。</string>
     <string name="settings_export_raw_sms_confirm_action">导出原始 CSV</string>
     <string name="settings_export_raw_sms_cancel">保留脱敏</string>
     <string name="settings_backup_restore">备份与恢复</string>
@@ -570,7 +570,7 @@
     <string name="settings_backup_passphrase_not_saved">CallShield 无法恢复此口令。导出后它会被清除。</string>
     <string name="settings_restore_passphrase">恢复口令（若有保护）</string>
     <string name="settings_restore_passphrase_hint">遗留明文备份请留空。</string>
-    <string name="settings_backup_logs_privacy">日志可能包含被拦截的短信文本；仅传输规则时可关闭它们。</string>
+    <string name="settings_backup_logs_privacy">日志可能包含被标记短信的文本；仅传输规则时可关闭它们。</string>
     <string name="backup_section_blocked">拦截列表</string>
     <string name="backup_section_blocked_desc">仅用户添加的已拦截号码</string>
     <string name="backup_section_whitelist">白名单</string>
@@ -979,7 +979,7 @@
     <string name="backup_restore_preview_summary">已拦截：%1$d；白名单：%2$d；通配符：%3$d；关键词：%4$d；号段：%5$d；设置：%6$d；日志：%7$d</string>
     <string name="backup_restore_preview_no_conflicts">未发现匹配的本地项。</string>
     <string name="backup_restore_preview_settings_privacy">设置恢复不含外部订阅 URL。</string>
-    <string name="backup_restore_preview_logs_privacy">日志恢复可导入此备份中的已拦截短信文本。</string>
+    <string name="backup_restore_preview_logs_privacy">日志恢复可导入此备份中被标记短信的文本。</string>
     <string name="backup_restore_replace_warning">替换将在恢复前仅清除所选本地部分。已同步的订阅源保持安装。</string>
     <string name="backup_restore_merge">合并</string>
     <string name="backup_restore_replace">替换</string>
@@ -998,7 +998,7 @@
     <string name="share_spam_warning_subject">垃圾号码警告：%s</string>
     <string name="share_spam_warning_chooser_title">分享垃圾警告</string>
     <string name="notif_channel_blocked">已拦截通话与短信</string>
-    <string name="notif_channel_blocked_desc">垃圾通话/短信被拦截时发出通知</string>
+    <string name="notif_channel_blocked_desc">拦截垃圾通话或标记垃圾短信时发出通知</string>
     <string name="notif_channel_rating">垃圾评分</string>
     <string name="notif_channel_rating_desc">通话结束后将其评为垃圾</string>
     <string name="notif_channel_status">防护状态</string>
@@ -1010,7 +1010,7 @@
     <string name="notif_channel_allowed">放行的来电决策</string>
     <string name="notif_channel_allowed_desc">解释 CallShield 因安全规则而放行的来电</string>
     <string name="notif_channel_digest">每日摘要</string>
-    <string name="notif_channel_digest_desc">已拦截通话与消息的每日汇总</string>
+    <string name="notif_channel_digest_desc">已拦截通话与已标记消息的每日汇总</string>
     <string name="notif_channel_message_screening">消息筛查告警</string>
     <string name="notif_channel_message_screening_desc">针对已订阅的即时通讯与邮件通知的设备端警告</string>
     <string name="notif_channel_protection_health">防护健康</string>
@@ -1026,6 +1026,9 @@
     <string name="notif_type_call">来电</string>
     <string name="notif_type_sms">短信</string>
     <string name="notif_action_block_forever">永久拦截</string>
+    <string name="desc_allowed_from_notification">从拦截通知中放行</string>
+    <string name="notif_not_spam_allowed">接下来 24 小时内，此号码的来电会正常响铃。</string>
+    <string name="notif_action_not_spam">不是骚扰</string>
     <string name="notif_action_report">举报</string>
     <string name="url_threat_phishing">钓鱼</string>
     <string name="url_threat_malware">恶意软件</string>
@@ -1050,8 +1053,8 @@
     <string name="notif_repeated_urgent_big_text">CallShield 放行了 %s，因为同一号码在几分钟内反复呼叫。若属多余请拦截，或标记为安全以信任其后续来电。</string>
     <string name="notif_repeated_urgent_action_safe">标记为安全</string>
     <string name="digest_title">CallShield 每日摘要</string>
-    <string name="digest_text">今日拦截：%1$d | 通话：%2$d | 短信：%3$d</string>
-    <string name="digest_big_text">今日拦截：%1$d\n通话：%2$d | 短信：%3$d\n%4$s</string>
+    <string name="digest_text">过去 24 小时：共拦下 %1$d | 拦截通话：%2$d | 标记短信：%3$d</string>
+    <string name="digest_big_text">过去 24 小时：共拦下 %1$d\n拦截通话：%2$d | 标记短信：%3$d\n%4$s</string>
     <string name="digest_source_database">%1$d 号码库</string>
     <string name="digest_source_heuristic">%1$d 启发式</string>
     <string name="digest_source_ml">%1$d ML</string>
@@ -1345,7 +1348,7 @@
     <string name="reasoning_carrier_label_detail">新加坡、爱尔兰和澳大利亚的运营商会把未注册发件人的名称换成警示标签，这条短信正是以这种标签发来的。</string>
     <string name="reasoning_sms_burst_detail">短时间内收到多条来自此发件人或前缀的陌生短信。</string>
     <string name="reasoning_sms_burst_action">可通过通知中的操作将发件人标记为安全，或举报这次爆发。</string>
-    <string name="reasoning_rcs_headline">RCS 消息已通过通知过滤器拦截。</string>
+    <string name="reasoning_rcs_headline">RCS 消息已被通知过滤器标记。</string>
     <string name="reasoning_rcs_detail">由 RCS 消息的通知过滤器匹配。</string>
     <string name="reasoning_rcs_underlying">根本原因：%1$s。</string>
     <string name="reasoning_rcs_filtered_content">被过滤的内容</string>
