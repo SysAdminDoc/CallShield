@@ -633,6 +633,9 @@
     </plurals>
     <string name="settings_contacts_only">Contacts-only mode</string>
     <string name="settings_contacts_only_desc">Allow only contacts and explicit trusted numbers</string>
+    <string name="contacts_only_paused">Contacts only is paused because CallShield can\'t read your contacts. Until you allow Contacts, calls from anyone can ring.</string>
+    <string name="contacts_only_allow">Allow Contacts</string>
+    <string name="contacts_only_allow_in_app_info">Turn on Contacts in App info, under Permissions.</string>
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
@@ -1108,7 +1111,7 @@
     <string name="protection_test_capability_unsupported">Degraded: this message path did not provide usable sender or content evidence.</string>
     <string name="protection_test_capability_hint">Keep enabled access in place. CallShield does not request a default SMS or messaging role; sender and URL checks continue when data is available.</string>
     <string name="permission_contract_degraded_call_log">Recent-call scans, callback trust, frequency checks, and blocked-call history are limited without call log access.</string>
-    <string name="permission_contract_degraded_contacts">Contact trust and local caller trust cannot protect known callers without contacts access.</string>
+    <string name="permission_contract_degraded_contacts">Without contacts access, contact trust and local caller trust can\'t protect known callers, and Contacts only mode is paused, so anyone can ring.</string>
     <string name="permission_contract_degraded_read_sms">SMS inbox scans and blocked-message review cannot read existing texts without SMS inbox access.</string>
     <string name="permission_contract_degraded_receive_sms">Incoming SMS spam filtering cannot inspect new texts until incoming-SMS access is granted.</string>
     <string name="permission_contract_advisory_receive_sms">Android 16+ makes incoming-SMS interception advisory; the default SMS app may receive messages first and controls inbox delivery.</string>

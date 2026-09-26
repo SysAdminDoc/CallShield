@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.checker
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import androidx.datastore.preferences.core.Preferences
@@ -21,6 +22,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import com.sysadmindoc.callshield.ui.describeIdentityEvidence
 import com.sysadmindoc.callshield.ui.joinSignalLabels
@@ -128,6 +130,9 @@ internal class ContactWhitelistChecker(
 internal class ContactsOnlyChecker(
     private val appContext: Context,
     private val spamHeuristics: SpamHeuristics,
+    private val contactsReadable: (Context) -> Boolean = {
+        CallShieldPermissions.isPermissionGranted(it, Manifest.permission.READ_CONTACTS)
+    },
 ) : IChecker {
     override val priority = CheckerPriority.CONTACTS_ONLY
     override val name = "contacts_only"
@@ -136,12 +141,18 @@ internal class ContactsOnlyChecker(
     // (OTP shortcode, bank, delivery) must not be logged as a blocked call.
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.smsBody == null && (ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false)
 
-    override suspend fun check(ctx: CheckContext): BlockResult? =
-        if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        // Without READ_CONTACTS every lookup misses, so every caller, saved
+        // contacts included, would read as a stranger and be rejected. The
+        // documented contract (CallShieldPermissions) is no opinion while the
+        // permission is missing: fail open.
+        if (!contactsReadable(appContext)) return null
+        return if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
             BlockResult.block("contacts_only", description = appContext.getString(R.string.block_reason_contacts_only))
         } else {
             null
         }
+    }
 }
 
 /**

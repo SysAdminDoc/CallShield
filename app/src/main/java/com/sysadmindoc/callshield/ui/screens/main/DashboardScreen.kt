@@ -113,9 +113,11 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionStatus
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -301,6 +303,11 @@ fun DashboardScreen(
         remember(context, permissionRefreshTick) {
             CallShieldPermissions.hasNotificationPermission(context)
         }
+    val contactsGranted =
+        remember(context, permissionRefreshTick) {
+            CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
+        }
+    val allowContacts = rememberAllowContacts { permissionRefreshTick++ }
     val corePermissionsReady = missingPerms.isEmpty()
     val dashboardStatus =
         remember(
@@ -677,6 +684,10 @@ fun DashboardScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = CatSubtext,
                 )
+                if (contactsOnly && !contactsGranted) {
+                    Spacer(Modifier.height(12.dp))
+                    ContactsOnlyPausedNote(onAllow = allowContacts)
+                }
             }
         }
 

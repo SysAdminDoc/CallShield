@@ -448,6 +448,9 @@
     <string name="settings_contact_groups_empty">未找到含电话号码的联系人群组。</string>
     <string name="settings_contacts_only">仅联系人模式</string>
     <string name="settings_contacts_only_desc">仅允许联系人和明确的白名单条目</string>
+    <string name="contacts_only_paused">“仅限联系人”已暂停，因为 CallShield 无法读取你的联系人。在你允许访问联系人之前，任何人来电都会响铃。</string>
+    <string name="contacts_only_allow">允许访问联系人</string>
+    <string name="contacts_only_allow_in_app_info">请在应用信息的“权限”中开启“通讯录”。</string>
     <string name="settings_outgoing_risk_warning">拨出高风险电话前提醒</string>
     <string name="settings_outgoing_risk_warning_desc">对垃圾号码库中精确匹配的号码显示本地警告</string>
     <string name="settings_outgoing_risk_warning_overlay_required">允许悬浮窗权限以查看拨出提醒。</string>
@@ -822,7 +825,7 @@
     <string name="protection_test_overlay_permission">悬浮窗权限</string>
     <string name="protection_test_notification_access">通知访问权限（RCS）</string>
     <string name="permission_contract_degraded_call_log">无通话记录访问权限时，最近通话扫描、回拨信任、频次检查与已拦截通话历史将受限。</string>
-    <string name="permission_contract_degraded_contacts">无联系人访问权限时，联系人白名单与本地主叫信任无法保护已知来电者。</string>
+    <string name="permission_contract_degraded_contacts">无联系人访问权限时，联系人白名单与本地主叫信任无法保护已知来电者，“仅限联系人”模式也会暂停，任何人来电都会响铃。</string>
     <string name="permission_contract_degraded_read_sms">无短信收件箱访问权限时，短信收件箱扫描与已拦截消息核查无法读取已有文本。</string>
     <string name="permission_contract_degraded_receive_sms">在授予接收短信权限前，入站短信垃圾过滤无法检查新文本。</string>
     <string name="permission_contract_degraded_call_screening">在 CallShield 成为活跃来电筛查应用前，实时拦截不可用。</string>

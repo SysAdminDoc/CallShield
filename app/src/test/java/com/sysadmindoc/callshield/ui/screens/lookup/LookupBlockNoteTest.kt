@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.ui.screens.lookup
 
+import android.Manifest
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
@@ -13,6 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -66,6 +69,9 @@ class LookupBlockNoteTest {
     @Test
     fun `a label from a check above the user's own rule doesn't replace their note`() =
         runBlocking {
+            // Contacts-only mode only has a say with the permission granted; without
+            // it the mode stays out of the decision instead of blocking everyone.
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_CONTACTS)
             fixture.repository.blockNumber(number, "spam", "landlord's old line")
             fixture.repository.setContactsOnly(true)
             val result = fixture.repository.isSpam(number)

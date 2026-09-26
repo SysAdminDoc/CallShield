@@ -27,6 +27,9 @@ All notable changes to CallShield will be documented in this file.
 - Rapid-fire detection works for callers outside North America again. There it
   compares the whole number, so a +49 and a +1 number that share their last ten
   digits still never match.
+- Contacts only mode no longer rejects every call, your contacts' included, when
+  Contacts permission is off. It pauses instead, and Home, Settings and
+  Protection test say so, with a button to allow Contacts.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
 - Protection test's ML spam check no longer fails on every phone. Its sample

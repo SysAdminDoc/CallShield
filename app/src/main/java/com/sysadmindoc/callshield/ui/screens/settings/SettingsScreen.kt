@@ -86,9 +86,11 @@ import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MIN
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.ui.AppLanguage
+import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
+import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -318,6 +320,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
             contactsPermissionGranted = granted
             viewModel.refreshContactGroups()
             if (granted) showContactGroups = true
+        }
+
+    val allowContacts =
+        rememberAllowContacts {
+            contactsPermissionGranted = CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
         }
 
     LaunchedEffect(contactsPermissionGranted) {
@@ -673,6 +680,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     Icons.Default.PhoneLocked,
                     contactsOnly,
                 ) { viewModel.setContactsOnly(it) }
+                if (contactsOnly && !contactsPermissionGranted) {
+                    ContactsOnlyPausedNote(onAllow = allowContacts, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+                }
                 GradientDivider()
                 SettingsToggle(
                     stringResource(R.string.settings_outgoing_risk_warning),
