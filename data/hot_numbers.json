@@ -1,11 +1,11 @@
 {
-  "generated": "2026-09-26T01:42:20.593921+00:00",
+  "generated": "2026-09-26T11:55:27.130456+00:00",
   "window_hours": 24,
   "min_reports": 4,
   "min_distinct_reporters": 3,
   "min_report_span_minutes": 120,
   "count": 0,
   "numbers": [],
-  "input_report_digest": "d0193a65f1d79bdc53f334d2f765670af39e98ec552020394b72324fecfa0add",
-  "cleared": false
+  "input_report_digest": "b4435d252602f19e4511b293c724242b71a473ec7e2aeb2fd9ad91d7b55f97e2",
+  "cleared": true
 }
