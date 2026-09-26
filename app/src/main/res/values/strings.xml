@@ -79,7 +79,7 @@
     <string name="dashboard_quick_controls">Quick Controls</string>
     <string name="dashboard_block_calls">Block Calls</string>
     <string name="dashboard_block_sms">Analyze spam SMS</string>
-    <string name="dashboard_quick_profiles">Quick Profiles</string>
+    <string name="dashboard_quick_profiles">How strict?</string>
     <string name="dashboard_profile_personal">Personal</string>
     <string name="dashboard_profile_sleep">Sleep</string>
     <string name="dashboard_profile_off">Off</string>

@@ -13,6 +13,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -469,47 +470,61 @@ fun DashboardScreen(
             },
         )
 
-        DashboardSetupChecklistCard(
-            dashboardStatus = dashboardStatus,
-            corePermissionsReady = corePermissionsReady,
-            syncState = syncState,
-            spamDatabaseReady = spamDatabaseReady,
-            spamCount = spamCount,
-            blockCallsEnabled = blockCallsEnabled,
-            callScreenerReady = callScreenerReady,
-            overlayGranted = overlayGranted,
-            notificationsGranted = notificationsGranted,
-            onReviewPermissions = openPermissions,
-            onSyncDatabase = {
-                hapticTick(context)
-                viewModel.sync()
-            },
-            onEnableCallScreener = openPermissions,
-            onEnableOverlay = openPermissions,
-            onEnableNotifications = openPermissions,
-        )
-
-        if (backgroundExecutionRisk != BackgroundExecutionRisk.Ok && !backgroundWarningDismissed) {
-            BackgroundExecutionWarning(
-                risk = backgroundExecutionRisk,
-                showMiuiAction = remember { BackgroundExecutionStatus.isLikelyMiui() },
-                onOpenBatterySettings = {
-                    context.startActivitySafely(
-                        BackgroundExecutionStatus.batteryExemptionSettingsIntent(context),
-                    )
-                },
-                onOpenMiuiSettings = {
-                    context.startActivitySafely(BackgroundExecutionStatus.miuiAutostartIntent())
-                },
-                onDismiss = { backgroundWarningDismissed = true },
-            )
-        }
-
         DashboardStatsRow(
             totalBlocked = totalBlocked,
             blockedToday = blockedToday,
             blockedThisWeek = blockedThisWeek,
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            val callsActive = blockCallsEnabled && callProtectionReady
+            val textsActive = blockSmsEnabled && smsProtectionReady
+            PremiumCard(
+                modifier = Modifier.weight(1f),
+                onClick = openPermissions,
+                accentColor = if (callsActive) CatGreen else CatYellow,
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    PremiumIconTile(Icons.Default.Phone, if (callsActive) CatGreen else CatYellow, showContainer = true)
+                    Text(stringResource(R.string.onboarding_call_screening_title), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(
+                            when {
+                                callsActive -> R.string.dashboard_status_ready
+                                blockCallsEnabled -> R.string.dashboard_status_needed
+                                else -> R.string.dashboard_profile_off
+                            },
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (callsActive) CatGreen else CatYellow,
+                    )
+                }
+            }
+            PremiumCard(
+                modifier = Modifier.weight(1f),
+                onClick = openPermissions,
+                accentColor = if (textsActive) CatGreen else CatYellow,
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    PremiumIconTile(Icons.Default.Sms, if (textsActive) CatGreen else CatYellow, showContainer = true)
+                    Text(stringResource(R.string.dashboard_block_sms), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(
+                            when {
+                                textsActive -> R.string.dashboard_status_ready
+                                blockSmsEnabled -> R.string.dashboard_status_needed
+                                else -> R.string.dashboard_profile_off
+                            },
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (textsActive) CatGreen else CatYellow,
+                    )
+                }
+            }
+        }
 
         if (blockedThisWeek > 0 || blockedLastWeek > 0) {
             val diff = blockedThisWeek - blockedLastWeek
@@ -587,25 +602,7 @@ fun DashboardScreen(
 
         PremiumCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader(stringResource(R.string.dashboard_quick_controls), CatGreen)
-                Spacer(Modifier.height(12.dp))
-                QuickToggle(
-                    icon = Icons.Default.Phone,
-                    label = stringResource(R.string.dashboard_block_calls),
-                    checked = blockCallsEnabled,
-                ) { viewModel.setBlockCalls(it) }
-                GradientDivider(modifier = Modifier.padding(vertical = 4.dp))
-                QuickToggle(
-                    icon = Icons.Default.Sms,
-                    label = stringResource(R.string.dashboard_block_sms),
-                    checked = blockSmsEnabled,
-                ) { viewModel.setBlockSms(it) }
-            }
-        }
-
-        PremiumCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader(stringResource(R.string.dashboard_quick_profiles), CatMauve)
+                SectionHeader(stringResource(R.string.dashboard_quick_profiles), CatGreen)
                 SnackbarHost(profileSnackbar)
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -657,6 +654,60 @@ fun DashboardScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = CatSubtext,
                 )
+            }
+        }
+
+        DashboardSetupChecklistCard(
+            dashboardStatus = dashboardStatus,
+            corePermissionsReady = corePermissionsReady,
+            syncState = syncState,
+            spamDatabaseReady = spamDatabaseReady,
+            spamCount = spamCount,
+            blockCallsEnabled = blockCallsEnabled,
+            callScreenerReady = callScreenerReady,
+            overlayGranted = overlayGranted,
+            notificationsGranted = notificationsGranted,
+            onReviewPermissions = openPermissions,
+            onSyncDatabase = {
+                hapticTick(context)
+                viewModel.sync()
+            },
+            onEnableCallScreener = openPermissions,
+            onEnableOverlay = openPermissions,
+            onEnableNotifications = openPermissions,
+        )
+
+        if (backgroundExecutionRisk != BackgroundExecutionRisk.Ok && !backgroundWarningDismissed) {
+            BackgroundExecutionWarning(
+                risk = backgroundExecutionRisk,
+                showMiuiAction = remember { BackgroundExecutionStatus.isLikelyMiui() },
+                onOpenBatterySettings = {
+                    context.startActivitySafely(
+                        BackgroundExecutionStatus.batteryExemptionSettingsIntent(context),
+                    )
+                },
+                onOpenMiuiSettings = {
+                    context.startActivitySafely(BackgroundExecutionStatus.miuiAutostartIntent())
+                },
+                onDismiss = { backgroundWarningDismissed = true },
+            )
+        }
+
+        PremiumCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                SectionHeader(stringResource(R.string.dashboard_quick_controls), CatGreen)
+                Spacer(Modifier.height(12.dp))
+                QuickToggle(
+                    icon = Icons.Default.Phone,
+                    label = stringResource(R.string.dashboard_block_calls),
+                    checked = blockCallsEnabled,
+                ) { viewModel.setBlockCalls(it) }
+                GradientDivider(modifier = Modifier.padding(vertical = 4.dp))
+                QuickToggle(
+                    icon = Icons.Default.Sms,
+                    label = stringResource(R.string.dashboard_block_sms),
+                    checked = blockSmsEnabled,
+                ) { viewModel.setBlockSms(it) }
             }
         }
 
@@ -1834,6 +1885,7 @@ fun ProfileChip(
         modifier =
             modifier
                 .height(48.dp)
+                .border(1.dp, if (isActive) color else CatMuted, RoundedCornerShape(ShapeSm))
                 .semantics { selected = isActive },
         shape = RoundedCornerShape(ShapeSm),
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),

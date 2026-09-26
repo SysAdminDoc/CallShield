@@ -56,7 +56,7 @@
     <string name="dashboard_quick_controls">快捷控制</string>
     <string name="dashboard_block_calls">拦截通话</string>
     <string name="dashboard_block_sms">拦截短信</string>
-    <string name="dashboard_quick_profiles">快速情景模式</string>
+    <string name="dashboard_quick_profiles">保护等级</string>
     <string name="dashboard_profile_personal">个人</string>
     <string name="dashboard_profile_sleep">睡眠</string>
     <string name="dashboard_profile_off">关闭</string>
