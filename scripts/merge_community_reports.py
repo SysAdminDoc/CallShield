@@ -147,6 +147,18 @@ def community_has_quorum(state: dict) -> bool:
     return len(days) >= 2 and (not buckets or len(buckets) >= 3)
 
 
+def promote_community_row(state: dict) -> None:
+    """Publish a row and record whether three reporter buckets carried it.
+
+    Only the pending window's events are kept, so a row promoted by three buckets
+    lost its quorum once the oldest reports passed 30 days and was demoted. Such a
+    row now keeps its place; a row promoted on report days alone is still
+    rechecked when bucket evidence appears.
+    """
+    state["published"] = True
+    state["bucket_quorum"] = len({event["bucket"] for event in state["events"] if event["bucket"]}) >= 3
+
+
 def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
     """Add this run's ids and drop those past MERGED_ID_RETENTION_DAYS."""
     cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=MERGED_ID_RETENTION_DAYS)).strftime("%Y-%m-%d")
@@ -402,10 +414,10 @@ def main(argv: list[str] | None = None):
             pending.pop(number, None)
             continue
         state = pending.setdefault(number, legacy_community_state(entry, today))
-        if state["published"] and not any(event["bucket"] for event in state["events"]):
+        if state["published"] and (state.get("bucket_quorum") or not any(event["bucket"] for event in state["events"])):
             continue
         if community_has_quorum(state):
-            state["published"] = True
+            promote_community_row(state)
         else:
             state["published"] = False
             del existing[number]
@@ -488,7 +500,9 @@ def main(argv: list[str] | None = None):
                     # "implausible" total hides a stale Worker.
                     unattributed_votes += 1
             else:
-                if reported_at < pending_cutoff:
+                if reported_at < pending_cutoff and number not in existing:
+                    # Too old to count toward promoting a new row. A row that is already
+                    # in the database (FCC-backed or published) still takes the report.
                     expired_reports += 1
                 else:
                     bucket = validated_reporter_bucket(report.get("reporter_bucket"))
@@ -508,7 +522,7 @@ def main(argv: list[str] | None = None):
                         if state:
                             state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
                             state["entry"] = entry
-                            if bucket and state["published"] and not community_has_quorum(state):
+                            if bucket and state["published"] and not state.get("bucket_quorum") and not community_has_quorum(state):
                                 state["published"] = False
                                 del existing[number]
                                 demoted += 1
@@ -534,7 +548,7 @@ def main(argv: list[str] | None = None):
                             entry["first_seen"] = min(days)
                             entry["last_seen"] = max(days)
                             existing[number] = entry
-                            state["published"] = True
+                            promote_community_row(state)
                             added += 1
                 if report_id:
                     counted_ids.add(report_id)

@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Community rows that three separate reporters promoted stay in the database
+  when their oldest reports pass 30 days. Once the report Worker records
+  reporters, the old check would have dropped them about a month after
+  their first report.
+- A late community report for a number that is already in the database, such
+  as one with FCC complaints, now counts instead of being thrown away.
 - The FCC import now resumes from when complaints were published, not from the
   date written on each one. FCC's daily batches reach back years, so once a typo
   row dated September 26 moved the old cursor, every new batch was skipped: all

@@ -285,6 +285,41 @@ def assert_community_promotion(data_dir: Path) -> None:
     run_drain(data_dir)
     assert reports_for(data_dir, bucket_number) == 3, "three buckets across two days did not promote"
 
+    # The pending ledger keeps only 30 days of events, so the oldest report of a
+    # three-bucket promotion ages out first and the rest fall short of quorum.
+    # That used to demote the row on the next merge, queue or no queue.
+    pending_path = data_dir / "community_pending.json"
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    aged = (datetime.now(timezone.utc) - timedelta(days=40)).date().isoformat()
+    pending["numbers"][bucket_number]["events"][0]["day"] = aged
+    write_json(pending_path, pending)
+    run_script("merge_community_reports.py", data_dir)
+    assert reports_for(data_dir, bucket_number) == 3, "expiry demoted a row three buckets had promoted"
+    # Once every event has aged out, one new bucketed report must not demote it either.
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    for event in pending["numbers"][bucket_number]["events"]:
+        event["day"] = aged
+    write_json(pending_path, pending)
+    write_report(data_dir, "bucket_late.json", bucket_number, BUCKETS[3], f"{TODAY}T00:04:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, bucket_number) == 4, "one new bucket demoted a row three buckets had promoted"
+
+    # The 30-day cutoff is for promoting new rows. A row already in the database
+    # (here FCC-backed) takes a late report instead of having it thrown away.
+    fcc_number = "+12122340675"
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    database["numbers"].append(
+        {"number": fcc_number, "type": "robocall", "reports": 5, "first_seen": BASE_DAY,
+         "last_seen": BASE_DAY, "description": "FCC complaints", "sources": ["fcc_complaints"],
+         "evidence": [{"source_id": "fcc_complaints", "evidence_type": "complaint"}]}
+    )
+    write_json(data_dir / "spam_numbers.json", database)
+    late = (datetime.now(timezone.utc) - timedelta(days=40)).replace(microsecond=0).isoformat()
+    write_report(data_dir, "late_for_fcc_row.json", fcc_number, None, late)
+    run_drain(data_dir)
+    assert reports_for(data_dir, fcc_number) == 6, "a late report for a row already in the database was thrown away"
+
+
     database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     database["numbers"].append(
         {"number": old_number, "type": "spam", "reports": 1, "first_seen": BASE_DAY,
