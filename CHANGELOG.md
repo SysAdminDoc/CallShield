@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- North American toll-free, VoIP, neighbor-spoof, hot-campaign and repeat-call
+  checks now ignore international numbers whose last ten digits resemble a
+  North American number. Other international risk checks still run.
 - Region Rules now recognizes all 453 active geographic area codes in a pinned
   NANP registry snapshot, including new 465, 483 and 942. Unknown codes no
   longer trigger an out-of-region block. The 324 and 826 city labels are fixed.

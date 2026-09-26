@@ -934,6 +934,7 @@ internal class HeuristicChecker(
             spamHeuristics.analyze(
                 context = appContext,
                 number = ctx.number,
+                numberingPlan = ctx.numberingPlan,
                 smsBody = sms,
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp },
                 enableNeighborSpoof = ctx.prefs[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true,

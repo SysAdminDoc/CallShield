@@ -56,11 +56,13 @@ class PhoneNumberFuzzTest {
         }
 
         // SpamHeuristics — public methods that take a phone number
+        NumberingPlan.from(input)
         SpamHeuristics.isTollFree(input)
         SpamHeuristics.isInternationalPremium(input)
         SpamHeuristics.isHighSpamVoipRange(input)
         SpamHeuristics.isInvalidFormat(input)
         SpamHeuristics.isHotCampaignRange(input)
+        SpamHeuristics.isRapidFire(listOf(input to System.currentTimeMillis()), input)
 
         // SpamHeuristics.isWangiriCountryCode (public)
         SpamHeuristics.isWangiriCountryCode(input)

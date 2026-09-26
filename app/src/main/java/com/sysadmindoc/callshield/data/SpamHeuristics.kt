@@ -85,8 +85,11 @@ class SpamHeuristics
         fun isNeighborSpoof(
             context: Context,
             incomingNumber: String,
+            numberingPlan: NumberingPlan = NumberingPlan.from(incomingNumber),
         ): Boolean {
+            if (numberingPlan != NumberingPlan.NANP) return false
             val userNumber = getUserPhoneNumber(context) ?: return false
+            if (NumberingPlan.from(userNumber) != NumberingPlan.NANP) return false
             val userDigits = filterAsciiDigitsLast(userNumber, 10)
             val inDigits = filterAsciiDigitsLast(incomingNumber, 10)
 
@@ -101,7 +104,11 @@ class SpamHeuristics
         // Toll-free numbers are heavily abused by robocallers
         private val tollFreePrefixes = setOf("800", "888", "877", "866", "855", "844", "833")
 
-        fun isTollFree(number: String): Boolean {
+        fun isTollFree(
+            number: String,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number),
+        ): Boolean {
+            if (numberingPlan != NumberingPlan.NANP) return false
             val digits = filterAsciiDigitsLast(number, 10)
             if (digits.length < 10) return false
             return digits.substring(0, 3) in tollFreePrefixes
@@ -322,7 +329,11 @@ class SpamHeuristics
                 "437373",
             )
 
-        fun isHighSpamVoipRange(number: String): Boolean {
+        fun isHighSpamVoipRange(
+            number: String,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number),
+        ): Boolean {
+            if (numberingPlan != NumberingPlan.NANP) return false
             val digits = filterAsciiDigitsLast(number, 10)
             if (digits.length < 10) return false
             return digits.substring(0, 6) in highSpamVoipNpanxx
@@ -341,7 +352,11 @@ class SpamHeuristics
 
         fun hasHotRanges(): Boolean = hotCampaignRanges.isNotEmpty()
 
-        fun isHotCampaignRange(number: String): Boolean {
+        fun isHotCampaignRange(
+            number: String,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number),
+        ): Boolean {
+            if (numberingPlan != NumberingPlan.NANP) return false
             if (hotCampaignRanges.isEmpty()) return false
             val digits = filterAsciiDigitsLast(number, 10)
             if (digits.length < 6) return false
@@ -370,12 +385,15 @@ class SpamHeuristics
             number: String,
             windowMs: Long = 3600_000,
             threshold: Int = 3,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number),
         ): Boolean {
+            if (numberingPlan != NumberingPlan.NANP) return false
             val now = System.currentTimeMillis()
             val normalized = filterAsciiDigitsLast(number, 10)
             val count =
                 recentNumbers.count { (num, time) ->
-                    filterAsciiDigitsLast(num, 10) == normalized && (now - time) < windowMs
+                    NumberingPlan.from(num) == NumberingPlan.NANP &&
+                        filterAsciiDigitsLast(num, 10) == normalized && (now - time) < windowMs
                 }
             return count >= threshold
         }
@@ -393,6 +411,7 @@ class SpamHeuristics
         fun analyze(
             context: Context,
             number: String,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number),
             smsBody: String? = null,
             recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
             enableNeighborSpoof: Boolean = true,
@@ -418,31 +437,31 @@ class SpamHeuristics
             }
 
             // High-spam VoIP range
-            if (isHighSpamVoipRange(number)) {
+            if (isHighSpamVoipRange(number, numberingPlan)) {
                 score += 30
                 reasons.add("voip_spam_range")
             }
 
             // Active campaign range — 3+ distinct numbers from this NPA-NXX in last 24h
-            if (isHotCampaignRange(number)) {
+            if (isHotCampaignRange(number, numberingPlan)) {
                 score += 35
                 reasons.add("hot_campaign_range")
             }
 
             // Toll-free (mild signal — many legit businesses use these)
-            if (isTollFree(number)) {
+            if (isTollFree(number, numberingPlan)) {
                 score += 10
                 reasons.add("toll_free")
             }
 
             // Neighbor spoofing (gated by the Settings toggle)
-            if (enableNeighborSpoof && isNeighborSpoof(context, number)) {
+            if (enableNeighborSpoof && isNeighborSpoof(context, number, numberingPlan)) {
                 score += 50
                 reasons.add("neighbor_spoof")
             }
 
             // Rapid-fire calling
-            if (isRapidFire(recentBlockedNumbers, number)) {
+            if (isRapidFire(recentBlockedNumbers, number, numberingPlan = numberingPlan)) {
                 score += 40
                 reasons.add("rapid_fire")
             }
@@ -531,6 +550,13 @@ class SpamHeuristics
                 smsBody: String? = null,
                 recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
                 senderProvenance: SenderProvenance? = null,
-            ): HeuristicResult = shared.analyze(context, number, smsBody, recentBlockedNumbers, senderProvenance = senderProvenance)
+            ): HeuristicResult =
+                shared.analyze(
+                    context,
+                    number,
+                    smsBody = smsBody,
+                    recentBlockedNumbers = recentBlockedNumbers,
+                    senderProvenance = senderProvenance,
+                )
         }
     }

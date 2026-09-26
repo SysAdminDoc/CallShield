@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.checker
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.NumberingPlan
 import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
@@ -140,6 +141,9 @@ data class CheckContext(
      */
     val alternateForms: List<String> = emptyList(),
 ) {
+    /** Shared plan classification for NANP-only checkers in this evaluation. */
+    val numberingPlan: NumberingPlan = NumberingPlan.from(number)
+
     /**
      * Forms to try when matching stored numbers exactly, canonical first.
      * Allow and block lookups both use it, so a number saved in any form
