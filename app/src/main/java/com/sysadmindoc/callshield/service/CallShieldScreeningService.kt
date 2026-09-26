@@ -83,6 +83,13 @@ class CallShieldScreeningService : CallScreeningService() {
         val responseGate =
             ScreeningResponseGate<CallResponse> { response -> respondToCall(callDetails, response) }
 
+        // Before any early return: a second call of any kind reaching screening
+        // while a spam call is answered and waiting out its hang-up delay has to
+        // end that call now, before the second one rings.
+        if (callDetails.callDirection != Call.Details.DIRECTION_OUTGOING) {
+            AnswerHangUpController.onIncomingScreeningStarted()
+        }
+
         // Real-time text (RTT) is an active assistive voice/text channel and
         // may carry emergency traffic. Screening must not reject, silence, or
         // launch the caller-ID overlay for it; Telecom owns the RTT session.
@@ -121,8 +128,6 @@ class CallShieldScreeningService : CallScreeningService() {
                 return
             }
         }
-
-        AnswerHangUpController.onIncomingScreeningStarted()
 
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
@@ -406,7 +411,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         silenceWins = false,
                         permissionsGranted = permissionsGranted,
                         busy = !permissionsGranted || isAnswerHangUpBusy(),
-                        roaming = isRoaming(),
+                        roaming = isRoaming(callDetails),
                     )
                 } catch (_: RuntimeException) {
                     false
@@ -561,10 +566,16 @@ class CallShieldScreeningService : CallScreeningService() {
             checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
 
-    /** Answering a call abroad can be charged, so a roaming phone rejects instead. An unreadable state counts as roaming. */
-    private fun isRoaming(): Boolean =
+    /**
+     * Answering a call abroad can be charged, so a roaming line rejects instead.
+     * The SIM the call came in on decides, not the default one, and an
+     * unreadable state counts as roaming.
+     */
+    private fun isRoaming(callDetails: Call.Details): Boolean =
         try {
-            getSystemService(android.telephony.TelephonyManager::class.java)?.isNetworkRoaming ?: false
+            val telephony = getSystemService(android.telephony.TelephonyManager::class.java) ?: return true
+            val line = callDetails.accountHandle?.let(telephony::createForPhoneAccountHandle) ?: telephony
+            line.isNetworkRoaming
         } catch (_: SecurityException) {
             true
         }
