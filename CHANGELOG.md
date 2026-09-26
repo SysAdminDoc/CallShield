@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A caller blocked three times by quiet hours or Contacts only no longer looks
+  like a rapid-fire robocaller. Only blocks that judged the caller count now,
+  not ones your own schedule or mode caused, and not calls that were let
+  through.
+
 ## v1.9.0 (2026-09-26)
 
 - Phones no longer treat the empty trending feeds as an outage. Since

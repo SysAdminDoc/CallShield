@@ -431,8 +431,14 @@ interface SpamDao {
     @Delete
     suspend fun deleteBlockedCall(call: BlockedCall)
 
-    // Meeting-mode silences are not evidence against a caller; rapid-fire must not count them.
-    @Query("SELECT * FROM call_log WHERE timestamp > :since AND reasonCode != 'meeting_mode' ORDER BY timestamp DESC")
+    // Only blocks that judged the caller are evidence against it. Meeting-mode and
+    // quiet-hours silences and contacts-only rejections happen whoever calls, and
+    // non-blocked exemption and diagnostic rows were never blocks, so rapid-fire
+    // must not count them.
+    @Query(
+        "SELECT * FROM call_log WHERE timestamp > :since AND wasBlocked = 1 " +
+            "AND reasonCode NOT IN ('meeting_mode', 'time_block', 'contacts_only') ORDER BY timestamp DESC",
+    )
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
 
     // Local campaign evidence
