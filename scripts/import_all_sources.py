@@ -96,8 +96,10 @@ class SourceFetchResult(list[dict]):
         self.error = error
 
 
-def _cursor_key(timestamp: str, record_id: str) -> tuple[str, str]:
-    return timestamp or "", record_id or ""
+def _cursor_key(timestamp: str, record_id: str) -> tuple[str, tuple[int, int | str]]:
+    # Socrata ids are numbers. Compared as text, id 10000000 sorted before 9999999.
+    rid = record_id or ""
+    return timestamp or "", (0, int(rid)) if rid.isdigit() else (1, rid)
 
 
 def _record_cursor(
@@ -120,7 +122,12 @@ def _record_cursor(
 
 
 def _valid_cursor(cursor: dict[str, str] | None) -> dict[str, str] | None:
-    return _record_cursor(cursor, timestamp_field="timestamp") if cursor else None
+    valid = _record_cursor(cursor, timestamp_field="timestamp") if cursor else None
+    # The optional field names what the timestamp measures, so an old cursor on a
+    # different field is never used to resume the new walk.
+    if valid is not None and isinstance(cursor.get("field"), str):
+        valid["field"] = cursor["field"]
+    return valid
 
 
 def _cursor_after(
@@ -459,6 +466,11 @@ def fetch_ftc(
 
 # ── Source 2: FCC Unwanted Calls (Socrata) ─────────────────────────────
 FCC_API_URL = "https://opendata.fcc.gov/resource/vakf-fz8e.json"
+# FCC publishes daily batches whose issue dates reach back months or years, and
+# some rows carry typo dates in the future. A high-water mark on issue_date
+# skipped every later batch dated below it (all 535 rows of the 2026-09-26
+# batch), so the cursor tracks when a row landed in the dataset instead.
+FCC_CURSOR_FIELD = ":created_at"
 
 
 def fetch_fcc(
@@ -472,19 +484,25 @@ def fetch_fcc(
     cursor_records: list[dict] = []
     offset = 0
     records_fetched = 0
-    previous_cursor = _valid_cursor(cursor)
+    previous = _valid_cursor(cursor)
+    # A cursor from before the switch to :created_at measured issue_date and can't
+    # resume this walk; start again from the newest rows instead.
+    previous_cursor = previous if previous and previous.get("field") == FCC_CURSOR_FIELD else None
     upper_bound = datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
 
     while records_fetched < max_records:
         batch = min(FCC_PAGE_SIZE, max_records - records_fetched)
         params = {
+            "$select": f"*, {FCC_CURSOR_FIELD}",
             "$limit": batch,
             "$offset": offset,
-            "$order": "issue_date ASC, id ASC" if previous_cursor else "issue_date DESC, id DESC",
-            "$where": f"issue_date IS NOT NULL AND issue_date <= '{upper_bound}'",
+            "$order": f"{FCC_CURSOR_FIELD} ASC, id ASC" if previous_cursor else f"{FCC_CURSOR_FIELD} DESC, id DESC",
+            "$where": f"issue_date IS NOT NULL AND {FCC_CURSOR_FIELD} <= '{upper_bound}'",
         }
         if previous_cursor:
-            params["$where"] += f" AND issue_date >= '{previous_cursor['timestamp']}'"
+            # SoQL compares floating timestamps: drop the trailing Z.
+            since = previous_cursor["timestamp"].removesuffix("Z")
+            params["$where"] += f" AND {FCC_CURSOR_FIELD} >= '{since}'"
 
         response, error = _get_with_backoff(
             FCC_API_URL,
@@ -509,12 +527,16 @@ def fetch_fcc(
             record = record if isinstance(record, dict) else {}
             cursor_record = {
                 "id": str(record.get("id", "") or ""),
-                "issue_date": str(record.get("issue_date", "") or ""),
+                FCC_CURSOR_FIELD: str(record.get(FCC_CURSOR_FIELD, "") or ""),
             }
-            if not _cursor_after(cursor_record, previous_cursor, timestamp_field="issue_date"):
+            if not _cursor_after(cursor_record, previous_cursor, timestamp_field=FCC_CURSOR_FIELD):
                 continue
-            if cursor_record.get("issue_date"):
-                cursor_records.append(cursor_record)
+            cursor_records.append(cursor_record)
+            # The issue date only decides whether a row is accepted: a missing or
+            # future (typo) date is refused but no longer moves the cursor.
+            issue_date_row = {"id": cursor_record["id"], "issue_date": str(record.get("issue_date", "") or "")}
+            if _record_cursor(issue_date_row, timestamp_field="issue_date") is None:
+                continue
 
             issue = str(record.get("issue", "Unwanted Calls") or "Unwanted Calls").strip()
             call_type = str(
@@ -576,8 +598,10 @@ def fetch_fcc(
     next_cursor = _max_cursor(
         cursor_records,
         previous_cursor,
-        timestamp_field="issue_date",
+        timestamp_field=FCC_CURSOR_FIELD,
     )
+    if next_cursor is not None:
+        next_cursor["field"] = FCC_CURSOR_FIELD
     print(f"  Fetched {len(numbers):,} role-separated entries ({records_fetched:,} records)")
     return SourceFetchResult(
         list(numbers.values()),

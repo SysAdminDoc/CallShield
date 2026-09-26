@@ -49,6 +49,7 @@ def test_fcc_retains_roles_and_spoof_signals():
                     {
                         "id": "fcc-1",
                         "issue_date": "2026-08-01T00:00:00.000",
+                        ":created_at": "2026-08-03T05:06:29.585Z",
                         "issue": "Unwanted Calls",
                         "type_of_call_or_messge": "Telemarketing",
                         "caller_id_number": "+12125561201",
@@ -57,6 +58,7 @@ def test_fcc_retains_roles_and_spoof_signals():
                     {
                         "id": "fcc-2",
                         "issue_date": "2026-08-02T00:00:00.000",
+                        ":created_at": "2026-08-03T05:06:29.585Z",
                         "issue": "My own number is being spoofed",
                         "type_of_call_or_messge": "Robocall",
                         "caller_id_number": "+12125561202",
@@ -75,7 +77,7 @@ def test_fcc_retains_roles_and_spoof_signals():
         spoofed = by_role[("+12125561202", "caller_id")]
         assert spoofed["reports"] == 0
         assert spoofed["spoof_signal"] == "explicit_spoof_claim"
-        assert requests_seen[0][1]["params"]["$order"].startswith("issue_date DESC")
+        assert requests_seen[0][1]["params"]["$order"].startswith(":created_at DESC")
         assert entries.cursor["id"] == "fcc-2"
         assert entries.complete
     finally:
@@ -90,10 +92,11 @@ def test_future_fcc_row_cannot_poison_the_cursor():
     try:
         def fake_get(url, **kwargs):
             requests_seen.append(kwargs["params"])
+            created = "2026-09-26T05:06:29.585Z"
             return FakeResponse([
-                {"id": "missing", "issue_date": None, "caller_id_number": "+12125561203"},
-                {"id": "46486", "issue_date": "9999-12-15T00:00:00.000", "caller_id_number": "+12125561201"},
-                {"id": "valid", "issue_date": "2026-09-24T00:00:00.000", "caller_id_number": "+12125561202"},
+                {"id": "missing", "issue_date": None, ":created_at": created, "caller_id_number": "+12125561203"},
+                {"id": "46486", "issue_date": "9999-12-15T00:00:00.000", ":created_at": created, "caller_id_number": "+12125561201"},
+                {"id": "valid", "issue_date": "2026-09-24T00:00:00.000", ":created_at": created, "caller_id_number": "+12125561202"},
             ])
 
         module.requests.get = fake_get
@@ -102,9 +105,10 @@ def test_future_fcc_row_cannot_poison_the_cursor():
             cursor={"timestamp": "9999-12-15T00:00:00.000", "id": "46486"},
         )
         assert "issue_date IS NOT NULL" in requests_seen[0]["$where"], requests_seen
-        assert "issue_date >=" not in requests_seen[0]["$where"], requests_seen
+        assert ":created_at >=" not in requests_seen[0]["$where"], requests_seen
+        # Missing and future issue dates are refused as rows but do not steer the cursor.
         assert [row["number"] for row in result] == ["+12125561202"], result
-        assert result.cursor == {"timestamp": "2026-09-24T00:00:00.000", "id": "valid"}, result.cursor
+        assert result.cursor == {"timestamp": "2026-09-26T05:06:29.585Z", "id": "valid", "field": ":created_at"}, result.cursor
 
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "source-cursors.json"
@@ -116,6 +120,52 @@ def test_future_fcc_row_cannot_poison_the_cursor():
             assert module.load_source_cursors(path) == {}
     finally:
         module.requests.get = original_get
+
+
+def test_fcc_resumes_by_arrival_so_back_dated_batches_land():
+    # The 2026-09-26 batch arrived after the cursor had reached issue date 09-26
+    # (a typo row) and held 535 rows dated 2006-01-19 to 09-25. An issue_date
+    # high-water mark skipped every one of them.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    try:
+        def fake_get(url, **kwargs):
+            requests_seen.append(kwargs["params"])
+            created = "2026-09-26T05:06:29.585Z"
+            return FakeResponse([
+                {"id": "9152342", "issue_date": "2025-12-01T00:00:00.000", ":created_at": created, "caller_id_number": "+12125561211"},
+                {"id": "9152364", "issue_date": "2006-01-19T00:00:00.000", ":created_at": created, "caller_id_number": "+12125561212"},
+            ])
+
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+        cursor = {"timestamp": "2026-09-26T00:59:00.000Z", "id": "9140121", "field": ":created_at"}
+        result = module.fetch_fcc(max_records=10, cursor=cursor)
+
+        where = requests_seen[0]["$where"]
+        assert ":created_at >= '2026-09-26T00:59:00.000'" in where, where
+        assert requests_seen[0]["$order"].startswith(":created_at ASC"), requests_seen[0]
+        assert sorted(row["number"] for row in result) == ["+12125561211", "+12125561212"], result
+        assert result.cursor == {"timestamp": "2026-09-26T05:06:29.585Z", "id": "9152364", "field": ":created_at"}, result.cursor
+
+        # A cursor saved before the switch measured issue_date: start over from the newest rows.
+        requests_seen.clear()
+        module.fetch_fcc(max_records=10, cursor={"timestamp": "2026-09-26T00:00:00.000", "id": "9140121"})
+        assert ":created_at >=" not in requests_seen[0]["$where"], requests_seen
+        assert requests_seen[0]["$order"].startswith(":created_at DESC"), requests_seen
+
+        # Socrata ids are numbers; text order put 10000000 before 9999999.
+        assert module._cursor_key("t", "10000000") > module._cursor_key("t", "9999999")
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source-cursors.json"
+            module.save_source_cursors({"fcc_complaints": result.cursor}, path)
+            assert module.load_source_cursors(path) == {"fcc_complaints": result.cursor}
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
 
 
 def test_incremental_window_retries_and_advances_cursor():
@@ -452,6 +502,7 @@ def test_merge_summary_counts_only_numbers_that_stayed():
 def main():
     test_fcc_retains_roles_and_spoof_signals()
     test_future_fcc_row_cannot_poison_the_cursor()
+    test_fcc_resumes_by_arrival_so_back_dated_batches_land()
     test_incremental_window_retries_and_advances_cursor()
     test_cursors_and_snapshot_are_durable_and_attributed()
     test_source_freshness_keeps_what_a_run_did_not_fetch()

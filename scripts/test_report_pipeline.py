@@ -591,6 +591,7 @@ def assert_external_source_parsers() -> None:
                             "advertiser_business_phone_number": "+13105561234",
                             "issue": "Telemarketing",
                             "issue_date": "2026-07-31T00:00:00.000",
+                            ":created_at": "2026-08-01T05:06:29.585Z",
                         }
                     ]
                 )
