@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C362-f38ba8?style=flat-square" alt="51,362 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1580-94e2d5?style=flat-square" alt="1580 Tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1594-94e2d5?style=flat-square" alt="1594 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -268,9 +268,9 @@ by locale and message type without shipping personal data:
 - After-call "Was this spam?" feedback notification
 
 ### Home Screen Widget
-- Today vs yesterday blocked count with trend indicator
-- Last blocked number and time
-- Quick-access to lookup and protection status
+- Today's blocked count with a trend against yesterday, and the all-time total
+- How long ago the last block was
+- Whether protection is on. Tapping the widget opens the app
 
 ### Community
 - **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev). Each number and vote goes out at most once a day, and a report made offline is sent when the connection returns
@@ -364,7 +364,7 @@ scrape Nomorobo's restricted carrier feed.
 
 - **Network security config**. Cleartext traffic disabled in production
 - **Signing credentials**. Stored in `local.properties`, not hardcoded in build files
-- **Restricted FileProvider paths**. Scoped to export directory only
+- **Restricted FileProvider paths**. Shares only the export, backup and crash-report folders
 - **Scoped backup**. Cloud backup includes non-secret settings only. The
   sensitive database is limited to direct device transfer and explicit
   user-created portable backups
@@ -384,7 +384,7 @@ scrape Nomorobo's restricted carrier feed.
 Call and message decisions run on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
 - Optional live caller enrichment is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
-- Community reports to Cloudflare Worker (phone number only, no identity)
+- Community reports to the Cloudflare Worker. It stores the reported number, the report type and time, the report's random id, and two reporter IDs that change every day (keyed HMACs of your network's /48 and /64, so the same network can't be linked across days or turned back into an address). An SMS report adds the linked domains and link labels, never message text. Your IP address isn't stored
 - Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain, and the OpenPhish feed is downloaded for local matching. Neither receives message text
 
 No API keys. None required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
@@ -510,12 +510,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1580 tests
+./gradlew testDebugUnitTest   # 1594 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1580 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1594 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -552,7 +552,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1580 JVM unit tests (JUnit) |
+| Tests | 1594 JVM unit tests (JUnit) |
 | Strings | 1656 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

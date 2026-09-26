@@ -88,6 +88,33 @@ class ReleaseDriftTest(unittest.TestCase):
                 issues,
             )
 
+    def test_getting_started_guide_must_match_the_settings_cards(self) -> None:
+        """The guide listed a toggle that doesn't exist and missed about 15 settings."""
+        self.assertEqual([], verify_release_drift.settings_guide_audit(ROOT))
+        self.assertIn("Detection engines", verify_release_drift.settings_card_titles(ROOT))
+
+        copied = [
+            verify_release_drift.SETTINGS_SCREEN,
+            verify_release_drift.GETTING_STARTED,
+            "app/src/main/res/values/strings.xml",
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in copied:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes((ROOT / relative).read_bytes())
+            guide_path = root / verify_release_drift.GETTING_STARTED
+            guide = guide_path.read_text(encoding="utf-8")
+            renamed = guide.replace("### Power mode", "### Power settings")
+            self.assertNotEqual(guide, renamed)
+            guide_path.write_text(renamed, encoding="utf-8")
+
+            issues = verify_release_drift.settings_guide_audit(root)
+
+            self.assertTrue(any("no section" in issue and "Power mode" in issue for issue in issues), issues)
+            self.assertTrue(any("don't exist" in issue and "Power settings" in issue for issue in issues), issues)
+
     def test_readme_database_size_must_match_the_database(self) -> None:
         """The advertised database size moves on every community merge."""
         version_name, version_code = verify_release_drift.parse_app_version(

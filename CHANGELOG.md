@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The getting-started guide matches the app again: setup's five steps, and a
+  section for every Settings card with its settings and defaults. The README
+  now says what the report Worker stores, what the widget shows and which
+  folders the app can share, and its tests badge says it counts JVM unit tests.
 - WorkManager is 2.12.0. The data pipeline now requires cryptography 50.0.1
   and urllib3 2.7.0 or later, which fix published vulnerabilities.
 - Backups now carry the outgoing-call hold, the theme, the update check and

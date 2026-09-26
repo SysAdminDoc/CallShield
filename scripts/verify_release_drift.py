@@ -10,6 +10,7 @@ the code and must be explicit.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -431,6 +432,48 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     return issues
 
 
+SETTINGS_SCREEN = "app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt"
+GETTING_STARTED = "docs/getting-started.md"
+
+
+def settings_card_titles(root: Path) -> list[str]:
+    """The English title of every card and section header on the Settings screen."""
+    screen = read_text(root / SETTINGS_SCREEN)
+    resources = read_text(root / "app/src/main/res/values/strings.xml")
+    keys = re.findall(r"(?:SettingsCard|SectionHeader)\(\s*stringResource\(R\.string\.([a-z0-9_]+)\)", screen)
+    titles = []
+    for key in dict.fromkeys(keys):
+        match = re.search(rf'<string name="{key}"[^>]*>(.*?)</string>', resources, re.S)
+        if match:
+            titles.append(html.unescape(match.group(1)).replace("\\'", "'"))
+    return titles
+
+
+def settings_guide_audit(root: Path) -> list[str]:
+    """The getting-started guide has one section per Settings card, under the card's own title.
+
+    The guide listed a toggle that doesn't exist and left out about 15 settings,
+    because nothing compared it with the screen.
+    """
+    for relative in (SETTINGS_SCREEN, GETTING_STARTED, "app/src/main/res/values/strings.xml"):
+        if not (root / relative).is_file():
+            return [f"Settings guide check is missing {relative}."]
+    titles = settings_card_titles(root)
+    if len(titles) < 10:
+        return [f"Found only {len(titles)} Settings card titles; the Settings guide check can't read the screen."]
+    guide = read_text(root / GETTING_STARTED)
+    reference = guide.split("## Settings reference", 1)[1] if "## Settings reference" in guide else ""
+    headings = re.findall(r"(?m)^### (.+?)\s*$", reference)
+    issues = []
+    missing = [title for title in titles if title not in headings]
+    if missing:
+        issues.append(f"{GETTING_STARTED} has no section for these Settings cards: {', '.join(missing)}.")
+    extra = [heading for heading in headings if heading not in titles]
+    if extra:
+        issues.append(f"{GETTING_STARTED} describes Settings cards that don't exist: {', '.join(extra)}.")
+    return issues
+
+
 def audit(
     root: Path = ROOT,
     *,
@@ -450,6 +493,7 @@ def audit(
     source_report, source_issues = source_audit(root, current_time, max_snapshot_age_days, snapshot_path)
     advisories, advisory_issues = advisory_audit(root, dependency_report)
     issues.extend(release_metadata_audit(root, version_name, version_code))
+    issues.extend(settings_guide_audit(root))
     issues.extend(dependency_issues)
     issues.extend(source_issues)
     issues.extend(advisory_issues)

@@ -488,8 +488,8 @@ tasks.register("verifyReleaseMetadata") {
         } else {
             val testCountReferences =
                 listOf(
-                    "img.shields.io/badge/Tests-$testCount-",
-                    "alt=\"$testCount Tests\"",
+                    "img.shields.io/badge/JVM%20unit%20tests-$testCount-",
+                    "alt=\"$testCount JVM unit tests\"",
                     "# $testCount tests",
                     "| Tests | $testCount JVM unit tests (JUnit) |",
                 )
