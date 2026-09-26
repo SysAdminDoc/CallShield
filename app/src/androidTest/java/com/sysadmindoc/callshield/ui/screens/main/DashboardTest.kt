@@ -85,7 +85,7 @@ class DashboardTest {
                 syncState = SyncState.Idle,
                 heroAction =
                     HeroAction(
-                        label = "Sync Database",
+                        label = "Sync database",
                         icon = Icons.Default.Sync,
                         onClick = { syncRequests++ },
                     ),
@@ -102,7 +102,7 @@ class DashboardTest {
         composeRule.onNodeWithText("8").assertIsDisplayed()
         composeRule.onNodeWithText("Numbers").assertIsDisplayed()
         composeRule.onNodeWithText("1,234").assertIsDisplayed()
-        composeRule.onNodeWithText("Sync Database").performClick()
+        composeRule.onNodeWithText("Sync database").performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, syncRequests)
@@ -123,7 +123,7 @@ class DashboardTest {
 
         composeRule.onNodeWithText("Today").assertIsDisplayed()
         composeRule.onNodeWithText("7").assertIsDisplayed()
-        composeRule.onNodeWithText("This Week").assertIsDisplayed()
+        composeRule.onNodeWithText("This week").assertIsDisplayed()
         composeRule.onNodeWithText("12").assertIsDisplayed()
         composeRule.onNodeWithText("Total").assertIsDisplayed()
         composeRule.onNodeWithText("42").assertIsDisplayed()
@@ -183,7 +183,7 @@ class DashboardTest {
         composeRule.onNodeWithText("Core permissions are granted.").assertIsDisplayed()
         composeRule.onNodeWithText("Ready for live call blocking.").assertIsDisplayed()
         composeRule.onNodeWithText("Spam numbers loaded: 1,234").assertIsDisplayed()
-        listOf("Review", "Enable Call Screening", "Sync", "Optional extras", "Enable Overlay", "Enable Notifications").forEach { action ->
+        listOf("Review", "Enable call screening", "Sync", "Optional extras", "Enable overlay", "Enable notifications").forEach { action ->
             composeRule.onAllNodesWithText(action).assertCountEquals(0)
         }
         // Every row carries its own Ready badge, and none says Needed.
@@ -274,7 +274,7 @@ class DashboardTest {
         composeRule.onNodeWithText("Protection checks", ignoreCase = true).assertIsDisplayed()
         composeRule.onNodeWithText("Call screener").assertIsDisplayed()
         composeRule.onNodeWithText("Required for live call blocking.").assertIsDisplayed()
-        composeRule.onNodeWithText("Enable Call Screening").performClick()
+        composeRule.onNodeWithText("Enable call screening").performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, screenerRequests)

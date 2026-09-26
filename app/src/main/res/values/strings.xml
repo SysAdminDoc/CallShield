@@ -9,12 +9,12 @@
     <string name="shortcut_scan_sms_long">Scan SMS inbox</string>
 
     <!-- Dashboard Screen -->
-    <string name="dashboard_enable_call_screening">Enable Call Screening</string>
+    <string name="dashboard_enable_call_screening">Enable call screening</string>
     <string name="dashboard_review_permissions">Review permissions</string>
     <string name="dashboard_live_protection">Live protection</string>
     <string name="dashboard_protection_active">Protection active</string>
-    <string name="dashboard_protection_disabled">Protection Paused</string>
-    <string name="dashboard_setup_needed">Setup Needed</string>
+    <string name="dashboard_protection_disabled">Protection paused</string>
+    <string name="dashboard_setup_needed">Setup needed</string>
     <string name="dashboard_setup_progress">%1$s of %2$s complete</string>
     <string name="dashboard_outcome_title">This week</string>
     <string name="dashboard_outcome_calls">Calls blocked</string>
@@ -33,7 +33,7 @@
     <string name="dashboard_background_battery_action">Open battery settings</string>
     <string name="dashboard_background_miui_action">Open autostart settings</string>
     <string name="dashboard_background_dismiss">Dismiss</string>
-    <string name="dashboard_sync_database">Sync Database</string>
+    <string name="dashboard_sync_database">Sync database</string>
     <string name="dashboard_metric_core_setup">Setup</string>
     <string name="dashboard_metric_engines">Engines</string>
     <string name="dashboard_metric_numbers">Numbers</string>
@@ -56,8 +56,8 @@
     <string name="dashboard_screener_optional_short">Off while call blocking is disabled.</string>
     <string name="dashboard_overlay_needed_short">Floating caller ID alerts.</string>
     <string name="dashboard_notifications_needed_short">Blocking alerts and reminders.</string>
-    <string name="dashboard_enable_overlay">Enable Overlay</string>
-    <string name="dashboard_enable_notifications">Enable Notifications</string>
+    <string name="dashboard_enable_overlay">Enable overlay</string>
+    <string name="dashboard_enable_notifications">Enable notifications</string>
     <string name="dashboard_optional_extras">Optional extras</string>
     <string name="dashboard_synced_just_now">Synced just now</string>
     <string name="dashboard_synced_minutes_ago">Synced %dm ago</string>
@@ -66,7 +66,7 @@
     <string name="dashboard_database_bundled_ready">Protection snapshot ready</string>
     <string name="dashboard_not_synced">Not synced yet</string>
     <string name="dashboard_stat_today">Today</string>
-    <string name="dashboard_stat_this_week">This Week</string>
+    <string name="dashboard_stat_this_week">This week</string>
     <string name="dashboard_stat_total">Total</string>
     <string name="dashboard_trend_more">Change vs last week: +%1$s</string>
     <string name="dashboard_trend_fewer">Change vs last week: -%1$s</string>
@@ -78,8 +78,8 @@
     <string name="dashboard_time_minutes_ago">%dm ago</string>
     <string name="dashboard_time_hours_ago">%dh ago</string>
     <string name="dashboard_time_days_ago">%dd ago</string>
-    <string name="dashboard_quick_controls">Quick Controls</string>
-    <string name="dashboard_block_calls">Block Calls</string>
+    <string name="dashboard_quick_controls">Quick controls</string>
+    <string name="dashboard_block_calls">Block calls</string>
     <string name="dashboard_block_sms">Analyze spam SMS</string>
     <string name="dashboard_quick_profiles">How strict?</string>
     <string name="dashboard_profile_personal">Personal</string>
@@ -119,7 +119,7 @@
     <string name="settings_protection_level">Protection level</string>
     <string name="settings_custom_profile">Custom</string>
     <string name="dashboard_sync">Sync</string>
-    <string name="dashboard_quick_actions">Quick Actions</string>
+    <string name="dashboard_quick_actions">Quick actions</string>
     <string name="dashboard_action_sync_subtitle">Refresh the spam database before unknown campaigns slip through.</string>
     <plurals name="dashboard_action_sync_subtitle_ready">
         <item quantity="one">Refresh %1$s local spam record with the latest reports.</item>
@@ -133,9 +133,9 @@
     <string name="dashboard_action_run">Run</string>
     <string name="dashboard_status_ready">Ready</string>
     <string name="dashboard_status_needed">Needed</string>
-    <string name="dashboard_scan_calls">Scan Calls</string>
+    <string name="dashboard_scan_calls">Scan calls</string>
     <string name="dashboard_scan_sms_inbox">Scan SMS Inbox</string>
-    <string name="dashboard_call_log_scan">Call Log Scan</string>
+    <string name="dashboard_call_log_scan">Call log scan</string>
     <string name="dashboard_scan_result">%1$s | %2$s</string>
     <plurals name="dashboard_scan_unique_numbers_scanned">
         <item quantity="one">%1$s unique number scanned</item>
@@ -160,7 +160,7 @@
         <item quantity="one">%1$s message scanned</item>
         <item quantity="other">%1$s messages scanned</item>
     </plurals>
-    <string name="dashboard_smart_suggestions">Smart Suggestions</string>
+    <string name="dashboard_smart_suggestions">Smart suggestions</string>
     <string name="dashboard_spam_from_area">Spam count: %1$s | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
     <string name="dashboard_block_area_confirm_title">Block area code %s?</string>
@@ -191,12 +191,12 @@
     <string name="blocked_log_undo">Undo</string>
     <string name="blocked_log_undo_failed">Couldn\'t undo that block. You can remove it from the Rules tab.</string>
     <string name="blocked_log_number_blocked">%s blocked</string>
-    <string name="blocked_log_clear_title">Clear Blocked Log?</string>
+    <string name="blocked_log_clear_title">Clear blocked log?</string>
     <plurals name="blocked_log_clear_message">
         <item quantity="one">This will permanently delete the blocked call and SMS log. Total record: %d. This cannot be undone.</item>
         <item quantity="other">This will permanently delete the blocked call and SMS log. Total records: %d. This cannot be undone.</item>
     </plurals>
-    <string name="blocked_log_clear_all">Clear All</string>
+    <string name="blocked_log_clear_all">Clear all</string>
     <string name="blocked_log_cancel">Cancel</string>
     <string name="blocked_log_log_cleared">Log cleared</string>
     <string name="blocked_log_copied">Copied %s</string>
@@ -385,7 +385,7 @@
     <string name="rule_conflict_dismiss">Dismiss conflict</string>
     <string name="rule_conflict_audit_pair">%1$s (priority %2$d) wins over %3$s (priority %4$d)</string>
     <string name="rule_conflict_audit_sample">Example: %1$s</string>
-    <string name="dialog_phone_number">Phone Number</string>
+    <string name="dialog_phone_number">Phone number</string>
     <string name="dialog_phone_placeholder">+1234567890</string>
     <string name="dialog_description_optional">Description (optional)</string>
     <string name="dialog_block">Block</string>
@@ -437,7 +437,7 @@
     <string name="lookup_details">Details</string>
     <string name="lookup_confidence">Confidence</string>
     <string name="lookup_confidence_value">%d%%</string>
-    <string name="lookup_pipeline_trace">Pipeline Trace</string>
+    <string name="lookup_pipeline_trace">Pipeline trace</string>
     <string name="lookup_conflict">Conflict</string>
     <string name="lookup_trace_show">Show %d active</string>
     <string name="lookup_trace_hide">Hide</string>
@@ -490,7 +490,7 @@
     <string name="lookup_remove_my_rule">Remove my rule</string>
     <string name="lookup_rule_removed">Your rule was removed</string>
     <string name="lookup_block_this_number">Block this number</string>
-    <string name="lookup_open_detail">Open Full Detail</string>
+    <string name="lookup_open_detail">Open full detail</string>
     <string name="lookup_spam">SPAM</string>
     <string name="lookup_safe">SAFE</string>
     <string name="lookup_idle_title">Private · on-device · no account</string>
@@ -504,10 +504,10 @@
     <string name="lookup_mark_trusted">Mark trusted</string>
 
     <!-- Caller ID Overlay -->
-    <string name="overlay_header_possible_spam">Possible Spam</string>
-    <string name="overlay_header_incoming_call">Incoming Call</string>
+    <string name="overlay_header_possible_spam">Possible spam</string>
+    <string name="overlay_header_incoming_call">Incoming call</string>
     <string name="overlay_header_outgoing_risk">Known-risk outgoing call</string>
-    <string name="overlay_header_likely_spam">Likely Spam</string>
+    <string name="overlay_header_likely_spam">Likely spam</string>
     <string name="overlay_header_suspicious">Suspicious</string>
     <string name="overlay_reason_premium_rate">Premium-rate number</string>
     <string name="overlay_reason_wangiri">One-ring scam pattern</string>
@@ -529,7 +529,7 @@
     <string name="signal_lookalike_host">Link imitating a real site</string>
     <!-- Joins the signals that fired. Labels never contain it, so the log can split them again. -->
     <string name="signal_list_separator">", "</string>
-    <string name="overlay_header_safe">Looks Safe</string>
+    <string name="overlay_header_safe">Looks safe</string>
     <string name="overlay_initial_score">Score: %1$d%%</string>
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>
     <string name="overlay_score_loading">Checking databases…</string>
@@ -828,8 +828,8 @@
     <string name="stats_calls">Calls</string>
     <string name="stats_sms">Texts</string>
     <string name="stats_db_size">Database</string>
-    <string name="stats_by_detection_method">By Detection Method</string>
-    <string name="stats_top_offenders">Top Offenders</string>
+    <string name="stats_by_detection_method">By detection method</string>
+    <string name="stats_top_offenders">Top offenders</string>
     <string name="stats_spam_by_area_code">Spam by Area Code</string>
     <string name="stats_spam_by_hour">Spam by Hour</string>
     <string name="stats_spam_concentrate">When spam calls concentrate</string>
@@ -837,16 +837,16 @@
     <string name="stats_time_6a">6a</string>
     <string name="stats_time_12p">12p</string>
     <string name="stats_time_6p">6p</string>
-    <string name="stats_weekly_activity">Weekly Activity</string>
-    <string name="stats_source_breakdown">Source Breakdown</string>
+    <string name="stats_weekly_activity">Weekly activity</string>
+    <string name="stats_source_breakdown">Source breakdown</string>
     <string name="stats_donut_total">Total</string>
-    <string name="stats_monthly_trend">Monthly Trend</string>
-    <string name="stats_this_month">This Month</string>
-    <string name="stats_last_month">Last Month</string>
+    <string name="stats_monthly_trend">Monthly trend</string>
+    <string name="stats_this_month">This month</string>
+    <string name="stats_last_month">Last month</string>
     <string name="stats_trend_up">Change vs last month: +%d</string>
     <string name="stats_trend_down">Change vs last month: -%d</string>
     <string name="stats_trend_same">Same as last month</string>
-    <string name="stats_overview_title">Protection Snapshot</string>
+    <string name="stats_overview_title">Protection snapshot</string>
     <plurals name="stats_threats_stopped">
         <item quantity="one">%1$,d event recorded this week</item>
         <item quantity="other">%1$,d events recorded this week</item>
@@ -854,19 +854,19 @@
     <string name="stats_previous_week_more">%1$d more than the previous 7 days.</string>
     <string name="stats_previous_week_fewer">%1$d fewer than the previous 7 days.</string>
     <string name="stats_previous_week_same">Same as the previous 7 days.</string>
-    <string name="stats_overview_week">This Week</string>
-    <string name="stats_overview_change">Weekly Change</string>
-    <string name="stats_overview_top_source">Top Source</string>
-    <string name="stats_overview_peak_hour">Peak Hour</string>
+    <string name="stats_overview_week">This week</string>
+    <string name="stats_overview_change">Weekly change</string>
+    <string name="stats_overview_top_source">Top source</string>
+    <string name="stats_overview_peak_hour">Peak hour</string>
     <string name="stats_overview_no_source">No source data yet</string>
     <string name="stats_overview_no_peak">No peak hour yet</string>
-    <string name="stats_weekly_highlights">Weekly Highlights</string>
+    <string name="stats_weekly_highlights">Weekly highlights</string>
     <string name="stats_change_up">+%d vs previous 7 days</string>
     <string name="stats_change_down">-%d vs previous 7 days</string>
     <string name="stats_change_same">Same as previous 7 days</string>
     <string name="stats_highlight_weekly_change">Momentum</string>
-    <string name="stats_highlight_busiest_day">Busiest Day</string>
-    <string name="stats_highlight_peak_window">Peak Window</string>
+    <string name="stats_highlight_busiest_day">Busiest day</string>
+    <string name="stats_highlight_peak_window">Peak window</string>
     <string name="stats_highlight_busiest_value">%1$s • %2$d events</string>
     <string name="stats_highlight_peak_value">%1$s • %2$d events</string>
     <string name="stats_insight_waiting">Waiting for more activity</string>
@@ -933,10 +933,10 @@
     <string name="more_github_repo">GitHub repository</string>
     <string name="more_report_bug">Report a bug</string>
     <string name="more_star_github">Star on GitHub</string>
-    <string name="more_report_spam_number">Report Spam Number</string>
+    <string name="more_report_spam_number">Report spam number</string>
     <string name="more_share_crash_log">Share crash log</string>
     <string name="more_no_crash_logs">No crashes logged. CallShield hasn\'t recorded an uncaught exception.</string>
-    <string name="more_section_tools">Protection Tools</string>
+    <string name="more_section_tools">Protection tools</string>
     <string name="more_section_release">Release &amp; Diagnostics</string>
     <string name="more_section_support">Project &amp; Support</string>
     <string name="more_github_repo_subtitle">Source, roadmap, and releases</string>
@@ -952,15 +952,15 @@
     <string name="link_no_activity">This device can\'t open that screen.</string>
     <!-- Emergency contacts (Feature E) -->
     <string name="emergency_contacts_subtitle">They always ring, even past your blocklist, quiet hours and aggressive mode.</string>
-    <string name="emergency_contacts_add">Add Emergency Contact</string>
+    <string name="emergency_contacts_add">Add emergency contact</string>
     <string name="emergency_contacts_added">Emergency contact added</string>
     <string name="emergency_contacts_mark_as">Mark as Emergency</string>
-    <string name="emergency_contacts_unmark">Remove Emergency Status</string>
+    <string name="emergency_contacts_unmark">Remove emergency status</string>
     <string name="emergency_contacts_badge">EMERGENCY</string>
     <!-- Block reasoning (Feature D) -->
     <string name="detail_category_action_source">%1$s rule · %2$s</string>
     <!-- Smart call labels (Feature A) -->
-    <string name="call_category_debt_collector">Debt Collector</string>
+    <string name="call_category_debt_collector">Debt collector</string>
     <string name="call_category_political">Political</string>
     <string name="call_category_robocall">Robocall</string>
     <string name="call_category_scam">Scam</string>
@@ -968,7 +968,7 @@
     <string name="call_category_telemarketer">Telemarketer</string>
     <string name="call_category_business">Business</string>
     <string name="call_category_unknown">Unknown</string>
-    <string name="call_category_wangiri">Wangiri Scam</string>
+    <string name="call_category_wangiri">Wangiri scam</string>
     <string name="call_category_survey">Survey</string>
     <string name="category_action_inherit">Inherit</string>
     <string name="category_action_allow">Allow</string>
@@ -983,7 +983,7 @@
     <string name="protection_test_ready_body">CallShield is ready to screen calls and messages.</string>
     <string name="protection_test_last_tested_now">Last tested just now</string>
     <string name="protection_test_testing">Testing…</string>
-    <string name="protection_test_run_all">Run All Tests</string>
+    <string name="protection_test_run_all">Run all tests</string>
     <string name="protection_test_run_again">Run all tests again</string>
     <string name="protection_test_summary">Progress: %1$d/%2$d passed (%3$d%%)</string>
     <string name="protection_test_run_failed_title">Couldn\'t finish the tests</string>
@@ -1078,24 +1078,24 @@
     <string name="protection_test_overlay_fail">Not granted, so the overlay won\'t show</string>
     <string name="protection_test_notif_pass">RCS filter can monitor messages</string>
     <string name="protection_test_notif_fail">Not granted, so the RCS filter won\'t work</string>
-    <string name="protection_test_perm_name_call_log">Call Log Permission</string>
-    <string name="protection_test_perm_name_contacts">Contacts Permission</string>
+    <string name="protection_test_perm_name_call_log">Call log permission</string>
+    <string name="protection_test_perm_name_contacts">Contacts permission</string>
     <string name="protection_test_perm_name_sms">SMS Permission</string>
     <string name="protection_test_perm_name_incoming_sms">Incoming SMS Permission</string>
-    <string name="protection_test_perm_name_phone_state">Phone State Permission</string>
-    <string name="protection_test_perm_name_answer_calls">Answer Calls Permission</string>
-    <string name="protection_test_call_screener_role">Call Screener Role</string>
-    <string name="protection_test_spam_database">Spam Database</string>
-    <string name="protection_test_prefix_detection">Prefix Detection</string>
-    <string name="protection_test_wangiri_detection">Wangiri Detection</string>
+    <string name="protection_test_perm_name_phone_state">Phone state permission</string>
+    <string name="protection_test_perm_name_answer_calls">Answer calls permission</string>
+    <string name="protection_test_call_screener_role">Call screener role</string>
+    <string name="protection_test_spam_database">Spam database</string>
+    <string name="protection_test_prefix_detection">Prefix detection</string>
+    <string name="protection_test_wangiri_detection">Wangiri detection</string>
     <string name="protection_test_sms_content_analysis">SMS Content Analysis</string>
     <string name="protection_test_checker_health">Checker health</string>
     <string name="protection_test_checker_health_ok">All %1$d checkers completed without exceptions.</string>
     <string name="protection_test_checker_health_errors">%1$d of %2$d checkers reported an exception; affected checks fail open.</string>
     <string name="protection_test_ml_spam_scorer">ML Spam Scorer</string>
     <string name="protection_test_ml_false_positive">ML False Positive</string>
-    <string name="protection_test_hot_list_data">Hot List Data</string>
-    <string name="protection_test_overlay_permission">Overlay Permission</string>
+    <string name="protection_test_hot_list_data">Hot list data</string>
+    <string name="protection_test_overlay_permission">Overlay permission</string>
     <string name="protection_test_notification_access">Notification Access (RCS)</string>
     <string name="protection_test_sms_capability">SMS message evidence</string>
     <string name="protection_test_notification_capability">Notification message evidence</string>
@@ -1120,7 +1120,7 @@
     <string name="permission_contract_answer_calls_not_needed">Not needed until Answer &amp; hang up blocked calls is on. That setting asks for it.</string>
     <string name="permission_contract_degraded_overlay">Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.</string>
     <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
-    <string name="permission_contract_post_notifications_name">Notification Permission</string>
+    <string name="permission_contract_post_notifications_name">Notification permission</string>
     <string name="permission_contract_post_notifications_denied">Denied, so alerts and review actions may be hidden</string>
     <string name="permission_contract_degraded_post_notifications">Blocked-call/SMS alerts, review actions, and daily summaries may be suppressed until notification permission is granted.</string>
     <string name="permission_contract_post_notifications_not_required">Not required on this Android version</string>
@@ -1136,10 +1136,10 @@
     <string name="changelog_about_body">CallShield checks calls and texts on this phone. A number or link only leaves it when you turn on an online check or send a report.</string>
 
     <!-- Onboarding Screen -->
-    <string name="onboarding_enable_notifications">Enable Notifications</string>
+    <string name="onboarding_enable_notifications">Enable notifications</string>
     <string name="onboarding_step">Step %1$d of %2$d</string>
     <string name="onboarding_screener_unavailable_detail">You can still use blocklists, scans, and lookup tools, but Android is not exposing the native screening role here.</string>
-    <string name="onboarding_finish_setup">Finish Setup</string>
+    <string name="onboarding_finish_setup">Finish setup</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_skip_optional">Skip for now</string>
     <string name="onboarding_optional">Optional access</string>
@@ -1251,8 +1251,8 @@
     <string name="detail_first_seen">First seen</string>
     <string name="detail_last_seen">Last seen</string>
     <string name="detail_match_reasons">Match reasons:</string>
-    <string name="detail_recent_activity">Recent Activity</string>
-    <string name="detail_online_lookup">Online Lookup</string>
+    <string name="detail_recent_activity">Recent activity</string>
+    <string name="detail_online_lookup">Online lookup</string>
     <string name="detail_check_sources">Check spam sources</string>
     <string name="detail_checking_sources">Checking SkipCalls…</string>
     <string name="detail_check_sources_failed">Couldn\'t reach the lookup sources. Check your connection and try again.</string>
@@ -1272,8 +1272,8 @@
     <string name="detail_number_unblocked">Number unblocked</string>
     <string name="detail_currently_blocked">Currently blocked</string>
     <string name="detail_report">Report</string>
-    <string name="detail_report_spam">Report Spam</string>
-    <string name="detail_not_spam">Not Spam</string>
+    <string name="detail_report_spam">Report spam</string>
+    <string name="detail_not_spam">Not spam</string>
     <string name="detail_not_spam_pending">Marked not spam</string>
     <string name="detail_undo">Undo</string>
     <string name="detail_report_carrier">Report to carrier (7726)</string>
@@ -1397,7 +1397,7 @@
     <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_error_generic">Couldn\'t read this backup. The file may be corrupt, encrypted with a different passphrase, or from a newer app version.</string>
     <string name="clip_label_phone">Phone</string>
-    <string name="clip_label_phone_number">Phone Number</string>
+    <string name="clip_label_phone_number">Phone number</string>
     <string name="clip_label_spam_number">CallShield spam number</string>
     <string name="log_export_subject">CallShield Blocked Log</string>
     <string name="log_export_chooser_title">Export log</string>
@@ -1412,17 +1412,17 @@
     <!-- NotificationHelper -->
     <string name="notif_channel_blocked">Blocked Calls &amp; SMS</string>
     <string name="notif_channel_blocked_desc">Notifications when spam calls/texts are blocked</string>
-    <string name="notif_channel_rating">Spam Rating</string>
+    <string name="notif_channel_rating">Spam rating</string>
     <string name="notif_channel_rating_desc">Rate calls as spam after they end</string>
-    <string name="notif_channel_status">Protection Status</string>
+    <string name="notif_channel_status">Protection status</string>
     <string name="notif_channel_status_desc">Persistent protection status indicator</string>
     <string name="notif_channel_sync">Protection updates</string>
     <string name="notif_channel_sync_desc">Progress while refreshing spam protection data</string>
     <string name="notif_channel_phishing">Phishing URL Warning</string>
     <string name="notif_channel_phishing_desc">Alert when a received SMS contains a known malicious URL</string>
-    <string name="notif_channel_allowed">Allowed Call Decisions</string>
+    <string name="notif_channel_allowed">Allowed call decisions</string>
     <string name="notif_channel_allowed_desc">Explains calls CallShield allowed because of safety rules</string>
-    <string name="notif_channel_digest">Daily Digest</string>
+    <string name="notif_channel_digest">Daily digest</string>
     <string name="notif_channel_digest_desc">Daily summary of blocked calls and messages</string>
     <string name="notif_channel_message_screening">Message screening alerts</string>
     <string name="notif_channel_message_screening_desc">On-device warnings for opted-in messenger and email notifications</string>
@@ -1495,7 +1495,7 @@
     <string name="feedback_title">Was this call spam?</string>
     <string name="feedback_text">You received a call from %s</string>
     <string name="feedback_spam">Spam</string>
-    <string name="feedback_not_spam">Not Spam</string>
+    <string name="feedback_not_spam">Not spam</string>
     <string name="feedback_blocked">Number blocked and reported</string>
     <string name="feedback_whitelisted">Number marked as safe</string>
     <string name="notification_action_failed">That didn\'t work. Try again from the app.</string>
@@ -1621,14 +1621,14 @@
     <string name="accessibility_reason_unknown">This item was blocked by a CallShield protection rule.</string>
 
     <!-- Protection Test: v1.2.8 additions -->
-    <string name="test_campaign_detection">Campaign Detection</string>
+    <string name="test_campaign_detection">Campaign detection</string>
     <string name="test_campaign_monitoring">Active campaigns monitored: %d</string>
     <string name="test_ml_model_loaded">ML Model Loaded</string>
     <string name="test_ml_model_ready">GBT v3 or LR v2 weights loaded</string>
     <string name="test_ml_model_fallback">Using default heuristic priors</string>
     <string name="test_after_call_feedback">After-Call Feedback</string>
     <string name="test_feedback_ready">Spam rating notifications ready</string>
-    <string name="test_security_patch">Device Security Patch</string>
+    <string name="test_security_patch">Device security patch</string>
     <string name="test_security_patch_current">Patch level %1$s, current</string>
     <string name="test_security_patch_stale">Patch level %1$s, over 90 days old</string>
     <string name="test_security_patch_hint">Check for system updates in Settings → System → Software update</string>

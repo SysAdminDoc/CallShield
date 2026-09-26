@@ -21,7 +21,7 @@ class CallerIdOverlayPrivacyTest {
 
     @Test
     fun `a lookup that failed everywhere leaves the local verdict instead of calling the caller safe`() {
-        // SkipCalls is the only source, so its failure used to score 0: "Looks Safe".
+        // SkipCalls is the only source, so its failure used to score 0: "Looks safe".
         assertEquals(-1, liveLookupScore(totalReports = 0, anySpam = false, allFinished = true, definitive = 0))
         assertEquals(0, liveLookupScore(totalReports = 0, anySpam = false, allFinished = true, definitive = 1))
         assertEquals(-1, liveLookupScore(totalReports = 0, anySpam = false, allFinished = false, definitive = 1))

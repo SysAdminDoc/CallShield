@@ -49,7 +49,7 @@ class BlocklistTest {
             }
         }
 
-        composeRule.onNodeWithText("Phone Number").performTextInput("(212) 555-0101")
+        composeRule.onNodeWithText("Phone number").performTextInput("(212) 555-0101")
         composeRule.onNodeWithText("Description (optional)").performTextInput("Persistent scam")
         composeRule.onNodeWithText("Block").assertIsEnabled().performClick()
 
@@ -95,7 +95,7 @@ class BlocklistTest {
             )
         }
 
-        composeRule.onNodeWithText("Phone Number").performTextInput("+1 (212) 555-0101")
+        composeRule.onNodeWithText("Phone number").performTextInput("+1 (212) 555-0101")
 
         composeRule
             .onNodeWithText("Emergency allow wins over Exact block", substring = true)

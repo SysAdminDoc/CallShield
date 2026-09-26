@@ -12,6 +12,8 @@ All notable changes to CallShield will be documented in this file.
 - Tabs, chips, empty-state cards and icon backdrops that had drifted back to
   pill and circle shapes use the app's corner scale again, and a test now fails
   if a pill shape returns.
+- Buttons, headings and notification channel names use sentence case
+  throughout, matching the rest of the app.
 - Insights now opens with outlined totals, then its real weekly chart and
   detail cards. Its labels describe recorded call and text events accurately.
 - Number details now groups block, report, call and area-code controls under a
