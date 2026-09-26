@@ -242,6 +242,11 @@ def assert_community_promotion(data_dir: Path) -> None:
     bucket_number = "+12122340672"
     old_number = "+12122340673"
     mixed_batch_number = "+12122340674"
+    midnight_number = "+12122340676"
+    rotating_number = "+12122340677"
+    ledger_number = "+12122340678"
+    ledger_spread_number = "+12122340679"
+    late_night_number = "+12122340681"
 
     write_report(data_dir, "first.json", legacy_number, None, TIMES[0])
     run_drain(data_dir)
@@ -255,7 +260,33 @@ def assert_community_promotion(data_dir: Path) -> None:
 
     write_report(data_dir, "next_day.json", legacy_number, None, f"{TODAY}T00:00:00+00:00")
     run_drain(data_dir)
-    assert reports_for(data_dir, legacy_number) == 3, "two UTC days did not promote bucketless reports"
+    assert reports_for(data_dir, legacy_number) == 0, "bucketless reports 20 hours apart were shipped"
+    write_report(data_dir, "a_day_later.json", legacy_number, None, f"{TODAY}T04:00:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 4, "bucketless reports 24 hours apart did not promote"
+
+    # Two UTC days, six minutes apart.
+    write_report(data_dir, "before_midnight.json", midnight_number, None, f"{BASE_DAY}T23:57:00+00:00")
+    write_report(data_dir, "after_midnight.json", midnight_number, None, f"{TODAY}T00:03:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, midnight_number) == 0, "reports either side of midnight were shipped"
+
+    # Ledger events recorded before events carried a time: only whole days count.
+    pending_path = data_dir / "community_pending.json"
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()
+    for number, first_day in ((ledger_number, BASE_DAY), (ledger_spread_number, two_days_ago)):
+        entry = {"number": number, "type": "phishing", "reports": 0, "first_seen": first_day, "last_seen": TODAY,
+                 "description": "Community reported", "sources": ["community"]}
+        pending["numbers"][number] = {"published": False, "entry": entry, "events": [
+            {"key": f"file:{number}_a.json", "day": first_day, "bucket": "", "count": 1},
+        ]}
+    write_json(pending_path, pending)
+    write_report(data_dir, "ledger_next_day.json", ledger_number, None, f"{TODAY}T00:04:00+00:00")
+    write_report(data_dir, "ledger_two_days.json", ledger_spread_number, None, f"{TODAY}T00:04:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, ledger_number) == 0, "a timeless event on the day before shipped a row"
+    assert reports_for(data_dir, ledger_spread_number) == 2, "a timeless event two days before did not promote"
 
     write_report(data_dir, "legacy_bucket_first.json", legacy_number, BUCKETS[0], f"{TODAY}T00:01:00+00:00")
     run_drain(data_dir)
@@ -265,7 +296,7 @@ def assert_community_promotion(data_dir: Path) -> None:
     assert reports_for(data_dir, legacy_number) == 0, "two buckets restored a demoted row"
     write_report(data_dir, "legacy_bucket_third.json", legacy_number, BUCKETS[2], f"{TODAY}T00:03:00+00:00")
     run_drain(data_dir)
-    assert reports_for(data_dir, legacy_number) == 6, "three buckets did not restore a demoted row"
+    assert reports_for(data_dir, legacy_number) == 7, "three buckets did not restore a demoted row"
 
     write_report(data_dir, "mixed_batch_first.json", mixed_batch_number, None, TIMES[0])
     write_report(data_dir, "mixed_batch_second.json", mixed_batch_number, None, f"{TODAY}T00:00:00+00:00")
@@ -283,7 +314,28 @@ def assert_community_promotion(data_dir: Path) -> None:
     assert reports_for(data_dir, bucket_number) == 0, "two buckets were enough to ship"
     write_report(data_dir, "bucket_third.json", bucket_number, BUCKETS[2], f"{TODAY}T00:02:00+00:00")
     run_drain(data_dir)
-    assert reports_for(data_dir, bucket_number) == 3, "three buckets across two days did not promote"
+    # Buckets rotate at UTC midnight, so BUCKETS[0] may be either of today's reporters.
+    assert reports_for(data_dir, bucket_number) == 0, "two reporters with three daily buckets were enough to ship"
+    write_report(data_dir, "bucket_fourth.json", bucket_number, BUCKETS[3], f"{TODAY}T00:03:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, bucket_number) == 0, "three reporters shipped a row within 24 hours"
+    write_report(data_dir, "bucket_fifth.json", bucket_number, BUCKETS[5], f"{TODAY}T04:00:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, bucket_number) == 5, "three same-day reporters 24 hours apart did not promote"
+
+    # Three reporters just before midnight and one just after: two UTC days, eight minutes.
+    for index, minute in enumerate(("23:55", "23:56", "23:57")):
+        write_report(data_dir, f"late_{index}.json", late_night_number, BUCKETS[index], f"{BASE_DAY}T{minute}:00+00:00")
+    write_report(data_dir, "early.json", late_night_number, BUCKETS[3], f"{TODAY}T00:03:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, late_night_number) == 0, "reporters eight minutes apart across midnight were shipped"
+
+    # One reporter on three days shows three buckets.
+    three_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()
+    for index, reported_at in enumerate((f"{three_days_ago}T10:00:00+00:00", TIMES[0], f"{TODAY}T00:04:00+00:00")):
+        write_report(data_dir, f"rotating_{index}.json", rotating_number, BUCKETS[index], reported_at)
+        run_drain(data_dir)
+    assert reports_for(data_dir, rotating_number) == 0, "one reporter's daily buckets on three days were shipped"
 
     # The pending ledger keeps only 30 days of events, so the oldest report of a
     # three-bucket promotion ages out first and the rest fall short of quorum.
@@ -294,15 +346,15 @@ def assert_community_promotion(data_dir: Path) -> None:
     pending["numbers"][bucket_number]["events"][0]["day"] = aged
     write_json(pending_path, pending)
     run_script("merge_community_reports.py", data_dir)
-    assert reports_for(data_dir, bucket_number) == 3, "expiry demoted a row three buckets had promoted"
+    assert reports_for(data_dir, bucket_number) == 5, "expiry demoted a row three reporters had promoted"
     # Once every event has aged out, one new bucketed report must not demote it either.
     pending = json.loads(pending_path.read_text(encoding="utf-8"))
     for event in pending["numbers"][bucket_number]["events"]:
         event["day"] = aged
     write_json(pending_path, pending)
-    write_report(data_dir, "bucket_late.json", bucket_number, BUCKETS[3], f"{TODAY}T00:04:00+00:00")
+    write_report(data_dir, "bucket_late.json", bucket_number, BUCKETS[4], f"{TODAY}T00:04:00+00:00")
     run_drain(data_dir)
-    assert reports_for(data_dir, bucket_number) == 4, "one new bucket demoted a row three buckets had promoted"
+    assert reports_for(data_dir, bucket_number) == 6, "one new bucket demoted a row three reporters had promoted"
 
     # The 30-day cutoff is for promoting new rows. A row already in the database
     # (here FCC-backed) takes a late report instead of having it thrown away.
@@ -328,7 +380,7 @@ def assert_community_promotion(data_dir: Path) -> None:
     write_json(data_dir / "spam_numbers.json", database)
     run_script("merge_community_reports.py", data_dir)
     assert reports_for(data_dir, old_number) == 0, "a legacy single-report row stayed in the shipped database"
-    assert reports_for(data_dir, legacy_number) == 6, "a promoted row was demoted on the next merge"
+    assert reports_for(data_dir, legacy_number) == 7, "a promoted row was demoted on the next merge"
 
     pending_path = data_dir / "community_pending.json"
     pending = json.loads(pending_path.read_text(encoding="utf-8"))
@@ -354,6 +406,9 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
     community = "+14152340101"
     authoritative = "+14152340102"
     legacy_authoritative = "+14152340103"
+    # Two days apart: a pre-ledger row's dates carry no time, so consecutive
+    # days can't show its reports were 24 hours apart.
+    first_seen = (datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()
     write_json(
         data_dir / "spam_numbers.json",
         {
@@ -366,7 +421,7 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
                     "type": "spam",
                     "description": "Community reported",
                     "sources": ["community"],
-                    "first_seen": BASE_DAY,
+                    "first_seen": first_seen,
                     "last_seen": TODAY,
                 },
                 {

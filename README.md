@@ -96,7 +96,7 @@ A fix release, from a review of the work that went into 1.8.0.
 - **Signed protection data.** Every feed the app downloads now carries the maintainer's signature, the certificate pins that had refused downloads since August are fixed, and a feed mirror covers places where GitHub is blocked.
 - **Region rules** reach outside North America, and Settings gains telemarketing ranges for Spain, India and Brazil.
 - **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
-- **Community reports** go out once and wait for a connection when you're offline. A new number enters the database after reports on two different UTC days. Reports with reporter buckets also need three distinct buckets.
+- **Community reports** go out once and wait for a connection when you're offline. A new number enters the database once two reports arrive at least 24 hours apart. Reports with reporter buckets also need three different reporters on the same UTC day, because a bucket changes every day and one person could otherwise look like three.
 
 ## Detection Pipeline (v1.8.1)
 

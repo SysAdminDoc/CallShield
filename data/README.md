@@ -18,7 +18,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_domains_review.json`: Generated domain candidates awaiting approval
 - `not_spam_review.json`: Generated community false-positive review candidates
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
-- `community_pending.json`: Community-only reports waiting for the two-day and reporter-bucket promotion threshold
+- `community_pending.json`: Community-only reports waiting for the promotion threshold: two reports 24 hours apart, and three same-day reporter buckets when the reports carry buckets
 - `reports/*.json`: Pending community reports. `reports/rejected/` holds quarantined files
 - `nanp-area-codes.csv`: Pinned NANP registry snapshot used to generate the app's area-code table
 - `area-code-city-labels.csv`: Existing on-device city labels retained where the pinned region agrees
@@ -214,8 +214,10 @@ python scripts/feed_signing.py sign
 ```
 
 The merge holds a number supported only by community reports in
-`community_pending.json` until reports span two UTC days. If those reports have
-reporter buckets, at least three distinct buckets are also needed. Pending
+`community_pending.json` until two of its reports arrive at least 24 hours
+apart. If those reports have reporter buckets, the number also needs three
+different buckets on one UTC day. The Worker's bucket changes at midnight, so
+buckets from different days could all be one person. Pending
 reports expire after 30 days. The merge applies this rule to older
 community-only database rows too, including a run with no queued reports.
 Rows backed by FCC, FTC or another source aren't held by this gate.

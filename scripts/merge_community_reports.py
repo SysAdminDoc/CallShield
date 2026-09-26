@@ -35,6 +35,9 @@ SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 MERGED_IDS_FILE = DATA_DIR / "merged_report_ids.json"
 COMMUNITY_PENDING_FILE = DATA_DIR / "community_pending.json"
 COMMUNITY_PENDING_DAYS = 30
+COMMUNITY_REPORTER_QUORUM = 3
+# Every promotion needs two reports this far apart, with or without buckets.
+COMMUNITY_REPORT_GAP = timedelta(hours=24)
 # How long a merged report's id is remembered. The app resends a report whose
 # answer it never saw, and a resend that lands after its original was merged
 # and deleted is invisible to the queue.
@@ -111,6 +114,7 @@ def load_community_pending(today: str) -> dict[str, dict]:
                     or (event["bucket"] and validated_reporter_bucket(event["bucket"]) != event["bucket"])
                     or type(event.get("count")) is not int
                     or event["count"] < 1
+                    or ("at" in event and parse_reported_at(event["at"]) is None)
                 ):
                     raise ValueError(f"invalid pending event for {number}")
                 if event["day"] >= cutoff:
@@ -140,23 +144,62 @@ def legacy_community_state(entry: dict, today: str) -> dict:
     return {"published": False, "entry": entry, "events": events}
 
 
+def _event_time(event: dict) -> datetime | None:
+    """The Worker's timestamp an event was recorded with, when it has one."""
+    at = parse_reported_at(event.get("at"))
+    return at if at is not None and at.astimezone(timezone.utc).date().isoformat() == event["day"] else None
+
+
+def same_day_reporters(events: list[dict]) -> int:
+    """How many reporters the events prove are different people.
+
+    The Worker's bucket is an HMAC of the UTC day and the reporter's network, so
+    it changes at midnight by design and one reporter on three days shows three
+    buckets. Only buckets from the same day are known to be different reporters.
+    """
+    by_day: dict[str, set[str]] = {}
+    for event in events:
+        if event["bucket"]:
+            by_day.setdefault(event["day"], set()).add(event["bucket"])
+    return max((len(buckets) for buckets in by_day.values()), default=0)
+
+
+def reports_a_day_apart(events: list[dict]) -> bool:
+    """True when two reports are provably at least 24 hours apart.
+
+    UTC dates alone can't show it: reports at 23:57 and 00:03 fall on two days.
+    An event recorded without a time could be anywhere in its day, so it counts
+    from whichever end of the day makes the gap smallest.
+    """
+    if not events:
+        return False
+    starts, ends = [], []
+    for event in events:
+        at = _event_time(event)
+        day_start = datetime.fromisoformat(event["day"]).replace(tzinfo=timezone.utc)
+        starts.append(at or day_start)
+        ends.append(at or day_start + timedelta(days=1))
+    return max(starts) - min(ends) >= COMMUNITY_REPORT_GAP
+
+
 def community_has_quorum(state: dict) -> bool:
+    """Two reports a day apart, and with reporter buckets, three reporters on one day."""
     events = state["events"]
-    days = {event["day"] for event in events}
-    buckets = {event["bucket"] for event in events if event["bucket"]}
-    return len(days) >= 2 and (not buckets or len(buckets) >= 3)
+    if any(event["bucket"] for event in events) and same_day_reporters(events) < COMMUNITY_REPORTER_QUORUM:
+        return False
+    return reports_a_day_apart(events)
 
 
 def promote_community_row(state: dict) -> None:
-    """Publish a row and record whether three reporter buckets carried it.
+    """Publish a row and record whether three reporters carried it.
 
-    Only the pending window's events are kept, so a row promoted by three buckets
-    lost its quorum once the oldest reports passed 30 days and was demoted. Such a
-    row now keeps its place; a row promoted on report days alone is still
-    rechecked when bucket evidence appears.
+    Only the pending window's events are kept, so a row promoted by three
+    reporters lost its quorum once the oldest reports passed 30 days and was
+    demoted. Such a row now keeps its place; a row promoted on report times alone
+    is still rechecked when bucket evidence appears.
     """
     state["published"] = True
-    state["bucket_quorum"] = len({event["bucket"] for event in state["events"] if event["bucket"]}) >= 3
+    state["bucket_quorum"] = same_day_reporters(state["events"]) >= COMMUNITY_REPORTER_QUORUM
 
 
 def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
@@ -507,6 +550,9 @@ def main(argv: list[str] | None = None):
                 else:
                     bucket = validated_reporter_bucket(report.get("reporter_bucket"))
                     key = f"id:{report_id}" if report_id else f"file:{report_file.name}"
+                    event = {"key": key, "day": reported_at, "bucket": bucket, "count": 1}
+                    if parsed_at and parsed_at.astimezone(timezone.utc).date().isoformat() == reported_at:
+                        event["at"] = parsed_at.astimezone(timezone.utc).isoformat(timespec="seconds")
                     state = pending.get(number)
                     if state and (
                         any(event["key"] == key for event in state["events"])
@@ -520,7 +566,7 @@ def main(argv: list[str] | None = None):
                         if reported_at > entry.get("last_seen", ""):
                             entry["last_seen"] = reported_at
                         if state:
-                            state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
+                            state["events"].append(event)
                             state["entry"] = entry
                             if bucket and state["published"] and not state.get("bucket_quorum") and not community_has_quorum(state):
                                 state["published"] = False
@@ -540,7 +586,7 @@ def main(argv: list[str] | None = None):
                             }
                             state = {"published": False, "entry": entry, "events": []}
                             pending[number] = state
-                        state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
+                        state["events"].append(event)
                         if community_has_quorum(state):
                             days = [event["day"] for event in state["events"]]
                             entry = state["entry"]

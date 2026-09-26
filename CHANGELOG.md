@@ -19,6 +19,12 @@ All notable changes to CallShield will be documented in this file.
   date written on each one. FCC's daily batches reach back years, so once a typo
   row dated September 26 moved the old cursor, every new batch was skipped: all
   535 complaints published that day. The next import picks them up.
+- A number can't enter the database on one person's reports any more. The
+  report Worker's reporter ID changes every UTC day, so one person reporting on
+  three days counted as three reporters, and two reports minutes apart either
+  side of midnight counted as two days. A new number now needs two reports at
+  least 24 hours apart and, when reports carry reporter IDs, three different
+  reporters on the same day.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,
