@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Layers
@@ -68,6 +67,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -208,7 +208,7 @@ fun DashboardScreen(
                 val previous = viewModel.applyProfile(profile)
                 profileApplying = false
                 profileSnackbar.currentSnackbarData?.dismiss()
-                if (profileSnackbar.showSnackbar(profileAppliedMessage, actionLabel = profileUndoLabel) == SnackbarResult.ActionPerformed) {
+                if (profileSnackbar.showSnackbar(profileAppliedMessage, actionLabel = profileUndoLabel, duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     profileApplying = true
                     viewModel.undoProfile(previous)
                     profileApplying = false
@@ -515,7 +515,6 @@ fun DashboardScreen(
         DashboardStatsRow(
             totalBlocked = totalBlocked,
             blockedToday = blockedToday,
-            blockedThisWeek = blockedThisWeek,
         )
 
         Row(
@@ -1679,11 +1678,12 @@ private fun DashboardOutcomeMetric(
     }
 }
 
+// This week's count lives in the outcome summary above, split into calls and
+// texts, so this card carries only today and the running total.
 @Composable
 internal fun DashboardStatsRow(
     totalBlocked: Int,
     blockedToday: Int,
-    blockedThisWeek: Int,
 ) {
     PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatRed) {
         Row(
@@ -1696,14 +1696,6 @@ internal fun DashboardStatsRow(
                 value = blockedToday,
                 icon = Icons.Default.Today,
                 color = CatRed,
-            )
-            Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = stringResource(R.string.dashboard_stat_this_week),
-                value = blockedThisWeek,
-                icon = Icons.Default.DateRange,
-                color = CatMauve,
             )
             Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
             StatCard(

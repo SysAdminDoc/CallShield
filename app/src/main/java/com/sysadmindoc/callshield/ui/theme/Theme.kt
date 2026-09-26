@@ -280,6 +280,17 @@ val ShapeMd = 8.dp
 val ShapeLg = 8.dp
 val ShapeXl = 10.dp
 
+// Material's own component defaults reach 28dp (dialogs, bottom sheets), so
+// every component shape comes from the same 12dp-capped scale as the cards.
+internal val CallShieldShapes =
+    Shapes(
+        extraSmall = RoundedCornerShape(ShapeXs),
+        small = RoundedCornerShape(ShapeSm),
+        medium = RoundedCornerShape(ShapeMd),
+        large = RoundedCornerShape(ShapeXl),
+        extraLarge = RoundedCornerShape(12.dp),
+    )
+
 // ─── Gradient presets ──────────────────────────────────────────────
 val SurfaceGradient: Brush
     @Composable get() = Brush.verticalGradient(listOf(SurfaceVariant, Surface))
@@ -469,6 +480,7 @@ fun CallShieldTheme(
     MaterialTheme(
         colorScheme = colorScheme(palette),
         typography = CallShieldTypography,
+        shapes = CallShieldShapes,
     ) {
         CompositionLocalProvider(LocalCallShieldPalette provides palette, content = content)
     }
@@ -573,6 +585,45 @@ fun LedgerCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
             content = content,
         )
+    }
+}
+
+/**
+ * The empty or error state a list shows in place of its rows: the same outlined
+ * surface as the app's other cards, centered in the space the list would fill.
+ */
+@Composable
+fun FramedEmptyState(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accentColor: Color,
+    iconDescription: String?,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier.fillMaxSize().padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        LedgerCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(icon, contentDescription = iconDescription, tint = accentColor, modifier = Modifier.size(42.dp))
+                Text(title, style = MaterialTheme.typography.titleMedium, color = CatText, textAlign = TextAlign.Center)
+                Text(
+                    subtitle,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    textAlign = TextAlign.Center,
+                )
+                action?.invoke()
+            }
+        }
     }
 }
 
@@ -835,10 +886,13 @@ fun Modifier.accentGlow(
     alpha: Float = 0.08f,
 ): Modifier =
     this.drawBehind {
+        val center = Offset(size.width / 2, size.height / 2)
+        // A fade to transparent, not a flat circle: the flat one read as a hard
+        // disc behind the lookup gauge.
         drawCircle(
-            color = color.copy(alpha = alpha),
+            brush = Brush.radialGradient(listOf(color.copy(alpha = alpha), Color.Transparent), center = center, radius = radius),
             radius = radius,
-            center = Offset(size.width / 2, size.height / 2),
+            center = center,
         )
     }
 

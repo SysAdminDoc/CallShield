@@ -37,6 +37,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -117,6 +118,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             ) {
                 Text(
                     stringResource(R.string.blocked_log_heading),
+                    modifier = Modifier.semantics { heading() },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = CatText,
@@ -605,47 +607,19 @@ private fun BlockedLogEmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(ShapeXl))
-                    .background(SurfaceBright)
-                    .border(1.dp, CatMuted.copy(alpha = 0.35f), RoundedCornerShape(ShapeXl))
-                    .padding(horizontal = 20.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = stringResource(R.string.cd_no_items),
-                tint = accentColor,
-                modifier = Modifier.size(42.dp),
-            )
-            Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
-            Text(
-                subtitle,
-                color = CatSubtext,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
+    FramedEmptyState(
+        title = title,
+        subtitle = subtitle,
+        icon = Icons.Default.CheckCircle,
+        accentColor = accentColor,
+        iconDescription = stringResource(R.string.cd_no_items),
+        action =
             if (actionLabel != null && onAction != null) {
-                PremiumCompactButton(
-                    label = actionLabel,
-                    icon = Icons.Default.Refresh,
-                    color = accentColor,
-                    onClick = onAction,
-                )
-            }
-        }
-    }
+                { PremiumCompactButton(label = actionLabel, icon = Icons.Default.Refresh, color = accentColor, onClick = onAction) }
+            } else {
+                null
+            },
+    )
 }
 
 @Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")

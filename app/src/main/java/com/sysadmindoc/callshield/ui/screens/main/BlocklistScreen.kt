@@ -94,11 +94,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -136,6 +136,7 @@ import com.sysadmindoc.callshield.ui.theme.CatRed
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
+import com.sysadmindoc.callshield.ui.theme.FramedEmptyState
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
@@ -143,7 +144,6 @@ import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.ShapeLg
-import com.sysadmindoc.callshield.ui.theme.ShapeXl
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
@@ -350,6 +350,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             ) {
                 Text(
                     stringResource(R.string.blocklist_heading),
+                    modifier = Modifier.semantics { heading() },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = CatText,
@@ -906,50 +907,21 @@ private fun EmptyStateCard(
     accentColor: Color,
     onRetry: (() -> Unit)? = null,
 ) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(ShapeXl))
-                    .background(SurfaceBright)
-                    .border(1.dp, CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(ShapeXl))
-                    .padding(horizontal = 20.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = stringResource(R.string.cd_empty_list),
-                tint = accentColor,
-                modifier = Modifier.size(42.dp),
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = CatText,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (onRetry != null) {
-                TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.blocklist_retry), color = accentColor)
+    FramedEmptyState(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        accentColor = accentColor,
+        iconDescription = stringResource(R.string.cd_empty_list),
+        action =
+            onRetry?.let { retry ->
+                {
+                    TextButton(onClick = retry) {
+                        Text(stringResource(R.string.blocklist_retry), color = accentColor)
+                    }
                 }
-            }
-        }
-    }
+            },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

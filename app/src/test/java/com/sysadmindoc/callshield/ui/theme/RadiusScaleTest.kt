@@ -1,10 +1,15 @@
 package com.sysadmindoc.callshield.ui.theme
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+
+/** Corner radii the product allows, in dp. */
+private val CORNER_SCALE = setOf(0f, 4f, 6f, 8f, 10f, 12f)
 
 /**
  * The product bans pill and oval backdrops: corners come from the 0/4/6/8/10/12dp
@@ -16,6 +21,18 @@ class RadiusScaleTest {
     @Test
     fun `the shared shape tokens stay on the scale`() {
         listOf(ShapeXs, ShapeSm, ShapeMd, ShapeLg, ShapeXl).forEach { assertTrue("$it", it <= 12.dp) }
+    }
+
+    @Test
+    fun `Material component defaults use the scale too`() {
+        // Dialogs and bottom sheets take their corners from MaterialTheme.shapes,
+        // which default to 28dp and never appear in a source scan.
+        val shapes = with(CallShieldShapes) { listOf(extraSmall, small, medium, large, extraLarge) }
+        shapes.forEach { shape ->
+            listOf(shape.topStart, shape.topEnd, shape.bottomEnd, shape.bottomStart).forEach { corner ->
+                assertTrue("$shape", corner.toPx(Size(1000f, 1000f), Density(1f)) <= 12f)
+            }
+        }
     }
 
     @Test
@@ -39,6 +56,9 @@ class RadiusScaleTest {
             "RoundedCornerShape(percent = 50)",
             "RoundedCornerShape(50)",
             "RoundedCornerShape(topStart = 16.dp, topEnd = 8.dp)",
+            // Off the scale without being large: 3dp on a 6dp bar is a pill.
+            "RoundedCornerShape(3.dp)",
+            "RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)",
         ).forEach { assertTrue(it, radiusViolations(it).isNotEmpty()) }
         listOf(
             "RoundedCornerShape(12.dp)",
@@ -57,13 +77,13 @@ class RadiusScaleTest {
             .map { it.name to it.readText() }
             .toList()
 
-    /** Each `RoundedCornerShape(...)` in [source] with a corner past 12dp or given as a percentage. */
+    /** Each `RoundedCornerShape(...)` in [source] with a corner off the 0/4/6/8/10/12dp scale or given as a percentage. */
     private fun radiusViolations(source: String): List<String> =
         Regex("""RoundedCornerShape\(([^()]*)\)""")
             .findAll(source)
             .mapNotNull { call ->
                 val arguments = call.groupValues[1]
-                val tooRound = Regex("""(\d+(?:\.\d+)?)\.dp""").findAll(arguments).any { it.groupValues[1].toFloat() > 12f }
+                val tooRound = Regex("""(\d+(?:\.\d+)?)\.dp""").findAll(arguments).any { it.groupValues[1].toFloat() !in CORNER_SCALE }
                 val percent = "percent" in arguments || Regex("""^\s*([1-9]\d*)\s*$""").matches(arguments)
                 call.value.takeIf { tooRound || percent }
             }.toList()

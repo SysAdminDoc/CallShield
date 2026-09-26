@@ -44,7 +44,6 @@
     <string name="dashboard_synced_hours_ago">%d 小时前同步</string>
     <string name="dashboard_synced_days_ago">%d 天前同步</string>
     <string name="dashboard_stat_today">今日</string>
-    <string name="dashboard_stat_this_week">本周</string>
     <string name="dashboard_stat_total">总计</string>
     <string name="dashboard_trend_more">较上周变化：+%s</string>
     <string name="dashboard_trend_fewer">较上周变化：-%s</string>
@@ -626,6 +625,12 @@
     <string name="settings_about_desc">开源垃圾拦截器。无订阅、无追踪、无 API 密钥。</string>
     <string name="stats_heading">防护洞察</string>
     <string name="stats_intro">快速了解 CallShield 记录的活动。</string>
+    <string name="blocked_log_heading">拦截活动</string>
+    <string name="blocked_log_intro">已拦截的来电、已标记的短信和安全例外。</string>
+    <string name="blocklist_heading">拦截名单与规则</string>
+    <string name="blocklist_intro">决定谁能联系你，以及 CallShield 如何处理可疑来电和短信。</string>
+    <string name="recent_heading">最近通话</string>
+    <string name="recent_intro">查看谁来过电话，以及 CallShield 如何处理。</string>
     <string name="stats_explainer_title">这些数字包括什么</string>
     <string name="stats_explainer_body">通话记录包括已筛查的来电和安全例外。短信记录是 CallShield 标记的消息；它们仍会送达您的短信应用。</string>
     <string name="stats_calls">通话</string>
@@ -777,7 +782,7 @@
     <string name="protection_test_fix_screener">将 CallShield 设为默认来电筛查应用，以便实时拦截垃圾电话。</string>
     <string name="protection_test_fix_database">从主页或“更多”页运行号码库同步，以获取本地防护数据。</string>
     <string name="protection_test_fix_engine">在设置中检查检测引擎开关并重新运行本项检查。</string>
-    <string name="protection_test_fix_sync">等待下次刷新，若仍为空则手动同步。</string>
+    <string name="protection_test_fix_sync">若热点列表仍为空，请等待下次刷新或手动同步。</string>
     <string name="protection_test_fix_update_app">请安装最新版 CallShield。同步无法解决这个问题。</string>
     <string name="protection_test_feed_trust">防护数据服务器</string>
     <string name="protection_test_feed_trust_fail">此版本无法验证服务器证书，因此收不到新的防护数据</string>
@@ -788,7 +793,7 @@
     <string name="protection_test_perm_not_granted">未授予 — 功能可能不可用</string>
     <string name="protection_test_screener_yes">CallShield 是默认来电筛查应用</string>
     <string name="protection_test_screener_no">未设置 — 前往设置启用</string>
-    <string name="protection_test_db_count">已加载号码：%d</string>
+    <string name="protection_test_db_count">已加载号码：%s</string>
     <string name="protection_test_prefix_pass">正确拦截 +1900 前缀（%s）</string>
     <string name="protection_test_prefix_fail">未能识别付费电话号码</string>
     <string name="protection_test_wangiri_pass">正确标记塞拉利昂号码</string>

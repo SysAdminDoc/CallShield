@@ -81,6 +81,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -217,6 +219,7 @@ fun LookupScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     stringResource(R.string.lookup_page_title),
+                    modifier = Modifier.semantics { heading() },
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = CatText,
@@ -359,10 +362,14 @@ fun LookupScreen(viewModel: MainViewModel) {
                     val probabilistic = lookupResult.isSpam && BlockReasoning.isProbabilistic(lookupResult.reasonCode)
                     val userRule = BlockReasoning.isUserRule(lookupResult.reasonCode)
 
-                    SectionHeader(
-                        stringResource(R.string.lookup_risk_assessment),
-                        if (lookupResult.isSpam) CatRed else CatGreen,
-                    )
+                    // Full width so the header starts at the left edge like every
+                    // other section header, not centered by this column.
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        SectionHeader(
+                            stringResource(R.string.lookup_risk_assessment),
+                            if (lookupResult.isSpam) CatRed else CatGreen,
+                        )
+                    }
                     PremiumCard(accentColor = resultAccent, modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(18.dp),
@@ -829,16 +836,17 @@ fun DetailRow(
                 .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
-            Icon(icon, contentDescription = label, tint = CatSubtext, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-        }
         Text(
             label,
             style = MaterialTheme.typography.bodySmall,
             color = CatOverlay,
             modifier = Modifier.width(90.dp),
         )
+        // The icon belongs to the value, so every row's label and value columns line up.
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = CatSubtext, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+        }
         Text(value, style = MaterialTheme.typography.bodySmall, color = CatText)
     }
 }

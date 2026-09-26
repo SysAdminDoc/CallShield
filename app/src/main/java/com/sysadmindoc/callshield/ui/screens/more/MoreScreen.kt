@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -24,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -153,6 +154,7 @@ fun MoreHub(
             // The top bar already says "More", so the page heading names what's here.
             Text(
                 stringResource(R.string.more_heading),
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = CatText,
@@ -272,24 +274,26 @@ fun MoreHub(
                     ) { launchExternalLink(context, checksumUrl) }
                 }
             }
-            QuickLink(
-                icon = Icons.Default.Description,
-                label = stringResource(R.string.more_share_crash_log),
-                subtitle = stringResource(R.string.more_share_crash_log_subtitle),
-                color = CatSubtext,
-                external = false,
-            ) {
-                val intent = CrashReporter.shareLatestCrashIntent(context)
-                if (intent != null) {
-                    context.startActivity(
-                        Intent.createChooser(intent, null).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        },
-                    )
-                } else {
-                    Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
-                }
-            }
+            Spacer(Modifier.height(8.dp))
+            MoreNavCard(
+                Icons.Default.Description,
+                stringResource(R.string.more_share_crash_log),
+                stringResource(R.string.more_share_crash_log_subtitle),
+                CatSubtext,
+                onClick = {
+                    val intent = CrashReporter.shareLatestCrashIntent(context)
+                    if (intent != null) {
+                        context.startActivity(
+                            Intent.createChooser(intent, null).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            },
+                        )
+                    } else {
+                        Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                outlined = true,
+            )
         }
 
         MoreSection(stringResource(R.string.more_section_support)) {
@@ -433,12 +437,8 @@ private fun AppUpdatePreferenceRow(
             AppUpdateStatus.UNAVAILABLE -> stringResource(R.string.more_update_unavailable)
             AppUpdateStatus.NEVER_CHECKED -> stringResource(R.string.more_update_never_checked)
         }
-    Surface(
-        color = SurfaceVariant,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+    LedgerCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PremiumIconTile(icon = Icons.Default.SystemUpdate, color = CatSubtext, size = 34.dp, iconSize = 18.dp)
                 Spacer(Modifier.width(10.dp))
@@ -449,11 +449,12 @@ private fun AppUpdatePreferenceRow(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
+                    // The off text is the privacy promise, so it gets room to finish.
                     Text(
                         if (enabled) statusText else stringResource(R.string.more_update_checks_off),
                         color = CatSubtext,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
+                        maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -536,12 +537,11 @@ fun MoreNavCard(
         )
     }
     if (outlined) {
-        LedgerCard(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 76.dp),
-        ) {
+        LedgerCard(onClick = onClick, modifier = modifier) {
+            // The minimum height sits on the row so a short subtitle stays centered
+            // instead of leaving an empty band under it.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 content = rowContent,
             )

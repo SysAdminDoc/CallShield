@@ -301,7 +301,7 @@ fun CallShieldApp(
                                         Modifier
                                             .width(24.dp)
                                             .height(3.dp)
-                                            .background(CatGreen, RoundedCornerShape(3.dp)),
+                                            .background(CatGreen),
                                 )
                             }
                         }
@@ -338,7 +338,12 @@ fun CallShieldApp(
                     )
                     NavItem(
                         selectedTab == 4,
-                        { selectedTab = 4 },
+                        {
+                            // Tapping More while inside one of its pages goes back to
+                            // the More list, as reselecting a tab does in Android apps.
+                            if (selectedTab == 4) moreView = 0
+                            selectedTab = 4
+                        },
                         Icons.Default.MoreHoriz,
                         stringResource(R.string.nav_more),
                         CatGreen,

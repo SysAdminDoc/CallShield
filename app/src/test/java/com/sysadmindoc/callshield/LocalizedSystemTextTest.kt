@@ -78,7 +78,7 @@ class LocalizedSystemTextTest {
         assertEquals(R.string.notification_listener_label, listener.labelRes)
         assertEquals(R.string.app_name, tile.labelRes)
         assertEquals(context.getString(R.string.notification_listener_label), listener.loadLabel(pm).toString())
-        assertNotEquals("CallShield RCS Filter", listener.loadLabel(pm).toString())
+        assertNotEquals("CallShield RCS filter", listener.loadLabel(pm).toString())
     }
 
     @Test

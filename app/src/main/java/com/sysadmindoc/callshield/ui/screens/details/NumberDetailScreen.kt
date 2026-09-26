@@ -265,25 +265,27 @@ fun NumberDetailScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionHeader(stringResource(R.string.detail_take_action), CatGreen)
                     Text(stringResource(R.string.detail_take_action_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    // Block gets a row of its own: three weighted buttons broke "Report"
+                    // and "Unblock" mid-word on 360dp phones.
+                    PremiumActionButton(
+                        label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
+                        icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
+                        color = CatRed,
+                        onClick = {
+                            if (isBlocked) {
+                                // By number, so a block saved in another spelling of it goes too.
+                                viewModel.unblockByNumber(number)
+                                hapticTick(context)
+                                Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
+                            } else {
+                                viewModel.blockNumber(number, "spam", blockedFromDetail)
+                                hapticConfirm(context)
+                                Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PremiumActionButton(
-                            label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
-                            icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
-                            color = CatRed,
-                            onClick = {
-                                if (isBlocked) {
-                                    // By number, so a block saved in another spelling of it goes too.
-                                    viewModel.unblockByNumber(number)
-                                    hapticTick(context)
-                                    Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
-                                } else {
-                                    viewModel.blockNumber(number, "spam", blockedFromDetail)
-                                    hapticConfirm(context)
-                                    Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
                         PremiumActionButton(
                             label = stringResource(R.string.detail_report),
                             icon = Icons.Default.Flag,

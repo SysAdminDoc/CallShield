@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -199,7 +200,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 val previous = viewModel.applyProfile(BlockingProfiles.Profile.WORK)
                 profileApplying = false
                 profileSnackbar.currentSnackbarData?.dismiss()
-                if (profileSnackbar.showSnackbar(profileRestoredMessage, actionLabel = profileUndoLabel) == SnackbarResult.ActionPerformed) {
+                if (profileSnackbar.showSnackbar(profileRestoredMessage, actionLabel = profileUndoLabel, duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     profileApplying = true
                     viewModel.undoProfile(previous)
                     profileApplying = false
@@ -241,6 +242,25 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val feedMirrorResult by viewModel.feedMirrorResult.collectAsStateWithLifecycle()
     // Keyed on the stored value so the field shows what was saved, in its normal form.
     var feedMirrorInput by rememberSaveable(feedMirrorUrl) { mutableStateOf(feedMirrorUrl.orEmpty()) }
+    // Backup and restore state lives up here, outside the Advanced branch: state
+    // remembered inside it was dropped every time the user switched to Basic.
+    // Section choices must also survive recreation: the document picker is a
+    // separate activity, so rotating (or being killed in the background) while it
+    // is open otherwise silently reverts these to the defaults and restores
+    // sections the user had explicitly deselected.
+    var backupSections by
+        rememberSaveable(stateSaver = BackupSectionSetSaver) {
+            mutableStateOf(BackupRestore.defaultExportSections)
+        }
+    var restoreSections by
+        rememberSaveable(stateSaver = BackupSectionSetSaver) {
+            mutableStateOf(BackupRestore.defaultRestoreSections)
+        }
+    // Passphrases are deliberately NOT saved: saved instance state is persisted to
+    // disk. If recreation drops one, the restore reports "passphrase required" and
+    // the user re-enters it.
+    var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
+    var restorePassphrase by remember { mutableStateOf("") }
 
     val roleManager =
         remember(context) {
@@ -390,23 +410,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = !showAdvanced,
-                onClick = { showAdvanced = false },
-                label = { Text(stringResource(R.string.settings_basic)) },
-                modifier = Modifier.testTag(SETTINGS_BASIC_TAB_TAG),
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
-                border = BorderStroke(1.dp, if (!showAdvanced) CatGreen else CatMuted),
-            )
-            FilterChip(
-                selected = showAdvanced,
-                onClick = { showAdvanced = true },
-                label = { Text(stringResource(R.string.settings_advanced)) },
-                modifier = Modifier.testTag(SETTINGS_ADVANCED_TAB_TAG),
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
-                border = BorderStroke(1.dp, if (showAdvanced) CatGreen else CatMuted),
-            )
+        // Tabs, not filter chips: FilterChip announces itself as a checkbox, and
+        // this is a choice between two views of the same page.
+        Row(modifier = Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsViewTab(stringResource(R.string.settings_basic), selected = !showAdvanced, tag = SETTINGS_BASIC_TAB_TAG) {
+                showAdvanced = false
+            }
+            SettingsViewTab(stringResource(R.string.settings_advanced), selected = showAdvanced, tag = SETTINGS_ADVANCED_TAB_TAG) {
+                showAdvanced = true
+            }
         }
 
         // Home's Review permissions opens Settings, which starts on Basic. While
@@ -450,7 +462,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     title = stringResource(R.string.settings_run_setup_again),
                     value = stringResource(R.string.settings_run_setup_again_detail),
                     icon = Icons.Default.Tune,
-                    tintColor = CatBlue,
                     stackValue = true,
                     onClick = viewModel::restartOnboarding,
                 )
@@ -525,7 +536,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         title = stringResource(R.string.settings_access_optional_title),
                         value = stringResource(R.string.settings_access_optional_ready),
                         icon = Icons.Default.Layers,
-                        tintColor = CatGreen,
                         stackValue = true,
                         onClick = {
                             context.startActivitySafely(
@@ -597,7 +607,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     title = stringResource(R.string.settings_theme),
                     value = stringResource(appTheme.labelResource()),
                     icon = Icons.Default.Palette,
-                    tintColor = CatGreen,
                     modifier = Modifier.testTag(SETTINGS_THEME_ROW_TAG),
                     onClick = { showThemeDialog = true },
                 )
@@ -606,7 +615,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     title = stringResource(R.string.settings_language),
                     value = stringResource(currentLanguage.labelRes),
                     icon = Icons.Default.Language,
-                    tintColor = CatBlue,
                     onClick = { showLanguageDialog = true },
                 )
             }
@@ -627,7 +635,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     title = stringResource(R.string.settings_category_actions),
                     value = stringResource(R.string.settings_category_actions_summary, categoryCallActions.size),
                     icon = Icons.AutoMirrored.Filled.CallSplit,
-                    tintColor = CatBlue,
                     stackValue = true,
                     onClick = { showCategoryCallActions = true },
                 )
@@ -658,7 +665,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                 }
                             },
                         icon = Icons.Default.Groups,
-                        tintColor = CatGreen,
                         modifier = Modifier.testTag(SETTINGS_CONTACT_SCOPE_TAG),
                         onClick = {
                             if (contactsPermissionGranted) {
@@ -742,24 +748,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     )
                 }
                 GradientDivider()
-                PremiumActionButton(
-                    label = stringResource(R.string.settings_region_cnap_rules),
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_region_cnap_rules),
+                    value =
+                        stringResource(
+                            R.string.settings_region_cnap_summary,
+                            if (regionBlockEnabled) allowedRegions.size else 0,
+                            cnapTrustPatterns.size,
+                            cnapBlockPatterns.size,
+                        ),
                     icon = Icons.Default.Public,
-                    color = CatBlue,
+                    stackValue = true,
                     onClick = { showRegionCnapRules = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = true,
-                )
-                Text(
-                    stringResource(
-                        R.string.settings_region_cnap_summary,
-                        if (regionBlockEnabled) allowedRegions.size else 0,
-                        cnapTrustPatterns.size,
-                        cnapBlockPatterns.size,
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatSubtext,
-                    modifier = Modifier.padding(start = 4.dp),
                 )
             }
 
@@ -1130,23 +1130,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
             // Backup/restore
             SettingsCard(stringResource(R.string.settings_backup_restore)) {
-                // Section choices must survive recreation: the document picker is a
-                // separate activity, so rotating (or being killed in the background)
-                // while it is open otherwise silently reverts these to the defaults
-                // and restores sections the user had explicitly deselected.
-                var backupSections by
-                    rememberSaveable(stateSaver = BackupSectionSetSaver) {
-                        mutableStateOf(BackupRestore.defaultExportSections)
-                    }
-                var restoreSections by
-                    rememberSaveable(stateSaver = BackupSectionSetSaver) {
-                        mutableStateOf(BackupRestore.defaultRestoreSections)
-                    }
-                // Passphrases are deliberately NOT saved: saved instance state is
-                // persisted to disk. If recreation drops one, the restore reports
-                // "passphrase required" and the user re-enters it.
-                var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
-                var restorePassphrase by remember { mutableStateOf("") }
                 val restoreLauncher =
                     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                         uri?.let {
@@ -2595,7 +2578,8 @@ private fun SettingsLinkRow(
     title: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tintColor: androidx.compose.ui.graphics.Color,
+    // Neutral like the toggles' icons; an accent tint is for rows whose state it names.
+    tintColor: androidx.compose.ui.graphics.Color = CatSubtext,
     modifier: Modifier = Modifier,
     stackValue: Boolean = false,
     onClick: () -> Unit,
@@ -2626,6 +2610,33 @@ private fun SettingsLinkRow(
             tint = CatOverlay,
             modifier = Modifier.size(18.dp),
         )
+    }
+}
+
+@Composable
+private fun SettingsViewTab(
+    label: String,
+    selected: Boolean,
+    tag: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.testTag(tag).selectable(selected = selected, role = Role.Tab, onClick = onClick),
+        shape = RoundedCornerShape(ShapeLg),
+        color = if (selected) CatGreen.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
+        border = BorderStroke(1.dp, if (selected) CatGreen else CatMuted),
+    ) {
+        Box(
+            modifier = Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                color = CatText,
+            )
+        }
     }
 }
 
@@ -2664,12 +2675,12 @@ fun SettingsToggle(
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             if (subtitle.isNotBlank()) {
+                // No line cap: these descriptions carry safety and privacy caveats,
+                // and any cap cut some of them off on 360-384dp phones.
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = CatSubtext,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
             }
         }

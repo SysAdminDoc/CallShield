@@ -66,7 +66,6 @@
     <string name="dashboard_database_bundled_ready">Protection snapshot ready</string>
     <string name="dashboard_not_synced">Not synced yet</string>
     <string name="dashboard_stat_today">Today</string>
-    <string name="dashboard_stat_this_week">This week</string>
     <string name="dashboard_stat_total">Total</string>
     <string name="dashboard_trend_more">Change vs last week: +%1$s</string>
     <string name="dashboard_trend_fewer">Change vs last week: -%1$s</string>
@@ -134,7 +133,7 @@
     <string name="dashboard_status_ready">Ready</string>
     <string name="dashboard_status_needed">Needed</string>
     <string name="dashboard_scan_calls">Scan calls</string>
-    <string name="dashboard_scan_sms_inbox">Scan SMS Inbox</string>
+    <string name="dashboard_scan_sms_inbox">Scan SMS inbox</string>
     <string name="dashboard_call_log_scan">Call log scan</string>
     <string name="dashboard_scan_result">%1$s | %2$s</string>
     <plurals name="dashboard_scan_unique_numbers_scanned">
@@ -154,7 +153,7 @@
         <item quantity="one">More match: +%1$s</item>
         <item quantity="other">More matches: +%1$s</item>
     </plurals>
-    <string name="dashboard_sms_inbox_scan">SMS Inbox Scan</string>
+    <string name="dashboard_sms_inbox_scan">SMS inbox scan</string>
     <string name="dashboard_sms_scan_result">%1$s | %2$s</string>
     <plurals name="dashboard_sms_scan_messages_scanned">
         <item quantity="one">%1$s message scanned</item>
@@ -353,7 +352,7 @@
         <item quantity="other">Reports: %d</item>
     </plurals>
     <string name="blocklist_manual_badge">Manual block</string>
-    <string name="blocklist_export_subject">CallShield Blocklist</string>
+    <string name="blocklist_export_subject">CallShield blocklist</string>
     <string name="blocklist_export_chooser_title">Share blocklist</string>
     <string name="blocklist_import_no_valid_numbers">No valid numbers found in import file</string>
     <string name="blocklist_import_could_not_open">Couldn\'t open the selected file</string>
@@ -414,7 +413,7 @@
     <string name="dialog_keyword_note">SMS containing this keyword will be flagged in the CallShield log.</string>
 
     <!-- Lookup Screen -->
-    <string name="lookup_page_title">Lookup a number</string>
+    <string name="lookup_page_title">Look up a number</string>
     <string name="lookup_page_intro">Check a phone number before you call or text.</string>
     <string name="lookup_phone_number">Phone number</string>
     <string name="lookup_paste_clipboard">Paste</string>
@@ -542,7 +541,7 @@
     <string name="overlay_action_search">Search</string>
     <string name="overlay_action_block">Block</string>
     <string name="overlay_action_dismiss">Dismiss</string>
-    <string name="overlay_action_sit_tone">Play SIT Tone</string>
+    <string name="overlay_action_sit_tone">Play SIT tone</string>
     <string name="overlay_source_flagged">Flagged</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
     <string name="remote_lookup_status_found">Found</string>
@@ -746,7 +745,7 @@
     <string name="settings_export_raw_sms_confirm_body">Raw blocked SMS text can include OTPs, reset links, names, and per-recipient phishing tokens. Use redacted export for support unless the original message text is required.</string>
     <string name="settings_export_raw_sms_confirm_action">Export raw CSV</string>
     <string name="settings_export_raw_sms_cancel">Keep redacted</string>
-    <string name="settings_backup_restore">Backup &amp; Restore</string>
+    <string name="settings_backup_restore">Backup &amp; restore</string>
     <string name="settings_backup">Backup</string>
     <string name="settings_restore">Restore</string>
     <string name="settings_backup_includes">Choose only the sections needed for this transfer. External feed URLs are not included.</string>
@@ -833,8 +832,8 @@
     <string name="stats_db_size">Database</string>
     <string name="stats_by_detection_method">By detection method</string>
     <string name="stats_top_offenders">Top offenders</string>
-    <string name="stats_spam_by_area_code">Spam by Area Code</string>
-    <string name="stats_spam_by_hour">Spam by Hour</string>
+    <string name="stats_spam_by_area_code">Spam by area code</string>
+    <string name="stats_spam_by_hour">Spam by hour</string>
     <string name="stats_spam_concentrate">When spam calls concentrate</string>
     <string name="stats_time_12a">12a</string>
     <string name="stats_time_6a">6a</string>
@@ -940,8 +939,8 @@
     <string name="more_share_crash_log">Share crash log</string>
     <string name="more_no_crash_logs">No crashes logged. CallShield hasn\'t recorded an uncaught exception.</string>
     <string name="more_section_tools">Protection tools</string>
-    <string name="more_section_release">Release &amp; Diagnostics</string>
-    <string name="more_section_support">Project &amp; Support</string>
+    <string name="more_section_release">Release &amp; diagnostics</string>
+    <string name="more_section_support">Project &amp; support</string>
     <string name="more_github_repo_subtitle">Source, roadmap, and releases</string>
     <string name="more_report_bug_subtitle">Open a GitHub issue</string>
     <string name="more_star_github_subtitle">Support the project</string>
@@ -957,7 +956,7 @@
     <string name="emergency_contacts_subtitle">They always ring, even past your blocklist, quiet hours and aggressive mode.</string>
     <string name="emergency_contacts_add">Add emergency contact</string>
     <string name="emergency_contacts_added">Emergency contact added</string>
-    <string name="emergency_contacts_mark_as">Mark as Emergency</string>
+    <string name="emergency_contacts_mark_as">Mark as emergency</string>
     <string name="emergency_contacts_unmark">Remove emergency status</string>
     <string name="emergency_contacts_badge">EMERGENCY</string>
     <!-- Block reasoning (Feature D) -->
@@ -1046,12 +1045,12 @@
     <string name="protection_test_fix_screener">Set CallShield as the default call screener so spam calls can be intercepted live.</string>
     <string name="protection_test_fix_database">Run a database sync from the dashboard or More screen so local protection data is available.</string>
     <string name="protection_test_fix_engine">Review detection engine toggles in Settings and rerun this check.</string>
-    <string name="protection_test_fix_sync">Wait for the next refresh or run a manual sync if this remains empty.</string>
+    <string name="protection_test_fix_sync">If the hot list stays empty, wait for the next refresh or run a manual sync.</string>
     <string name="protection_test_fix_update_app">Install the latest CallShield release. A sync can\'t fix this one.</string>
     <string name="protection_test_feed_trust">Protection data server</string>
     <string name="protection_test_feed_trust_fail">This version can\'t verify the server\'s certificate, so no new protection data is arriving</string>
     <string name="protection_test_caller_name">Caller name availability</string>
-    <string name="protection_test_caller_name_unavailable">This device hasn\'t provided a caller name to any of the last 20 screened calls. Caller Name rules won\'t fire during screening.</string>
+    <string name="protection_test_caller_name_unavailable">This device hasn\'t provided a caller name to any of the last 20 screened calls. Caller-name rules won\'t fire during screening.</string>
     <string name="protection_test_fix_overlay">Allow overlay access if you want floating caller ID alerts on incoming calls.</string>
     <string name="protection_test_fix_notifications">Enable notification or listener access if you want alerts and RCS filtering.</string>
     <string name="protection_test_db_empty">No spam data loaded yet</string>
@@ -1059,7 +1058,7 @@
     <string name="protection_test_perm_not_granted">Not granted, so this feature may not work</string>
     <string name="protection_test_screener_yes">CallShield is the default call screener</string>
     <string name="protection_test_screener_no">Not set. Turn it on in Settings.</string>
-    <string name="protection_test_db_count">Numbers loaded: %d</string>
+    <string name="protection_test_db_count">Numbers loaded: %s</string>
     <string name="protection_test_prefix_pass">Correctly blocked +1900 prefix (%s)</string>
     <string name="protection_test_prefix_fail">Failed to detect premium rate number</string>
     <string name="protection_test_wangiri_pass">Correctly flagged Sierra Leone number</string>
@@ -1083,23 +1082,23 @@
     <string name="protection_test_notif_fail">Not granted, so the RCS filter won\'t work</string>
     <string name="protection_test_perm_name_call_log">Call log permission</string>
     <string name="protection_test_perm_name_contacts">Contacts permission</string>
-    <string name="protection_test_perm_name_sms">SMS Permission</string>
-    <string name="protection_test_perm_name_incoming_sms">Incoming SMS Permission</string>
+    <string name="protection_test_perm_name_sms">SMS permission</string>
+    <string name="protection_test_perm_name_incoming_sms">Incoming SMS permission</string>
     <string name="protection_test_perm_name_phone_state">Phone state permission</string>
     <string name="protection_test_perm_name_answer_calls">Answer calls permission</string>
     <string name="protection_test_call_screener_role">Call screener role</string>
     <string name="protection_test_spam_database">Spam database</string>
     <string name="protection_test_prefix_detection">Prefix detection</string>
     <string name="protection_test_wangiri_detection">Wangiri detection</string>
-    <string name="protection_test_sms_content_analysis">SMS Content Analysis</string>
+    <string name="protection_test_sms_content_analysis">SMS content analysis</string>
     <string name="protection_test_checker_health">Checker health</string>
     <string name="protection_test_checker_health_ok">All %1$d checkers completed without exceptions.</string>
     <string name="protection_test_checker_health_errors">%1$d of %2$d checkers reported an exception; affected checks fail open.</string>
-    <string name="protection_test_ml_spam_scorer">ML Spam Scorer</string>
-    <string name="protection_test_ml_false_positive">ML False Positive</string>
+    <string name="protection_test_ml_spam_scorer">ML spam scorer</string>
+    <string name="protection_test_ml_false_positive">ML false positive</string>
     <string name="protection_test_hot_list_data">Hot list data</string>
     <string name="protection_test_overlay_permission">Overlay permission</string>
-    <string name="protection_test_notification_access">Notification Access (RCS)</string>
+    <string name="protection_test_notification_access">Notification access (RCS)</string>
     <string name="protection_test_sms_capability">SMS message evidence</string>
     <string name="protection_test_notification_capability">Notification message evidence</string>
     <string name="protection_test_capability_not_observed">No message sample observed yet; capability will be checked when a message arrives.</string>
@@ -1282,7 +1281,7 @@
     <string name="detail_not_spam_pending">Marked not spam</string>
     <string name="detail_undo">Undo</string>
     <string name="detail_report_carrier">Report to carrier (7726)</string>
-    <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
+    <string name="detail_ftc_complaint">File an FTC Do Not Call complaint</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
     <string name="detail_share_false_alarm">Share a false-alarm report</string>
@@ -1349,7 +1348,7 @@
     <string name="sync_error">Error: %s</string>
 
     <!-- Backup, restore, and clipboard labels -->
-    <string name="backup_subject">CallShield Backup</string>
+    <string name="backup_subject">CallShield backup</string>
     <string name="backup_chooser_title">Save backup</string>
     <string name="backup_restore_could_not_read">Could not read file</string>
     <string name="backup_restore_file_too_large">Backup file is too large</string>
@@ -1404,18 +1403,18 @@
     <string name="clip_label_phone">Phone</string>
     <string name="clip_label_phone_number">Phone number</string>
     <string name="clip_label_spam_number">CallShield spam number</string>
-    <string name="log_export_subject">CallShield Blocked Log</string>
+    <string name="log_export_subject">CallShield blocked log</string>
     <string name="log_export_chooser_title">Export log</string>
     <string name="redress_export_subject">CallShield blocked-call redress list</string>
     <string name="redress_export_chooser_title">Export blocked calls for redress</string>
     <string name="share_spam_warning_text">Spam alert: %1$s%2$s is a known spam number.%3$s Blocked by CallShield.</string>
     <string name="share_spam_warning_location"> (%s)</string>
     <string name="share_spam_warning_type"> Type: %s.</string>
-    <string name="share_spam_warning_subject">Spam Number Warning: %s</string>
+    <string name="share_spam_warning_subject">Spam number warning: %s</string>
     <string name="share_spam_warning_chooser_title">Share spam warning</string>
 
     <!-- NotificationHelper -->
-    <string name="notif_channel_blocked">Blocked Calls &amp; SMS</string>
+    <string name="notif_channel_blocked">Blocked calls &amp; SMS</string>
     <string name="notif_channel_blocked_desc">Notifications when spam calls/texts are blocked</string>
     <string name="notif_channel_rating">Spam rating</string>
     <string name="notif_channel_rating_desc">Rate calls as spam after they end</string>
@@ -1423,7 +1422,7 @@
     <string name="notif_channel_status_desc">Persistent protection status indicator</string>
     <string name="notif_channel_sync">Protection updates</string>
     <string name="notif_channel_sync_desc">Progress while refreshing spam protection data</string>
-    <string name="notif_channel_phishing">Phishing URL Warning</string>
+    <string name="notif_channel_phishing">Phishing URL warning</string>
     <string name="notif_channel_phishing_desc">Alert when a received SMS contains a known malicious URL</string>
     <string name="notif_channel_allowed">Allowed call decisions</string>
     <string name="notif_channel_allowed_desc">Explains calls CallShield allowed because of safety rules</string>
@@ -1485,7 +1484,7 @@
     <string name="notif_repeated_urgent_action_safe">Mark safe</string>
 
     <!-- DigestWorker -->
-    <string name="digest_title">CallShield Daily Summary</string>
+    <string name="digest_title">CallShield daily summary</string>
     <string name="digest_text">Today blocked: %1$d | Calls: %2$d | Texts: %3$d</string>
     <string name="digest_big_text">Today blocked: %1$d\nCalls: %2$d | Texts: %3$d\n%4$s</string>
     <string name="digest_source_database">%1$d database</string>
@@ -1628,10 +1627,10 @@
     <!-- Protection Test: v1.2.8 additions -->
     <string name="test_campaign_detection">Campaign detection</string>
     <string name="test_campaign_monitoring">Active campaigns monitored: %d</string>
-    <string name="test_ml_model_loaded">ML Model Loaded</string>
+    <string name="test_ml_model_loaded">ML model loaded</string>
     <string name="test_ml_model_ready">GBT v3 or LR v2 weights loaded</string>
     <string name="test_ml_model_fallback">Using default heuristic priors</string>
-    <string name="test_after_call_feedback">After-Call Feedback</string>
+    <string name="test_after_call_feedback">After-call feedback</string>
     <string name="test_feedback_ready">Spam rating notifications ready</string>
     <string name="test_security_patch">Device security patch</string>
     <string name="test_security_patch_current">Patch level %1$s, current</string>
@@ -1858,7 +1857,7 @@
     <string name="reasoning_underlying_detection">Underlying detection: %1$s</string>
     <string name="reasoning_category_precedence">Emergency and manual whitelists, plus explicit personal block rules, take precedence.</string>
     <string name="block_reason_keyword">Keyword: %1$s</string>
-    <string name="notification_listener_label">CallShield RCS Filter</string>
+    <string name="notification_listener_label">CallShield RCS filter</string>
     <string name="model_health_title">ML model health</string>
     <string name="model_health_gbt_active">Gradient-boosted model active</string>
     <string name="model_health_gbt_active_detail">The highest-quality on-device model loaded successfully.</string>

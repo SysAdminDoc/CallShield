@@ -110,12 +110,11 @@ class DashboardTest {
     }
 
     @Test
-    fun statsRowRendersTodayWeekAndTotalCounts() {
+    fun statsRowRendersTodayAndTotalCounts() {
         composeRule.setContent {
             DashboardStatsRow(
                 totalBlocked = 42,
                 blockedToday = 7,
-                blockedThisWeek = 12,
             )
         }
 
@@ -123,8 +122,8 @@ class DashboardTest {
 
         composeRule.onNodeWithText("Today").assertIsDisplayed()
         composeRule.onNodeWithText("7").assertIsDisplayed()
-        composeRule.onNodeWithText("This week").assertIsDisplayed()
-        composeRule.onNodeWithText("12").assertIsDisplayed()
+        // The week's count is in the outcome summary; repeating it here was noise.
+        composeRule.onNodeWithText("This week").assertDoesNotExist()
         composeRule.onNodeWithText("Total").assertIsDisplayed()
         composeRule.onNodeWithText("42").assertIsDisplayed()
     }

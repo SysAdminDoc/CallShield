@@ -35,10 +35,20 @@ All notable changes to CallShield will be documented in this file.
   longer switches off the "call screening is off" warning.
 - Denying the Phone permission during setup no longer stops setup from
   finishing. Phone access is recommended, not required.
+- The Undo offered after picking a protection level times out on Home, in
+  Settings and in setup, so tapping it later can't roll back changes you made
+  since.
 - Home's Enable call screening, Enable overlay and Enable notifications buttons
   ask for that permission directly. They opened Settings, which could land on a
   page without the control. While a required permission is missing, Settings
   shows Grant and Enable buttons on Basic at any text size, not just labels.
+- Backup and restore choices no longer reset when you switch between Basic and
+  Advanced in Settings.
+- Number details gives Block a row of its own, so the action labels stop
+  breaking mid-word on smaller phones.
+- TalkBack reads Settings' Basic and Advanced as tabs, page titles as headings,
+  and setup's progress as 13% on the first step instead of 0%.
+- Six page headings that only existed in English are translated into Chinese.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
 - Protection test's ML spam check no longer fails on every phone. Its sample
@@ -47,7 +57,20 @@ All notable changes to CallShield will be documented in this file.
   data checks refuse a retrained model that breaks them. Its cards span the
   page, the database count is formatted like everywhere else, and the hot list
   hint says what it's about.
+- Dialogs and bottom sheets use the same 12dp corners as the app's cards.
+- Empty Blocklist and Blocked log screens use the app's standard outlined card.
+- More's cards keep their text centered, and the update check and crash log
+  share the What's new card style. The update check's privacy note is no longer
+  cut off.
 - The last setup step says Finish is waiting for a protection level.
+- Lookup reads "Look up a number". Its risk gauge sits on a soft glow instead of
+  a solid disc, and the evidence rows line up.
+- Home no longer shows this week's count twice.
+- Settings rows share one icon tone, region and caller-name rules open from a
+  regular row, and switch descriptions are no longer cut off.
+- Tapping More while inside one of its pages goes back to the More list.
+- Labels with acronyms (SMS, ML, URL), the Insights and More headings, and the
+  share, backup and daily summary titles use sentence case too.
 - Protection test opens with a heading, and after a run it shows required and
   optional checks as two progress cards. Each result is an outlined row with a
   status mark and an OK, Fix or Review label.

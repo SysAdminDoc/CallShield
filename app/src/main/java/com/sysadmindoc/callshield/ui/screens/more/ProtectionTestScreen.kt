@@ -56,6 +56,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
 
 private enum class TestPriority { Required, Recommended, Informational }
@@ -248,7 +249,7 @@ fun ProtectionTestScreen() {
         }
 
         if (runFailed) {
-            PremiumCard(accentColor = CatRed) {
+            PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatRed) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         stringResource(R.string.protection_test_run_failed_title),
@@ -266,7 +267,7 @@ fun ProtectionTestScreen() {
         }
 
         if (results.isEmpty()) {
-            PremiumCard {
+            PremiumCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionHeader(stringResource(R.string.protection_test_intro_title), CatGreen)
                     Text(
@@ -285,7 +286,7 @@ fun ProtectionTestScreen() {
             val allPassed = passed == total
             val (required, optional) = remember(results) { results.partition { it.priority == TestPriority.Required } }
 
-            PremiumCard(accentColor = summaryColor) {
+            PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = summaryColor) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -364,7 +365,7 @@ fun ProtectionTestScreen() {
             )
 
             if (nextSteps.isNotEmpty()) {
-                PremiumCard(accentColor = CatBlue) {
+                PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatBlue) {
                     Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
                             stringResource(R.string.protection_test_next_steps),
@@ -657,7 +658,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 passed = count > 0,
                 detail =
                     if (count > 0) {
-                        context.getString(R.string.protection_test_db_count, count)
+                        context.getString(R.string.protection_test_db_count, NumberFormat.getIntegerInstance().format(count))
                     } else {
                         context.getString(R.string.protection_test_db_empty)
                     },

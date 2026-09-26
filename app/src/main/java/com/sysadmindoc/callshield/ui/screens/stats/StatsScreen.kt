@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -26,6 +25,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,6 +141,7 @@ fun StatsScreen(viewModel: MainViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 stringResource(R.string.stats_heading),
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = CatText,
@@ -348,11 +350,16 @@ fun StatsScreen(viewModel: MainViewModel) {
                                 Text(friendlyMatchReasonLabel(reasonCode.wireValue), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                                 Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                             }
+                            // Flat data bars: a 3dp radius on a 6dp bar is a pill, and the corner
+                            // scale has nothing between 0 and 4dp.
                             LinearProgressIndicator(
                                 progress = { fraction },
-                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
                                 color = color,
                                 trackColor = CatMuted.copy(alpha = 0.2f),
+                                strokeCap = StrokeCap.Butt,
+                                gapSize = 0.dp,
+                                drawStopIndicator = {},
                             )
                             Spacer(Modifier.height(4.dp))
                         }
@@ -402,9 +409,12 @@ fun StatsScreen(viewModel: MainViewModel) {
                                 Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))
                                 LinearProgressIndicator(
                                     progress = { fraction },
-                                    modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(3.dp)),
+                                    modifier = Modifier.weight(1f).height(8.dp),
                                     color = CatPeach,
                                     trackColor = CatMuted.copy(alpha = 0.2f),
+                                    strokeCap = StrokeCap.Butt,
+                                    gapSize = 0.dp,
+                                    drawStopIndicator = {},
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)
@@ -437,7 +447,6 @@ fun StatsScreen(viewModel: MainViewModel) {
                                         Modifier
                                             .weight(1f)
                                             .fillMaxHeight(fraction.coerceAtLeast(0.02f))
-                                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
                                             .background(barColor),
                                 )
                             }
