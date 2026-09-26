@@ -21,6 +21,7 @@ internal class IsolatedRepositoryFixture(
     context: Context,
     externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
     remote: SpamDataSource = GitHubDataSource(),
+    wallClock: () -> Long = System::currentTimeMillis,
 ) : AutoCloseable {
     private val storeJob = SupervisorJob()
     private val storeScope = CoroutineScope(storeJob + Dispatchers.IO)
@@ -40,6 +41,7 @@ internal class IsolatedRepositoryFixture(
             privateSettingsDataStore = preferenceStore("private"),
             externalBlocklistDataSource = externalBlocklistDataSource,
             remote = remote,
+            wallClock = wallClock,
         )
 
     private fun preferenceStore(name: String) =

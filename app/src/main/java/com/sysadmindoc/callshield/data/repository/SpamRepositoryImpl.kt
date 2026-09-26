@@ -43,6 +43,7 @@ class SpamRepositoryImpl(
     private val senderRegionIso: String? = null,
     /** Every stored spelling of a canonical number, canonical first. */
     private val equivalentForms: (String) -> List<String> = { listOf(it) },
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) {
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
@@ -52,6 +53,8 @@ class SpamRepositoryImpl(
     @Volatile private var cacheGeneration = 0L
 
     @Volatile private var cachedPrefixes: List<SpamPrefix>? = null
+
+    @Volatile private var cachedPrefixDeadline = Long.MAX_VALUE
 
     @Volatile private var cachedWildcardRules: List<WildcardRule>? = null
 
@@ -100,10 +103,14 @@ class SpamRepositoryImpl(
     }
 
     internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> {
-        cachedPrefixes?.let { return it }
+        val now = wallClock()
+        cachedPrefixes?.let { if (now < cachedPrefixDeadline) return it }
         val gen = cacheGeneration
-        val result = dao.getAllPrefixes(System.currentTimeMillis())
-        if (cacheGeneration == gen) cachedPrefixes = result
+        val result = dao.getAllPrefixes(now)
+        if (cacheGeneration == gen) {
+            cachedPrefixDeadline = result.mapNotNull(SpamPrefix::evidenceExpiresAt).minOrNull() ?: Long.MAX_VALUE
+            cachedPrefixes = result
+        }
         return result
     }
 

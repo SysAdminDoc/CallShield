@@ -89,6 +89,7 @@ class SpamRepository(
     private val phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer =
         PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
     externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
+    wallClock: () -> Long = System::currentTimeMillis,
 ) {
     private val appContext: Context = context.applicationContext
     private val db: AppDatabase = database
@@ -109,6 +110,7 @@ class SpamRepository(
             normalizeSenderIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
             senderRegionIso = phoneIdentityCanonicalizer.homeRegionIso,
             equivalentForms = phoneIdentityCanonicalizer::equivalentForms,
+            wallClock = wallClock,
         )
     private val syncRepository =
         SyncRepository(

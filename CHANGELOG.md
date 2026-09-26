@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Cached prefix ranges now expire on time, even when no feed sync runs.
 - Frequency auto-block now counts prior incoming calls that reached the phone's
   call log as answered or missed. Calls stopped or silenced by CallShield, and
   diagnostic entries, no longer push a caller toward the repeat-call limit.
