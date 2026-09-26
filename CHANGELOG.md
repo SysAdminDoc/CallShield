@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Lookup now opens with a clear number-check prompt and a private-check card.
+  Risk results group the app's actual reasons under Evidence, and checking a
+  number closes the keypad so the verdict stays visible.
 - Activity now uses clear Recent and Blocked pills and an outlined summary of
   actual call history. Its introduction names the history the app can show.
 - Settings now opens on grouped Basic controls, with detailed access, detection,

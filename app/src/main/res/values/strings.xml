@@ -410,6 +410,8 @@
     <string name="dialog_keyword_note">SMS containing this keyword will be flagged in the CallShield log.</string>
 
     <!-- Lookup Screen -->
+    <string name="lookup_page_title">Lookup a number</string>
+    <string name="lookup_page_intro">Check a phone number before you call or text.</string>
     <string name="lookup_phone_number">Phone number</string>
     <string name="lookup_paste_clipboard">Paste</string>
     <string name="lookup_supporting_location">%1$s · %2$s</string>
@@ -425,6 +427,7 @@
     <string name="lookup_verdict_suspected_spam">Suspected spam</string>
     <string name="lookup_verdict_no_risk">No risk detected</string>
     <string name="lookup_verdict_probabilistic_note">This confidence comes from on-device analysis and is shown only for probabilistic signals.</string>
+    <string name="lookup_evidence">Evidence</string>
     <string name="lookup_detection">Detection</string>
     <string name="lookup_type">Type</string>
     <string name="lookup_details">Details</string>

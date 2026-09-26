@@ -77,7 +77,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -126,6 +128,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun LookupScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -169,6 +173,8 @@ fun LookupScreen(viewModel: MainViewModel) {
     fun runLookup() {
         if (!canLookup || checking) return
 
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
         checking = true
         viewModel.clearLookupOutcome()
         errorMessage = null
@@ -206,6 +212,19 @@ fun LookupScreen(viewModel: MainViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.lookup_page_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(R.string.lookup_page_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CatSubtext,
+                )
+            }
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -402,6 +421,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                             GradientDivider(color = resultAccent)
 
                             if (lookupResult.isSpam) {
+                                SectionHeader(stringResource(R.string.lookup_evidence), CatRed)
                                 DetailRow(
                                     label = stringResource(R.string.lookup_detection),
                                     value = friendlyMatchReasonLabel(lookupResult.reasonCode.wireValue),
@@ -605,39 +625,41 @@ fun LookupScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun LookupIdleCard() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatGreen) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                imageVector = Icons.Default.VerifiedUser,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = CatGreen,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VerifiedUser,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = CatGreen,
+                )
+                Text(
+                    text = stringResource(R.string.lookup_idle_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = CatText,
+                )
+            }
+            LookupHintRow(
+                icon = Icons.Default.Psychology,
+                title = stringResource(R.string.lookup_idle_signal_title),
+                subtitle = stringResource(R.string.lookup_idle_signal_body),
+                accentColor = CatSubtext,
             )
-            Text(
-                text = stringResource(R.string.lookup_idle_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = CatSubtext,
+            LookupHintRow(
+                icon = Icons.Default.VerifiedUser,
+                title = stringResource(R.string.lookup_idle_trusted_title),
+                subtitle = stringResource(R.string.lookup_idle_trusted_body),
+                accentColor = CatGreen,
             )
         }
-        LookupHintRow(
-            icon = Icons.Default.Psychology,
-            title = stringResource(R.string.lookup_idle_signal_title),
-            subtitle = stringResource(R.string.lookup_idle_signal_body),
-            accentColor = CatSubtext,
-        )
-        LookupHintRow(
-            icon = Icons.Default.VerifiedUser,
-            title = stringResource(R.string.lookup_idle_trusted_title),
-            subtitle = stringResource(R.string.lookup_idle_trusted_body),
-            accentColor = CatGreen,
-        )
     }
 }
 

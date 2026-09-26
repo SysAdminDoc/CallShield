@@ -295,6 +295,8 @@
     <string name="dialog_keyword">关键词</string>
     <string name="dialog_keyword_placeholder">例如：免费礼品卡</string>
     <string name="dialog_keyword_note">任何包含此关键词的短信都将被拦截。</string>
+    <string name="lookup_page_title">查询号码</string>
+    <string name="lookup_page_intro">拨打电话或发送短信前，先检查号码。</string>
     <string name="lookup_phone_number">电话号码</string>
     <string name="lookup_paste_clipboard">粘贴剪贴板</string>
     <string name="lookup_supporting_location">正在核查 %1$s · %2$s</string>
@@ -305,6 +307,7 @@
     <string name="lookup_trace_allow">允许</string>
     <string name="lookup_trace_off">关闭</string>
     <string name="lookup_trace_pass">通过</string>
+    <string name="lookup_evidence">判断依据</string>
     <string name="lookup_detection">检测</string>
     <string name="lookup_type">类型</string>
     <string name="lookup_details">详情</string>
