@@ -755,55 +755,23 @@ private fun RecentCallsSummaryCard(
     onRefresh: () -> Unit,
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance() }
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    PremiumCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), accentColor = CatGreen) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RecentSummaryPill(
-                formatter.format(totalCount),
-                stringResource(R.string.recent_summary_total),
-                CatText,
-                Modifier.weight(1f),
-            )
-            RecentSummaryPill(
-                formatter.format(spamCount),
-                stringResource(R.string.recent_summary_spam),
-                CatRed,
-                Modifier.weight(1f),
-            )
-            RecentSummaryPill(
-                formatter.format(missedCount),
-                stringResource(R.string.recent_summary_missed),
-                CatYellow,
-                Modifier.weight(1f),
-            )
-            RecentSummaryPill(
-                formatter.format(contactCount),
-                stringResource(R.string.recent_summary_known),
-                CatGreen,
-                Modifier.weight(1f),
-            )
+            RecentSummaryPill(formatter.format(totalCount), stringResource(R.string.recent_summary_total), CatText, Modifier.weight(1f))
+            RecentSummaryPill(formatter.format(spamCount), stringResource(R.string.recent_summary_spam), CatRed, Modifier.weight(1f))
+            RecentSummaryPill(formatter.format(missedCount), stringResource(R.string.recent_summary_missed), CatYellow, Modifier.weight(1f))
+            RecentSummaryPill(formatter.format(contactCount), stringResource(R.string.recent_summary_known), CatGreen, Modifier.weight(1f))
             IconButton(onClick = onRefresh, enabled = !refreshing) {
                 if (refreshing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = CatGreen,
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = CatGreen)
                 } else {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.cd_refresh_recent),
-                        tint = CatGreen,
-                    )
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_refresh_recent), tint = CatGreen)
                 }
             }
         }
-        GradientDivider()
     }
 }
 

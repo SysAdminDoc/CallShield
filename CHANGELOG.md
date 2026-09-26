@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Activity now uses clear Recent and Blocked pills and an outlined summary of
+  actual call history. Its introduction names the history the app can show.
 - Settings now opens on grouped Basic controls, with detailed access, detection,
   lists and backup options under Advanced. Cards match the dark screen design,
   and Settings no longer opens an unrelated database search.

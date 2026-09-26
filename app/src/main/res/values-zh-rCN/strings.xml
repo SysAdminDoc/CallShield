@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CallShield</string>
+    <string name="activity_intro">查看最近的来电和 CallShield 拦截的通话。</string>
     <string name="shortcut_lookup">查询</string>
     <string name="shortcut_lookup_long">核查一个号码</string>
     <string name="shortcut_scan">扫描</string>

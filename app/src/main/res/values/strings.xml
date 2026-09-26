@@ -1275,6 +1275,7 @@
     <!-- MainActivity / Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_activity">Activity</string>
+    <string name="activity_intro">Review recent calls and calls stopped by CallShield.</string>
     <string name="activity_tab_recent">Recent</string>
     <string name="activity_tab_blocked">Blocked</string>
     <string name="nav_lookup">Lookup</string>
