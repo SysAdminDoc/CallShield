@@ -159,7 +159,7 @@ fun CallShieldRoot(
             }
 
             onboardingDone == false -> {
-                OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
+                OnboardingScreen(viewModel = viewModel, onComplete = { viewModel.completeOnboarding() })
             }
 
             selectedNumber != null -> {

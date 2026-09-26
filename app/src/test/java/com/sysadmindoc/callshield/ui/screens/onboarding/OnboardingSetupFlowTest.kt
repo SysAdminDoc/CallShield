@@ -57,7 +57,7 @@ class OnboardingSetupFlowTest {
     }
 
     @Test
-    fun `intro and review are navigation steps rather than permission checks`() {
+    fun `intro review and profile are navigation steps rather than permission checks`() {
         val state =
             OnboardingSetupState(
                 runtimePermissionsGranted = false,
@@ -70,6 +70,7 @@ class OnboardingSetupFlowTest {
 
         assertTrue(state.isComplete(OnboardingSetupStep.Intro))
         assertTrue(state.isComplete(OnboardingSetupStep.Review))
+        assertTrue(state.isComplete(OnboardingSetupStep.Profile))
         assertEquals(0, state.completedSetupCount)
         assertFalse(state.isReady)
     }

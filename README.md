@@ -57,9 +57,9 @@ shard service is unavailable.
 ## Getting Started
 
 1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). See [Installing](#installing) for signature details.
-2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. You can skip notifications, Notification Access (for RCS filtering), and Overlay (for live caller ID). The review shows what each skipped grant disables. Open Settings and tap **Run setup again** whenever you want to enable them.
+2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. You can skip notifications, Notification Access (for RCS filtering), and Overlay (for live caller ID). The review shows what each skipped grant disables. The last step lets you choose Recommended, Strict, or Contacts only. Open Settings and tap **Run setup again** whenever you want to change these choices.
 3. **Sync the database.** The Home screen runs a first sync on its own. After that, background syncs check every six hours.
-4. **Recommended starting profile.** Leave everything at defaults: the database, heuristics, trending feed, and ML scorer all run. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
+4. **Recommended starting profile.** Choose Recommended for the default call and text controls. Strict adds aggressive call checks, blocks hidden callers, and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Every profile change offers Undo. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
 
 For a full walkthrough of every toggle with its default, see [docs/getting-started.md](docs/getting-started.md).
 
@@ -102,7 +102,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |---------:|-------|---------|-------------|
 | 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
-|  8800 | **Contacts-Only Mode** | Block | Optional strict mode. Everything not in your contacts is blocked |
+|  8800 | **Contacts-Only Mode** | Block | Calls outside your contacts and trusted numbers are blocked |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
 |  7000 | **User Blocklist** | Block | Your own exact blocks, permanent or temporary |
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract`. Respects stock Phone/Messages blocks |
@@ -248,7 +248,7 @@ by locale and message type without shipping personal data:
 - Smart suggestions. Detects area code spam patterns, one-tap block entire area code
 - Weekly trend indicator. Shows if spam is increasing or decreasing vs last week
 - Last blocked preview card on dashboard with tap-to-inspect
-- Blocking profiles: Work / Personal / Sleep / Maximum / Off
+- Blocking profiles: Recommended / Strict / Contacts only / Personal / Sleep / Off, with Undo
 - Callback detection + repeated urgent caller allow-through
 - FTC Do Not Call complaint filing
 - After-call "Was this spam?" feedback notification
@@ -538,7 +538,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1556 JVM unit tests (JUnit) |
-| Strings | 1583 string resources and 38 plural groups (translation-ready) |
+| Strings | 1614 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

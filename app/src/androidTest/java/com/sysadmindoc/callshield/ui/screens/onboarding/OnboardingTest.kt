@@ -45,6 +45,7 @@ class OnboardingTest {
                 "Caller ID overlay",
                 "Notification access",
                 "Protection is ready",
+                "How strict?",
             )
         expectedTitles.forEachIndexed { index, title ->
             assertPage(index + 1, title)
@@ -53,6 +54,7 @@ class OnboardingTest {
             }
         }
 
+        composeRule.onNodeWithTag(ONBOARDING_PROFILE_RECOMMENDED_TAG).performClick()
         composeRule.onNodeWithTag(ONBOARDING_FINISH_BUTTON_TAG).performClick()
         composeRule.runOnIdle { assertEquals(1, completed) }
     }
@@ -101,7 +103,7 @@ class OnboardingTest {
             )
         }
 
-        repeat(onboardingSteps.lastIndex) {
+        repeat(onboardingSteps.indexOf(OnboardingSetupStep.Review)) {
             composeRule.onNodeWithTag(primaryTag(onboardingSteps[it])).performClick()
         }
         assertPage(7, "Protection is ready")
@@ -132,6 +134,9 @@ class OnboardingTest {
             .onNodeWithText("Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.")
             .performScrollTo()
             .assertIsDisplayed()
+        composeRule.onNodeWithTag(primaryTag(OnboardingSetupStep.Review)).performClick()
+        assertPage(8, "How strict?")
+        composeRule.onNodeWithTag(ONBOARDING_PROFILE_RECOMMENDED_TAG).performClick()
         composeRule.onNodeWithTag(ONBOARDING_FINISH_BUTTON_TAG).performClick()
         composeRule.runOnIdle { assertEquals(1, completed) }
     }
@@ -168,7 +173,7 @@ class OnboardingTest {
         page: Int,
         title: String,
     ) {
-        composeRule.onNodeWithContentDescription("Onboarding page $page of 7").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Onboarding page $page of 8").assertIsDisplayed()
         composeRule.onAllNodesWithText(title)[0].assertIsDisplayed()
     }
 

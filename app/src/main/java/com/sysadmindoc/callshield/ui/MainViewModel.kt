@@ -1343,15 +1343,10 @@ class MainViewModel
                 .map { name -> name?.let { runCatching { BlockingProfiles.Profile.valueOf(it) }.getOrNull() } }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-        fun applyProfile(profile: BlockingProfiles.Profile) {
-            viewModelScope.launch {
-                try {
-                    BlockingProfiles.apply(appContext, profile)
-                    repo.setActiveProfileName(profile.name)
-                } catch (_: Exception) {
-                    repo.setActiveProfileName(null)
-                }
-            }
+        suspend fun applyProfile(profile: BlockingProfiles.Profile): BlockingProfiles.Snapshot = BlockingProfiles.apply(appContext, profile)
+
+        suspend fun undoProfile(snapshot: BlockingProfiles.Snapshot) {
+            BlockingProfiles.restore(appContext, snapshot)
         }
 
         // Anonymous community contribution

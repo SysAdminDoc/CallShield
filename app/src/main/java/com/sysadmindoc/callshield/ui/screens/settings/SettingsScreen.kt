@@ -65,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.MessageCapabilityState
@@ -91,6 +92,7 @@ import com.sysadmindoc.callshield.ui.StatusMessage
 import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
@@ -162,8 +164,47 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
     val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
     val timeBlock by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val timeStart by viewModel.timeBlockStart.collectAsStateWithLifecycle()
     val timeEnd by viewModel.timeBlockEnd.collectAsStateWithLifecycle()
+    val profileSettings =
+        BlockingProfiles.Settings(
+            blockCalls = blockCalls,
+            analyzeSms = blockSms,
+            blockHidden = blockUnknown,
+            aggressive = aggressiveMode,
+            quietHours = timeBlock,
+            contactsOnly = contactsOnly,
+        )
+    val displayedProfile =
+        activeProfile?.takeIf { it.settings == profileSettings }
+            ?: BlockingProfiles.Profile.entries.firstOrNull { it.settings == profileSettings }
+    val profileScope = rememberCoroutineScope()
+    val profileSnackbar = remember { SnackbarHostState() }
+    val profileRestoredMessage = stringResource(R.string.settings_profile_restored)
+    val profileFailedMessage = stringResource(R.string.profile_failed)
+    val profileUndoLabel = stringResource(R.string.profile_undo)
+    var profileApplying by remember { mutableStateOf(false) }
+
+    fun restoreRecommended() {
+        if (profileApplying) return
+        profileApplying = true
+        profileScope.launch {
+            try {
+                val previous = viewModel.applyProfile(BlockingProfiles.Profile.WORK)
+                profileApplying = false
+                profileSnackbar.currentSnackbarData?.dismiss()
+                if (profileSnackbar.showSnackbar(profileRestoredMessage, actionLabel = profileUndoLabel) == SnackbarResult.ActionPerformed) {
+                    profileApplying = true
+                    viewModel.undoProfile(previous)
+                    profileApplying = false
+                }
+            } catch (_: Exception) {
+                profileApplying = false
+                profileSnackbar.showSnackbar(profileFailedMessage)
+            }
+        }
+    }
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val freqThreshold by viewModel.freqThreshold.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
@@ -311,6 +352,34 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatGreen) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                SectionHeader(stringResource(R.string.settings_protection_level), CatGreen)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text =
+                        displayedProfile?.let { stringResource(it.labelRes) }
+                            ?: stringResource(R.string.settings_custom_profile),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = CatGreen,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text =
+                        displayedProfile?.let { stringResource(it.descriptionRes) }
+                            ?: stringResource(R.string.profile_custom_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+                TextButton(onClick = ::restoreRecommended, enabled = !profileApplying) {
+                    Icon(Icons.Default.Restore, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_restore_recommended))
+                }
+                SnackbarHost(profileSnackbar)
+            }
+        }
+
         Column(modifier = Modifier.fillMaxWidth()) {
             val setupSummary =
                 if (setupReadyCount == setupTotal) {

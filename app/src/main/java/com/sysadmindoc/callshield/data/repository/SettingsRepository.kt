@@ -11,6 +11,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.AppUpdateStatus
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CallerNameSupport
@@ -297,6 +298,40 @@ class SettingsRepository(
                 prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
             }
         }
+
+    suspend fun replaceBlockingSettings(
+        settings: BlockingProfiles.Settings,
+        profileName: String?,
+    ): BlockingProfiles.Snapshot {
+        var previous: BlockingProfiles.Snapshot? = null
+        dataStore.edit { prefs ->
+            previous =
+                BlockingProfiles.Snapshot(
+                    settings =
+                        BlockingProfiles.Settings(
+                            blockCalls = prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true,
+                            analyzeSms = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true,
+                            blockHidden = prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false,
+                            aggressive = prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false,
+                            quietHours = prefs[SpamRepository.KEY_TIME_BLOCK] ?: false,
+                            contactsOnly = prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false,
+                        ),
+                    activeProfileName = prefs[SpamRepository.KEY_ACTIVE_PROFILE],
+                )
+            prefs[SpamRepository.KEY_BLOCK_CALLS] = settings.blockCalls
+            prefs[SpamRepository.KEY_BLOCK_SMS] = settings.analyzeSms
+            prefs[SpamRepository.KEY_BLOCK_UNKNOWN] = settings.blockHidden
+            prefs[SpamRepository.KEY_AGGRESSIVE_MODE] = settings.aggressive
+            prefs[SpamRepository.KEY_TIME_BLOCK] = settings.quietHours
+            prefs[SpamRepository.KEY_CONTACTS_ONLY] = settings.contactsOnly
+            if (profileName == null) {
+                prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
+            } else {
+                prefs[SpamRepository.KEY_ACTIVE_PROFILE] = profileName
+            }
+        }
+        return checkNotNull(previous)
+    }
 
     suspend fun setAppTheme(theme: String) =
         dataStore.edit { preferences ->

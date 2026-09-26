@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Setup now ends with a choice of Recommended, Strict, or Contacts only. Each
+  card shows what changes. Home shows the active level, and profile changes
+  offer Undo. Settings can restore the recommended controls with Undo too.
 - The report Worker can now deploy from a clean checkout. Wrangler provisions
   its KV namespace and uses the current rate-limit binding format.
 - Reviewed domains in `spam_domains_approved.json` now reach the published

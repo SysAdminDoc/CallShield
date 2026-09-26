@@ -453,6 +453,11 @@ class SpamRepository(
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
 
+    suspend fun replaceBlockingSettings(
+        settings: BlockingProfiles.Settings,
+        profileName: String?,
+    ): BlockingProfiles.Snapshot = settingsRepository.replaceBlockingSettings(settings, profileName)
+
     suspend fun setFeedMirrorUrl(url: String?): Boolean = settingsRepository.setFeedMirrorUrl(url)
 
     suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave = syncRepository.saveFeedMirrorUrl(url)

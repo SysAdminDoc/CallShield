@@ -1,71 +1,66 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import com.sysadmindoc.callshield.R
 
-/**
- * Blocking profiles — preset configurations for different scenarios.
- * Work: block all spam, allow unknown (clients may call)
- * Personal: block spam + unknown numbers
- * Sleep: block everything except contacts
- * Off: disable all blocking
- */
+/** Presets for the call and message controls changed together by a profile. */
 object BlockingProfiles {
+    data class Settings(
+        val blockCalls: Boolean = true,
+        val analyzeSms: Boolean = true,
+        val blockHidden: Boolean = false,
+        val aggressive: Boolean = false,
+        val quietHours: Boolean = false,
+        val contactsOnly: Boolean = false,
+    )
+
+    data class Snapshot(
+        val settings: Settings,
+        val activeProfileName: String?,
+    )
+
     enum class Profile(
-        val label: String,
-        val description: String,
+        val labelRes: Int,
+        val descriptionRes: Int,
+        val settings: Settings,
     ) {
-        WORK("Work", "Block spam, allow unknown callers"),
-        PERSONAL("Personal", "Block spam + unknown numbers"),
-        SLEEP("Sleep", "Block everything except contacts"),
-        MAX("Maximum", "Aggressive mode + block unknowns + quiet hours"),
-        OFF("Off", "Disable all blocking"),
+        WORK(R.string.onboarding_profile_recommended, R.string.profile_work_description, Settings()),
+        PERSONAL(
+            R.string.dashboard_profile_personal,
+            R.string.profile_personal_description,
+            Settings(blockHidden = true),
+        ),
+        SLEEP(
+            R.string.dashboard_profile_sleep,
+            R.string.profile_sleep_description,
+            Settings(blockHidden = true, quietHours = true),
+        ),
+        MAX(
+            R.string.onboarding_profile_strict,
+            R.string.profile_maximum_description,
+            Settings(blockHidden = true, aggressive = true, quietHours = true),
+        ),
+        OFF(
+            R.string.dashboard_profile_off,
+            R.string.profile_off_description,
+            Settings(blockCalls = false, analyzeSms = false),
+        ),
+        CONTACTS_ONLY(
+            R.string.dashboard_profile_contacts_only,
+            R.string.profile_contacts_only_description,
+            Settings(blockHidden = true, contactsOnly = true),
+        ),
     }
 
     suspend fun apply(
         context: Context,
         profile: Profile,
+    ): Snapshot = SpamRepository.getInstance(context).replaceBlockingSettings(profile.settings, profile.name)
+
+    suspend fun restore(
+        context: Context,
+        snapshot: Snapshot,
     ) {
-        val repo = SpamRepository.getInstance(context)
-        when (profile) {
-            Profile.WORK -> {
-                repo.setBlockCalls(true)
-                repo.setBlockSms(true)
-                repo.setBlockUnknown(false)
-                repo.setAggressiveMode(false)
-                repo.setTimeBlock(false)
-            }
-
-            Profile.PERSONAL -> {
-                repo.setBlockCalls(true)
-                repo.setBlockSms(true)
-                repo.setBlockUnknown(true)
-                repo.setAggressiveMode(false)
-                repo.setTimeBlock(false)
-            }
-
-            Profile.SLEEP -> {
-                repo.setBlockCalls(true)
-                repo.setBlockSms(true)
-                repo.setBlockUnknown(true)
-                repo.setAggressiveMode(false)
-                repo.setTimeBlock(true)
-            }
-
-            Profile.MAX -> {
-                repo.setBlockCalls(true)
-                repo.setBlockSms(true)
-                repo.setBlockUnknown(true)
-                repo.setAggressiveMode(true)
-                repo.setTimeBlock(true)
-            }
-
-            Profile.OFF -> {
-                repo.setBlockCalls(false)
-                repo.setBlockSms(false)
-                repo.setBlockUnknown(false)
-                repo.setAggressiveMode(false)
-                repo.setTimeBlock(false)
-            }
-        }
+        SpamRepository.getInstance(context).replaceBlockingSettings(snapshot.settings, snapshot.activeProfileName)
     }
 }

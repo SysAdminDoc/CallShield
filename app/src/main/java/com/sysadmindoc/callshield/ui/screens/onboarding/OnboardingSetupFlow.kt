@@ -12,6 +12,7 @@ internal enum class OnboardingSetupStep {
     Overlay,
     NotificationAccess,
     Review,
+    Profile,
 }
 
 internal data class OnboardingSetupState(
@@ -26,6 +27,7 @@ internal data class OnboardingSetupState(
         when (step) {
             OnboardingSetupStep.Intro,
             OnboardingSetupStep.Review,
+            OnboardingSetupStep.Profile,
             -> true
 
             OnboardingSetupStep.RuntimePermissions -> runtimePermissionsGranted
@@ -66,6 +68,7 @@ private fun restrictedFromSdk(step: OnboardingSetupStep): Int? =
         OnboardingSetupStep.CallScreening,
         OnboardingSetupStep.Notifications,
         OnboardingSetupStep.Review,
+        OnboardingSetupStep.Profile,
         -> null
     }
 

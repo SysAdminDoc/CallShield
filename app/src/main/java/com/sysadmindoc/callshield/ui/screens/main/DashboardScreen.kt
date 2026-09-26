@@ -65,6 +65,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -78,6 +81,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -134,6 +138,7 @@ import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @Composable
@@ -147,6 +152,10 @@ fun DashboardScreen(
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+    val blockHidden by viewModel.blockUnknownEnabled.collectAsStateWithLifecycle()
+    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
+    val quietHours by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
+    val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val stirShaken by viewModel.stirShakenEnabled.collectAsStateWithLifecycle()
@@ -165,7 +174,45 @@ fun DashboardScreen(
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val lastSyncSource by viewModel.lastSyncSource.collectAsStateWithLifecycle()
     val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val currentProfileSettings =
+        BlockingProfiles.Settings(
+            blockCalls = blockCallsEnabled,
+            analyzeSms = blockSmsEnabled,
+            blockHidden = blockHidden,
+            aggressive = aggressiveMode,
+            quietHours = quietHours,
+            contactsOnly = contactsOnly,
+        )
+    val displayedProfile =
+        activeProfile?.takeIf { it.settings == currentProfileSettings }
+            ?: BlockingProfiles.Profile.entries.firstOrNull { it.settings == currentProfileSettings }
     val context = LocalContext.current
+    val profileScope = rememberCoroutineScope()
+    val profileSnackbar = remember { SnackbarHostState() }
+    val profileAppliedMessage = stringResource(R.string.profile_applied)
+    val profileFailedMessage = stringResource(R.string.profile_failed)
+    val profileUndoLabel = stringResource(R.string.profile_undo)
+    var profileApplying by remember { mutableStateOf(false) }
+
+    fun selectProfile(profile: BlockingProfiles.Profile) {
+        if (profileApplying) return
+        profileApplying = true
+        profileScope.launch {
+            try {
+                val previous = viewModel.applyProfile(profile)
+                profileApplying = false
+                profileSnackbar.currentSnackbarData?.dismiss()
+                if (profileSnackbar.showSnackbar(profileAppliedMessage, actionLabel = profileUndoLabel) == SnackbarResult.ActionPerformed) {
+                    profileApplying = true
+                    viewModel.undoProfile(previous)
+                    profileApplying = false
+                }
+            } catch (_: Exception) {
+                profileApplying = false
+                profileSnackbar.showSnackbar(profileFailedMessage)
+            }
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
     val openPermissions = onOpenSettings ?: { openAppSettings(context) }
@@ -559,43 +606,57 @@ fun DashboardScreen(
         PremiumCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(18.dp)) {
                 SectionHeader(stringResource(R.string.dashboard_quick_profiles), CatMauve)
+                SnackbarHost(profileSnackbar)
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ProfileChip(
                         Modifier.weight(1f),
-                        stringResource(R.string.dashboard_profile_work),
-                        CatBlue,
-                        activeProfile == BlockingProfiles.Profile.WORK,
-                    ) { viewModel.applyProfile(BlockingProfiles.Profile.WORK) }
-                    ProfileChip(
-                        Modifier.weight(1f),
-                        stringResource(R.string.dashboard_profile_personal),
+                        stringResource(BlockingProfiles.Profile.WORK.labelRes),
                         CatGreen,
-                        activeProfile == BlockingProfiles.Profile.PERSONAL,
-                    ) { viewModel.applyProfile(BlockingProfiles.Profile.PERSONAL) }
+                        displayedProfile == BlockingProfiles.Profile.WORK,
+                    ) { selectProfile(BlockingProfiles.Profile.WORK) }
                     ProfileChip(
                         Modifier.weight(1f),
-                        stringResource(R.string.dashboard_profile_sleep),
-                        CatMauve,
-                        activeProfile == BlockingProfiles.Profile.SLEEP,
-                    ) { viewModel.applyProfile(BlockingProfiles.Profile.SLEEP) }
+                        stringResource(BlockingProfiles.Profile.MAX.labelRes),
+                        CatRed,
+                        displayedProfile == BlockingProfiles.Profile.MAX,
+                    ) { selectProfile(BlockingProfiles.Profile.MAX) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(BlockingProfiles.Profile.CONTACTS_ONLY.labelRes),
+                        CatBlue,
+                        displayedProfile == BlockingProfiles.Profile.CONTACTS_ONLY,
+                    ) { selectProfile(BlockingProfiles.Profile.CONTACTS_ONLY) }
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ProfileChip(
                         Modifier.weight(1f),
-                        stringResource(R.string.dashboard_profile_maximum),
-                        CatRed,
-                        activeProfile == BlockingProfiles.Profile.MAX,
-                    ) { viewModel.applyProfile(BlockingProfiles.Profile.MAX) }
+                        stringResource(BlockingProfiles.Profile.PERSONAL.labelRes),
+                        CatGreen,
+                        displayedProfile == BlockingProfiles.Profile.PERSONAL,
+                    ) { selectProfile(BlockingProfiles.Profile.PERSONAL) }
                     ProfileChip(
                         Modifier.weight(1f),
-                        stringResource(R.string.dashboard_profile_off),
+                        stringResource(BlockingProfiles.Profile.SLEEP.labelRes),
+                        CatMauve,
+                        displayedProfile == BlockingProfiles.Profile.SLEEP,
+                    ) { selectProfile(BlockingProfiles.Profile.SLEEP) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(BlockingProfiles.Profile.OFF.labelRes),
                         CatOverlay,
-                        activeProfile == BlockingProfiles.Profile.OFF,
-                    ) { viewModel.applyProfile(BlockingProfiles.Profile.OFF) }
-                    Spacer(Modifier.weight(1f))
+                        displayedProfile == BlockingProfiles.Profile.OFF,
+                    ) { selectProfile(BlockingProfiles.Profile.OFF) }
                 }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text =
+                        displayedProfile?.let { stringResource(it.descriptionRes) }
+                            ?: stringResource(R.string.profile_custom_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
             }
         }
 
@@ -1772,21 +1833,17 @@ fun ProfileChip(
         // by border/tint/check, invisible to TalkBack on the mode-selection row.
         modifier =
             modifier
-                .height(36.dp)
+                .height(48.dp)
                 .semantics { selected = isActive },
         shape = RoundedCornerShape(ShapeSm),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
         colors =
             ButtonDefaults.textButtonColors(
                 contentColor = color,
                 containerColor = if (isActive) color.copy(alpha = 0.12f) else Color.Transparent,
             ),
     ) {
-        if (isActive) {
-            Icon(Icons.Default.Check, null, tint = color, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(4.dp))
-        }
-        Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1)
     }
 }
 

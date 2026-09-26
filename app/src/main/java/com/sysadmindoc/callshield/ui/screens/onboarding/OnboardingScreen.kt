@@ -15,6 +15,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -50,8 +52,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +78,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -84,8 +89,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.RcsNotificationListener
+import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -110,9 +117,15 @@ internal const val ONBOARDING_OVERLAY_BUTTON_TAG = "onboarding_overlay_button"
 internal const val ONBOARDING_SCREENER_BUTTON_TAG = "onboarding_screener_button"
 internal const val ONBOARDING_NOTIFICATION_ACCESS_BUTTON_TAG = "onboarding_notification_access_button"
 internal const val ONBOARDING_SKIP_OPTIONAL_BUTTON_TAG = "onboarding_skip_optional_button"
+internal const val ONBOARDING_PROFILE_RECOMMENDED_TAG = "onboarding_profile_recommended"
+internal const val ONBOARDING_PROFILE_STRICT_TAG = "onboarding_profile_strict"
+internal const val ONBOARDING_PROFILE_CONTACTS_ONLY_TAG = "onboarding_profile_contacts_only"
 
 @Composable
-fun OnboardingScreen(onComplete: () -> Unit) {
+fun OnboardingScreen(
+    viewModel: MainViewModel,
+    onComplete: () -> Unit,
+) {
     val context = LocalContext.current
     val roleManager = remember { context.getSystemService(Context.ROLE_SERVICE) as? RoleManager }
     val screenerSupported = remember(roleManager) { CallShieldPermissions.isCallScreeningRoleAvailable(roleManager) }
@@ -255,6 +268,8 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             )
         },
         onComplete = onComplete,
+        onApplyProfile = viewModel::applyProfile,
+        onUndoProfile = viewModel::undoProfile,
         onOpenAppInfo = {
             context.startActivitySafely(
                 Intent(
@@ -276,12 +291,20 @@ internal fun OnboardingScreenContent(
     onRequestOverlay: () -> Unit,
     onRequestNotificationAccess: () -> Unit,
     onComplete: () -> Unit,
+    onApplyProfile: suspend (BlockingProfiles.Profile) -> BlockingProfiles.Snapshot? = { null },
+    onUndoProfile: suspend (BlockingProfiles.Snapshot) -> Unit = {},
     runtimePermissionsBlocked: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onOpenAppInfo: () -> Unit = {},
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
+    var selectedProfile by rememberSaveable { mutableStateOf<BlockingProfiles.Profile?>(null) }
+    var profileApplying by remember { mutableStateOf(false) }
+    val profileScope = rememberCoroutineScope()
+    val profileAppliedMessage = stringResource(R.string.profile_applied)
+    val profileFailedMessage = stringResource(R.string.profile_failed)
+    val undoLabel = stringResource(R.string.profile_undo)
     val currentStep = onboardingSteps[currentPage]
     val presentation = onboardingPresentation(currentStep, setupState, runtimePermissionsBlocked)
     val pageContentDescription =
@@ -295,6 +318,32 @@ internal fun OnboardingScreenContent(
         }
     }
 
+    fun chooseProfile(profile: BlockingProfiles.Profile) {
+        if (profileApplying) return
+        val previousSelection = selectedProfile
+        profileApplying = true
+        profileScope.launch {
+            try {
+                val snapshot = onApplyProfile(profile)
+                selectedProfile = profile
+                profileApplying = false
+                snackbarHostState.currentSnackbarData?.dismiss()
+                if (snapshot != null &&
+                    snackbarHostState.showSnackbar(profileAppliedMessage, actionLabel = undoLabel) == SnackbarResult.ActionPerformed
+                ) {
+                    profileApplying = true
+                    onUndoProfile(snapshot)
+                    selectedProfile = previousSelection
+                    profileApplying = false
+                }
+            } catch (_: Exception) {
+                selectedProfile = previousSelection
+                profileApplying = false
+                snackbarHostState.showSnackbar(profileFailedMessage)
+            }
+        }
+    }
+
     fun runPrimaryAction() {
         when (currentStep) {
             OnboardingSetupStep.Intro -> {
@@ -303,11 +352,15 @@ internal fun OnboardingScreenContent(
 
             OnboardingSetupStep.Review -> {
                 if (setupState.isReady) {
-                    onComplete()
+                    currentPage++
                 } else {
                     val missingStep = setupSteps.firstOrNull { it !in optionalSetupSteps && !setupState.isComplete(it) }
                     currentPage = onboardingSteps.indexOf(missingStep).coerceAtLeast(1)
                 }
+            }
+
+            OnboardingSetupStep.Profile -> {
+                if (selectedProfile != null && !profileApplying) onComplete()
             }
 
             else -> {
@@ -328,6 +381,7 @@ internal fun OnboardingScreenContent(
 
                         OnboardingSetupStep.Intro,
                         OnboardingSetupStep.Review,
+                        OnboardingSetupStep.Profile,
                         -> Unit
                     }
                 }
@@ -390,6 +444,8 @@ internal fun OnboardingScreenContent(
                 step = step,
                 presentation = stepPresentation,
                 setupState = setupState,
+                selectedProfile = selectedProfile,
+                onChooseProfile = ::chooseProfile,
             )
         }
 
@@ -437,6 +493,7 @@ internal fun OnboardingScreenContent(
             icon = primaryIcon(currentStep, setupState),
             color = presentation.accent,
             onClick = ::runPrimaryAction,
+            enabled = currentStep != OnboardingSetupStep.Profile || (selectedProfile != null && !profileApplying),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -581,6 +638,16 @@ private fun onboardingPresentation(
                 if (setupState.isReady) CatGreen else CatYellow,
             )
         }
+
+        OnboardingSetupStep.Profile -> {
+            OnboardingPresentation(
+                Icons.Default.Shield,
+                stringResource(R.string.onboarding_profile_title),
+                stringResource(R.string.onboarding_profile_body),
+                null,
+                CatGreen,
+            )
+        }
     }
 
 @Composable
@@ -588,6 +655,8 @@ private fun OnboardingStepBody(
     step: OnboardingSetupStep,
     presentation: OnboardingPresentation,
     setupState: OnboardingSetupState,
+    selectedProfile: BlockingProfiles.Profile?,
+    onChooseProfile: (BlockingProfiles.Profile) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 22.dp, bottom = 12.dp),
@@ -635,6 +704,10 @@ private fun OnboardingStepBody(
                 OnboardingReview(setupState)
             }
 
+            OnboardingSetupStep.Profile -> {
+                OnboardingProfileOptions(selectedProfile, onChooseProfile)
+            }
+
             else -> {
                 OnboardingVerification(
                     complete = setupState.isComplete(step),
@@ -666,6 +739,89 @@ private fun OnboardingStepBody(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OnboardingProfileOptions(
+    selectedProfile: BlockingProfiles.Profile?,
+    onChooseProfile: (BlockingProfiles.Profile) -> Unit,
+) {
+    val options =
+        listOf(
+            Triple(BlockingProfiles.Profile.WORK, R.string.onboarding_profile_recommended, ONBOARDING_PROFILE_RECOMMENDED_TAG),
+            Triple(BlockingProfiles.Profile.MAX, R.string.onboarding_profile_strict, ONBOARDING_PROFILE_STRICT_TAG),
+            Triple(BlockingProfiles.Profile.CONTACTS_ONLY, R.string.dashboard_profile_contacts_only, ONBOARDING_PROFILE_CONTACTS_ONLY_TAG),
+        )
+    options.forEach { (profile, labelRes, tag) ->
+        val selected = selectedProfile == profile
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(selected = selected, role = Role.RadioButton) { onChooseProfile(profile) }
+                    .testTag(tag),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.35f)),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = if (profile == BlockingProfiles.Profile.CONTACTS_ONLY) Icons.Default.VerifiedUser else Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = if (selected) CatGreen else CatSubtext,
+                    modifier = Modifier.size(26.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(labelRes),
+                        color = CatText,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(profile.descriptionRes),
+                        color = CatSubtext,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    val details =
+                        listOf(
+                            R.string.profile_detail_calls to
+                                (if (profile.settings.contactsOnly) R.string.profile_detail_contacts else R.string.profile_detail_spam),
+                            R.string.profile_detail_texts to R.string.profile_detail_flagged,
+                            R.string.profile_detail_hidden to
+                                (if (profile.settings.blockHidden) R.string.profile_detail_blocked else R.string.profile_detail_allowed),
+                            R.string.profile_detail_quiet to
+                                (if (profile.settings.quietHours) R.string.profile_detail_on else R.string.profile_detail_off),
+                            R.string.profile_detail_checks to
+                                (if (profile.settings.aggressive) R.string.profile_detail_aggressive else R.string.profile_detail_standard),
+                        )
+                    details.forEach { (labelRes, valueRes) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(stringResource(labelRes), color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = stringResource(valueRes),
+                                modifier = Modifier.weight(1f),
+                                color = CatText,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.End,
+                            )
+                        }
+                    }
+                }
+                RadioButton(selected = selected, onClick = null)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -825,8 +981,12 @@ private fun primaryLabel(
             stringResource(R.string.onboarding_start_setup)
         }
 
-        step == OnboardingSetupStep.Review && setupState.isReady -> {
+        step == OnboardingSetupStep.Profile -> {
             stringResource(R.string.onboarding_finish_setup)
+        }
+
+        step == OnboardingSetupStep.Review && setupState.isReady -> {
+            stringResource(R.string.onboarding_continue)
         }
 
         step == OnboardingSetupStep.Review -> {
@@ -871,7 +1031,7 @@ private fun primaryIcon(
     setupState: OnboardingSetupState,
 ): ImageVector =
     when {
-        step == OnboardingSetupStep.Review && setupState.isReady -> Icons.Default.Check
+        step == OnboardingSetupStep.Profile -> Icons.Default.Check
         setupState.isComplete(step) -> Icons.AutoMirrored.Filled.ArrowForward
         else -> Icons.AutoMirrored.Filled.OpenInNew
     }
@@ -883,6 +1043,7 @@ internal fun primaryTag(step: OnboardingSetupStep): String =
         OnboardingSetupStep.Notifications -> ONBOARDING_NOTIFICATIONS_BUTTON_TAG
         OnboardingSetupStep.Overlay -> ONBOARDING_OVERLAY_BUTTON_TAG
         OnboardingSetupStep.NotificationAccess -> ONBOARDING_NOTIFICATION_ACCESS_BUTTON_TAG
-        OnboardingSetupStep.Review -> ONBOARDING_FINISH_BUTTON_TAG
+        OnboardingSetupStep.Review -> ONBOARDING_PRIMARY_ACTION_TAG
+        OnboardingSetupStep.Profile -> ONBOARDING_FINISH_BUTTON_TAG
         OnboardingSetupStep.Intro -> ONBOARDING_PRIMARY_ACTION_TAG
     }
