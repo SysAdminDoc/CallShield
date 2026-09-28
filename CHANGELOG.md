@@ -9,6 +9,8 @@ All notable changes to CallShield will be documented in this file.
   spam domains couldn't count independent reporters. It now records a daily
   reporter bucket, limits reports per network, per carrier block and overall,
   and turns away browser posts and bodies that aren't JSON.
+- The README's caller ID popup screenshot shows the current popup, with its
+  larger text and full-size buttons.
 
 ## v1.10.0 (2026-09-28)
 
