@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -403,6 +404,48 @@ def test_merge_writes_its_records_beside_the_database():
         }
 
 
+def test_import_moves_old_evidence_onto_the_manifest_lifetime():
+    # 2026-09-28: all 51,362 rows carried evidence due to lapse between 10-09
+    # and 10-25, and the app drops a row at its earliest expiry. An import with
+    # nothing new must still restamp them and publish a new version.
+    module = load_importer()
+    with tempfile.TemporaryDirectory() as directory:
+        directory = Path(directory)
+        db_path = directory / "spam_numbers.json"
+        thirty_days = int(datetime(2026, 10, 23, tzinfo=timezone.utc).timestamp() * 1000)
+        row = {
+            "number": "+18056377456",
+            "type": "robocall",
+            "reports": 59,
+            "first_seen": "2015-07-28",
+            "last_seen": "2026-09-21",
+            "description": "FCC: Unwanted Calls",
+            "sources": ["legacy_import"],
+            "evidence": [
+                {
+                    "source_id": "github_database",
+                    "retrieved_at": "2026-09-23T00:00:00+00:00",
+                    "expires_at_epoch_ms": thirty_days,
+                }
+            ],
+        }
+        db_path.write_text(
+            json.dumps({"version": 49, "updated": "2026-09-26", "numbers": [row], "prefixes": []}),
+            encoding="utf-8",
+        )
+        module.DB_FILE = db_path
+        module.merge_into_database([], min_reports=1, source_names={"ftc_complaints"})
+
+        database = json.loads(db_path.read_text(encoding="utf-8"))
+        assert database["version"] == 50, database["version"]
+        expires = database["numbers"][0]["evidence"][0]["expires_at_epoch_ms"]
+        assert expires == int(datetime(2036, 9, 20, tzinfo=timezone.utc).timestamp() * 1000), expires
+
+        # Nothing left to move: a rerun publishes nothing new.
+        module.merge_into_database([], min_reports=1, source_names={"ftc_complaints"})
+        assert json.loads(db_path.read_text(encoding="utf-8"))["version"] == 50
+
+
 def test_new_complaints_require_independent_caller_corroboration():
     module = load_importer()
     with tempfile.TemporaryDirectory() as directory:
@@ -590,6 +633,7 @@ def main():
     test_cursors_and_snapshot_are_durable_and_attributed()
     test_source_freshness_keeps_what_a_run_did_not_fetch()
     test_merge_writes_its_records_beside_the_database()
+    test_import_moves_old_evidence_onto_the_manifest_lifetime()
     test_new_complaints_require_independent_caller_corroboration()
     test_ftc_demo_key_run_stays_inside_the_hourly_budget()
     test_merge_summary_counts_only_numbers_that_stayed()

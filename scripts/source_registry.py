@@ -51,7 +51,54 @@ def load_source_manifest(path: Path) -> dict[str, Any]:
             raise ValueError(f"{source_id}: redistributable must be boolean")
         if not isinstance(source["stale_after_days"], int) or source["stale_after_days"] <= 0:
             raise ValueError(f"{source_id}: stale_after_days must be positive")
+        ttl = source.get("evidence_ttl_days", source["stale_after_days"])
+        if isinstance(ttl, bool) or not isinstance(ttl, int) or ttl < source["stale_after_days"]:
+            # Shorter than the freshness limit, a row would stop blocking before
+            # the weekly check calls its import overdue.
+            raise ValueError(f"{source_id}: evidence_ttl_days must be an integer no shorter than stale_after_days")
     return manifest
+
+
+def evidence_ttl_days(source: Mapping[str, Any]) -> int:
+    """How long one evidence record keeps its row blocking on phones.
+
+    `stale_after_days` is when the weekly check calls a source's import overdue.
+    Until 2026-09-28 it also set this, so every downloaded row stopped matching
+    14 to 30 days after the import that last stamped it (the app drops a row at
+    its earliest evidence expiry), and the self-snapshot evidence on most rows
+    was never re-stamped at all. A source without its own value keeps the old
+    behaviour.
+    """
+
+    return int(source.get("evidence_ttl_days", source["stale_after_days"]))
+
+
+def refresh_evidence_expiry(entries: list[dict[str, Any]], manifest: Mapping[str, Any]) -> int:
+    """Recompute each evidence record's expiry from its retrieval time.
+
+    Keeps rows imported before a lifetime change in line with the manifest
+    instead of leaving them on the lifetime they were stamped with. Records from
+    sources the manifest doesn't know, or without a readable `retrieved_at`, are
+    left alone. Returns how many rows changed; a second run changes none.
+    """
+
+    by_id = {source["id"]: source for source in manifest["sources"]}
+    changed = 0
+    for entry in entries:
+        row_changed = False
+        for item in entry.get("evidence") or []:
+            if not isinstance(item, dict):
+                continue
+            source = by_id.get(item.get("source_id"))
+            fetched = _parse_timestamp(item.get("retrieved_at"))
+            if source is None or fetched is None:
+                continue
+            expires_at = int((fetched + timedelta(days=evidence_ttl_days(source))).timestamp() * 1000)
+            if item.get("expires_at_epoch_ms") != expires_at:
+                item["expires_at_epoch_ms"] = expires_at
+                row_changed = True
+        changed += row_changed
+    return changed
 
 
 def source_snapshot(
@@ -311,7 +358,9 @@ def source_evidence(
         fetched = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     except ValueError as exc:
         raise ValueError(f"invalid retrieved_at timestamp: {timestamp}") from exc
-    expires_at = fetched + timedelta(days=source["stale_after_days"])
+    if fetched.tzinfo is None:
+        fetched = fetched.replace(tzinfo=timezone.utc)
+    expires_at = fetched + timedelta(days=evidence_ttl_days(source))
     evidence = {
         "source_id": source_id,
         "evidence_type": source["evidence_type"],

@@ -27,8 +27,9 @@ Three signals separate a healthy queue from a stalled one:
 An empty queue is healthy: nothing has arrived, nothing is stuck.
 
 With `--scheduled` (the weekly workflow) the age check measures against the
-current time instead of the database date, and upstream sources with a regular
-cadence are checked against `stale_after_days`. Both are left out of
+current time instead of the database date, upstream sources with a regular
+cadence are checked against `stale_after_days`, and published rows whose
+evidence expires within a month are reported. Both are left out of
 `verifyPipelineTests`: that task runs inside `check`, where a clock would fail
 every later build of an old tag. Measured against the database date, the age
 check cannot fire in the weeks after a drain, because every report queued since
@@ -73,6 +74,8 @@ MIN_BUCKET_SAMPLE = 10
 # decision and have no schedule to fall behind; community reports and the
 # database itself are covered by the queue checks.
 REGULAR_CADENCES = frozenset({"daily", "weekly"})
+# How far ahead the weekly run looks for downloaded rows whose evidence runs out.
+EVIDENCE_EXPIRY_WARNING_DAYS = 30
 
 
 def _parse_updated(value: object) -> datetime | None:
@@ -228,6 +231,49 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     return problems
 
 
+def evaluate_evidence_expiry(database: object, now: datetime) -> list[str]:
+    """One message per kind of published row that is about to stop blocking.
+
+    The app drops a downloaded number or range once its earliest evidence
+    expires. Until 2026-09-28 every row's evidence ran out within a month of the
+    import that stamped it and nothing looked, so protection would have ended
+    without a word whenever imports paused. Expired rows count too: they
+    already match nothing on phones. Evidence that hasn't expired is fine
+    however old it is.
+    """
+    if not isinstance(database, dict):
+        return [f"{DB_FILE.name} is missing or unreadable, so evidence expiry can't be checked"]
+    horizon = now + timedelta(days=EVIDENCE_EXPIRY_WARNING_DAYS)
+    problems: list[str] = []
+    for kind, label in (("numbers", "numbers"), ("prefixes", "ranges")):
+        rows = database.get(kind)
+        if not isinstance(rows, list):
+            continue
+        expiring = 0
+        earliest: datetime | None = None
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            stamps = [
+                item.get("expires_at_epoch_ms")
+                for item in row.get("evidence") or []
+                if isinstance(item, dict)
+            ]
+            stamps = [stamp for stamp in stamps if isinstance(stamp, int) and not isinstance(stamp, bool)]
+            if not stamps:
+                continue
+            expires = datetime.fromtimestamp(min(stamps) / 1000, timezone.utc)
+            if expires <= horizon:
+                expiring += 1
+                earliest = expires if earliest is None else min(earliest, expires)
+        if earliest is not None:
+            problems.append(
+                f"{expiring} published {label} stop blocking on phones from {earliest.date().isoformat()}, "
+                "when their evidence expires - run scripts/import_all_sources.py, then merge, sign and publish"
+            )
+    return problems
+
+
 def _load_json(path: Path) -> object:
     try:
         with Path(path).open(encoding="utf-8") as handle:
@@ -285,6 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     problems = evaluate_queue_health(reports, load_database_updated(DB_FILE), unreadable, now=now)
     if now is not None:
         problems += evaluate_source_freshness(_load_json(MANIFEST_FILE), _load_json(FRESHNESS_FILE), now)
+        problems += evaluate_evidence_expiry(_load_json(DB_FILE), now)
     if problems:
         print(f"Report pipeline is not healthy ({total} queued file(s) in {REPORTS_DIR}):", file=sys.stderr)
         for problem in problems:

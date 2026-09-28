@@ -40,7 +40,14 @@ from phone_normalization import (
 
 from pipeline_io import atomic_write_json
 from spam_shards import write_sharded_database
-from source_registry import attach_source_evidence, load_source_manifest, merge_evidence, source_evidence, source_snapshot
+from source_registry import (
+    attach_source_evidence,
+    load_source_manifest,
+    merge_evidence,
+    refresh_evidence_expiry,
+    source_evidence,
+    source_snapshot,
+)
 
 try:
     import requests
@@ -956,6 +963,13 @@ def merge_into_database(
     for row in db["numbers"]:
         if not row.get("evidence"):
             row["evidence"] = [source_evidence(manifest, "github_database", row, retrieved_at=legacy_retrieved_at)]
+    # Rows stamped before a manifest lifetime changed take the new lifetime, so
+    # none of them stops blocking on the old one.
+    expiry_refreshed = refresh_evidence_expiry(db["numbers"], manifest) + refresh_evidence_expiry(
+        db.get("prefixes", []), manifest
+    )
+    if expiry_refreshed:
+        print(f"  Evidence expiry recomputed on {expiry_refreshed:,} rows")
 
     existing = {n["number"]: n for n in db["numbers"]}
     # Snapshot the pre-merge keys so the min_reports filter below can be
@@ -1116,6 +1130,7 @@ def merge_into_database(
         and prefix_added == 0
         and prefix_updated == 0
         and prefix_removed == 0
+        and expiry_refreshed == 0
     ):
         write_sharded_database(db, DB_FILE.parent)
         print("No changes — database version left at", db.get("version", 0))

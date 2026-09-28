@@ -7,9 +7,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pipeline_liveness import (
+    EVIDENCE_EXPIRY_WARNING_DAYS,
     MAX_QUEUE_AGE_DAYS,
     MAX_QUEUE_DEPTH,
     MIN_BUCKET_SAMPLE,
+    evaluate_evidence_expiry,
     evaluate_queue_health,
     evaluate_source_freshness,
     load_database_updated,
@@ -231,7 +233,46 @@ def scheduled_checks() -> None:
     problems = evaluate_source_freshness(real_manifest, default_import, BASE)
     assert len(problems) == 1 and problems[0].startswith("fcc_complaints newest record is from 2026-08-01"), problems
 
+    evidence_expiry_checks()
     check_scheduled_switch()
+
+
+def evidence_row(expires_in_days: float | None, *, number: str = "+15125550100") -> dict:
+    evidence = [{"source_id": "github_database", "retrieved_at": BASE.isoformat()}]
+    if expires_in_days is not None:
+        evidence[0]["expires_at_epoch_ms"] = int((BASE + timedelta(days=expires_in_days)).timestamp() * 1000)
+    return {"number": number, "evidence": evidence}
+
+
+def evidence_expiry_checks() -> None:
+    """Rows whose evidence runs out stop blocking on phones, so the weekly run says so first."""
+    # The 2026-09-28 shape: every row due to lapse within the month.
+    database = {
+        "numbers": [evidence_row(11), evidence_row(25, number="+15125550101"), evidence_row(400, number="+15125550102")],
+        "prefixes": [{"prefix": "+33162", "evidence": [{"expires_at_epoch_ms": int((BASE + timedelta(days=12)).timestamp() * 1000)}]}],
+    }
+    problems = evaluate_evidence_expiry(database, BASE)
+    assert len(problems) == 2, problems
+    assert problems[0].startswith("2 published numbers stop blocking on phones from 2026-09-15"), problems
+    assert problems[1].startswith("1 published ranges stop blocking on phones from 2026-09-16"), problems
+
+    # A row's earliest record decides, as it does in the app.
+    mixed = evidence_row(400)
+    mixed["evidence"].append({"source_id": "fcc_complaints", "expires_at_epoch_ms": int((BASE + timedelta(days=5)).timestamp() * 1000)})
+    assert len(evaluate_evidence_expiry({"numbers": [mixed]}, BASE)) == 1
+
+    # Already expired rows match nothing on phones, so they count too.
+    assert "from 2026-09-01" in evaluate_evidence_expiry({"numbers": [evidence_row(-3)]}, BASE)[0]
+
+    # Healthy: far-off expiry, no expiry at all, the warning edge, and no rows.
+    assert evaluate_evidence_expiry({"numbers": [evidence_row(400), evidence_row(None)], "prefixes": []}, BASE) == []
+    assert evaluate_evidence_expiry({"numbers": [evidence_row(EVIDENCE_EXPIRY_WARNING_DAYS + 1)]}, BASE) == []
+    assert len(evaluate_evidence_expiry({"numbers": [evidence_row(EVIDENCE_EXPIRY_WARNING_DAYS)]}, BASE)) == 1
+    assert evaluate_evidence_expiry({"updated": "2026-09-04"}, BASE) == []
+
+    # An unreadable database fails the check rather than switching it off.
+    problems = evaluate_evidence_expiry(None, BASE)
+    assert len(problems) == 1 and "can't be checked" in problems[0], problems
 
 
 def check_scheduled_switch() -> None:
@@ -252,7 +293,16 @@ def check_scheduled_switch() -> None:
         month_ago = datetime.now(timezone.utc) - timedelta(days=30)
         queued = {"number": "+15125550100", "type": "spam", "reported_at": month_ago.isoformat(), "reporter_bucket": BUCKET}
         (data / "reports" / "15125550100_1.json").write_text(json.dumps(queued), encoding="utf-8")
-        (data / "spam_numbers.json").write_text(json.dumps({"updated": month_ago.date().isoformat()}), encoding="utf-8")
+        expiring = int((datetime.now(timezone.utc) + timedelta(days=3)).timestamp() * 1000)
+        (data / "spam_numbers.json").write_text(
+            json.dumps(
+                {
+                    "updated": month_ago.date().isoformat(),
+                    "numbers": [{"number": "+15125550100", "evidence": [{"expires_at_epoch_ms": expiring}]}],
+                }
+            ),
+            encoding="utf-8",
+        )
         (data / "source-manifest.json").write_text(
             json.dumps({"sources": [{"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14}]}),
             encoding="utf-8",
@@ -272,6 +322,7 @@ def check_scheduled_switch() -> None:
             report = scheduled.getvalue()
             assert "has waited 30 days" in report, report
             assert "ftc_complaints (daily source) has no record date" in report, report
+            assert "1 published numbers stop blocking on phones" in report, report
         finally:
             liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE = saved
 

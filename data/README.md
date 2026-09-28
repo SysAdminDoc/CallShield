@@ -230,6 +230,15 @@ reports expire after 30 days. The merge applies this rule to older
 community-only database rows too, including a run with no queued reports.
 Rows backed by FCC, FTC or another source aren't held by this gate.
 
+Every evidence record carries `expires_at_epoch_ms`, and phones stop matching
+a downloaded number or range once its earliest record expires. The manifest's
+`evidence_ttl_days` sets that lifetime for each source: a year for complaint
+feeds, 90 days for Saracroche ranges and ten years for the database's own snapshot record. `stale_after_days` only decides
+when the weekly check calls an import overdue. Until 2026-09-28 the two were
+the same number, which put every row on a 14 to 30 day clock. Each import now
+recomputes stored expiries from the manifest, and the weekly check fails when
+published rows are within 30 days of expiring.
+
 `train_spam_model.py` prints the learned per-feature weights and writes a
 version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression
 fallback) with `spam_model_holdout.json` beside it: hashes of the 20% of rows

@@ -3,6 +3,7 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 import source_registry
@@ -176,6 +177,75 @@ class SourceRegistryTest(unittest.TestCase):
             path.write_text(json.dumps({"version": 1, "sources": [{"id": "broken"}]}))
             with self.assertRaises(ValueError):
                 source_registry.load_source_manifest(path)
+
+    @staticmethod
+    def _source(source_id: str, stale_after_days: int, ttl: int | None = None) -> dict:
+        source = {
+            "id": source_id,
+            "access_mode": "public_api",
+            "geography": "US",
+            "license": "public",
+            "attribution": "Example",
+            "cadence": "daily",
+            "parser_version": "v1",
+            "evidence_type": "complaint",
+            "confidence_tier": "unverified",
+            "redistributable": True,
+            "stale_after_days": stale_after_days,
+        }
+        if ttl is not None:
+            source["evidence_ttl_days"] = ttl
+        return source
+
+    @staticmethod
+    def _epoch_ms(timestamp: str) -> int:
+        return int(datetime.fromisoformat(timestamp).timestamp() * 1000)
+
+    def test_evidence_lives_for_its_ttl_not_the_import_freshness_limit(self):
+        # 2026-09-28: evidence expired at stale_after_days, so every row stopped
+        # blocking 14 to 30 days after the import that stamped it.
+        manifest = {"version": 1, "sources": [self._source("fcc", 14, ttl=365), self._source("legacy", 7)]}
+        fcc = source_registry.source_evidence(manifest, "fcc", {}, retrieved_at="2026-09-26T00:00:00+00:00")
+        legacy = source_registry.source_evidence(manifest, "legacy", {}, retrieved_at="2026-09-26T00:00:00+00:00")
+        self.assertEqual(fcc["expires_at_epoch_ms"], self._epoch_ms("2027-09-26T00:00:00+00:00"))
+        # A source without its own lifetime keeps the old one.
+        self.assertEqual(legacy["expires_at_epoch_ms"], self._epoch_ms("2026-10-03T00:00:00+00:00"))
+
+    def test_manifest_rejects_a_ttl_shorter_than_the_freshness_limit(self):
+        for ttl in (13, 0, "365", True):
+            with self.subTest(ttl=ttl), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "manifest.json"
+                path.write_text(json.dumps({"version": 1, "sources": [self._source("fcc", 14, ttl=ttl)]}))
+                with self.assertRaises(ValueError):
+                    source_registry.load_source_manifest(path)
+
+    def test_real_manifest_keeps_number_evidence_for_at_least_a_year(self):
+        manifest = source_registry.load_source_manifest(Path(__file__).parent.parent / "data" / "source-manifest.json")
+        ttl = {source["id"]: source_registry.evidence_ttl_days(source) for source in manifest["sources"]}
+        for source_id in ("ftc_complaints", "fcc_complaints", "community_reports", "github_database"):
+            self.assertGreaterEqual(ttl[source_id], 365, source_id)
+        self.assertGreaterEqual(ttl["saracroche_prefixes"], 90)
+
+    def test_refresh_recomputes_expiry_from_retrieval_time_once(self):
+        manifest = {"version": 1, "sources": [self._source("fcc", 14, ttl=365)]}
+        rows = [
+            {
+                "number": "+18056377456",
+                "evidence": [
+                    {"source_id": "fcc", "retrieved_at": "2026-09-26T16:53:57+00:00", "expires_at_epoch_ms": 1791651237000},
+                    {"source_id": "unknown", "retrieved_at": "2026-09-26T00:00:00+00:00", "expires_at_epoch_ms": 1},
+                    {"source_id": "fcc", "retrieved_at": "not a time", "expires_at_epoch_ms": 2},
+                ],
+            },
+            {"number": "+15125550100"},
+        ]
+        self.assertEqual(source_registry.refresh_evidence_expiry(rows, manifest), 1)
+        evidence = rows[0]["evidence"]
+        self.assertEqual(evidence[0]["expires_at_epoch_ms"], self._epoch_ms("2027-09-26T16:53:57+00:00"))
+        # Sources the manifest doesn't know and unreadable times are left alone.
+        self.assertEqual(evidence[1]["expires_at_epoch_ms"], 1)
+        self.assertEqual(evidence[2]["expires_at_epoch_ms"], 2)
+        self.assertEqual(source_registry.refresh_evidence_expiry(rows, manifest), 0)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,8 @@
       "evidence_type": "unverified_complaint",
       "confidence_tier": "unverified",
       "redistributable": true,
-      "stale_after_days": 14
+      "stale_after_days": 14,
+      "evidence_ttl_days": 365
     },
     {
       "id": "fcc_complaints",
@@ -25,7 +26,8 @@
       "evidence_type": "unverified_complaint",
       "confidence_tier": "unverified",
       "redistributable": true,
-      "stale_after_days": 14
+      "stale_after_days": 14,
+      "evidence_ttl_days": 365
     },
     {
       "id": "phoneblock_bulk",
@@ -38,7 +40,8 @@
       "evidence_type": "community_reputation",
       "confidence_tier": "corroborated",
       "redistributable": false,
-      "stale_after_days": 30
+      "stale_after_days": 30,
+      "evidence_ttl_days": 365
     },
     {
       "id": "saracroche_prefixes",
@@ -52,7 +55,8 @@
       "confidence_tier": "curated",
       "redistributable": true,
       "stale_after_days": 14,
-      "import_flag": "--include-saracroche"
+      "import_flag": "--include-saracroche",
+      "evidence_ttl_days": 90
     },
     {
       "id": "nomorobo_irs",
@@ -65,7 +69,8 @@
       "evidence_type": "provider_authorized",
       "confidence_tier": "authorized",
       "redistributable": false,
-      "stale_after_days": 30
+      "stale_after_days": 30,
+      "evidence_ttl_days": 365
     },
     {
       "id": "toastedspam",
@@ -79,7 +84,8 @@
       "confidence_tier": "unverified",
       "redistributable": false,
       "stale_after_days": 30,
-      "import_flag": "--allow-insecure-sources"
+      "import_flag": "--allow-insecure-sources",
+      "evidence_ttl_days": 365
     },
     {
       "id": "community_reports",
@@ -92,7 +98,8 @@
       "evidence_type": "user_report",
       "confidence_tier": "unverified",
       "redistributable": true,
-      "stale_after_days": 90
+      "stale_after_days": 90,
+      "evidence_ttl_days": 365
     },
     {
       "id": "github_database",
@@ -105,7 +112,8 @@
       "evidence_type": "aggregate_database",
       "confidence_tier": "unverified",
       "redistributable": true,
-      "stale_after_days": 30
+      "stale_after_days": 30,
+      "evidence_ttl_days": 3650
     },
     {
       "id": "community_text_lists",
@@ -118,7 +126,8 @@
       "evidence_type": "community_curated",
       "confidence_tier": "unverified",
       "redistributable": false,
-      "stale_after_days": 30
+      "stale_after_days": 30,
+      "evidence_ttl_days": 365
     }
   ]
 }
