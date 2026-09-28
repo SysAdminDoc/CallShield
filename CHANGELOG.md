@@ -11,6 +11,11 @@ All notable changes to CallShield will be documented in this file.
   and turns away browser posts and bodies that aren't JSON.
 - The README's caller ID popup screenshot shows the current popup, with its
   larger text and full-size buttons.
+- The README matches the app again. The detection table lists the emergency
+  and one-time-code floors and the carrier scam-label check, Rules shows its
+  six tabs, backup is under Settings, Advanced, and the caller ID example uses
+  the popup's current wording. It also names the hand-reviewed numbers source
+  and says the build needs JDK 17 or 21.
 
 ## v1.10.0 (2026-09-28)
 

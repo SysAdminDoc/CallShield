@@ -5,8 +5,8 @@
 <h1 align="center">CallShield</h1>
 
 <p align="center">
-  <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 51,363 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  <strong>Open-source spam call blocker and text screener for Android</strong><br>
+  30+ detection layers with an on-device ML model | 51,363 spam numbers | Real-time caller ID | RCS filter | No API keys
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,363-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
+CallShield blocks spam calls and flags spam texts with an on-device engine of more than **30 detection layers**. They include a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity signals, an RCS notification filter and real-time caller ID. Its 51,363-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts and no tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -56,14 +56,14 @@ shard service is unavailable.
 
 ## Getting Started
 
-1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). See [Installing](#installing) for signature details.
-2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. You can skip notifications, Notification Access (for RCS filtering), and Overlay (for live caller ID). The review shows what each skipped grant disables. The last step lets you choose Recommended, Strict, or Contacts only. Open Settings and tap **Run setup again** whenever you want to change these choices.
-3. **Sync the database.** The Home screen runs a first sync on its own. After that, background syncs check every six hours.
-4. **Recommended starting profile.** Choose Recommended for the default call and text controls. Strict adds aggressive call checks, blocks hidden callers, and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Every profile change offers Undo. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
+1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). [Installing](#installing) has the signature details. If a sideloaded install won't take its permissions, see [Permissions look granted but nothing works](#permissions-look-granted-but-nothing-works).
+2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. Notifications, Notification Access and Overlay are optional. Notification Access powers the RCS filter, push-alert caller trust and meeting mode, and Overlay shows live caller ID. The review at the end says what each skipped grant turns off.
+3. **Pick a protection level.** Setup ends with Recommended, Strict or Contacts only. Recommended keeps the default call and text controls. Strict adds aggressive call checks, blocks hidden callers and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Home and Settings switch levels later with Undo, and **Run setup again** in Settings walks through everything once more.
+4. **Let it sync.** Home runs the first database sync by itself. After that the database is checked every six hours and the trending feeds every 30 minutes.
 
-New installs use the AMOLED theme. Settings opens on Basic controls for blocking,
-safety, notifications and appearance. Advanced holds the detailed access and
-detection options. Change the theme to Graphite, Light or System in Basic.
+New installs use the AMOLED theme. Settings opens on Basic, which covers blocking,
+safety, notifications and appearance. Advanced holds detection, lists, backup and
+the rest. Switch the theme to Graphite, Light or System under Appearance.
 
 For a full walkthrough of every toggle with its default, see [docs/getting-started.md](docs/getting-started.md).
 
@@ -71,12 +71,12 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## How It Works
 
-1. **51,363 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and corroborated community reports.
-2. **15+ layer detection + ML**. Database, heuristics, bounded campaign/churn detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
-3. **Real-time caller ID overlay**. An optional SkipCalls spam check for locally suspicious calls, with SIT tone anti-autodialer
-4. **Trending feeds**. The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports
-5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
-6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
+1. **51,363 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call complaints, numbers the maintainer reviewed by hand, and community reports that several people confirmed.
+2. **30+ detection layers and ML.** The database, heuristics, bounded campaign and churn detection, an on-device gradient-boosted tree, SMS content and burst analysis, the RCS filter, STIR/SHAKEN and more.
+3. **Real-time caller ID overlay.** The local verdict appears as the phone rings. An optional SkipCalls check covers locally suspicious calls, and a SIT tone tells autodialers the line is dead.
+4. **Trending feeds.** The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports.
+5. **Callback-aware.** It won't block a number you recently called or keep answering, a callback after a local emergency call, or a caller who tries twice in five minutes.
+6. **Community-driven.** One-tap anonymous reports go through a Cloudflare Worker, and the maintainer merges them into the database.
 
 ## v1.10.0 Highlights
 
@@ -98,33 +98,17 @@ A new look for every screen, protection levels you can switch in one tap, and a 
 - **Fixes from the review.** Light can be chosen again. Protection test's ML check passes on a healthy phone. Calls from abroad no longer show US place names, and Region rules block area codes that can't exist. Contacts only mode pauses, and says so, instead of blocking everyone when Contacts permission is off.
 - **Fresher data.** The FCC import picks up back-dated complaint batches it used to skip, the trending lists no longer look like an outage to phones, and community reports that three people confirmed stay published.
 
-## v1.8.1 Highlights
-
-A fix release, from a review of the work that went into 1.8.0.
-
-- **Category rules** no longer act on a weak ML block. An ML score under 80 doesn't count as a robocall any more.
-- **Filters** on the Database tab and in the Blocked log keep their chips when Android closes the app, and a new filter never shows the last one's rows while it loads.
-- **Outgoing call check** no longer drops the second of two overlapping calls.
-- **Light theme contrast** meets the AA minimum on the log cleanup chips, the repeat counts and the rule-conflict warning.
-- **Telemarketing range names** in the "why was this blocked" panel follow the app's language.
-
-## v1.8.0 Highlights
-
-- **Answer & hang up** takes a blocked call and drops it straight away, so spam can't leave a voicemail. Off by default. Contributed by tikkamasalla.
-- **Outgoing call check** holds a call you dial to a number CallShield already flags and tells you why before it connects.
-- **Meeting mode** sends unknown callers quietly to voicemail while a meeting app you pick has a call up.
-- **Signed protection data.** Every feed the app downloads now carries the maintainer's signature, the certificate pins that had refused downloads since August are fixed, and a feed mirror covers places where GitHub is blocked.
-- **Region rules** reach outside North America, and Settings gains telemarketing ranges for Spain, India and Brazil.
-- **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
-- **Community reports** go out once and wait for a connection when you're offline. A new number enters the database once two reports arrive at least 24 hours apart. Reports with reporter buckets also need three different reporters on the same UTC day, because a bucket changes every day and one person could otherwise look like three.
+Earlier releases are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Detection Pipeline (v1.10.0)
 
-All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
+All detection layers implement a shared `IChecker` interface and run in priority order through `CheckerPipeline.run`. The first layer with a verdict wins, and each layer is tested on its own. Priorities are stable numbers, and the ladder below is the live order.
 
 | Priority | Layer | Verdict | How It Works |
 |---------:|-------|---------|-------------|
-| 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
+| 11000 | **Emergency Number Floor** | Allow | Recognized emergency and public-safety numbers always ring, ahead of every rule (calls only) |
+| 10900 | **One-Time Code Floor** | Allow | Short texts carrying a verification code are never flagged, so sign-ins keep working (texts only) |
+| 10000 | **Manual Whitelist** | Allow | Numbers you marked as always allowed, emergency contacts included |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
 |  8800 | **Contacts-Only Mode** | Block | Calls outside your contacts and trusted numbers are blocked |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
@@ -146,19 +130,19 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
 |  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns (requires the device to provide a name during screening) |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
-|  4500 | *Campaign Recorder* |. | Side-effect only; feeds burst detection below |
+|  4500 | *Campaign Recorder* | None | Side effect only. It records the call for the burst detection below |
 |  4300 | **Region Rules** | Block | Opt-in offline blocking outside the US/Canadian regions and country calling codes you allow |
 |  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours (calls only) |
-|  3500 | **Frequency Auto-Block** | Block | With call log access, numbers with 3+ incoming calls that rang in 7 days get auto-blocked; screened blocks and silences don't count |
-|  3000 | **Heuristic Engine** | Block | North American VoIP ranges, neighbor spoofing, toll-free and rapid-fire checks; international risk checks also run |
+|  3500 | **Frequency Auto-Block** | Block | With call log access, numbers with 3+ incoming calls that rang in 7 days get auto-blocked. Screened blocks and silences don't count |
+|  3000 | **Heuristic Engine** | Block | North American VoIP ranges, neighbor spoofing, toll-free and rapid-fire checks. International risk checks also run |
 |  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
 |  2250 | **Caller Name Rules** | Block | Carrier-presented names can match bounded, user-defined `*`/`?` patterns after every allow layer (requires the device to provide a name during screening) |
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 |  1500 | **Meeting Mode** | Silence | Opt-in. While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail. Runs on notification access, with no calendar permission |
 
-SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900. 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
+SMS-specific layers run after the shared chain, in their own priority order: **SMS Keyword Rules** (5400, with schedules) → **Carrier Scam Label** (4750, a sender your carrier renamed to its scam label, such as Singapore's Likely-SCAM) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900, with 30+ regex patterns, URL shorteners, suspicious TLDs and the spam-domain list).
 
-> **A blocked text still reaches your inbox.** Calls are different from
+> **A flagged text still reaches your inbox.** Calls are different from
 > messages here, and the table above is about verdicts, not delivery. CallShield
 > screens calls through Android's `CallScreeningService`, which can actually
 > reject a call. For messages it listens on `SMS_RECEIVED_ACTION`, and since
@@ -171,7 +155,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 ### Additional Layers
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
 - **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority. Area codes absent from the pinned NANP table pass through this regional rule
-- **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
+- **Message notification screening**. Once Notification Access is on, Google Messages and Samsung Messages are screened by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook and Thunderbird can each be turned on. A match in a private messenger or an email app shows a separate warning and leaves the original notification alone.
 - **URL Safety**. Local spam-domain checks stay on-device. Optional link checks use PhishTank and a six-hour OpenPhish feed. PhishTank receives only the site's base domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
@@ -183,31 +167,32 @@ Any wildcard, range, or SMS keyword rule can be time-gated to specific days of t
 
 ## Live Caller ID Overlay
 
-For a locally suspicious call, CallShield can show a real-time overlay when the default-off **Live caller enrichment** setting is on. It checks the number against SkipCalls' spam reports:
+With the Overlay permission granted, a caller ID card appears as the phone rings. It shows the number, where it's from and CallShield's own verdict. For a locally suspicious call, the default-off **Live caller enrichment** setting also asks SkipCalls about the number:
 
 ```
-┌──────────────────────────────────┐
-│ LIKELY SPAM                      │
-│ (212) 555-1234                   │
-│ New York, NY                     │
-│ Spam Score: 50% (Flagged)        │
-│ ⚠ SkipCalls: Flagged             │
-│ All sources checked              │
-│ [Search] [Block] [Dismiss]       │
-│ 🔈 Play SIT Tone (anti-dialer)  │
-└──────────────────────────────────┘
+┌──────────────────────────────────────┐
+│ Likely spam                          │
+│ (212) 555-1234                       │
+│ New York, NY                         │
+│ Spam score: 50% (Flagged)            │
+│ ⚠ SkipCalls: Flagged                 │
+│ All sources checked                  │
+│ [Search]      [Block]      [Dismiss] │
+│ [          Play SIT tone           ] │
+└──────────────────────────────────────┘
 ```
 
-- Shows instantly with the area code, then updates when SkipCalls answers. A scam, robocall, telemarketer or fraud category can flag the call. An answer without one of those categories reads "Reported, no category" and leaves CallShield's own warning in place. SkipCalls gives no report count
-- If SkipCalls can't answer, the overlay keeps CallShield's own warning and says no source returned a definitive result
-- **SIT Tone**. ITU-T E.180 three-tone sequence tricks autodialers into removing your number
-- Color-coded: green (safe) → yellow → orange → red (spam)
+- The card appears at once with the local verdict, which names its reason (for example "50% risk: High-risk VoIP range"), and updates when SkipCalls answers. A scam, robocall, telemarketer or fraud category flags the call. An answer without one of those categories reads "Reported, no category" and leaves CallShield's own warning in place. SkipCalls gives no report count
+- If SkipCalls can't answer, the card keeps CallShield's own warning and says no source returned a definitive result. With enrichment off it says the verdict came from on-device checks
+- TalkBack reads the header and the verdict as they change. Text is at least 14sp, every button is a 48dp target, and Search looks the number up in the phone's language
+- **SIT tone**. The ITU-T E.180 three-tone sequence makes many autodialers mark your number as out of service
+- The score is color-coded: green at 0, yellow above 0, orange from 40 and red from 70
 
 PhoneBlock, OpenCNAM and WhoCalledMe were dropped in September 2026. PhoneBlock and OpenCNAM now require accounts, which CallShield never asks for, and WhoCalledMe's domain is parked. `scripts/probe_live_sources.py` checks that SkipCalls still answers the way the app reads it.
 
 ## ML Spam Scorer
 
-On-device **20-feature gradient-boosted tree** model. Pure Kotlin, no TFLite, no heavy ML libraries. Runs in microseconds.
+An on-device **gradient-boosted tree** of 50 trees over 20 features, with a logistic-regression fallback. It's pure Kotlin with no TFLite or other ML library, and it runs in microseconds.
 
 | Feature | Description |
 |---------|------------|
@@ -227,7 +212,7 @@ On-device **20-feature gradient-boosted tree** model. Pure Kotlin, no TFLite, no
 | subscriber_sequential | Last 4 form ascending/descending run |
 | + 6 additional | Campaign proximity, time-of-day, call frequency, area code density, prefix heat, neighbor spoof score |
 
-Trained by hand on the maintainer's machine from the CallShield database (50K positive + 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.648 for the model that ships today.
+The maintainer trains it by hand from the CallShield database (50K positive and 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.648 for the model that ships today. A quality gate scores the 20% of rows training held out, with the same inference the app runs, and fails when F1 drops below 0.45.
 
 SMS content regressions use a separate CC0, CallShield-authored synthetic
 corpus covering seven locales, sender forms, link classes, legitimate messages,
@@ -238,15 +223,15 @@ by locale and message type without shipping personal data:
 ## Features
 
 ### Number Lookup
-- Instant spam check through all 15+ detection layers, with an animated confidence gauge for probabilistic signals
+- Instant spam check through every detection layer, with an animated confidence gauge for probabilistic signals
 - Auto-paste from clipboard, area code lookup (453 active geographic NANP codes), haptic feedback
 - Verdict cards lead with the deciding rule or causal signal, show confidence only for
   probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
 - On-request SkipCalls spam lookup
 
 ### Recent Calls & Blocked Log
-- Recent calls with contact names, risk indicators, call type icons, filter chips (All/Missed/Spam)
-- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips.
+- Recent calls with contact names, risk indicators, call type icons and filter chips (All, Incoming, Outgoing, Missed, Spam)
+- Blocked log with swipe-to-dismiss and Undo, grouping with severity-scaled accent bars, and Calls, Texts and Reason filters.
   Swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
 - Staggered entrance animations, shimmer loading skeletons
 
@@ -256,8 +241,8 @@ by locale and message type without shipping personal data:
 - Block reasons are spoken as complete plain-English sentences, while swipe-only block, delete,
   and unblock actions remain available through accessibility actions.
 
-### Rules Management (5 tabs)
-- Blocklist, Wildcards, Keywords, Whitelist, Database
+### Rules Management (6 tabs)
+- Blocked, Wildcards, Ranges, Keywords, Trusted, Database
 - Export/import blocklists as JSON, per-rule enable/disable toggles
 - Regex validation before adding wildcard rules
 - Inline priority-conflict warnings name the whitelist, emergency allow, or block rule that wins before an overlapping rule is saved
@@ -270,6 +255,7 @@ by locale and message type without shipping personal data:
 - Protection Test shows local WorkManager attempts and Android stop reasons, with a warning when background quota repeatedly defers protection refreshes
 
 ### Smart Features
+- Expecting a call. From Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight, with a countdown notification and End now
 - Smart suggestions. Detects area code spam patterns, one-tap block entire area code
 - Weekly trend indicator. Shows if spam is increasing or decreasing vs last week
 - Last blocked preview card on dashboard with tap-to-inspect
@@ -291,10 +277,9 @@ by locale and message type without shipping personal data:
 ### Data & System
 - Selective backup/restore for rules, non-secret settings, and opt-in logs, plus CSV log export and auto-cleanup (7/14/30/90 days)
 - Database sync every 6 hours, a trending-feed check every 30 minutes, and a daily digest notification
-- External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row. Each row shows the list's name, the host it comes from, how many numbers it holds and when it last updated, and TalkBack reads it as one item. A row's switch turns its list off or on; a tap on the list's name does nothing. Removing a list takes its numbers out straight away, and Undo puts both back without downloading the list again
+- External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row. Each row shows the list's name, the host it comes from, how many numbers it holds and when it last updated, and TalkBack reads it as one item. A row's switch turns its list off or on. Tapping the list's name does nothing. Removing a list takes its numbers out straight away, and Undo puts both back without downloading the list again
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. For ten minutes after GitHub couldn't be reached at all, the mirror goes first. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't alter the data, though it can hold back updates. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
-- Expecting a call: from Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight, with a countdown notification and End now
-- Quick Settings tile, app shortcuts, home screen widget
+- Two Quick Settings tiles (protection on or off, and Expecting a call), app shortcuts and a home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
 - Home leads with localized blocked-call/text outcomes and collapses completed setup into a review row
@@ -309,10 +294,11 @@ by locale and message type without shipping personal data:
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
 | **FTC Do Not Call** | `api.ftc.gov` (DEMO_KEY) |
-| **Saracroche** | Daily French telemarketing ranges; imported as compact prefixes |
+| **Saracroche** | French telemarketing ranges, imported as compact prefixes when the maintainer asks for them |
 | **PhoneBlock** | Optional authenticated bulk snapshot, maintainer import only |
 | **Nomorobo IRS** | Optional carrier-authorized callback-scam CSV feed |
-| **ToastedSpam** | Community curated list |
+| **ToastedSpam** | Community curated list. It's served over plain HTTP, so the importer skips it unless the maintainer allows insecure sources |
+| **Reviewed numbers** | Numbers the maintainer checked by hand, usually after a GitHub report, kept in `data/spam_numbers_approved.json` |
 | **Community Reports** | Anonymous via Cloudflare Worker |
 
 The source importer also has optional adapters for **PhoneBlock's** versioned
@@ -356,7 +342,7 @@ scrape Nomorobo's restricted carrier feed.
 ### Hot List (checked every 30 minutes, regenerated by hand)
 | File | Contents |
 |------|----------|
-| `hot_numbers.json` | Top 500 trending numbers (last 24h, with three reporters on the same UTC day) |
+| `hot_numbers.json` | Top 500 trending numbers from the last 24 hours. Each needs 4 reports spread over at least two hours, from 3 reporters on the same UTC day |
 | `hot_ranges.json` | NPA-NXX prefixes where at least 4 trending numbers drew reports from at least 6 reporters between them on one UTC day |
 | `spam_domains.json` | Phishing/spam domains from community SMS reports |
 
@@ -369,8 +355,8 @@ scrape Nomorobo's restricted carrier feed.
 | Source | What It Checks |
 |--------|---------------|
 | **Local spam-domain list** | Checks known spam domains on the phone |
-| **PhishTank** | Optional link lookup; receives only the site's base domain |
-| **OpenPhish** | Optional feed checked for updates after six hours of use; matches stay on the phone |
+| **PhishTank** | Optional link lookup. It receives only the site's base domain |
+| **OpenPhish** | Optional feed, checked for updates after six hours of use. Matches stay on the phone |
 
 ## Security
 
@@ -393,11 +379,13 @@ scrape Nomorobo's restricted carrier feed.
 
 ## Privacy
 
-Call and message decisions run on-device. No personal data is collected. Network requests:
-- Syncing spam database from GitHub (public)
-- Optional live caller enrichment is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
+Call and message decisions run on the phone. No personal data is collected. CallShield makes these network requests:
+- The spam database and trending feeds, from this public repository on GitHub, or from the feed mirror if you set one
+- Live caller enrichment, which is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
 - Community reports to the Cloudflare Worker. Each report is committed as a public JSON file to this repository's `data/reports` folder, and the next merge folds it into the database. It holds the reported number, the report type and time, the report's random id, and two reporter IDs that change every day (keyed HMACs of your network's /48 and /64, so the same network can't be linked across days or turned back into an address). An SMS report adds the linked domains and link labels, never message text. The report never holds your IP address. To stop floods and repeat reports, the Worker's short-lived store keys a duplicate check on your IPv4 address or IPv6 /64 for five minutes, and when Cloudflare's rate limiter is unavailable its fallback counter does the same for one minute. Both expire on their own
 - Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain, and the OpenPhish feed is downloaded for local matching. Neither receives message text
+- External blocklists you subscribe to, fetched from the addresses you entered
+- The update check, which is off by default. When it's on, it asks GitHub Releases once a week
 
 No API keys. None required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
@@ -421,7 +409,7 @@ before v1.7.37 were signed with keys that are no longer available. If the
 install fails, you have to uninstall first, which erases your rules and logs,
 so export them before you do:
 
-1. Open CallShield, go to **More → Backup and restore**, and create a portable
+1. Open CallShield, go to **Settings → Advanced → Backup & restore**, and create a portable
    backup. Save it somewhere outside the app, and set a passphrase if the
    backup includes logs.
 2. Uninstall CallShield.
@@ -447,8 +435,8 @@ Every release also ships a `.sha256` sidecar for the APK itself.
 ### Permissions look granted but nothing works
 
 On Android 13 and later a sideloaded app is put behind **restricted settings**.
-The system hides the SMS role and notification access from an app that was not
-installed by an app store, and the permission dialog either never appears or
+The system holds back SMS permissions and notification access from an app that
+wasn't installed by an app store, and the permission dialog either never appears or
 appears and changes nothing. GrapheneOS and CalyxOS apply this the same way
 stock Android does, and it is the most likely reason CallShield sees no
 messages after a clean sideload.
@@ -486,7 +474,8 @@ known-advisory dispositions, and source-snapshot provenance. Run the report
 directly with `python scripts/verify_release_drift.py` when reviewing metadata
 without building an APK.
 
-Requires JDK 17+. With release signing properties configured, the signed APK is
+Requires JDK 17 or 21. The Gradle 8.14 wrapper won't start on JDK 25, so point
+JAVA_HOME at 17 or 21. With release signing properties configured, the signed APK is
 at `app/build/outputs/apk/release/app-release.apk`. Without them, the local
 verification build emits `app-release-unsigned.apk`.
 Generate the release hash sidecar with:
@@ -539,7 +528,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 
 ## Translations
 
-CallShield ships in English with a substantial Simplified Chinese translation.
+CallShield ships in English and Simplified Chinese, which covers about four in five strings.
 More translations are welcome. See
 [docs/TRANSLATING.md](docs/TRANSLATING.md) for the resource layout, the priority
 order for partial translations, and `scripts/check_translations.py`, which
@@ -553,14 +542,14 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Language | Kotlin 2.3.21 |
 | UI | Jetpack Compose BOM 2026.06.01 + Material 3 |
 | Theme | System, Light, Graphite, and true-black AMOLED |
-| Database | Room 2.8.5 (SQLite). 8 entities |
+| Database | Room 2.8.5 (SQLite), 10 entities |
 | Networking | OkHttp 5.4.0 + certificate pinning |
-| JSON | Moshi |
+| JSON | Moshi 1.15.2 |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences 1.2.1 |
-| Background | WorkManager 2.11.2 |
+| Background | WorkManager 2.12.0 |
 | Community API | Cloudflare Workers |
-| URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
+| URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1640 JVM unit tests (JUnit) |
 | Strings | 1708 string resources and 38 plural groups (translation-ready) |
