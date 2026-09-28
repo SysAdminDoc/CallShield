@@ -850,6 +850,109 @@ def pending_reports_for(data_dir: Path, number: str) -> int:
     return sum(event["count"] for event in ledger[number]["events"])
 
 
+def row_for(data_dir: Path, number: str) -> dict | None:
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    return next((row for row in database["numbers"] if row["number"] == number), None)
+
+
+def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
+    """Issue #27: one report of a Munich number waits for corroboration no
+    imported source can give. The maintainer's review publishes it, and later
+    community reports can't demote it."""
+    munich, reported, fresh = "+498943780834", "+18056377456", "+13109462201"
+    fcc_evidence = {
+        "source_id": "fcc_complaints",
+        "retrieved_at": f"{BASE_DAY}T00:00:00+00:00",
+        "expires_at_epoch_ms": 4_000_000_000_000,
+    }
+    write_json(
+        data_dir / "spam_numbers.json",
+        {
+            "version": 7,
+            "updated": BASE_DAY,
+            "sources": ["community_reports"],
+            "numbers": [
+                {
+                    "number": reported,
+                    "type": "robocall",
+                    "reports": 59,
+                    "first_seen": "2015-07-28",
+                    "last_seen": "2026-09-21",
+                    "description": "FCC: Unwanted Calls",
+                    "sources": ["legacy_import"],
+                    "evidence": [fcc_evidence],
+                }
+            ],
+            "prefixes": [],
+        },
+    )
+    write_report(data_dir, "498943780834_1.json", munich, None, f"{BASE_DAY}T11:54:55+00:00", report_type="unknown")
+    run_drain(data_dir)
+    assert row_for(data_dir, munich) is None, "one report must not publish a number"
+    assert pending_reports_for(data_dir, munich) == 1
+
+    approvals = {
+        "approved": [
+            {
+                "number": munich,
+                "type": "telemarketer",
+                "reviewed_at": BASE_DAY,
+                "reference": "https://github.com/SysAdminDoc/CallShield/issues/27",
+                "note": "tellows.de 21 ratings, Clever Dialer 41 reviews",
+            },
+            {"number": reported, "type": "robocall", "reviewed_at": BASE_DAY, "reference": "https://github.com/SysAdminDoc/CallShield/issues/24"},
+            {"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/report"},
+        ]
+    }
+    write_json(data_dir / "spam_numbers_approved.json", approvals)
+    run_script("merge_community_reports.py", data_dir)
+
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    assert database["version"] == 8, database["version"]
+    row = row_for(data_dir, munich)
+    assert row is not None, "the reviewed number must be published"
+    assert row["type"] == "telemarketer" and row["reports"] == 1, row
+    assert row["description"] == "Community reported; Reviewed by the maintainer", row
+    assert row["sources"] == ["community"], row
+    [evidence] = row["evidence"]
+    assert evidence["source_id"] == "maintainer_review" and evidence["confidence_tier"] == "curated", evidence
+    expected_expiry = datetime.fromisoformat(f"{BASE_DAY}T00:00:00+00:00") + timedelta(days=730)
+    assert evidence["expires_at_epoch_ms"] == int(expected_expiry.timestamp() * 1000), evidence
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert munich not in pending, pending
+
+    # An imported row keeps its own evidence and counts, and gains the review.
+    row = row_for(data_dir, reported)
+    assert row["reports"] == 59 and row["description"] == "FCC: Unwanted Calls; Reviewed by the maintainer", row
+    assert [item["source_id"] for item in row["evidence"]] == ["fcc_complaints", "maintainer_review"], row
+
+    # A number nobody reported through the app is published on the review alone.
+    row = row_for(data_dir, fresh)
+    assert row["sources"] == ["maintainer_review"] and row["reports"] == 1, row
+    assert row["description"] == "Reviewed by the maintainer", row
+
+    # Running again changes nothing, so phones don't download the database again.
+    run_script("merge_community_reports.py", data_dir)
+    assert json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))["version"] == 8
+
+    # A later bucketed report can't demote it the way it demotes a community-only row.
+    write_report(data_dir, "498943780834_2.json", munich, BUCKETS[0], NOW, report_type="unknown")
+    run_drain(data_dir)
+    row = row_for(data_dir, munich)
+    assert row is not None and row["reports"] == 2, row
+
+    # An approval that can't be checked stops the merge instead of being skipped.
+    for broken in (
+        {"number": "+15555550100", "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"},
+        {"number": fresh, "type": "scam", "reviewed_at": "2999-01-01", "reference": "https://example.org/r"},
+        {"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "http://example.org/r"},
+        {"number": fresh, "type": "", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"},
+    ):
+        write_json(data_dir / "spam_numbers_approved.json", {"approved": [broken]})
+        result = run_script_result("merge_community_reports.py", data_dir)
+        assert result.returncode != 0 and "spam_numbers_approved.json" in result.stderr, (broken, result.stderr)
+
+
 def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     """A resend that lands after its original was merged and deleted counts
     once. The queue alone can't see that, so merged ids are kept a while."""
@@ -1013,6 +1116,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_maintainer_approval_publishes_a_reviewed_number(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_resend_across_drains_counts_once(Path(tmp) / "data")

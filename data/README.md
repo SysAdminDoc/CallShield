@@ -17,6 +17,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_domains_approved.json`: Optional maintainer approval input for domain
   candidates. Add reviewed names to its `approved` array. An invalid shape
   stops the extractor.
+- `spam_numbers_approved.json`: Numbers the maintainer checked by hand, usually a spam report filed as a GitHub issue for a number no imported source covers. Each entry gives the number, a `type`, the `reviewed_at` date, an https `reference` to the report and a note on what the review found. The merge publishes each one with a `maintainer_review` evidence record, and an entry it can't check stops the merge
 - `spam_domains_review.json`: Generated domain candidates awaiting approval
 - `not_spam_review.json`: Generated community false-positive review candidates
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
@@ -230,10 +231,18 @@ reports expire after 30 days. The merge applies this rule to older
 community-only database rows too, including a run with no queued reports.
 Rows backed by FCC, FTC or another source aren't held by this gate.
 
+Some reported numbers can't pass that gate at all. A German number reported
+once has no FCC or FTC record to back it, and few other people will report it.
+When the maintainer has checked such a number against public complaint sites,
+it goes in `spam_numbers_approved.json` with a link to the report. The merge
+then publishes it, keeping the pending community reports in its count, and the
+review is the row's own evidence, so later reports can't demote it.
+
 Every evidence record carries `expires_at_epoch_ms`, and phones stop matching
 a downloaded number or range once its earliest record expires. The manifest's
 `evidence_ttl_days` sets that lifetime for each source: a year for complaint
-feeds, 90 days for Saracroche ranges and ten years for the database's own snapshot record. `stale_after_days` only decides
+feeds, 90 days for Saracroche ranges, two years for a maintainer review and ten
+years for the database's own snapshot record. `stale_after_days` only decides
 when the weekly check calls an import overdue. Until 2026-09-28 the two were
 the same number, which put every row on a 14 to 30 day clock. Each import now
 recomputes stored expiries from the manifest, and the weekly check fails when

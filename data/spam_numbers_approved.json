@@ -1,0 +1,12 @@
+{
+  "about": "Numbers the maintainer checked by hand against public complaint sites, usually after a spam report filed as a GitHub issue. merge_community_reports.py publishes each one with a maintainer_review evidence record. Every entry needs the number, a type, the review date and a link to the report.",
+  "approved": [
+    {
+      "number": "+498943780834",
+      "type": "telemarketer",
+      "reviewed_at": "2026-09-28",
+      "reference": "https://github.com/SysAdminDoc/CallShield/issues/27",
+      "note": "Munich landline. Clever Dialer: 1.5 of 5 from 223 reviews, 342 blocks, repeated daily calls claiming to be a health insurer. tellows.de: 21 ratings warning about it."
+    }
+  ]
+}

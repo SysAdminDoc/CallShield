@@ -222,7 +222,7 @@ class SourceRegistryTest(unittest.TestCase):
     def test_real_manifest_keeps_number_evidence_for_at_least_a_year(self):
         manifest = source_registry.load_source_manifest(Path(__file__).parent.parent / "data" / "source-manifest.json")
         ttl = {source["id"]: source_registry.evidence_ttl_days(source) for source in manifest["sources"]}
-        for source_id in ("ftc_complaints", "fcc_complaints", "community_reports", "github_database"):
+        for source_id in ("ftc_complaints", "fcc_complaints", "community_reports", "github_database", "maintainer_review"):
             self.assertGreaterEqual(ttl[source_id], 365, source_id)
         self.assertGreaterEqual(ttl["saracroche_prefixes"], 90)
 

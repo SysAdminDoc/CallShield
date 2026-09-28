@@ -25,7 +25,12 @@ from report_dedup import (
     validated_report_id,
     validated_reporter_bucket,
 )
-from source_registry import source_health_report
+from source_registry import (
+    load_source_manifest,
+    merge_evidence,
+    source_evidence,
+    source_health_report,
+)
 from spam_shards import write_sharded_database
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
@@ -35,6 +40,13 @@ NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 MERGED_IDS_FILE = DATA_DIR / "merged_report_ids.json"
 COMMUNITY_PENDING_FILE = DATA_DIR / "community_pending.json"
+# Numbers the maintainer checked by hand, usually a spam report filed as a
+# GitHub issue, against public complaint sites. Tracked, so every approval is
+# on the record with the reason for it.
+APPROVED_NUMBERS_FILE = DATA_DIR / "spam_numbers_approved.json"
+SOURCE_MANIFEST_FILE = Path(__file__).parent.parent / "data" / "source-manifest.json"
+MAINTAINER_SOURCE = "maintainer_review"
+MAINTAINER_DESCRIPTION = "Reviewed by the maintainer"
 COMMUNITY_PENDING_DAYS = 30
 COMMUNITY_REPORTER_QUORUM = 3
 # Every promotion needs two reports this far apart, with or without buckets.
@@ -290,6 +302,92 @@ def apply_approved_corrections(
         candidate["applied_at"] = today
         candidate["applied_not_spam_votes"] = votes
     return decayed, removed
+
+
+def load_approved_numbers() -> list[dict]:
+    """Read the maintainer's approvals; a missing file means none.
+
+    A file that exists but can't be read stops the merge. Skipping it would
+    quietly drop approvals the maintainer made on purpose.
+    """
+    if not APPROVED_NUMBERS_FILE.exists():
+        return []
+    payload = json.loads(APPROVED_NUMBERS_FILE.read_text(encoding="utf-8"))
+    approved = payload.get("approved") if isinstance(payload, dict) else None
+    if not isinstance(approved, list):
+        raise TypeError(f"{APPROVED_NUMBERS_FILE.name} must hold an 'approved' list")
+    return approved
+
+
+def apply_maintainer_approvals(
+    existing: dict[str, dict],
+    pending: dict[str, dict],
+    approvals: list[dict],
+    manifest: dict,
+    today: str,
+) -> tuple[int, int]:
+    """Publish numbers the maintainer checked, with that review as their evidence.
+
+    The community gate holds a number until independent reports back it, which
+    is right for anonymous reports but leaves a number someone reported on
+    GitHub waiting forever when it's a region no imported source covers
+    (issue #27, a Munich number). The review is its own evidence record, so the
+    row is no longer community-only and the quorum rechecks leave it alone. The
+    pending reports still count toward it. Running this twice changes nothing.
+    """
+
+    added = 0
+    updated = 0
+    for approval in approvals:
+        if not isinstance(approval, dict):
+            raise TypeError(f"{APPROVED_NUMBERS_FILE.name}: every approval must be an object")
+        number = validated_report_number(str(approval.get("number", "")))
+        reviewed = approval.get("reviewed_at")
+        reference = approval.get("reference")
+        spam_type = approval.get("type")
+        if not number:
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {approval.get('number')!r} is not a plausible number")
+        if not isinstance(reviewed, str) or not _is_valid_day(reviewed, today):
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a reviewed_at date no later than today")
+        if not isinstance(reference, str) or not reference.startswith("https://"):
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs an https reference to the report")
+        if not isinstance(spam_type, str) or not spam_type.replace("_", "").isalpha():
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a type such as telemarketer or scam")
+
+        evidence = source_evidence(
+            manifest,
+            MAINTAINER_SOURCE,
+            {"first_seen": reviewed, "last_seen": reviewed},
+            retrieved_at=f"{reviewed}T00:00:00+00:00",
+        )
+        entry = existing.get(number)
+        if entry is not None:
+            merged = merge_evidence(entry.get("evidence"), [evidence])
+            if merged == entry.get("evidence"):
+                continue
+            entry["evidence"] = merged
+            if MAINTAINER_DESCRIPTION not in entry.get("description", ""):
+                entry["description"] = f"{entry.get('description', '')}; {MAINTAINER_DESCRIPTION}".strip("; ")
+            updated += 1
+            continue
+
+        state = pending.pop(number, None)
+        events = state["events"] if state else []
+        days = [event["day"] for event in events] + [reviewed]
+        base = dict(state["entry"]) if state else {}
+        entry = {
+            "number": number,
+            "type": spam_type if base.get("type") in (None, "", "unknown") else base["type"],
+            "reports": max(1, sum(event.get("count", 1) for event in events)),
+            "first_seen": min(days),
+            "last_seen": max(days),
+            "description": f"{COMMUNITY_DESCRIPTION}; {MAINTAINER_DESCRIPTION}" if events else MAINTAINER_DESCRIPTION,
+            "sources": sorted(set(base.get("sources", [])) | {COMMUNITY_SOURCE}) if events else [MAINTAINER_SOURCE],
+            "evidence": [evidence],
+        }
+        existing[number] = entry
+        added += 1
+    return added, updated
 
 
 def update_source_health_snapshot(
@@ -610,6 +708,15 @@ def main(argv: list[str] | None = None):
             quarantine(report_file, rejected_dir)
             rejected += 1
 
+    approvals = load_approved_numbers()
+    approved_added, approved_updated = (0, 0)
+    if approvals:
+        approved_added, approved_updated = apply_maintainer_approvals(
+            existing, pending, approvals, load_source_manifest(SOURCE_MANIFEST_FILE), today
+        )
+        if approved_added or approved_updated:
+            print(f"Maintainer approvals: {approved_added} published, {approved_updated} existing rows marked reviewed")
+
     # Anonymous false-positive votes never mutate the shipped database by
     # default. A distinct-source quorum strictly larger than the spam count can
     # only park a community-only row for maintainer review; rows with any
@@ -675,6 +782,8 @@ def main(argv: list[str] | None = None):
         or decayed > 0
         or removed > 0
         or demoted > 0
+        or approved_added > 0
+        or approved_updated > 0
     )
     if changed:
         db["version"] += 1
