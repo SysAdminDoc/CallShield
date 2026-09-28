@@ -55,18 +55,18 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
-            "1.9.0",
-            "A new look and protection levels",
+            "1.10.0",
+            "Expecting a call, and a database that keeps blocking",
             isLatest = true,
-            date = "September 26, 2026",
-            summary = "Every screen was redesigned, and a full review fixed what it turned up.",
+            date = "September 28, 2026",
+            summary = "Let unknown callers ring for a while, and a fix that keeps the spam database working between updates.",
             changes =
                 listOf(
-                    "Every screen uses the darker AMOLED design, and Light and Graphite are still in Settings",
-                    "Pick Recommended, Strict or Contacts only in setup, on Home or in Settings",
-                    "Settings splits into Basic and Advanced",
-                    "Choosing Light works again, and Protection test's ML check passes on a healthy phone",
-                    "Calls from abroad no longer show US place names, and Contacts only pauses instead of blocking everyone",
+                    "Expecting a call lets unknown callers ring for an hour, three hours or until midnight, from Home or a Quick Settings tile",
+                    "Numbers from the spam database no longer stop blocking a few weeks after an update",
+                    "The caller ID popup works with TalkBack, and the Blocked log and Blocklist fit small screens with large text",
+                    "A blocked-call alert offers Not spam for a day, and texts sent under a carrier's scam label are flagged",
+                    "Answer and hang up handles national-format numbers and rejects instead of answering while roaming",
                 ),
         )
         Spacer(Modifier.height(14.dp))
@@ -108,6 +108,20 @@ fun ChangelogScreen() {
         }
         AnimatedVisibility(visible = showHistory) {
             Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.9.0",
+                    "A new look and protection levels",
+                    date = "September 26, 2026",
+                    summary = "Every screen was redesigned, and a full review fixed what it turned up.",
+                    changes =
+                        listOf(
+                            "Every screen uses the darker AMOLED design, and Light and Graphite are still in Settings",
+                            "Pick Recommended, Strict or Contacts only in setup, on Home or in Settings",
+                            "Settings splits into Basic and Advanced",
+                            "Choosing Light works again, and Protection test's ML check passes on a healthy phone",
+                            "Calls from abroad no longer show US place names, and Contacts only pauses instead of blocking everyone",
+                        ),
+                )
                 VersionEntry(
                     "1.8.1",
                     "Fixes for category rules, filters and contrast",

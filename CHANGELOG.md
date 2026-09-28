@@ -4,11 +4,27 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.10.0 (2026-09-28)
+
 - Expecting a call lets unknown callers ring for an hour, three hours or until
   midnight, from Home or a Quick Settings tile. Your blocked numbers,
   wildcard rules and a failed caller ID check still block, and contacts-only
   mode steps aside for it. An ongoing notification counts down to the end and
   offers End now, and the window ends by itself.
+- Numbers from the spam database keep blocking between database updates. A
+  phone stops matching a downloaded number once its evidence expires, and every
+  number in the database carried evidence due to expire between October 9 and
+  October 25, so the database would have stopped protecting anyone if updates
+  paused. Complaint evidence now lasts a year from its import, the database's
+  own record ten years and French telemarketing ranges 90 days, and the weekly
+  data check fails a month before any of it runs out. The fix travels with the
+  data, so phones still on 1.9.0 get it with their next sync.
+- A number the maintainer has checked by hand can go into the database when no
+  imported source covers it. Such a row names the review as its evidence, and
+  later reports can't take it back out. The first is +49 89 43780834, a Munich
+  line reported in #27.
+- The README says plainly that CallShield ships from GitHub Releases only, with
+  no store listing planned, and the unused F-Droid submission files are gone.
 - The Blocked log and Blocklist fit a 360x780dp phone with 3-button
   navigation and large text. When the screen is short for its text size they
   drop their intro lines and tighten the empty card, so "Show all activity"

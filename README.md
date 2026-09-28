@@ -78,6 +78,16 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
+## v1.10.0 Highlights
+
+Let unknown callers ring when you're waiting for a call, and a fix that keeps the spam database blocking between updates.
+
+- **Expecting a call.** From Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight. Your blocked numbers, wildcard rules and a failed caller ID check still block, and a countdown notification offers End now.
+- **The database keeps working.** Every number's evidence was due to expire in October, and a phone stops matching a number once that happens. Complaint evidence now lasts a year, and the weekly data check warns a month ahead. Phones on 1.9.0 get this with their next sync.
+- **Reviewed numbers.** A number the maintainer checks by hand can join the database when no imported source covers it, starting with a Munich number reported on GitHub.
+- **Easier to use.** The caller ID popup works with TalkBack, the Blocked log and Blocklist fit small screens with large text, and a blocked-call alert offers Not spam for a day.
+- **Texts and hang-ups.** Texts sent under a carrier's scam label are flagged, and Answer and hang up handles national-format numbers and rejects instead of answering while roaming.
+
 ## v1.9.0 Highlights
 
 A new look for every screen, protection levels you can switch in one tap, and a round of fixes from a full review.
@@ -108,7 +118,7 @@ A fix release, from a review of the work that went into 1.8.0.
 - **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
 - **Community reports** go out once and wait for a connection when you're offline. A new number enters the database once two reports arrive at least 24 hours apart. Reports with reporter buckets also need three different reporters on the same UTC day, because a bucket changes every day and one person could otherwise look like three.
 
-## Detection Pipeline (v1.9.0)
+## Detection Pipeline (v1.10.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
 
