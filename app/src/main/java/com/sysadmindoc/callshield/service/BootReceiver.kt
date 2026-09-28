@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.service.notification.NotificationListenerService
+import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.launch
 
 /**
  * Re-asserts background protection after the two events that tear it down:
@@ -42,6 +44,7 @@ class BootReceiver : BroadcastReceiver() {
 
 private fun reassertProtection(context: Context) {
     (context.applicationContext as? com.sysadmindoc.callshield.CallShieldApp)?.initializeAfterUserUnlock()
+    restoreExpectingCallNotice(context.applicationContext)
     SyncWorker.schedule(context)
     HotListSyncWorker.schedule(context)
     DigestWorker.schedule(context)
@@ -56,5 +59,16 @@ private fun reassertProtection(context: Context) {
     } catch (_: Exception) {
         // requestRebind throws if notification access was revoked; the
         // user must re-grant it — nothing to do from here.
+    }
+}
+
+/** An "Expecting a call" window outlives a reboot, but its notification doesn't. */
+private fun restoreExpectingCallNotice(context: Context) {
+    com.sysadmindoc.callshield.CallShieldApp.appScope.launch {
+        try {
+            ExpectingCallController.restoreNotification(context, SpamRepository.getInstance(context))
+        } catch (e: Exception) {
+            android.util.Log.w("BootReceiver", "Couldn't restore the expecting-a-call notice", e)
+        }
     }
 }

@@ -219,6 +219,9 @@ class SpamRepository(
         val KEY_MEETING_MODE = booleanPreferencesKey("meeting_mode_enabled")
         val KEY_MEETING_MODE_APPS = stringSetPreferencesKey("meeting_mode_packages")
 
+        // "Expecting a call": unknown callers ring until this wall-clock time (0 = off).
+        val KEY_EXPECTING_CALL_UNTIL = longPreferencesKey("expecting_call_until")
+
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
@@ -439,6 +442,7 @@ class SpamRepository(
     val answerHangUpEnabled: Flow<Boolean> = settingsRepository.answerHangUpEnabled
     val hangUpDelaySeconds: Flow<Int> = settingsRepository.hangUpDelaySeconds
     val pushAlertEnabled: Flow<Boolean> = settingsRepository.pushAlertEnabled
+    val expectingCallUntil: Flow<Long> = settingsRepository.expectingCallUntil
     val pushAlertDisabledPackages: Flow<Set<String>> = settingsRepository.pushAlertDisabledPackages
     internal val smsMessageCapabilityStatus: Flow<MessageCapabilityStatus> = settingsRepository.smsMessageCapabilityStatus
     internal val notificationMessageCapabilityStatus: Flow<MessageCapabilityStatus> =
@@ -537,6 +541,8 @@ class SpamRepository(
     suspend fun setHangUpDelaySeconds(seconds: Int) = settingsRepository.setHangUpDelaySeconds(seconds)
 
     suspend fun setPushAlert(enabled: Boolean) = settingsRepository.setPushAlert(enabled)
+
+    suspend fun setExpectingCallUntil(until: Long) = settingsRepository.setExpectingCallUntil(until)
 
     suspend fun togglePushAlertPackage(
         pkg: String,

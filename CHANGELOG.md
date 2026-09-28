@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Expecting a call lets unknown callers ring for an hour, three hours or until
+  midnight, from Home or a Quick Settings tile. Your blocked numbers,
+  wildcard rules and a failed caller ID check still block, and contacts-only
+  mode steps aside for it. An ongoing notification counts down to the end and
+  offers End now, and the window ends by itself.
 - The Blocked log and Blocklist fit a 360x780dp phone with 3-button
   navigation and large text. When the screen is short for its text size they
   drop their intro lines and tighten the empty card, so "Show all activity"

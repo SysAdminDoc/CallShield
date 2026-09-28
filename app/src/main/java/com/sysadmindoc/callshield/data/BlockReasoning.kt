@@ -152,6 +152,14 @@ object BlockReasoning {
                     )
                 }
 
+                BlockReasonCode.EXPECTING_CALL -> {
+                    reasoning(
+                        s(R.string.reasoning_expecting_call_headline),
+                        s(R.string.reasoning_expecting_call_detail),
+                        s(R.string.reasoning_still_win_expecting_call),
+                    )
+                }
+
                 BlockReasonCode.STIR_SHAKEN_TRUSTED -> {
                     val display = StirShakenSemantics.forAndroidVerificationStatus(context, StirShakenSemantics.VERIFICATION_STATUS_PASSED)
                     Reasoning(

@@ -269,6 +269,12 @@ object CheckerPriority {
     // community reports included, is older than a year and the number isn't
     // trending (StirShakenTrustChecker.decidePure).
     // Paired with STIR_SHAKEN (block side) above.
+    // EXPECTING_CALL: the user said a call from an unknown number is coming.
+    // It sits under their blocklist, system list and wildcard rules and under a
+    // failed STIR/SHAKEN check, which still block; contacts-only mode stands
+    // aside for it (ContactsOnlyChecker), and it beats everything downloaded or
+    // statistical below.
+    const val EXPECTING_CALL = 5_360
     const val TEMPORARY_ALLOW = 5_350 // one-off false-positive recovery
     const val PREFIX_MATCH = 5_320 // downloaded prefix reputation rows (country/NPA ranges)
     const val REGULATORY_PREFIX = 5_310 // opt-in country telemarketing prefix blocks
@@ -482,6 +488,7 @@ object SpamCheckers {
             add(StirShakenChecker())
             add(UserBlocklistChecker(repo))
             add(TemporaryAllowChecker(repo))
+            add(ExpectingCallChecker())
             add(DatabaseChecker(repo))
             add(DbPrefixExpansionChecker(repo))
             add(SystemBlockListChecker(appContext))

@@ -9,6 +9,7 @@ import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.RegionRules
@@ -133,13 +134,18 @@ internal class ContactsOnlyChecker(
     private val contactsReadable: (Context) -> Boolean = {
         CallShieldPermissions.isPermissionGranted(it, Manifest.permission.READ_CONTACTS)
     },
+    private val now: () -> Long = System::currentTimeMillis,
 ) : IChecker {
     override val priority = CheckerPriority.CONTACTS_ONLY
     override val name = "contacts_only"
 
     // Calls-only, per the documented contract — an SMS from a non-contact
     // (OTP shortcode, bank, delivery) must not be logged as a blocked call.
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.smsBody == null && (ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false)
+    // An "Expecting a call" window is for exactly the stranger this mode rejects.
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.smsBody == null &&
+            (ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false) &&
+            !ExpectingCall.isActive(ctx.prefs, now())
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         // Without READ_CONTACTS every lookup misses, so every caller, saved
@@ -354,6 +360,22 @@ internal class TemporaryAllowChecker(
         ctx.lookupForms.firstNotNullOfOrNull { repo.findTemporaryWhitelistEntryInternal(it) } ?: return null
         return BlockResult.allow("temporary_allow")
     }
+}
+
+/**
+ * "Expecting a call" window: an unknown caller rings until it ends. Every check
+ * above it still applies (the user's blocklist, system list and wildcard rules,
+ * a failed STIR/SHAKEN check), and texts aren't affected.
+ */
+internal class ExpectingCallChecker(
+    private val now: () -> Long = System::currentTimeMillis,
+) : IChecker {
+    override val priority = CheckerPriority.EXPECTING_CALL
+    override val name = "expecting_call"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.smsBody == null && ExpectingCall.isActive(ctx.prefs, now())
+
+    override suspend fun check(ctx: CheckContext): BlockResult = BlockResult.allow("expecting_call")
 }
 
 /**

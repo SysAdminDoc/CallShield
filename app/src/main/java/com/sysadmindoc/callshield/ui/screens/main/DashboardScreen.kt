@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhoneDisabled
+import androidx.compose.material.icons.filled.PhoneInTalk
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -64,6 +66,8 @@ import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +113,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
+import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -146,6 +151,7 @@ import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.util.Date
 
 @Composable
 fun DashboardScreen(
@@ -168,6 +174,7 @@ fun DashboardScreen(
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val expectingCallUntil by viewModel.expectingCallUntil.collectAsStateWithLifecycle()
     val pushAlert by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val meetingMode by viewModel.meetingModeEnabled.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
@@ -839,6 +846,12 @@ fun DashboardScreen(
                     hapticTick(context)
                     viewModel.sync()
                 }
+                GradientDivider()
+                ExpectingCallRow(
+                    until = expectingCallUntil,
+                    onStart = viewModel::startExpectingCall,
+                    onEnd = viewModel::endExpectingCall,
+                )
                 GradientDivider()
                 DashboardActionRow(
                     icon = Icons.Default.Call,
@@ -1826,6 +1839,66 @@ private fun SetupStateBadge(
         fontWeight = FontWeight.SemiBold,
     )
 }
+
+/**
+ * "Expecting a call": Start offers an hour, three hours or until midnight;
+ * while the window runs the row says when it ends and offers End now.
+ */
+@Composable
+private fun ExpectingCallRow(
+    until: Long,
+    onStart: (ExpectingCall.Length) -> Unit,
+    onEnd: () -> Unit,
+) {
+    val context = LocalContext.current
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    // Recompose when the window runs out so the row turns back by itself.
+    LaunchedEffect(until) {
+        now = System.currentTimeMillis()
+        if (until > now) {
+            delay(until - now)
+            now = System.currentTimeMillis()
+        }
+    }
+    val active = until > now
+    var menuOpen by remember { mutableStateOf(false) }
+    Box {
+        DashboardActionRow(
+            icon = Icons.Default.PhoneInTalk,
+            title = stringResource(R.string.expecting_call_title),
+            subtitle =
+                if (active) {
+                    stringResource(R.string.expecting_call_active, DateFormat.getTimeFormat(context).format(Date(until)))
+                } else {
+                    stringResource(R.string.expecting_call_subtitle)
+                },
+            accentColor = CatYellow,
+            actionLabel = stringResource(if (active) R.string.expecting_call_end else R.string.expecting_call_start),
+            loading = false,
+            enabled = true,
+        ) {
+            if (active) onEnd() else menuOpen = true
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            ExpectingCall.Length.entries.forEach { length ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(length.labelRes())) },
+                    onClick = {
+                        menuOpen = false
+                        onStart(length)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun ExpectingCall.Length.labelRes(): Int =
+    when (this) {
+        ExpectingCall.Length.ONE_HOUR -> R.string.expecting_call_one_hour
+        ExpectingCall.Length.THREE_HOURS -> R.string.expecting_call_three_hours
+        ExpectingCall.Length.UNTIL_MIDNIGHT -> R.string.expecting_call_until_midnight
+    }
 
 @Composable
 private fun DashboardActionRow(

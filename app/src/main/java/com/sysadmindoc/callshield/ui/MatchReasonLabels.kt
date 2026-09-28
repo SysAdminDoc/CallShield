@@ -167,6 +167,7 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
         "stir_shaken_trusted" -> R.string.lookup_checker_stir_shaken_trusted
         "stir_shaken_failed" -> R.string.lookup_checker_stir_shaken_failed
         "temporary_allow" -> R.string.lookup_checker_temporary_allow
+        "expecting_call" -> R.string.lookup_checker_expecting_call
         "system_block_list" -> R.string.lookup_checker_system_block_list
         "user_blocklist" -> R.string.lookup_checker_user_blocklist
         "database" -> R.string.lookup_checker_database
@@ -248,6 +249,7 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.STIR_SHAKEN_TRUSTED -> R.string.accessibility_reason_stir_trusted
         BlockReasonCode.STIR_SHAKEN_FAILED -> R.string.accessibility_reason_stir_failed
         BlockReasonCode.TEMPORARY_ALLOW -> R.string.accessibility_reason_temporary_allow
+        BlockReasonCode.EXPECTING_CALL -> R.string.accessibility_reason_expecting_call
         BlockReasonCode.TEMPORARY_BLOCK -> R.string.accessibility_reason_temporary_block
         BlockReasonCode.SYSTEM_BLOCK_LIST -> R.string.accessibility_reason_system_block_list
         BlockReasonCode.USER_BLOCKLIST -> R.string.accessibility_reason_user_blocklist

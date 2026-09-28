@@ -80,6 +80,10 @@ class SpamActionReceiver : BroadcastReceiver() {
                     }
                 }
 
+                NotificationHelper.ACTION_END_EXPECTING_CALL -> {
+                    suspend { ExpectingCallController.end(appContext, repo) }
+                }
+
                 NotificationHelper.ACTION_CLEAR_SUMMARY -> {
                     // Fired by the blocked-summary group's deleteIntent when the
                     // user swipes it away. Pure in-memory reset, no async work —

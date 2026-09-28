@@ -62,6 +62,7 @@ object NotificationHelper {
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
     const val ACTION_NOT_SPAM = "com.sysadmindoc.callshield.ACTION_NOT_SPAM"
     const val ACTION_CLEAR_SUMMARY = "com.sysadmindoc.callshield.ACTION_CLEAR_SUMMARY"
+    const val ACTION_END_EXPECTING_CALL = "com.sysadmindoc.callshield.ACTION_END_EXPECTING_CALL"
     const val EXTRA_NUMBER = "extra_number"
     const val EXTRA_NOTIF_ID = "extra_notif_id"
     const val EXTRA_IS_CALL = "extra_is_call"
@@ -87,6 +88,7 @@ object NotificationHelper {
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
     internal const val APP_UPDATE_NOTIFICATION_ID = 5
     internal const val FEED_TRUST_NOTIFICATION_ID = 6
+    internal const val EXPECTING_CALL_NOTIFICATION_ID = 7
 
     /**
      * Notification ID for the after-call "Was this spam?" feedback notice.
@@ -126,6 +128,54 @@ object NotificationHelper {
             // Revoked at runtime between the check and the post — drop silently.
             false
         }
+    }
+
+    /**
+     * The ongoing "Expecting a call" notice: when the window ends, a countdown
+     * and End now. It removes itself when the window ends.
+     */
+    fun showExpectingCall(
+        context: Context,
+        until: Long,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        val endIntent =
+            PendingIntent.getBroadcast(
+                context,
+                EXPECTING_CALL_NOTIFICATION_ID,
+                Intent(context, SpamActionReceiver::class.java).setAction(ACTION_END_EXPECTING_CALL),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                EXPECTING_CALL_NOTIFICATION_ID,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+        val endTime =
+            android.text.format.DateFormat
+                .getTimeFormat(context)
+                .format(java.util.Date(until))
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_STATUS)
+                .setSmallIcon(R.drawable.ic_tile_expecting_call)
+                .setContentTitle(context.getString(R.string.expecting_call_title))
+                .setContentText(context.getString(R.string.expecting_call_notification_text, endTime))
+                .setContentIntent(openIntent)
+                .setOngoing(true)
+                .setSilent(true)
+                .setWhen(until)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setTimeoutAfter((until - now).coerceAtLeast(1L))
+                .addAction(0, context.getString(R.string.expecting_call_end), endIntent)
+        safeNotify(context, EXPECTING_CALL_NOTIFICATION_ID, builder)
+    }
+
+    fun cancelExpectingCall(context: Context) {
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(EXPECTING_CALL_NOTIFICATION_ID)
     }
 
     fun createChannels(context: Context) {

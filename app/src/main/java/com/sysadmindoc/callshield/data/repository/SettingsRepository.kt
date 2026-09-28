@@ -161,6 +161,7 @@ class SettingsRepository(
     val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> =
         dataStore.data.map { prefs -> RegulatoryPrefix.entries.filterTo(mutableSetOf()) { prefs[it.key] == true } }
     val meetingModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_MEETING_MODE] ?: false }
+    val expectingCallUntil: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_EXPECTING_CALL_UNTIL] ?: 0L }
     val meetingModeApps: Flow<Set<String>> =
         dataStore.data.map { prefs ->
             prefs[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty().filterTo(linkedSetOf()) { it in MeetingModeRegistry.MEETING_APPS }
@@ -566,6 +567,11 @@ class SettingsRepository(
     ) = dataStore.edit { it[prefix.key] = enabled }
 
     suspend fun setMeetingMode(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_MEETING_MODE] = enabled }
+
+    suspend fun setExpectingCallUntil(until: Long) =
+        dataStore.edit {
+            if (until > 0L) it[SpamRepository.KEY_EXPECTING_CALL_UNTIL] = until else it.remove(SpamRepository.KEY_EXPECTING_CALL_UNTIL)
+        }
 
     suspend fun setMeetingModeApp(
         packageName: String,

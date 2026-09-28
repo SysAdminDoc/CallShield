@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C362-f38ba8?style=flat-square" alt="51,362 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1635-94e2d5?style=flat-square" alt="1635 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1640-94e2d5?style=flat-square" alt="1640 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -122,6 +122,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract`. Respects stock Phone/Messages blocks |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
+|  5360 | **Expecting a Call** | Allow | Opt-in window (1 hour, 3 hours or until midnight) from Home or a Quick Settings tile. Unknown callers ring, and contacts-only mode steps aside. Your own blocks, wildcard and range rules and a failed caller ID check still win |
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log. Beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
@@ -282,6 +283,7 @@ by locale and message type without shipping personal data:
 - Database sync every 6 hours, a trending-feed check every 30 minutes, and a daily digest notification
 - External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row. Each row shows the list's name, the host it comes from, how many numbers it holds and when it last updated, and TalkBack reads it as one item. A row's switch turns its list off or on; a tap on the list's name does nothing. Removing a list takes its numbers out straight away, and Undo puts both back without downloading the list again
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. For ten minutes after GitHub couldn't be reached at all, the mirror goes first. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't alter the data, though it can hold back updates. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
+- Expecting a call: from Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight, with a countdown notification and End now
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
@@ -510,12 +512,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1635 tests
+./gradlew testDebugUnitTest   # 1640 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1635 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1640 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -552,8 +554,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1635 JVM unit tests (JUnit) |
-| Strings | 1692 string resources and 38 plural groups (translation-ready) |
+| Tests | 1640 JVM unit tests (JUnit) |
+| Strings | 1708 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

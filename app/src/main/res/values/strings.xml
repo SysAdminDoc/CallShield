@@ -451,6 +451,7 @@
     <string name="lookup_checker_stir_shaken_trusted">Verified caller</string>
     <string name="lookup_checker_stir_shaken_failed">Caller verification</string>
     <string name="lookup_checker_temporary_allow">Temporary allow</string>
+    <string name="lookup_checker_expecting_call">Expecting a call</string>
     <string name="lookup_checker_system_block_list">System block list</string>
     <string name="lookup_checker_user_blocklist">CallShield block list</string>
     <string name="lookup_checker_database">Spam database</string>
@@ -1607,6 +1608,7 @@
     <string name="accessibility_reason_stir_trusted">This item was allowed because the carrier verified the caller.</string>
     <string name="accessibility_reason_stir_failed">This item was blocked because the carrier could not verify the caller ID.</string>
     <string name="accessibility_reason_temporary_allow">This item was allowed because you granted a temporary exception.</string>
+    <string name="accessibility_reason_expecting_call">This call was allowed because you were expecting a call.</string>
     <string name="accessibility_reason_temporary_block">This item was blocked by your temporary rule.</string>
     <string name="accessibility_reason_system_block_list">This item was blocked by the phone system block list.</string>
     <string name="accessibility_reason_user_blocklist">This item was blocked because you saved a rule for it.</string>
@@ -1685,6 +1687,17 @@
     <string name="widget_last_never">Last: never</string>
     <string name="tile_protection_on">Protection on</string>
     <string name="tile_protection_off">Protection off</string>
+    <string name="expecting_call_title">Expecting a call</string>
+    <string name="expecting_call_subtitle">Let unknown callers ring for a while. Your blocked numbers and rules still apply.</string>
+    <string name="expecting_call_active">Unknown callers can ring until %1$s.</string>
+    <string name="expecting_call_start">Start</string>
+    <string name="expecting_call_end">End now</string>
+    <string name="expecting_call_one_hour">For 1 hour</string>
+    <string name="expecting_call_three_hours">For 3 hours</string>
+    <string name="expecting_call_until_midnight">Until midnight</string>
+    <string name="expecting_call_notification_text">Unknown callers can ring until %1$s. Your blocked numbers and rules still apply.</string>
+    <string name="tile_expecting_call_off">Tap for 1 hour</string>
+    <string name="tile_expecting_call_on">Until %1$s</string>
 
     <plurals name="overlay_reports_count">
         <item quantity="one">%1$s report</item>
@@ -1802,6 +1815,9 @@
     <string name="reasoning_sms_context_detail">You\'ve sent it a message, or it has written to you on two or more different days.</string>
     <string name="reasoning_sms_context_limit">It only helps a text that passed every check on the sender\'s number, and your SMS keyword rules still win.</string>
     <string name="reasoning_still_win_temporary_allow">Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, and numbers you blocked in Android still win.</string>
+    <string name="reasoning_expecting_call_headline">You were expecting a call</string>
+    <string name="reasoning_expecting_call_detail">Unknown callers ring until the window you set ends.</string>
+    <string name="reasoning_still_win_expecting_call">Your blocked numbers, wildcard rules and a failed caller ID check still block.</string>
     <string name="reasoning_still_win_protected_series">Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, numbers you blocked in Android and the downloaded prefix list still win.</string>
     <string name="reasoning_still_win_trust_signals">Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, numbers you blocked in Android, the downloaded prefix list, telemarketing ranges you block, database prefix expansion and the spam database still win.</string>
     <string name="reasoning_user_blocklist_headline">You blocked this number.</string>

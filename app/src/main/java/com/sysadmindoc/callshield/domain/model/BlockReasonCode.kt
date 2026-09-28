@@ -18,6 +18,7 @@ enum class BlockReasonCode(
     STIR_SHAKEN_TRUSTED("stir_shaken_trusted"),
     STIR_SHAKEN_FAILED("stir_shaken_failed"),
     TEMPORARY_ALLOW("temporary_allow"),
+    EXPECTING_CALL("expecting_call"),
     TEMPORARY_BLOCK("temporary_block"),
     SYSTEM_BLOCK_LIST("system_block_list"),
     USER_BLOCKLIST("user_blocklist"),

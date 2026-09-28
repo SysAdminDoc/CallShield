@@ -1154,6 +1154,17 @@
     <string name="widget_last_never">最近：从未</string>
     <string name="tile_protection_on">防护已开启</string>
     <string name="tile_protection_off">防护已关闭</string>
+    <string name="expecting_call_title">等待来电</string>
+    <string name="expecting_call_subtitle">暂时让陌生来电响铃。你拦截的号码和规则仍然有效。</string>
+    <string name="expecting_call_active">在 %1$s 之前，陌生来电可以响铃。</string>
+    <string name="expecting_call_start">开始</string>
+    <string name="expecting_call_end">立即结束</string>
+    <string name="expecting_call_one_hour">1 小时</string>
+    <string name="expecting_call_three_hours">3 小时</string>
+    <string name="expecting_call_until_midnight">到午夜</string>
+    <string name="expecting_call_notification_text">在 %1$s 之前，陌生来电可以响铃。你拦截的号码和规则仍然有效。</string>
+    <string name="tile_expecting_call_off">点按开启 1 小时</string>
+    <string name="tile_expecting_call_on">到 %1$s</string>
     <string name="settings_region_cnap_rules">地区与主叫姓名规则</string>
     <string name="settings_region_cnap_summary">%1$d 个允许地区 · %2$d 个可信姓名 · %3$d 个拦截姓名</string>
     <string name="settings_regulatory_prefixes">电话营销号段</string>
@@ -1174,6 +1185,7 @@
     <string name="lookup_checker_stir_shaken_trusted">已验证的来电者</string>
     <string name="lookup_checker_stir_shaken_failed">来电者验证</string>
     <string name="lookup_checker_temporary_allow">临时允许</string>
+    <string name="lookup_checker_expecting_call">等待来电</string>
     <string name="lookup_checker_system_block_list">系统拦截列表</string>
     <string name="lookup_checker_user_blocklist">CallShield 拦截列表</string>
     <string name="lookup_checker_database">垃圾号码库</string>
@@ -1290,6 +1302,9 @@
     <string name="reasoning_sms_context_detail">你给它发过消息，或它在两天或更多天里给你发过消息。</string>
     <string name="reasoning_sms_context_limit">它只对已通过发件号码全部检查的短信起作用，你的短信关键词规则仍然优先。</string>
     <string name="reasoning_still_win_temporary_allow">仅联系人模式、运营商验证失败、你的拦截列表、通配符和号段规则，以及你在 Android 中拦截的号码仍然优先。</string>
+    <string name="reasoning_expecting_call_headline">你正在等待来电</string>
+    <string name="reasoning_expecting_call_detail">在你设定的时段结束前，陌生来电会响铃。</string>
+    <string name="reasoning_still_win_expecting_call">你拦截的号码、通配规则以及来电号码验证失败仍会拦截。</string>
     <string name="reasoning_still_win_protected_series">仅联系人模式、运营商验证失败、你的拦截列表、通配符和号段规则、你在 Android 中拦截的号码以及下载的前缀列表仍然优先。</string>
     <string name="reasoning_still_win_trust_signals">仅联系人模式、运营商验证失败、你的拦截列表、通配符和号段规则、你在 Android 中拦截的号码、下载的前缀列表、你拦截的电话营销号段、号码库前缀扩展以及垃圾号码库仍然优先。</string>
     <string name="reasoning_user_blocklist_headline">你已拦截此号码。</string>

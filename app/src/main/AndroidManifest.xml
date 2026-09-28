@@ -188,6 +188,17 @@
                 android:value="android.service.quicksettings.CATEGORY_PRIVACY" />
         </service>
 
+        <service
+            android:name=".service.ExpectingCallTileService"
+            android:icon="@drawable/ic_tile_expecting_call"
+            android:label="@string/expecting_call_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".service.BootReceiver"
             android:directBootAware="true"

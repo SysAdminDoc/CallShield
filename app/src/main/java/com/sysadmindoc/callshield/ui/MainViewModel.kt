@@ -562,6 +562,7 @@ class MainViewModel
                 AnswerHangUpController.DEFAULT_DELAY_SECONDS,
             )
         val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val expectingCallUntil = repo.expectingCallUntil.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
         val pushAlertDisabledPackages =
             repo.pushAlertDisabledPackages
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -1333,6 +1334,18 @@ class MainViewModel
         fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch { repo.setHangUpDelaySeconds(seconds) }
 
         fun setPushAlert(v: Boolean) = viewModelScope.launch { repo.setPushAlert(v) }
+
+        internal fun startExpectingCall(length: com.sysadmindoc.callshield.data.ExpectingCall.Length) =
+            viewModelScope.launch {
+                com.sysadmindoc.callshield.service.ExpectingCallController
+                    .start(appContext, repo, length)
+            }
+
+        fun endExpectingCall() =
+            viewModelScope.launch {
+                com.sysadmindoc.callshield.service.ExpectingCallController
+                    .end(appContext, repo)
+            }
 
         /** Per-package opt-in/out for the A3 allowlist editor. */
         fun setPushAlertPackageAllowed(
