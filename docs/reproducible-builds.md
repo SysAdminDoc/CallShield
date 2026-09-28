@@ -106,9 +106,6 @@ the APK Signature Scheme v2 signing block changes, which is why
 F-Droid-style reproducible verification copies the signature before comparing
 the resulting APK.
 
-For the current F-Droid submission draft, release signer fingerprint, and
-fdroidserver handoff steps, see `docs/fdroid-submission.md`.
-
 ## Accrescent Packaging (Developer Verification survival path)
 
 Google's Developer Verification (2026-09-30 in BR/ID/SG/TH, global through 2027)

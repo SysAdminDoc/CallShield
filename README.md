@@ -462,7 +462,7 @@ sends you to App info instead of re-prompting, because the prompt would no
 longer show.
 
 Installing through a client that registers as the installing package (Obtainium
-and F-Droid both do) avoids the restriction entirely.
+does) avoids the restriction entirely.
 
 ## Building
 
@@ -471,7 +471,7 @@ and F-Droid both do) avoids the restriction entirely.
 ```
 
 `verifyReleaseMetadata` invokes `scripts/verify_release_drift.py`, which prints
-the synchronized app/F-Droid/changelog versions, locked dependency summary,
+the synchronized app and changelog versions, locked dependency summary,
 known-advisory dispositions, and source-snapshot provenance. Run the report
 directly with `python scripts/verify_release_drift.py` when reviewing metadata
 without building an APK.
@@ -496,10 +496,8 @@ provenance is evidence, not a replacement for that signature.
 See `docs/reproducible-builds.md` for the dependency-lock and hash-comparison
 runbook.
 
-F-Droid submission prep lives in `fastlane/metadata/android/en-US/`,
-`docs/fdroid/com.sysadmindoc.callshield.yml`, and
-`docs/fdroid-submission.md`. The actual F-Droid merge request and signature-copy
-verification still require an fdroiddata/GitLab environment.
+CallShield ships from GitHub Releases only. There's no Google Play or F-Droid
+listing and none is planned. Obtainium can follow the releases for you.
 
 **Signing:** Create `local.properties` in the project root with your keystore credentials:
 ```properties

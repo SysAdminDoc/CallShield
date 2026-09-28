@@ -343,8 +343,6 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
         "README.md": root / "README.md",
         "CHANGELOG.md": root / "CHANGELOG.md",
         "ChangelogScreen.kt": root / "app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt",
-        "F-Droid metadata": root / "docs/fdroid/com.sysadmindoc.callshield.yml",
-        "F-Droid runbook": root / "docs/fdroid-submission.md",
         "Fastlane changelog": root / f"fastlane/metadata/android/en-US/changelogs/{version_code}.txt",
     }
     missing = [label for label, path in required_files.items() if not path.is_file()]
@@ -353,8 +351,6 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     readme = read_text(required_files["README.md"])
     changelog = read_text(required_files["CHANGELOG.md"])
     screen = read_text(required_files["ChangelogScreen.kt"])
-    fdroid = read_text(required_files["F-Droid metadata"])
-    runbook = read_text(required_files["F-Droid runbook"])
     store_changelog = read_text(required_files["Fastlane changelog"]).strip()
     if f"## v{version_name}" not in changelog:
         issues.append(f"CHANGELOG has no entry for v{version_name}.")
@@ -428,22 +424,6 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
         if not claims or any(int(claim) != test_count for claim in claims):
             issues.append(f"README test count is stale; app/src/test holds {test_count} tests.")
 
-    source_marker = f"Current app source: {version_name} ({version_code});"
-    if source_marker not in fdroid:
-        issues.append("F-Droid metadata does not identify the current app source version/code.")
-    prepared_version = re.search(r"(?m)^CurrentVersion:\s*(\S+)\s*$", fdroid)
-    prepared_code = re.search(r"(?m)^CurrentVersionCode:\s*(\d+)\s*$", fdroid)
-    build_versions = re.findall(r"(?m)^\s*-\s+versionName:\s*(\S+)\s*$", fdroid)
-    build_codes = re.findall(r"(?m)^\s+versionCode:\s*(\d+)\s*$", fdroid)
-    if not prepared_version or not prepared_code or not build_versions or not build_codes:
-        issues.append("F-Droid metadata must contain a prepared build and CurrentVersion fields.")
-    else:
-        if prepared_version.group(1) != build_versions[-1] or prepared_code.group(1) != build_codes[-1]:
-            issues.append("F-Droid CurrentVersion fields do not match the last prepared build.")
-        if f"Latest release prepared for verification: `v{prepared_version.group(1)}`" not in runbook:
-            issues.append("F-Droid runbook release version differs from metadata.")
-        if f"Version code: `{prepared_code.group(1)}`" not in runbook:
-            issues.append("F-Droid runbook version code differs from metadata.")
     return issues
 
 

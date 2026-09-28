@@ -24,15 +24,6 @@ fun parseAppReleaseVersion(buildFile: File): AppReleaseVersion {
     return AppReleaseVersion(name, code)
 }
 
-fun metadataValue(
-    text: String,
-    key: String,
-): String? =
-    Regex("""(?m)^${Regex.escape(key)}:\s*(\S+)\s*$""")
-        .find(text)
-        ?.groupValues
-        ?.get(1)
-
 data class SigningSecretFinding(
     val path: String,
     val line: Int,
@@ -266,8 +257,6 @@ tasks.register<Exec>("verifyReleaseDrift") {
         layout.projectDirectory.file("README.md"),
         layout.projectDirectory.file("CHANGELOG.md"),
         layout.projectDirectory.file("app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt"),
-        layout.projectDirectory.file("docs/fdroid/com.sysadmindoc.callshield.yml"),
-        layout.projectDirectory.file("docs/fdroid-submission.md"),
         layout.projectDirectory.file("fastlane/metadata/android/en-US/changelogs/${appReleaseVersion.code}.txt"),
         layout.projectDirectory.file("data/source-manifest.json"),
         layout.projectDirectory.file("data/source-snapshot.json"),
@@ -411,7 +400,7 @@ tasks.register("verifyReleaseApkReproducibleMetadata") {
 
 tasks.register("verifyReleaseMetadata") {
     group = "verification"
-    description = "Fails when release, store, README, or F-Droid metadata drifts from the app."
+    description = "Fails when release, store listing, or README metadata drifts from the app."
     dependsOn("verifyTrackedSigningSecrets", "verifyReleaseDrift")
 
     val readme = layout.projectDirectory.file("README.md")
@@ -422,8 +411,6 @@ tasks.register("verifyReleaseMetadata") {
             "fastlane/metadata/android/en-US/changelogs/${appReleaseVersion.code}.txt",
         )
     val storeImages = layout.projectDirectory.dir("fastlane/metadata/android/en-US/images")
-    val fdroidMetadata = layout.projectDirectory.file("docs/fdroid/com.sysadmindoc.callshield.yml")
-    val fdroidRunbook = layout.projectDirectory.file("docs/fdroid-submission.md")
     val signingPreflight = layout.projectDirectory.file("scripts/verify-release-signing.ps1")
     val changelog = layout.projectDirectory.file("CHANGELOG.md")
     val changelogScreen =
@@ -436,8 +423,6 @@ tasks.register("verifyReleaseMetadata") {
         storeDescription,
         storeShortDescription,
         storeChangelog,
-        fdroidMetadata,
-        fdroidRunbook,
         signingPreflight,
         changelog,
         changelogScreen,
@@ -449,8 +434,6 @@ tasks.register("verifyReleaseMetadata") {
         val readmeText = readme.asFile.readText()
         val fullDescription = storeDescription.asFile.readText()
         val shortDescription = storeShortDescription.asFile.readText()
-        val fdroidText = fdroidMetadata.asFile.readText()
-        val runbookText = fdroidRunbook.asFile.readText()
         val signingPreflightText = signingPreflight.asFile.readText()
         val changelogText = changelog.asFile.readText()
         val changelogScreenText = changelogScreen.asFile.readText()
@@ -543,7 +526,7 @@ tasks.register("verifyReleaseMetadata") {
             }
         }
 
-        val currentStoreCopy = "$fullDescription\n$shortDescription\n$fdroidText".lowercase()
+        val currentStoreCopy = "$fullDescription\n$shortDescription".lowercase()
         val retiredClaims =
             listOf(
                 "abstractapi",
@@ -556,42 +539,6 @@ tasks.register("verifyReleaseMetadata") {
         }
         if (Regex("""CallShield-v\d+\.\d+\.\d+\.apk""").containsMatchIn(signingPreflightText)) {
             issues += "Signing preflight examples must use the stable AGP release output path."
-        }
-
-        val preparedVersion = metadataValue(fdroidText, "CurrentVersion")
-        val preparedCode = metadataValue(fdroidText, "CurrentVersionCode")
-        val lastBuildVersion =
-            Regex("""(?m)^\s*-\s+versionName:\s*(\S+)\s*$""")
-                .findAll(fdroidText)
-                .lastOrNull()
-                ?.groupValues
-                ?.get(1)
-        val lastBuildCode =
-            Regex("""(?m)^\s+versionCode:\s*(\d+)\s*$""")
-                .findAll(fdroidText)
-                .lastOrNull()
-                ?.groupValues
-                ?.get(1)
-        if (preparedVersion == null || preparedCode == null) {
-            issues += "F-Droid metadata must declare its last externally prepared build."
-        } else {
-            if (preparedVersion != lastBuildVersion || preparedCode != lastBuildCode) {
-                issues += "F-Droid CurrentVersion must match its last prepared Builds entry."
-            }
-            if ("Last externally prepared build: $preparedVersion ($preparedCode)." !in fdroidText) {
-                issues += "F-Droid metadata must label its last externally prepared build."
-            }
-            val currentSourceStatus =
-                "Current app source: ${appReleaseVersion.name} (${appReleaseVersion.code}); " +
-                    "no matching F-Droid build has been prepared."
-            if (currentSourceStatus !in fdroidText) {
-                issues += "F-Droid metadata must distinguish the current app source version."
-            }
-            if ("Latest release prepared for verification: `v$preparedVersion`" !in runbookText ||
-                "Version code: `$preparedCode`" !in runbookText
-            ) {
-                issues += "F-Droid runbook does not match the prepared metadata build."
-            }
         }
 
         check(issues.isEmpty()) {
