@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The report Worker runs the current code. It had been serving a build from
+  March, so reports carried no reporter identity and the trending lists and
+  spam domains couldn't count independent reporters. It now records a daily
+  reporter bucket, limits reports per network, per carrier block and overall,
+  and turns away browser posts and bodies that aren't JSON.
+
 ## v1.10.0 (2026-09-28)
 
 - Expecting a call lets unknown callers ring for an hour, three hours or until
