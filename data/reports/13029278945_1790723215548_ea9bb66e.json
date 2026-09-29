@@ -1,0 +1,14 @@
+{
+  "number": "+13029278945",
+  "type": "sms_spam",
+  "reported_at": "2026-09-29T23:06:55.548Z",
+  "source": "community_app",
+  "reporter_bucket": "9f5e0d2f8f467ddc",
+  "reporter_device": "514c05cb629f7814",
+  "sms_domains": [
+    "readyforthefight.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
