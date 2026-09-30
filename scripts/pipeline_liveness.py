@@ -231,11 +231,28 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     return problems
 
 
+def row_expiry_epoch_ms(row: dict) -> int | None:
+    """When a published row stops blocking on phones, or None if it never does.
+
+    A row stays live while any of its evidence is live, so the latest expiry
+    decides, and a record without one (or no evidence at all) keeps it live.
+    The app's SourceEvidenceCodec.rowExpiry applies the same rule, and both are
+    tested against evidence_expiry_fixtures.json.
+    """
+    stamps = []
+    for item in row.get("evidence") or []:
+        stamp = item.get("expires_at_epoch_ms") if isinstance(item, dict) else None
+        if not isinstance(stamp, int) or isinstance(stamp, bool):
+            return None
+        stamps.append(stamp)
+    return max(stamps) if stamps else None
+
+
 def evaluate_evidence_expiry(database: object, now: datetime) -> list[str]:
     """One message per kind of published row that is about to stop blocking.
 
-    The app drops a downloaded number or range once its earliest evidence
-    expires. Until 2026-09-28 every row's evidence ran out within a month of the
+    The app drops a downloaded number or range once its last evidence expires
+    (see row_expiry_epoch_ms). Until 2026-09-28 every row's evidence ran out within a month of the
     import that stamped it and nothing looked, so protection would have ended
     without a word whenever imports paused. Expired rows count too: they
     already match nothing on phones. Evidence that hasn't expired is fine
@@ -254,15 +271,10 @@ def evaluate_evidence_expiry(database: object, now: datetime) -> list[str]:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            stamps = [
-                item.get("expires_at_epoch_ms")
-                for item in row.get("evidence") or []
-                if isinstance(item, dict)
-            ]
-            stamps = [stamp for stamp in stamps if isinstance(stamp, int) and not isinstance(stamp, bool)]
-            if not stamps:
+            stamp = row_expiry_epoch_ms(row)
+            if stamp is None:
                 continue
-            expires = datetime.fromtimestamp(min(stamps) / 1000, timezone.utc)
+            expires = datetime.fromtimestamp(stamp / 1000, timezone.utc)
             if expires <= horizon:
                 expiring += 1
                 earliest = expires if earliest is None else min(earliest, expires)

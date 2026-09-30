@@ -16,6 +16,7 @@ from pipeline_liveness import (
     evaluate_source_freshness,
     load_database_updated,
     load_queue,
+    row_expiry_epoch_ms,
 )
 
 BUCKET = "0123456789abcdef"
@@ -256,10 +257,14 @@ def evidence_expiry_checks() -> None:
     assert problems[0].startswith("2 published numbers stop blocking on phones from 2026-09-15"), problems
     assert problems[1].startswith("1 published ranges stop blocking on phones from 2026-09-16"), problems
 
-    # A row's earliest record decides, as it does in the app.
+    # A row blocks while any record is live, as it does in the app: a record
+    # lapsing in 5 days doesn't matter when another runs 400.
     mixed = evidence_row(400)
     mixed["evidence"].append({"source_id": "fcc_complaints", "expires_at_epoch_ms": int((BASE + timedelta(days=5)).timestamp() * 1000)})
-    assert len(evaluate_evidence_expiry({"numbers": [mixed]}, BASE)) == 1
+    assert evaluate_evidence_expiry({"numbers": [mixed]}, BASE) == []
+    mixed["evidence"][0]["expires_at_epoch_ms"] = int((BASE + timedelta(days=9)).timestamp() * 1000)
+    assert "from 2026-09-13" in evaluate_evidence_expiry({"numbers": [mixed]}, BASE)[0]
+    shared_expiry_fixture_checks()
 
     # Already expired rows match nothing on phones, so they count too.
     assert "from 2026-09-01" in evaluate_evidence_expiry({"numbers": [evidence_row(-3)]}, BASE)[0]
@@ -273,6 +278,28 @@ def evidence_expiry_checks() -> None:
     # An unreadable database fails the check rather than switching it off.
     problems = evaluate_evidence_expiry(None, BASE)
     assert len(problems) == 1 and "can't be checked" in problems[0], problems
+
+
+def shared_expiry_fixture_checks() -> None:
+    """The app's row expiry test reads the same cases, so the two can't drift."""
+    fixture = json.loads((Path(__file__).parent / "evidence_expiry_fixtures.json").read_text(encoding="utf-8"))
+    assert len(fixture["cases"]) >= 5
+    for case in fixture["cases"]:
+        row = case["row"]
+        expiry = case["row_expires_at_epoch_ms"]
+        assert row_expiry_epoch_ms(row) == expiry, case["name"]
+        for check in case["checks"]:
+            clock = datetime.fromisoformat(check["at"].replace("Z", "+00:00"))
+            assert int(clock.timestamp() * 1000) == check["at_epoch_ms"], case["name"]
+            assert check["blocks"] == (expiry is None or expiry > check["at_epoch_ms"]), (case["name"], check)
+            reported = evaluate_evidence_expiry({"numbers": [row]}, clock)
+            # A row that no longer blocks is always reported; one live past the
+            # warning window never is.
+            horizon = int((clock + timedelta(days=EVIDENCE_EXPIRY_WARNING_DAYS)).timestamp() * 1000)
+            if not check["blocks"]:
+                assert len(reported) == 1, (case["name"], check)
+            elif expiry is None or expiry > horizon:
+                assert reported == [], (case["name"], check)
 
 
 def check_scheduled_switch() -> None:

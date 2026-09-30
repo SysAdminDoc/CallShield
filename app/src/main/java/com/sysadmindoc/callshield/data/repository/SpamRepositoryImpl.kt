@@ -94,7 +94,7 @@ class SpamRepositoryImpl(
 
     internal suspend fun findTemporaryWhitelistEntryInternal(normalized: String): WhitelistEntry? = dao.findActiveTemporaryWhitelistEntry(normalized, System.currentTimeMillis())
 
-    internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision()
+    internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision(wallClock())
 
     internal suspend fun hasDbPrefixMatch(normalized: String): Boolean {
         if (normalized.length < 9) return false

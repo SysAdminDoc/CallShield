@@ -16,6 +16,13 @@ All notable changes to CallShield will be documented in this file.
   six tabs, backup is under Settings, Advanced, and the caller ID example uses
   the popup's current wording. It also names the hand-reviewed numbers source
   and says the build needs JDK 17 or 21.
+- Numbers in the spam database keep blocking while any of their evidence is
+  current. A number backed by both an FCC complaint and the database used to
+  stop blocking when the complaint aged out in September 2027, nine years
+  before numbers backed by the database alone. Phones that already have the
+  database fix their stored copy once, on the first start after the update.
+  A trending number blocks again when its database entry has run out, and the
+  weekly pipeline check counts expiry the same way the app does.
 
 ## v1.10.0 (2026-09-28)
 

@@ -9,6 +9,7 @@ import com.sysadmindoc.callshield.data.ExternalBlocklistValidationException
 import com.sysadmindoc.callshield.data.ParsedExternalBlocklist
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.evidenceExpiryCorrections
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.mergeHotListNumbers
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistImportResult
@@ -209,6 +210,7 @@ class SyncRepository(
             mergeHotListNumbers(
                 hotNumbers = hotNumbers,
                 existingByNumber = existingByNumber,
+                now = appliedAt,
             )
 
         // Atomic delete + insert via the DAO's @Transaction helper. A bare
@@ -224,6 +226,37 @@ class SyncRepository(
         }
         // Hot list entries are exact number rows. Prefix/rule caches do not change here.
     }
+
+    /**
+     * Builds up to 1.10.0 stored each downloaded row's earliest evidence expiry,
+     * and a shard that hasn't changed since keeps what they stored, so this
+     * rewrites those values once under [SourceEvidenceCodec.rowExpiry]. It holds
+     * the sync lock so a sync can't write back rows it read before the fix.
+     * Returns how many rows changed.
+     */
+    suspend fun applyLatestEvidenceExpiryRule(): Int =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                if (settingsRepository.isEvidenceExpiryRuleApplied()) return@withLock 0
+                val numbers =
+                    evidenceExpiryCorrections(
+                        dao.getNumbersWithEvidenceExpiry().map { Triple(it.id, it.evidenceJson, it.evidenceExpiresAt) },
+                    )
+                val prefixes =
+                    evidenceExpiryCorrections(
+                        dao
+                            .getAllPrefixesForSync()
+                            .filter { it.evidenceExpiresAt != null }
+                            .map { Triple(it.id, it.evidenceJson, it.evidenceExpiresAt) },
+                    )
+                if (numbers.isNotEmpty() || prefixes.isNotEmpty()) {
+                    dao.setEvidenceExpiries(numbers, prefixes)
+                    invalidateAllCaches()
+                }
+                settingsRepository.markEvidenceExpiryRuleApplied()
+                numbers.size + prefixes.size
+            }
+        }
 
     /** Saves [url] as the feed mirror once it serves this project's signed manifest. */
     suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave {
@@ -627,7 +660,7 @@ class SyncRepository(
                         type = json.type.trim().ifBlank { "unknown" },
                         description = json.description.trim(),
                         evidenceJson = SourceEvidenceCodec.encode(evidence),
-                        evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
+                        evidenceExpiresAt = SourceEvidenceCodec.rowExpiry(evidence),
                     )
                 }
             }

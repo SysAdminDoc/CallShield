@@ -291,6 +291,9 @@ class SpamRepository(
 
         /** Set once [com.sysadmindoc.callshield.data.repository.KeepShownThemeOnUpgrade] has run. */
         internal val KEY_THEME_DEFAULT_SETTLED = booleanPreferencesKey("theme_default_settled")
+
+        /** Set once stored rows carry the latest-evidence expiry; see SyncRepository.applyLatestEvidenceExpiryRule. */
+        internal val KEY_EVIDENCE_EXPIRY_RULE_APPLIED = booleanPreferencesKey("evidence_expiry_rule_applied")
         val KEY_APP_UPDATE_CHECKS = booleanPreferencesKey("app_update_checks_enabled")
         internal val KEY_APP_UPDATE_STATUS = stringPreferencesKey("app_update_status")
         internal val KEY_APP_UPDATE_TAG = stringPreferencesKey("app_update_latest_tag")
@@ -513,6 +516,8 @@ class SpamRepository(
     }
 
     suspend fun purgeLegacyAbstractApiKey() = settingsRepository.purgeLegacyAbstractApiKey()
+
+    suspend fun applyLatestEvidenceExpiryRule(): Int = syncRepository.applyLatestEvidenceExpiryRule()
 
     suspend fun setMlScorer(enabled: Boolean) = settingsRepository.setMlScorer(enabled)
 
@@ -1230,7 +1235,7 @@ internal fun sanitizeDatabaseNumbers(
                 description = json.description.trim(),
                 source = "github",
                 evidenceJson = SourceEvidenceCodec.encode(evidence),
-                evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
+                evidenceExpiresAt = SourceEvidenceCodec.rowExpiry(evidence),
                 isUserBlocked = normalizedNumber in preservedUserBlockedNumbers,
                 expiresAt = preservedUserBlockedNumbers[normalizedNumber],
             )
@@ -1275,6 +1280,7 @@ private fun synthesizedDatabaseEvidence(json: SpamNumberJson): List<SourceEviden
 internal fun mergeHotListNumbers(
     hotNumbers: Collection<SpamNumber>,
     existingByNumber: Map<String, SpamNumber>,
+    now: Long = System.currentTimeMillis(),
 ): List<SpamNumber> =
     hotNumbers.mapNotNull { hotNumber ->
         when (val existing = existingByNumber[hotNumber.number]) {
@@ -1286,7 +1292,15 @@ internal fun mergeHotListNumbers(
                 // Never let ephemeral hot-list data overwrite a stronger row from
                 // the main database. If we already know this number from GitHub or
                 // from a user-owned entry, keep that record and skip the hot insert.
-                if (existing.source != "hot_list") {
+                // A database row whose evidence has all expired blocks nothing, so
+                // the hot entry takes its place (the unique number index replaces it).
+                if (existing.source == "github" && existing.activeDecision(now) == null) {
+                    hotNumber.copy(
+                        id = existing.id,
+                        isUserBlocked = existing.isUserBlocked,
+                        expiresAt = existing.expiresAt,
+                    )
+                } else if (existing.source != "hot_list") {
                     null
                 } else {
                     hotNumber.copy(

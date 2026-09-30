@@ -1,0 +1,159 @@
+{
+  "about": "Row expiry cases shared by the app (SourceEvidenceCodec.rowExpiry, EvidenceExpiryContractTest) and scripts/pipeline_liveness.py (test_pipeline_liveness.py). A published row keeps blocking while any of its evidence is live.",
+  "cases": [
+    {
+      "name": "FCC evidence ending 2027-09 plus database evidence ending 2036-09 blocks until 2036",
+      "row": {
+        "number": "+13152328257",
+        "type": "robocall",
+        "reports": 1263,
+        "evidence": [
+          {
+            "source_id": "fcc_complaints",
+            "evidence_type": "unverified_complaint",
+            "license": "US government public data",
+            "attribution": "US Federal Communications Commission unwanted calls dataset",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 1821916800000
+          },
+          {
+            "source_id": "github_database",
+            "evidence_type": "aggregate_database",
+            "license": "CallShield database terms",
+            "attribution": "CallShield maintained spam database",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 2106000000000
+          }
+        ]
+      },
+      "row_expires_at_epoch_ms": 2106000000000,
+      "checks": [
+        {
+          "at": "2028-03-01T00:00:00Z",
+          "at_epoch_ms": 1835481600000,
+          "blocks": true
+        },
+        {
+          "at": "2036-10-01T00:00:00Z",
+          "at_epoch_ms": 2106432000000,
+          "blocks": false
+        }
+      ]
+    },
+    {
+      "name": "A single dated record decides alone",
+      "row": {
+        "number": "+13152328258",
+        "type": "robocall",
+        "reports": 1,
+        "evidence": [
+          {
+            "source_id": "fcc_complaints",
+            "evidence_type": "unverified_complaint",
+            "license": "US government public data",
+            "attribution": "US Federal Communications Commission unwanted calls dataset",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 1821916800000
+          }
+        ]
+      },
+      "row_expires_at_epoch_ms": 1821916800000,
+      "checks": [
+        {
+          "at": "2026-09-30T00:00:00Z",
+          "at_epoch_ms": 1790726400000,
+          "blocks": true
+        },
+        {
+          "at": "2028-03-01T00:00:00Z",
+          "at_epoch_ms": 1835481600000,
+          "blocks": false
+        }
+      ]
+    },
+    {
+      "name": "Every record expired leaves the latest expiry, already past",
+      "row": {
+        "number": "+13152328259",
+        "type": "spam",
+        "reports": 2,
+        "evidence": [
+          {
+            "source_id": "github_database",
+            "evidence_type": "aggregate_database",
+            "license": "CallShield database terms",
+            "attribution": "CallShield maintained spam database",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 1780272000000
+          },
+          {
+            "source_id": "fcc_complaints",
+            "evidence_type": "unverified_complaint",
+            "license": "US government public data",
+            "attribution": "US Federal Communications Commission unwanted calls dataset",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 1767225600000
+          }
+        ]
+      },
+      "row_expires_at_epoch_ms": 1780272000000,
+      "checks": [
+        {
+          "at": "2026-09-30T00:00:00Z",
+          "at_epoch_ms": 1790726400000,
+          "blocks": false
+        }
+      ]
+    },
+    {
+      "name": "A record without an expiry keeps the row live for good",
+      "row": {
+        "number": "+13152328260",
+        "type": "spam",
+        "reports": 2,
+        "evidence": [
+          {
+            "source_id": "fcc_complaints",
+            "evidence_type": "unverified_complaint",
+            "license": "US government public data",
+            "attribution": "US Federal Communications Commission unwanted calls dataset",
+            "retrieved_at": "2026-09-26T00:00:00+00:00",
+            "expires_at_epoch_ms": 1821916800000
+          },
+          {
+            "source_id": "github_database",
+            "evidence_type": "aggregate_database",
+            "license": "CallShield database terms",
+            "attribution": "CallShield maintained spam database",
+            "retrieved_at": "2026-09-26T00:00:00+00:00"
+          }
+        ]
+      },
+      "row_expires_at_epoch_ms": null,
+      "checks": [
+        {
+          "at": "2040-01-01T00:00:00Z",
+          "at_epoch_ms": 2208988800000,
+          "blocks": true
+        }
+      ]
+    },
+    {
+      "name": "A row with no evidence list never expires",
+      "row": {
+        "number": "+13152328261",
+        "type": "spam",
+        "reports": 2,
+        "evidence": []
+      },
+      "row_expires_at_epoch_ms": null,
+      "checks": [
+        {
+          "at": "2040-01-01T00:00:00Z",
+          "at_epoch_ms": 2208988800000,
+          "blocks": true
+        }
+      ]
+    }
+  ]
+}

@@ -149,6 +149,26 @@ class SpamRepositorySyncTest {
     }
 
     @Test
+    fun `mergeHotListNumbers replaces a database row only once its evidence has expired`() {
+        val now = 2_000_000_000_000L
+        val expired =
+            SpamNumber(id = 10, number = "+12125551234", type = "scam", source = "github", evidenceExpiresAt = now - 1)
+        val live = expired.copy(id = 11, number = "+12125559876", evidenceExpiresAt = now + 1)
+        // A user block keeps an expired row in force, so the hot entry stays out.
+        val userBlocked = expired.copy(id = 12, number = "+12125550000", isUserBlocked = true)
+        val existing = listOf(expired, live, userBlocked)
+        val hotNumbers =
+            existing.map { SpamNumber(number = it.number, type = "robocall", source = "hot_list", evidenceExpiresAt = now + 1_000L) }
+
+        val merged = mergeHotListNumbers(hotNumbers, existing.associateBy { it.number }, now)
+
+        assertEquals(listOf("+12125551234"), merged.map { it.number })
+        assertEquals(10L, merged.single().id)
+        assertEquals("hot_list", merged.single().source)
+        assertEquals(now + 1_000L, merged.single().evidenceExpiresAt)
+    }
+
+    @Test
     fun `mergeHotListNumbers preserves user block state for existing hot rows`() {
         val existing =
             SpamNumber(

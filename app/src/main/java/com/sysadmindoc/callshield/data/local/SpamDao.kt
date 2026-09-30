@@ -141,6 +141,31 @@ interface SpamDao {
     )
     suspend fun clearExpiredSyncedUserBlockFlags(now: Long): Int
 
+    @Query("SELECT * FROM spam_numbers WHERE evidenceExpiresAt IS NOT NULL")
+    suspend fun getNumbersWithEvidenceExpiry(): List<SpamNumber>
+
+    @Query("UPDATE spam_numbers SET evidenceExpiresAt = :expiresAt WHERE id = :id")
+    suspend fun setNumberEvidenceExpiry(
+        id: Long,
+        expiresAt: Long?,
+    )
+
+    @Query("UPDATE spam_prefixes SET evidenceExpiresAt = :expiresAt WHERE id = :id")
+    suspend fun setPrefixEvidenceExpiry(
+        id: Long,
+        expiresAt: Long?,
+    )
+
+    /** Rewrites stored expiries by row id in one transaction. */
+    @Transaction
+    suspend fun setEvidenceExpiries(
+        numbers: Map<Long, Long?>,
+        prefixes: Map<Long, Long?>,
+    ) {
+        numbers.forEach { (id, expiresAt) -> setNumberEvidenceExpiry(id, expiresAt) }
+        prefixes.forEach { (id, expiresAt) -> setPrefixEvidenceExpiry(id, expiresAt) }
+    }
+
     @Transaction
     suspend fun replaceBySource(
         source: String,

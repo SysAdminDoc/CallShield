@@ -24,7 +24,7 @@ data class SpamNumber(
     val source: String = "community",
     /** JSON-encoded independent feed evidence; kept opaque on the hot path. */
     val evidenceJson: String = "[]",
-    /** Earliest expiry among the retained feed-evidence records, if any. */
+    /** When the row's last live evidence expires; null when any record never does. See SourceEvidenceCodec.rowExpiry. */
     val evidenceExpiresAt: Long? = null,
     val isUserBlocked: Boolean = false,
     val expiresAt: Long? = null,

@@ -296,6 +296,12 @@ class SettingsRepository(
     /** True once a hot list has come from the network, even an empty one. */
     suspend fun hasAppliedHotList(): Boolean = dataStore.data.first()[SpamRepository.KEY_TRENDING_APPLIED_AT] != null
 
+    suspend fun isEvidenceExpiryRuleApplied(): Boolean = dataStore.data.first()[SpamRepository.KEY_EVIDENCE_EXPIRY_RULE_APPLIED] == true
+
+    suspend fun markEvidenceExpiryRuleApplied() {
+        dataStore.edit { it[SpamRepository.KEY_EVIDENCE_EXPIRY_RULE_APPLIED] = true }
+    }
+
     val feedMirrorUrl: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_FEED_MIRROR_URL] }.distinctUntilChanged()
 
     /**

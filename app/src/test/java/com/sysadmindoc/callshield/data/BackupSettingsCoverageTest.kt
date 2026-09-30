@@ -29,6 +29,7 @@ class BackupSettingsCoverageTest {
             "KEY_EXPECTING_CALL_UNTIL" to "a window of a few hours that a restore days later would find long over",
             "KEY_DB_VERSION" to "sync state of this phone's copy of the database",
             "KEY_DISMISSED_RULE_CONFLICTS" to "notices this phone already showed",
+            "KEY_EVIDENCE_EXPIRY_RULE_APPLIED" to "a one-time fix to this phone's copy of the database",
             "KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS" to
                 "subscriptions carry this phone's fetch state, and a restored URL would download a list nobody re-reviewed",
             "KEY_FEED_TRUST_FAILED_AT" to "sync state of this phone's feeds",
