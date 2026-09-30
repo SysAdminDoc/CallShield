@@ -22,20 +22,30 @@ data class ListNumberPlan(
      * [raw] as "+" and the calling code, or null when it's already international
      * or isn't written one of the usual ways: the national number alone, with
      * the trunk prefix, with the calling code, or with "00" and the calling code.
+     * One stray digit in front of the calling code is dropped, as in
+     * OpenCallShield's "1573..." and "0357..." rows.
      */
     fun toInternational(raw: String): String? {
         val trimmed = raw.trim()
         if (trimmed.startsWith("+")) return null
         val digits = trimmed.filter { it in '0'..'9' }
+        val afterTrunk = digits.takeIf { trunkPrefix.isNotEmpty() && it.startsWith(trunkPrefix) }?.removePrefix(trunkPrefix)
         val national =
             when {
                 digits.startsWith("00$callingCode") -> digits.removePrefix("00$callingCode")
-                digits.startsWith(callingCode) && digits.length - callingCode.length in nationalLengths -> digits.removePrefix(callingCode)
-                trunkPrefix.isNotEmpty() && digits.startsWith(trunkPrefix) -> digits.removePrefix(trunkPrefix)
+                isInternational(digits) -> digits.removePrefix(callingCode)
+                hasStrayDigit(digits) -> digits.drop(1 + callingCode.length)
+                afterTrunk != null && hasStrayDigit(afterTrunk) -> afterTrunk.drop(1 + callingCode.length)
+                afterTrunk != null -> afterTrunk
                 else -> digits
             }
         return "+$callingCode$national".takeIf { national.length in nationalLengths }
     }
+
+    private fun isInternational(digits: String): Boolean = digits.startsWith(callingCode) && digits.length - callingCode.length in nationalLengths
+
+    /** A number that already has a national length is never read as a stray digit and a calling code. */
+    private fun hasStrayDigit(digits: String): Boolean = digits.length !in nationalLengths && isInternational(digits.drop(1))
 }
 
 /** A list from the signed catalog (`data/list_catalog.json`) that someone can subscribe to. */

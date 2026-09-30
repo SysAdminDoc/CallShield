@@ -21,13 +21,16 @@ class ListCatalogTest {
         assertEquals("+573390714583", colombia.toInternational("00573390714583"))
         assertEquals("+573390714583", colombia.toInternational("573390714583"))
         assertEquals("+573390714583", colombia.toInternational("(339) 071-4583"))
+        // A stray dial digit in front of 57, with and without the trunk 0.
+        assertEquals("+573395027772", colombia.toInternational("1573395027772"))
+        assertEquals("+573230757718", colombia.toInternational("03573230757718"))
     }
 
     @Test
     fun `a row that isn't one of the country's forms is left to the phone`() {
         assertNull("already international", colombia.toInternational("+12025550143"))
         assertNull("a digit too many after the trunk prefix", colombia.toInternational("033925590578"))
-        assertNull(colombia.toInternational("1573395027772"))
+        assertNull("a digit too many", colombia.toInternational("31183512482"))
         assertNull(colombia.toInternational(""))
     }
 

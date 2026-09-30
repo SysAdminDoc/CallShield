@@ -298,10 +298,20 @@ class SyncRepository(
                 listOfNotNull(downloaded, bundledListCatalog).maxByOrNull { it.revision }?.entries.orEmpty()
             }.flowOn(Dispatchers.IO)
 
-    /** Fetches the signed list catalog. A missing, unsigned or refused file keeps the last good one. */
+    /**
+     * Fetches the signed list catalog. A missing, unsigned or refused file keeps
+     * the last good one, and so does an older revision: a mirror can serve any
+     * catalog that was ever signed, and a list a later one took out stays out.
+     */
     suspend fun refreshListCatalog(): Boolean =
         withContext(Dispatchers.IO) {
             val body = remote.fetchListCatalogJson().getOrNull() ?: return@withContext false
+            val revision = runCatching { ListCatalog.parse(body).revision }.getOrNull() ?: return@withContext false
+            val stored =
+                settingsRepository.storedListCatalog
+                    .first()
+                    ?.let { runCatching { ListCatalog.parse(it).revision }.getOrNull() }
+            if (stored != null && revision <= stored) return@withContext false
             settingsRepository.saveListCatalog(body)
             true
         }
