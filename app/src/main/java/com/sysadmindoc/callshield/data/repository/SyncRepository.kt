@@ -6,7 +6,9 @@ import com.sysadmindoc.callshield.data.ExternalBlocklistFailureReason
 import com.sysadmindoc.callshield.data.ExternalBlocklistParser
 import com.sysadmindoc.callshield.data.ExternalBlocklistRefreshPolicy
 import com.sysadmindoc.callshield.data.ExternalBlocklistValidationException
+import com.sysadmindoc.callshield.data.ListCatalog
 import com.sysadmindoc.callshield.data.ParsedExternalBlocklist
+import com.sysadmindoc.callshield.data.ParsedListCatalog
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.evidenceExpiryCorrections
@@ -16,6 +18,8 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistImportResult
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistRefreshOutcome
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.model.ListCatalogEntry
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
@@ -39,6 +43,10 @@ import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -271,6 +279,33 @@ class SyncRepository(
             true
         }
 
+    private val bundledListCatalog: ParsedListCatalog? by lazy {
+        GitHubDataSource
+            .readBundledAsset(context, GitHubDataSource.BUNDLED_LIST_CATALOG_ASSET)
+            .mapCatching(ListCatalog::parse)
+            .getOrNull()
+    }
+
+    /**
+     * The recommended lists: the newer of the catalog bundled in the APK and
+     * the signed one the last sync downloaded, so a list added after a release
+     * shows without an update and an update's catalog shows before a sync.
+     */
+    val listCatalog: Flow<List<ListCatalogEntry>> =
+        settingsRepository.storedListCatalog
+            .map { stored ->
+                val downloaded = stored?.let { runCatching { ListCatalog.parse(it) }.getOrNull() }
+                listOfNotNull(downloaded, bundledListCatalog).maxByOrNull { it.revision }?.entries.orEmpty()
+            }.flowOn(Dispatchers.IO)
+
+    /** Fetches the signed list catalog. A missing, unsigned or refused file keeps the last good one. */
+    suspend fun refreshListCatalog(): Boolean =
+        withContext(Dispatchers.IO) {
+            val body = remote.fetchListCatalogJson().getOrNull() ?: return@withContext false
+            settingsRepository.saveListCatalog(body)
+            true
+        }
+
     /** Saves [url] as the feed mirror once it serves this project's signed manifest. */
     suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave {
         val normalized = FeedMirror.normalize(url) ?: return FeedMirrorSave.INVALID
@@ -286,7 +321,7 @@ class SyncRepository(
         withContext(Dispatchers.IO) {
             syncMutex.withLock {
                 runExternalBlocklistOperation {
-                    val parsed = fetchAndParseExternalBlocklist(url, label)
+                    val parsed = fetchAndParseTypedList(url, label)
                     val preview = buildExternalBlocklistPreview(parsed)
                     ExternalBlocklistImportResult(
                         success = true,
@@ -304,7 +339,18 @@ class SyncRepository(
         withContext(Dispatchers.IO) {
             syncMutex.withLock {
                 runExternalBlocklistOperation {
-                    val parsed = fetchAndParseExternalBlocklist(url, label)
+                    val parsed = fetchAndParseTypedList(url, label)
+                    commitExternalBlocklist(parsed)
+                }
+            }
+        }
+
+    /** Subscribes to [entry] from the catalog, reading its rows with the list's own [ListNumberPlan]. */
+    suspend fun applyCatalogListSubscription(entry: ListCatalogEntry): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val parsed = fetchAndParseExternalBlocklist(entry.url, entry.name, entry.numberPlan, entry.id)
                     commitExternalBlocklist(parsed)
                 }
             }
@@ -325,8 +371,7 @@ class SyncRepository(
                                 message = context.getString(R.string.external_blocklist_not_found),
                             )
                     if (enabled) {
-                        val parsed = fetchAndParseExternalBlocklist(subscription.url, subscription.label)
-                        commitExternalBlocklist(parsed)
+                        commitExternalBlocklist(fetchAndParseSubscription(subscription))
                     } else {
                         val removed = disableExternalBlocklist(subscription, subscriptions)
                         ExternalBlocklistImportResult(
@@ -699,20 +744,69 @@ class SyncRepository(
         return byPrefix.values.toList()
     }
 
+    /** The catalog list at [url], if it is one. */
+    private suspend fun catalogEntryFor(url: String): ListCatalogEntry? {
+        val normalized = runCatching { ExternalBlocklistParser.validateHttpUrl(url) }.getOrNull() ?: return null
+        return listCatalog.first().firstOrNull { it.url == normalized }
+    }
+
+    /** Reads a typed [url], the way the catalog reads it when it's a catalog list's link. */
+    private suspend fun fetchAndParseTypedList(
+        url: String,
+        label: String,
+    ): ParsedExternalBlocklist {
+        val entry = catalogEntryFor(url)
+        return fetchAndParseExternalBlocklist(
+            url,
+            label.ifBlank { entry?.name.orEmpty() },
+            entry?.numberPlan,
+            entry?.id.orEmpty(),
+        )
+    }
+
+    /**
+     * Downloads [subscription] again with its number plan, or with the
+     * catalog's for a catalog list that was typed in before it had one.
+     */
+    private suspend fun fetchAndParseSubscription(subscription: ExternalBlocklistSubscription): ParsedExternalBlocklist {
+        val entry = if (subscription.numberPlan == null) catalogEntryFor(subscription.url) else null
+        return fetchAndParseExternalBlocklist(
+            subscription.url,
+            subscription.label,
+            subscription.numberPlan ?: entry?.numberPlan,
+            subscription.catalogId.ifEmpty { entry?.id.orEmpty() },
+        )
+    }
+
+    /**
+     * Downloads and reads the list at [url]. With a [numberPlan], a row written
+     * the list country's national way is made international before this phone
+     * canonicalizes it, which would otherwise read it as one of its own numbers.
+     */
     private suspend fun fetchAndParseExternalBlocklist(
         url: String,
         label: String,
-    ): ParsedExternalBlocklist =
-        externalBlocklistDataSource
+        numberPlan: ListNumberPlan? = null,
+        catalogId: String = "",
+    ): ParsedExternalBlocklist {
+        val normalize: (String) -> String =
+            if (numberPlan == null) {
+                normalizeNumber
+            } else {
+                { raw -> normalizeNumber(numberPlan.toInternational(raw) ?: raw) }
+            }
+        return externalBlocklistDataSource
             .fetchText(url)
             .map { body ->
-                ExternalBlocklistParser.parse(
-                    rawUrl = url,
-                    rawLabel = label,
-                    body = body,
-                    normalizeNumber = normalizeNumber,
-                )
+                ExternalBlocklistParser
+                    .parse(
+                        rawUrl = url,
+                        rawLabel = label,
+                        body = body,
+                        normalizeNumber = normalize,
+                    ).copy(numberPlan = numberPlan, catalogId = catalogId)
             }.getOrThrow()
+    }
 
     private suspend fun buildExternalBlocklistPreview(parsed: ParsedExternalBlocklist): ExternalBlocklistPreview {
         val currentRows = dao.getNumbersBySource(parsed.source)
@@ -756,6 +850,8 @@ class SyncRepository(
                 lastError = "",
                 declaredRefreshHours = parsed.declaredRefreshHours,
                 lastAttemptAt = now,
+                numberPlan = parsed.numberPlan,
+                catalogId = parsed.catalogId,
             )
         upsertExternalBlocklistSubscription(subscription)
         CallShieldWidget.refreshAll(context)
@@ -815,7 +911,7 @@ class SyncRepository(
         val currentRows = dao.getCountBySource(subscription.source)
         val parsed =
             try {
-                fetchAndParseExternalBlocklist(subscription.url, subscription.label)
+                fetchAndParseSubscription(subscription)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ExternalBlocklistValidationException) {

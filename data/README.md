@@ -10,6 +10,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
 - `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
 - `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
+- `list_catalog.json`: The recommended lists Settings offers to add, each with its link, license and country number plan. Phones download a list from its own host only when someone adds it
 - `spam_model_holdout.json`: Hashed numbers of the rows the shipped model's training held out, which `evaluate_model.py` scores
 - `source-manifest.json`: Feed access, license, geography, attribution, and parser contract
 - `source-snapshot.json`: Per-run source health, checksum, accepted/rejected counts, and failures
@@ -270,9 +271,9 @@ fails the validation run if it's pushed as it is. Commit the regenerated
 
 ### Feed signatures
 
-Seven files carry a detached signature beside them: `spam_numbers.json`,
+Eight files carry a detached signature beside them: `spam_numbers.json`,
 `spam_numbers.manifest.json`, `hot_numbers.json`, `hot_ranges.json`,
-`spam_domains.json`, `spam_model_weights.json` and `app_release.json`. Each `<file>.sig` holds a
+`spam_domains.json`, `spam_model_weights.json`, `app_release.json` and `list_catalog.json`. Each `<file>.sig` holds a
 base64 DER ECDSA P-256 (SHA-256) signature over the file's exact bytes, line
 endings included. Shards aren't signed one by one: the signed manifest carries
 each shard's SHA-256, and the app checks every shard against it.
@@ -285,6 +286,22 @@ version and the release APK (or `--sha256` with the hash from the release's
 sidecar). Commit it only after `gh release create` has published the tag, or
 the card links to a page that isn't there yet. The app refuses a notice whose
 link isn't this repository's tag page for that version.
+
+`list_catalog.json` is the Recommended lists section of Settings > External
+blocklists. The APK bundles the copy it was built with, and each sync downloads
+the signed one. A phone shows whichever has the higher `revision`. Each entry
+gives an `id`, a `name`, the list's HTTPS `url`, `homepage`, `license` and
+`license_url`, its `format` (`json`, `csv` or `txt`) and its country's number
+plan: the ISO `country`, the `calling_code`, the `trunk_prefix` dialed before a
+national number (empty when the country has none) and the `national_lengths`
+a national number can have. The phone uses the plan to turn a row like
+`03395051735` into `+573395051735` before it stores it. `enabled_by_default`
+must be `false`: nothing on the list is fetched until someone adds it. The app
+leaves out an entry it can't use and still shows the rest, so
+`scripts/test_list_catalog.py` checks every entry in the pipeline suites. To add
+a list, append its entry, raise `revision`, run `python scripts/feed_signing.py
+sign` and commit the file with its `.sig`. A list must fit the subscription
+limits (1 MB, 20,000 rows) and must never become a database source.
 
 `spam_numbers.txt` is signed the same way for anyone who takes the list
 without the app. It's written with the shards, holds every number whose

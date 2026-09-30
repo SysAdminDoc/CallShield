@@ -288,6 +288,14 @@ class SettingsRepository(
         dataStore.edit { it[SpamRepository.KEY_RELEASE_NOTICE_DISMISSED] = versionCode }
     }
 
+    /** The last list catalog a sync downloaded and checked, as published, or null before the first. */
+    val storedListCatalog: Flow<String?> =
+        dataStore.data.map { it[SpamRepository.KEY_LIST_CATALOG] }.distinctUntilChanged()
+
+    suspend fun saveListCatalog(body: String) {
+        dataStore.edit { it[SpamRepository.KEY_LIST_CATALOG] = body }
+    }
+
     val appUpdateState: Flow<AppUpdateState> =
         dataStore.data.map { prefs ->
             AppUpdateState(

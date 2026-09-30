@@ -65,6 +65,7 @@ class BackupSettingsCoverageTest {
             "KEY_RELEASE_NOTICE_URL" to "the last release notice this phone downloaded, not a setting",
             "KEY_RELEASE_NOTICE_SHA256" to "the last release notice this phone downloaded, not a setting",
             "KEY_RELEASE_NOTICE_DISMISSED" to "a notice this phone already showed",
+            "KEY_LIST_CATALOG" to "the last list catalog this phone downloaded, not a setting",
             "KEY_TRENDING_NUMBERS" to "sync state of this phone's trending feeds",
         )
 

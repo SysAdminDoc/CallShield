@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import com.squareup.moshi.JsonReader
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okio.Buffer
@@ -30,6 +31,10 @@ internal data class ParsedExternalBlocklist(
     val skippedRows: Int,
     /** Hours between refreshes the list declares for itself, or 0 for none. */
     val declaredRefreshHours: Int = 0,
+    /** How the catalog said to read the list's national numbers, kept for its refreshes. */
+    val numberPlan: ListNumberPlan? = null,
+    /** The catalog entry it was added from, or "" for a typed URL. */
+    val catalogId: String = "",
 )
 
 private data class ExternalBlocklistRow(

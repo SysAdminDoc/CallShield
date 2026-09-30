@@ -4,6 +4,7 @@ package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,12 +16,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -33,13 +37,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ExternalBlocklistParser
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.model.ListCatalogEntry
 import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
 import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
 import com.sysadmindoc.callshield.ui.theme.*
+import java.util.Locale
 
 /** Blocklists downloaded from a URL, with the typed URL and label owned by the screen. */
 @Composable
@@ -55,10 +62,16 @@ internal fun ExternalBlocklistSection(
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
     val externalBlocklistUndo by viewModel.externalBlocklistUndo.collectAsStateWithLifecycle()
+    val listCatalog by viewModel.listCatalog.collectAsStateWithLifecycle()
     ExternalBlocklistSettings(
         url = url,
         label = label,
         subscriptions = externalBlocklists,
+        catalog = listCatalog,
+        onAddCatalogList = { entry ->
+            hapticTick(context)
+            viewModel.addCatalogList(entry)
+        },
         preview = externalBlocklistPreview,
         result = externalBlocklistResult,
         onUrlChange = onUrlChange,
@@ -125,6 +138,8 @@ internal fun ExternalBlocklistSettings(
     url: String,
     label: String,
     subscriptions: List<ExternalBlocklistSubscription>,
+    catalog: List<ListCatalogEntry>,
+    onAddCatalogList: (ListCatalogEntry) -> Unit,
     preview: ExternalBlocklistPreview?,
     result: StatusMessage?,
     onUrlChange: (String) -> Unit,
@@ -144,6 +159,18 @@ internal fun ExternalBlocklistSettings(
             style = MaterialTheme.typography.bodySmall,
             color = CatSubtext,
         )
+        if (catalog.isNotEmpty()) {
+            ListCatalogSection(catalog = catalog, subscriptions = subscriptions, onAdd = onAddCatalogList)
+            Spacer(Modifier.height(12.dp))
+            GradientDivider()
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.settings_external_blocklist_by_link),
+                style = MaterialTheme.typography.titleSmall,
+                color = CatText,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
             value = url,
@@ -398,6 +425,108 @@ internal fun ExternalBlocklistPreviewPanel(
         }
     }
 }
+
+internal const val LIST_CATALOG_ADD_TAG = "list_catalog_add"
+
+/**
+ * The recommended lists, each with its country and license on the row before
+ * its Add button, since adding one downloads it from someone else's site.
+ */
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+internal fun ListCatalogSection(
+    catalog: List<ListCatalogEntry>,
+    subscriptions: List<ExternalBlocklistSubscription>,
+    onAdd: (ListCatalogEntry) -> Unit,
+) {
+    Spacer(Modifier.height(12.dp))
+    Text(
+        stringResource(R.string.settings_list_catalog_title),
+        style = MaterialTheme.typography.titleSmall,
+        color = CatText,
+        modifier = Modifier.semantics { heading() },
+    )
+    Spacer(Modifier.height(4.dp))
+    Text(
+        stringResource(R.string.settings_list_catalog_desc),
+        style = MaterialTheme.typography.bodySmall,
+        color = CatSubtext,
+    )
+    val addedIds = subscriptions.map { it.id }.toSet()
+    val addedCatalogIds = subscriptions.map { it.catalogId }.filter { it.isNotEmpty() }.toSet()
+    catalog.forEach { entry ->
+        ListCatalogRow(
+            entry = entry,
+            added = entry.id in addedCatalogIds || ExternalBlocklistParser.idForUrl(entry.url) in addedIds,
+            onAdd = { onAdd(entry) },
+        )
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+internal fun ListCatalogRow(
+    entry: ListCatalogEntry,
+    added: Boolean,
+    onAdd: () -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    val country = remember(entry.numberPlan.country) { countryName(entry.numberPlan.country) }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        PremiumIconTile(icon = Icons.Default.Public, color = CatBlue, size = 38.dp, iconSize = 20.dp)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(entry.name, style = MaterialTheme.typography.bodyMedium, color = CatText)
+            Text(country, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Text(
+                stringResource(R.string.settings_list_catalog_license_link, entry.license),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatBlue,
+                modifier =
+                    Modifier.clickable(
+                        onClickLabel = stringResource(R.string.settings_list_catalog_license_action, entry.license),
+                        role = Role.Button,
+                    ) { runCatching { uriHandler.openUri(entry.licenseUrl) } },
+            )
+        }
+        if (added) {
+            Text(
+                stringResource(R.string.settings_list_catalog_added),
+                style = MaterialTheme.typography.labelMedium,
+                color = CatGreen,
+            )
+        } else {
+            val addAction = stringResource(R.string.settings_list_catalog_add_action, entry.name)
+            TextButton(
+                onClick = onAdd,
+                modifier =
+                    Modifier.semantics {
+                        contentDescription = addAction
+                        testTag = LIST_CATALOG_ADD_TAG
+                    },
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = CatBlue, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.settings_list_catalog_add), color = CatBlue)
+            }
+        }
+    }
+}
+
+/** [iso] as a country name in the phone's language, or the code itself when it isn't a country. */
+private fun countryName(iso: String): String =
+    runCatching {
+        Locale
+            .Builder()
+            .setRegion(iso)
+            .build()
+            .displayCountry
+    }.getOrNull()
+        ?.takeIf { it.isNotBlank() && it != iso }
+        ?: iso
 
 internal const val EXTERNAL_BLOCKLIST_SWITCH_TAG = "external_blocklist_switch"
 

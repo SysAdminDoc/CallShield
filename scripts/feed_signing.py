@@ -51,6 +51,7 @@ SIGNED_FEEDS = (
     "spam_domains.json",
     "spam_model_weights.json",
     "app_release.json",
+    "list_catalog.json",
 )
 
 # Signed for downstream consumers of the data. The app doesn't download these,

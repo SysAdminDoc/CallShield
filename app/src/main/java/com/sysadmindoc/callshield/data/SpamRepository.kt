@@ -303,6 +303,9 @@ class SpamRepository(
         internal val KEY_RELEASE_NOTICE_URL = stringPreferencesKey("release_notice_url")
         internal val KEY_RELEASE_NOTICE_SHA256 = stringPreferencesKey("release_notice_apk_sha256")
         internal val KEY_RELEASE_NOTICE_DISMISSED = intPreferencesKey("release_notice_dismissed_code")
+
+        /** The last signed list catalog a sync downloaded, as published. */
+        internal val KEY_LIST_CATALOG = stringPreferencesKey("list_catalog_json")
         internal val KEY_APP_UPDATE_STATUS = stringPreferencesKey("app_update_status")
         internal val KEY_APP_UPDATE_TAG = stringPreferencesKey("app_update_latest_tag")
         internal val KEY_APP_UPDATE_RELEASE_URL = stringPreferencesKey("app_update_release_url")
@@ -565,6 +568,13 @@ class SpamRepository(
     suspend fun refreshAppReleaseNotice(): Boolean = syncRepository.refreshAppReleaseNotice()
 
     suspend fun dismissAppReleaseNotice(versionCode: Int) = settingsRepository.dismissAppReleaseNotice(versionCode)
+
+    /** The recommended lists Settings offers to add. */
+    val listCatalog: Flow<List<ListCatalogEntry>> = syncRepository.listCatalog
+
+    suspend fun refreshListCatalog(): Boolean = syncRepository.refreshListCatalog()
+
+    suspend fun applyCatalogListSubscription(entry: ListCatalogEntry) = syncRepository.applyCatalogListSubscription(entry)
 
     suspend fun togglePushAlertPackage(
         pkg: String,

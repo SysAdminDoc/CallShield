@@ -35,6 +35,7 @@ val stageBundledAssets =
                 "hot_ranges.json",
                 "spam_domains.json",
                 "spam_model_weights.json",
+                "list_catalog.json",
             )
         }
         into(layout.buildDirectory.dir("generated/callshieldAssets"))

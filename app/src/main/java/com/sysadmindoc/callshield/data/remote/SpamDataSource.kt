@@ -40,6 +40,12 @@ interface SpamDataSource {
         repo: String = GitHubDataSource.DEFAULT_REPO_NAME,
     ): Result<AppReleaseNotice> = Result.failure(UnsupportedOperationException("Release notices are unavailable"))
 
+    /** The signed list catalog (`data/list_catalog.json`) as published, once its signature and shape check out. */
+    suspend fun fetchListCatalogJson(
+        owner: String = GitHubDataSource.DEFAULT_REPO_OWNER,
+        repo: String = GitHubDataSource.DEFAULT_REPO_NAME,
+    ): Result<String> = Result.failure(UnsupportedOperationException("The list catalog is unavailable"))
+
     /** True while GitHub itself fails certificate verification, even when a mirror is serving the feeds. */
     val gitHubTrustFailing: Boolean get() = false
 

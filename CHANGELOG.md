@@ -4,6 +4,15 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Settings > External blocklists opens with Recommended lists: OpenCallShield
+  (Colombia), SpamChile (Chile) and Turkish Spam Numbers (Turkey), each showing
+  its country and license beside an Add button. Nothing is downloaded until you
+  add one, and none of them is merged into the database. Every list declares its
+  country's number plan, so local rows such as `3131918305` and `03395051735`
+  are stored as +57 numbers even on a phone in another country. A catalog list
+  typed in by hand gets the same treatment, including one added before this
+  release, on its next refresh. The catalog ships in the app and a signed copy
+  is refreshed on every sync.
 - SMS checks catch reply bait: a first text from a phone number you've never
   texted or heard from that fishes for an answer without a link. "Hi mum,
   this is my new number, my phone broke" is caught in English, Spanish, German,

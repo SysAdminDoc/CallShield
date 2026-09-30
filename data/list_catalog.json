@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "revision": 1,
+  "lists": [
+    {
+      "id": "opencallshield-co",
+      "name": "OpenCallShield",
+      "country": "CO",
+      "calling_code": "57",
+      "trunk_prefix": "0",
+      "national_lengths": [
+        10
+      ],
+      "url": "https://raw.githubusercontent.com/jhonsu01/OpenCallShield/main/spam_numbers.json",
+      "homepage": "https://github.com/jhonsu01/OpenCallShield",
+      "license": "MIT",
+      "license_url": "https://github.com/jhonsu01/OpenCallShield/blob/main/LICENSE",
+      "format": "json",
+      "enabled_by_default": false
+    },
+    {
+      "id": "spamchile-cl",
+      "name": "SpamChile",
+      "country": "CL",
+      "calling_code": "56",
+      "trunk_prefix": "",
+      "national_lengths": [
+        9
+      ],
+      "url": "https://raw.githubusercontent.com/racuna/SpamChile/main/ChileSpam.csv",
+      "homepage": "https://github.com/racuna/SpamChile",
+      "license": "GPL-2.0",
+      "license_url": "https://github.com/racuna/SpamChile/blob/main/LICENSE",
+      "format": "csv",
+      "enabled_by_default": false
+    },
+    {
+      "id": "turkish-spam-numbers-tr",
+      "name": "Turkish Spam Numbers",
+      "country": "TR",
+      "calling_code": "90",
+      "trunk_prefix": "0",
+      "national_lengths": [
+        10
+      ],
+      "url": "https://raw.githubusercontent.com/symbuzzer/Turkish-Spam-Numbers/main/numbers",
+      "homepage": "https://github.com/symbuzzer/Turkish-Spam-Numbers",
+      "license": "GPL-3.0",
+      "license_url": "https://github.com/symbuzzer/Turkish-Spam-Numbers/blob/main/LICENSE",
+      "format": "txt",
+      "enabled_by_default": false
+    }
+  ]
+}

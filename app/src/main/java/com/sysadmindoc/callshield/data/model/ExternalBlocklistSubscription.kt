@@ -16,6 +16,10 @@ data class ExternalBlocklistSubscription(
     val declaredRefreshHours: Int = 0,
     /** The last fetch, successful or not. Paces retries of a list that keeps failing. */
     val lastAttemptAt: Long = 0L,
+    /** How to read the list's national numbers, for a list added from the catalog. */
+    val numberPlan: ListNumberPlan? = null,
+    /** The catalog entry it was added from, or "" for a typed URL. */
+    val catalogId: String = "",
 ) {
     val source: String get() = sourceFor(id)
 

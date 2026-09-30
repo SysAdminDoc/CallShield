@@ -792,6 +792,14 @@
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
     <string name="settings_external_blocklist_last_synced">Last updated: %1$s</string>
     <string name="settings_external_blocklist_undo">Undo</string>
+    <string name="settings_external_blocklist_by_link">Or add any list by its link</string>
+    <string name="settings_list_catalog_title">Recommended lists</string>
+    <string name="settings_list_catalog_desc">Lists kept by people in other countries. Each one downloads straight from its own site, and nothing is added until you tap Add.</string>
+    <string name="settings_list_catalog_license_link">%1$s license</string>
+    <string name="settings_list_catalog_license_action">Read the %1$s license</string>
+    <string name="settings_list_catalog_add">Add</string>
+    <string name="settings_list_catalog_add_action">Add %1$s</string>
+    <string name="settings_list_catalog_added">Added</string>
     <string name="settings_external_blocklist_remove_action">Remove %1$s</string>
     <string name="settings_feed_mirror">Feed mirror</string>
     <string name="settings_feed_mirror_desc">If GitHub is blocked where you are, CallShield can download its protection data from a second address instead. GitHub goes first, except for a few minutes after it couldn\'t be reached. Every file still has to carry the project\'s signature, so a mirror can\'t alter the data, though it can hold back updates.</string>

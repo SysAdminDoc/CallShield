@@ -604,6 +604,14 @@
     <string name="settings_external_blocklist_subscription_stats">%1$d 个活跃，上次同步 +%2$d / -%3$d</string>
     <string name="settings_external_blocklist_last_synced">上次更新：%1$s</string>
     <string name="settings_external_blocklist_undo">撤销</string>
+    <string name="settings_external_blocklist_by_link">或通过链接添加任意列表</string>
+    <string name="settings_list_catalog_title">推荐列表</string>
+    <string name="settings_list_catalog_desc">由其他国家的用户维护的列表。每个列表都直接从它自己的网站下载，点“添加”之前不会添加任何内容。</string>
+    <string name="settings_list_catalog_license_link">%1$s 许可</string>
+    <string name="settings_list_catalog_license_action">阅读 %1$s 许可</string>
+    <string name="settings_list_catalog_add">添加</string>
+    <string name="settings_list_catalog_add_action">添加 %1$s</string>
+    <string name="settings_list_catalog_added">已添加</string>
     <string name="settings_external_blocklist_remove_action">移除 %1$s</string>
     <string name="external_blocklist_undo_unavailable">现在无法恢复这个列表。请重新添加它。</string>
     <string name="settings_feed_mirror">数据镜像</string>

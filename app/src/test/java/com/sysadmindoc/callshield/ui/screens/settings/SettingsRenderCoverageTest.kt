@@ -150,6 +150,7 @@ class SettingsRenderCoverageTest {
             "KEY_RELEASE_NOTICE_URL" to "the last release notice, shown on Home",
             "KEY_RELEASE_NOTICE_SHA256" to "the last release notice, shown on Home",
             "KEY_RELEASE_NOTICE_DISMISSED" to "the last release notice, shown on Home",
+            "KEY_LIST_CATALOG" to "the downloaded list catalog, which External blocklists shows as rows, not a setting",
             "KEY_LAST_SYNC" to "sync state",
             "KEY_LAST_SYNC_SOURCE" to "sync state",
             "KEY_LAST_SHA" to "sync state",

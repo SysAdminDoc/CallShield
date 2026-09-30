@@ -7,6 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.AppUpdateRelease
+import com.sysadmindoc.callshield.data.ListCatalog
 import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
@@ -188,6 +189,7 @@ class GitHubDataSource internal constructor(
         const val SPAM_DOMAINS_PATH = "data/spam_domains.json"
         const val MODEL_WEIGHTS_PATH = "data/spam_model_weights.json"
         const val APP_RELEASE_PATH = "data/app_release.json"
+        const val LIST_CATALOG_PATH = "data/list_catalog.json"
 
         const val BUNDLED_DATABASE_ASSET = "spam_numbers.json"
         const val BUNDLED_SHARD_MANIFEST_ASSET = "spam_numbers.manifest.json"
@@ -196,6 +198,7 @@ class GitHubDataSource internal constructor(
         const val BUNDLED_HOT_RANGES_ASSET = "hot_ranges.json"
         const val BUNDLED_SPAM_DOMAINS_ASSET = "spam_domains.json"
         const val BUNDLED_MODEL_WEIGHTS_ASSET = "spam_model_weights.json"
+        const val BUNDLED_LIST_CATALOG_ASSET = "list_catalog.json"
 
         internal const val MAX_SPAM_DATABASE_BYTES = 16L * 1024L * 1024L
         internal const val MAX_SPAM_SHARD_BYTES = 1L * 1024L * 1024L
@@ -203,6 +206,7 @@ class GitHubDataSource internal constructor(
         internal const val MAX_HOT_RANGES_BYTES = 512L * 1024L
         internal const val MAX_SPAM_DOMAINS_BYTES = 2L * 1024L * 1024L
         internal const val MAX_APP_RELEASE_BYTES = 4L * 1024L
+        internal const val MAX_LIST_CATALOG_BYTES = 64L * 1024L
         internal const val MAX_MODEL_WEIGHTS_BYTES = 1L * 1024L * 1024L
 
         internal const val MAX_SPAM_DATABASE_NUMBERS = 250_000
@@ -239,6 +243,7 @@ class GitHubDataSource internal constructor(
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
                 MODEL_WEIGHTS_PATH to RawFeedSpec("model weights", MAX_MODEL_WEIGHTS_BYTES),
                 APP_RELEASE_PATH to RawFeedSpec("release notice", MAX_APP_RELEASE_BYTES),
+                LIST_CATALOG_PATH to RawFeedSpec("list catalog", MAX_LIST_CATALOG_BYTES),
             )
 
         /**
@@ -255,6 +260,7 @@ class GitHubDataSource internal constructor(
                 SPAM_DOMAINS_PATH,
                 MODEL_WEIGHTS_PATH,
                 APP_RELEASE_PATH,
+                LIST_CATALOG_PATH,
             )
 
         private val VERSION_NAME_REGEX = Regex("\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}")
@@ -485,6 +491,21 @@ class GitHubDataSource internal constructor(
                 Result.success(parseAppReleaseNotice(result.getOrThrow()))
             } catch (refused: GitHubFeedValidationException) {
                 Result.failure(refused)
+            }
+        }
+
+    override suspend fun fetchListCatalogJson(
+        owner: String,
+        repo: String,
+    ): Result<String> =
+        withContext(Dispatchers.IO) {
+            fetchRawText(LIST_CATALOG_PATH, owner, repo).mapCatching { body ->
+                try {
+                    ListCatalog.parse(body)
+                } catch (refused: IllegalArgumentException) {
+                    failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, refused.message.orEmpty())
+                }
+                body
             }
         }
 

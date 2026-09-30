@@ -45,6 +45,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.ListCatalogEntry
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -573,6 +574,7 @@ class MainViewModel
         val externalBlocklistSubscriptions =
             repo.externalBlocklistSubscriptions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val listCatalog = repo.listCatalog.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
         val feedMirrorUrl = repo.feedMirrorUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
         private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -720,15 +722,16 @@ class MainViewModel
                 if (showProgress) NotificationHelper.showSyncProgress(appContext)
                 try {
                     val result = syncDatabase(force = true)
-                    // Sync now also picks up a new release notice, as the
-                    // six-hour worker does.
+                    // Sync now also picks up a new release notice and list
+                    // catalog, as the six-hour worker does.
                     if (result.success) {
                         try {
                             repo.refreshAppReleaseNotice()
+                            repo.refreshListCatalog()
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            Log.w(TAG, "Release notice refresh failed", e)
+                            Log.w(TAG, "Release notice or list catalog refresh failed", e)
                         }
                     }
                     _syncState.value =
@@ -767,6 +770,15 @@ class MainViewModel
             viewModelScope.launch {
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
+            }
+        }
+
+        fun addCatalogList(entry: ListCatalogEntry) {
+            _externalBlocklistUndo.value = null
+            viewModelScope.launch {
+                val result = repo.applyCatalogListSubscription(entry)
+                _externalBlocklistPreview.value = null
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }

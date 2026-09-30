@@ -77,6 +77,28 @@ class GitHubDataSourceFetchTest {
     private fun fetchReleaseNotice(masterFiles: Map<String, ByteArray>) = runBlocking { dataSource(masterFiles, emptyMap()).fetchAppReleaseNotice(OWNER, REPO) }
 
     @Test
+    fun `the list catalog comes signed from the feed host and is refused when changed or unsigned`() {
+        val catalog = file(LIST_CATALOG)
+        val signature = file("$LIST_CATALOG.sig")
+        val accepted = fetchListCatalog(mapOf(LIST_CATALOG to catalog, "$LIST_CATALOG.sig" to signature))
+        assertTrue(accepted.exceptionOrNull()?.toString(), accepted.isSuccess)
+        assertEquals(String(catalog, Charsets.UTF_8), accepted.getOrThrow())
+        assertTrue(requested.toString(), requested.all { it.startsWith(RAW) || it.startsWith(API) })
+        assertTrue(requested.contains("$MASTER$LIST_CATALOG.sig"))
+
+        val moved =
+            String(catalog, Charsets.UTF_8)
+                .replaceFirst("jhonsu01/OpenCallShield/main", "someone-else/OpenCallShield/main")
+                .toByteArray(Charsets.UTF_8)
+        val changed = fetchListCatalog(mapOf(LIST_CATALOG to moved, "$LIST_CATALOG.sig" to signature))
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (changed.exceptionOrNull() as GitHubFeedValidationException).reason)
+        val unsigned = fetchListCatalog(mapOf(LIST_CATALOG to catalog))
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (unsigned.exceptionOrNull() as GitHubFeedValidationException).reason)
+    }
+
+    private fun fetchListCatalog(masterFiles: Map<String, ByteArray>) = runBlocking { dataSource(masterFiles, emptyMap()).fetchListCatalogJson(OWNER, REPO) }
+
+    @Test
     fun `a download changed in transit is refused`() {
         val result = fetchHotList(mapOf(HOT_LIST to tampered(hotList), "$HOT_LIST.sig" to hotListSignature))
 
@@ -447,6 +469,7 @@ class GitHubDataSourceFetchTest {
         const val MANIFEST = GitHubDataSource.SHARD_MANIFEST_PATH
         const val MODEL = GitHubDataSource.MODEL_WEIGHTS_PATH
         const val APP_RELEASE = GitHubDataSource.APP_RELEASE_PATH
+        const val LIST_CATALOG = GitHubDataSource.LIST_CATALOG_PATH
         const val OWNER = GitHubDataSource.DEFAULT_REPO_OWNER
         const val REPO = GitHubDataSource.DEFAULT_REPO_NAME
         const val REPOSITORY_API = "https://api.github.com/repos/SysAdminDoc/CallShield"
