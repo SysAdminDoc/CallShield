@@ -790,9 +790,13 @@ private object Imc25Sample {
         val replyBased: Boolean
             get() = scamType in REPLY_BASED
 
-        /** Only a phone number can be texted back; an alphanumeric or email sender can't. */
+        /**
+         * Only a phone number can be texted back; an alphanumeric or email
+         * sender can't. A report whose screenshot didn't show the sender isn't
+         * counted as a phone's first text either.
+         */
         val fromPhoneNumber: Boolean
-            get() = sender == "phone" || sender == "unknown"
+            get() = sender == "phone"
 
         /**
          * The dataset replaced links, numbers and names with placeholders. A
@@ -817,18 +821,19 @@ private object Imc25Sample {
 
     /**
      * Recall each group keeps at the evaluator threshold, measured 2026-09-30
-     * once reply bait landed: all 0.130 and reply-based 0.353, from 0.103 and
-     * 0.045 before it. A floor only moves up.
+     * once reply bait landed: all 0.122 and reply-based 0.257, from 0.103 and
+     * 0.045 before it. Only reports from a phone number count as a first
+     * text, and "wrong number" counts only as an opener. A floor only moves up.
      */
     val recallFloors =
         mapOf(
-            "all" to 0.13,
-            "reply-based" to 0.35,
-            "en" to 0.18,
-            "es" to 0.18,
+            "all" to 0.12,
+            "reply-based" to 0.25,
+            "en" to 0.16,
+            "es" to 0.17,
             "nl" to 0.07,
             "fr" to 0.08,
-            "de" to 0.17,
+            "de" to 0.13,
             "it" to 0.18,
             "id" to 0.10,
             "pt" to 0.15,

@@ -275,6 +275,7 @@ class SpamRepositoryImpl(
         body: String,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
+        fromSmsInbox: Boolean = true,
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
         val senderProvenance = senderProvenanceResolver.resolve(number, senderRegionIso)
@@ -283,9 +284,12 @@ class SpamRepositoryImpl(
             canonicalPhone.isNotBlank() &&
                 checkerDependencies.smsContextChecker.isTrustedSender(context, canonicalPhone)
         // Reply bait only means something in a stranger's first text. A rescan
-        // finds the old message itself in the inbox, so it applies only live.
+        // finds the old message itself in the inbox, so it applies only live,
+        // and an RCS or chat message never reaches the inbox, so every one of
+        // them would read as a first text.
         val smsFirstContact =
             realtimeCall &&
+                fromSmsInbox &&
                 !smsContextTrusted &&
                 canonicalPhone.isNotBlank() &&
                 checkerDependencies.smsContextChecker.isFirstMessageFrom(context, canonicalPhone)

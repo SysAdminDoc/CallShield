@@ -39,6 +39,18 @@ class SmsReplyBaitTest {
     }
 
     @Test
+    fun `a business's wrong-number line is not an opener`() {
+        // A clinic's first text: its opt-out wording already scores 40, and
+        // reply bait on top used to block it in the default mode.
+        val clinic = "Lakeside Family Clinic: your visit is confirmed for Tue 3:40 PM. Wrong number? Reply STOP to opt out."
+        assertFalse(baited(clinic))
+        assertTrue(analyzer.analyze(clinic, firstContact = true).score < 50)
+        assertFalse(baited("Wrong number? Text STOP and we won't message you again. Maple Bakery order updates"))
+        // Well past the opening, with no opt-out, it's an apology, not an opener.
+        assertFalse(baited("Your table at Rosa's is ready in 10 minutes, see you soon! If we have the wrong number, sorry about that."))
+    }
+
+    @Test
     fun `it counts only in a stranger's first text`() {
         assertFalse(baited("Hi mum, my phone broke. This is my new number, can you text me back?", firstContact = false))
         assertFalse(baited("Hi, is this Sarah?", firstContact = false))

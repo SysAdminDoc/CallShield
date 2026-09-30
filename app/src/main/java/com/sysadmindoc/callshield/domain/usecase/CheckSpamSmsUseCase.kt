@@ -12,11 +12,16 @@ class CheckSpamSmsUseCase(
         body: String,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
+        fromSmsInbox: Boolean = true,
     ): SpamCheckResult =
-        repository.checkSpamSms(
-            number = number,
-            body = body,
-            realtimeCall = realtimeCall,
-            prefsSnapshot = prefsSnapshot,
-        )
+        if (fromSmsInbox) {
+            repository.checkSpamSms(
+                number = number,
+                body = body,
+                realtimeCall = realtimeCall,
+                prefsSnapshot = prefsSnapshot,
+            )
+        } else {
+            repository.checkSpamMessageOutsideInbox(number, body, prefsSnapshot)
+        }
 }

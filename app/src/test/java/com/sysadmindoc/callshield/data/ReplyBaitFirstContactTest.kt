@@ -8,6 +8,8 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.Telephony
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -90,6 +92,16 @@ class ReplyBaitFirstContactTest {
     fun `a rescan of an old message doesn't treat it as a first text`() =
         runBlocking {
             assertFalse(fixture.repository.isSpamSms(number, body, realtimeCall = false).isSpam)
+        }
+
+    @Test
+    fun `an RCS or chat message never counts as a first text`() =
+        runBlocking {
+            // They never reach the SMS inbox, so every one would read as a stranger's first.
+            val result = CheckSpamSmsUseCase(SpamRepositoryAdapter(fixture.repository))(number, body, fromSmsInbox = false)
+
+            assertFalse(result.signals.toString(), "reply_bait" in result.signals)
+            assertFalse(result.isSpam)
         }
 
     @Test

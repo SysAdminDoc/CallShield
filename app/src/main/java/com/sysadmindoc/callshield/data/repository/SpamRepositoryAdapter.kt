@@ -49,6 +49,18 @@ class SpamRepositoryAdapter(
             prefsSnapshot = prefsSnapshot,
         )
 
+    override suspend fun checkSpamMessageOutsideInbox(
+        number: String,
+        body: String,
+        prefsSnapshot: Preferences?,
+    ): SpamCheckResult =
+        repository.isSpamSms(
+            number = number,
+            body = body,
+            prefsSnapshot = prefsSnapshot,
+            fromSmsInbox = false,
+        )
+
     override suspend fun syncDatabase(force: Boolean): SyncResult = repository.syncFromGitHub(force = force)
 
     override suspend fun blockNumber(

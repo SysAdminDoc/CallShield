@@ -738,12 +738,14 @@ class SpamRepository(
         body: String,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
+        fromSmsInbox: Boolean = true,
     ): SpamCheckResult =
         spamRepositoryImpl.isSpamSms(
             number = number,
             body = body,
             realtimeCall = realtimeCall,
             prefsSnapshot = prefsSnapshot,
+            fromSmsInbox = fromSmsInbox,
         )
 
     // ── Pipeline trace (diagnostic) ─────────────────────────────────────

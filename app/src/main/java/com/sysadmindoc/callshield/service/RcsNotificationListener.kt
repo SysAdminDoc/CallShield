@@ -251,7 +251,7 @@ class RcsNotificationListener : NotificationListenerService() {
         val result =
             senderNumber
                 .takeIf { spamBlockingEnabled && filterAsciiDigits(it).length >= 7 }
-                ?.let { number -> checkSpamSms(number, effectiveBody.orEmpty(), prefsSnapshot = prefs) }
+                ?.let { number -> checkSpamSms(number, effectiveBody.orEmpty(), prefsSnapshot = prefs, fromSmsInbox = false) }
         val contentVerdict =
             effectiveBody?.takeIf { spamBlockingEnabled && result == null }?.let { bodyText ->
                 contentVerdict(

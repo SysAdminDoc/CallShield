@@ -26,10 +26,12 @@ All notable changes to CallShield will be documented in this file.
   Dutch, Portuguese, Italian, French and a few more, and so are "Is this
   Sarah?" and "sorry, wrong number". On its own it blocks only in aggressive
   mode, since a real kid with a new phone writes the same words. Someone
-  else's parent ("this is Maya's mom, here's my new number") doesn't count.
+  else's parent ("this is Maya's mom, here's my new number") doesn't count,
+  and neither does a business's "Wrong number? Reply STOP" footer or an RCS
+  or chat message, which never reaches the inbox that says who's a stranger.
 - The SMS regression test runs 5,000 real smishing reports from the IMC 2025
   dataset (CC BY 4.0) and reports recall for each language. Content rules
-  catch 13% of them, up from 10% before reply bait, and 35% of the wrong
+  catch 12% of them, up from 10% before reply bait, and 26% of the wrong
   number and "hi mum" scams, up from 4.5%.
 - The report Worker runs the current code. It had been serving a build from
   March, so reports carried no reporter identity and the trending lists and

@@ -19,4 +19,15 @@ interface SpamCheckRepository {
         realtimeCall: Boolean,
         prefsSnapshot: Preferences?,
     ): SpamCheckResult
+
+    /**
+     * A live message the SMS inbox never holds (RCS, a chat app's notification).
+     * Whether it's someone's first text can't be read from the inbox, so it's
+     * never treated as one.
+     */
+    suspend fun checkSpamMessageOutsideInbox(
+        number: String,
+        body: String,
+        prefsSnapshot: Preferences?,
+    ): SpamCheckResult = checkSpamSms(number, body, realtimeCall = true, prefsSnapshot = prefsSnapshot)
 }

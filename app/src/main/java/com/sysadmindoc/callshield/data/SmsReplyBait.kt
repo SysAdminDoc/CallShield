@@ -20,6 +20,9 @@ internal object SmsReplyBait {
     /** How far back from a parent word to look for "Maya's" or "my". */
     private const val POSSESSIVE_WINDOW = 24
 
+    /** "Sorry, wrong number" opens a stranger's text; further in, it's usually a business's opt-out footer. */
+    private const val WRONG_NUMBER_OPENING = 40
+
     private const val START = "(?<![\\p{L}\\p{N}])"
     private const val END = "(?![\\p{L}\\p{N}])"
     private const val SPACE = "[\\s\\p{Zs}]"
@@ -86,6 +89,10 @@ internal object SmsReplyBait {
                 "|did(?:n$APOSTROPHE?t| not) you saved? my number|long time no (?:see|talk|chat|speak))$END",
         )
 
+    // A business's first text ends "Wrong number? Reply STOP to opt out".
+    private val optOut =
+        Regex("(?iu)$START(?:(?:reply|text|send)$SPACE+[\"'“]?stop|opt$SPACE?-?$SPACE?out|unsubscribe)$END")
+
     // "Hi, is this Sarah?" The name has to be capitalized: "is this the
     // number for the flyer?" is someone with a reason to write.
     private val isThisName =
@@ -110,7 +117,12 @@ internal object SmsReplyBait {
         val signsOff = parentSignsOff.containsMatchIn(text)
         if ((parents.isNotEmpty() || signsOff) && newPhone.containsMatchIn(text)) return true
         if ((signsOff || parents.any { it !in ambiguousParents }) && chatApp.containsMatchIn(text)) return true
-        return wrongNumber.containsMatchIn(text) || (visibleLength <= MAX_OPENER_LENGTH && isThisName.containsMatchIn(text))
+        return isWrongNumberOpener(text) || (visibleLength <= MAX_OPENER_LENGTH && isThisName.containsMatchIn(text))
+    }
+
+    private fun isWrongNumberOpener(text: String): Boolean {
+        val match = wrongNumber.find(text) ?: return false
+        return match.range.first <= WRONG_NUMBER_OPENING && !optOut.containsMatchIn(text)
     }
 
     /** The parent words [text] speaks to, skipping ones that name someone's parent. */
