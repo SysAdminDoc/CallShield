@@ -406,7 +406,8 @@ def test_merge_writes_its_records_beside_the_database():
 
 def test_import_moves_old_evidence_onto_the_manifest_lifetime():
     # 2026-09-28: all 51,362 rows carried evidence due to lapse between 10-09
-    # and 10-25, and the app drops a row at its earliest expiry. An import with
+    # and 10-25, and the app then dropped a row at its earliest expiry (its latest
+    # since 2026-09-30). An import with
     # nothing new must still restamp them and publish a new version.
     module = load_importer()
     with tempfile.TemporaryDirectory() as directory:

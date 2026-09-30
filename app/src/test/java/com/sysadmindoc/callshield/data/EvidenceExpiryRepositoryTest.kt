@@ -86,10 +86,11 @@ class EvidenceExpiryRepositoryTest {
             )
             assertNotEquals("database", fixture.repository.isSpam(NUMBER).matchSource)
 
+            // appliedAt is the feed's publish time, before the row expired; expiry is judged now.
             fixture.repository.replaceHotList(
                 listOf(SpamNumber(number = NUMBER, type = "robocall", source = "hot_list", evidenceExpiresAt = now + DAY_MS)),
                 recordTrending = false,
-                appliedAt = now,
+                appliedAt = FCC_2027 - DAY_MS,
             )
 
             assertEquals("database", fixture.repository.isSpam(NUMBER).matchSource)

@@ -133,6 +133,47 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `direct boot lets a hidden caller ring during an expecting-a-call window`() {
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = emptyList(),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = true,
+                silentVoicemailEnabled = false,
+                expectingCallUntil = System.currentTimeMillis() + 60L * 60L * 1_000L,
+            )
+        }
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails(""))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+    }
+
+    @Test
+    fun `direct boot rejects a hidden caller once the window has ended`() {
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = emptyList(),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = true,
+                silentVoicemailEnabled = false,
+                expectingCallUntil = System.currentTimeMillis() - 1_000L,
+            )
+        }
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails(""))
+
+        val response = awaitResponse()
+        assertTrue(response.rejectCall)
+    }
+
+    @Test
     fun `direct boot fails open when no mirror has been initialized`() {
         DirectBootScreeningStore.clearForTest(context)
         Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)

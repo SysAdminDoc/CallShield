@@ -4,6 +4,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import com.sysadmindoc.callshield.data.model.SpamNumber
 
 /** Small codec for the opaque Room evidence column. */
 internal object SourceEvidenceCodec {
@@ -29,6 +30,17 @@ internal object SourceEvidenceCodec {
         val stamps = evidence.map { it.expiresAtEpochMs ?: return null }
         return stamps.maxOrNull()
     }
+}
+
+/**
+ * This row with its expiry recomputed from its stored evidence under
+ * [SourceEvidenceCodec.rowExpiry], so a value written under an older rule
+ * can't decide anything. A row whose evidence can't be read keeps its own.
+ */
+internal fun SpamNumber.withCurrentEvidenceExpiry(): SpamNumber {
+    val evidence = SourceEvidenceCodec.decode(evidenceJson)
+    if (evidence.isEmpty()) return this
+    return copy(evidenceExpiresAt = SourceEvidenceCodec.rowExpiry(evidence))
 }
 
 /**

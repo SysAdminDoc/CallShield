@@ -157,7 +157,13 @@ class CallShieldScreeningService : CallScreeningService() {
                         val prefs = repository.readPrefsSnapshot()
                         val now = System.currentTimeMillis()
                         if (ExpectingCall.hasEnded(prefs, now)) {
-                            applicationScope.launch { repository.clearEndedExpectingCall(now) }
+                            applicationScope.launch {
+                                try {
+                                    repository.clearEndedExpectingCall(now)
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Couldn't clear an ended expecting-a-call window", e)
+                                }
+                            }
                         }
 
                         if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
@@ -626,7 +632,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     .canonicalizePhone(callDetails.handle?.schemeSpecificPart.orEmpty())
             val shouldBlock =
                 if (number.isBlank()) {
-                    snapshot.blockUnknownEnabled
+                    snapshot.rejectsHiddenCaller()
                 } else {
                     snapshot.isBlocked(number)
                 }

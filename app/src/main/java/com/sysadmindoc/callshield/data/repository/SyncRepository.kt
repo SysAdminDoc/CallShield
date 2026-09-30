@@ -52,6 +52,7 @@ class SyncRepository(
     private val normalizeNumber: (String) -> String,
     private val invalidateAllCaches: () -> Unit,
     private val externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val syncMutex = Mutex()
 
@@ -210,7 +211,8 @@ class SyncRepository(
             mergeHotListNumbers(
                 hotNumbers = hotNumbers,
                 existingByNumber = existingByNumber,
-                now = appliedAt,
+                // appliedAt is the feed's publish time; whether a row has expired is a question for now.
+                now = clock(),
             )
 
         // Atomic delete + insert via the DAO's @Transaction helper. A bare

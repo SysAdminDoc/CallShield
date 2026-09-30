@@ -241,11 +241,29 @@ def row_expiry_epoch_ms(row: dict) -> int | None:
     """
     stamps = []
     for item in row.get("evidence") or []:
-        stamp = item.get("expires_at_epoch_ms") if isinstance(item, dict) else None
-        if not isinstance(stamp, int) or isinstance(stamp, bool):
+        stamp = _epoch_ms(item.get("expires_at_epoch_ms") if isinstance(item, dict) else None)
+        if stamp is None:
             return None
         stamps.append(stamp)
     return max(stamps) if stamps else None
+
+
+def _epoch_ms(value: object) -> int | None:
+    """An expiry stamp read the way the app's Moshi reads a Long, or None when undated.
+
+    Moshi takes an integer, a float with no fractional part, or a string holding
+    either, so 1.8e12 and "1800000000000" are dates on phones too.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = float(value) if any(c in value for c in ".eE") else int(value)
+        except ValueError:
+            return None
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    return value if isinstance(value, int) else None
 
 
 def evaluate_evidence_expiry(database: object, now: datetime) -> list[str]:

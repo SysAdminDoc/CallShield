@@ -123,6 +123,7 @@ class SpamRepository(
             normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
             externalBlocklistDataSource = externalBlocklistDataSource,
+            clock = wallClock,
         )
     private val blocklistRepository =
         BlocklistRepository(
@@ -1296,7 +1297,9 @@ internal fun mergeHotListNumbers(
                 // from a user-owned entry, keep that record and skip the hot insert.
                 // A database row whose evidence has all expired blocks nothing, so
                 // the hot entry takes its place (the unique number index replaces it).
-                if (existing.source == "github" && existing.activeDecision(now) == null) {
+                // The expiry comes from the row's evidence, not the stored value, so a
+                // row stored by 1.10.0 isn't replaced before its one-time fix runs.
+                if (existing.source == "github" && existing.withCurrentEvidenceExpiry().activeDecision(now) == null) {
                     hotNumber.copy(
                         id = existing.id,
                         isUserBlocked = existing.isUserBlocked,

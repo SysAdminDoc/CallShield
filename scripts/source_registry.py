@@ -64,8 +64,8 @@ def evidence_ttl_days(source: Mapping[str, Any]) -> int:
 
     `stale_after_days` is when the weekly check calls a source's import overdue.
     Until 2026-09-28 it also set this, so every downloaded row stopped matching
-    14 to 30 days after the import that last stamped it (the app drops a row at
-    its earliest evidence expiry), and the self-snapshot evidence on most rows
+    14 to 30 days after the import that last stamped it (the app then dropped a
+    row at its earliest evidence expiry; since 2026-09-30 its latest decides), and the self-snapshot evidence on most rows
     was never re-stamped at all. A source without its own value keeps the old
     behaviour.
     """

@@ -266,6 +266,12 @@ def evidence_expiry_checks() -> None:
     assert "from 2026-09-13" in evaluate_evidence_expiry({"numbers": [mixed]}, BASE)[0]
     shared_expiry_fixture_checks()
 
+    # Stamps count in every form the app's Moshi reads as a Long.
+    for stamp in (2106000000000, 2106000000000.0, "2106000000000", "2.106e12"):
+        assert row_expiry_epoch_ms({"evidence": [{"expires_at_epoch_ms": stamp}]}) == 2106000000000, stamp
+    for stamp in (None, True, "soon", 2106000000000.5):
+        assert row_expiry_epoch_ms({"evidence": [{"expires_at_epoch_ms": stamp}]}) is None, stamp
+
     # Already expired rows match nothing on phones, so they count too.
     assert "from 2026-09-01" in evaluate_evidence_expiry({"numbers": [evidence_row(-3)]}, BASE)[0]
 
