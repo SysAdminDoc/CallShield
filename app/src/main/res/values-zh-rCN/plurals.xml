@@ -24,10 +24,6 @@
         <item quantity="one">已扫描 %s 条消息</item>
         <item quantity="other">已扫描 %s 条消息</item>
     </plurals>
-    <plurals name="blocked_log_clear_message">
-        <item quantity="one">这将永久删除已拦截通话与已标记短信的日志。总记录数：%d。此操作无法撤销。</item>
-        <item quantity="other">这将永久删除已拦截通话与已标记短信的日志。总记录数：%d。此操作无法撤销。</item>
-    </plurals>
     <plurals name="blocklist_count_saved">
         <item quantity="one">%1$,d 条</item>
         <item quantity="other">%1$,d 条</item>

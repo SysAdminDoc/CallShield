@@ -75,6 +75,7 @@ internal fun BackupRestoreSettings(
             }
         val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
         val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
+        val restoreUndo by viewModel.restoreUndo.collectAsStateWithLifecycle()
 
         BackupSectionPicker(
             title = stringResource(R.string.settings_backup_sections_title),
@@ -152,18 +153,31 @@ internal fun BackupRestoreSettings(
         }
         restoreResult?.let { status ->
             Spacer(Modifier.height(4.dp))
-            Text(
-                status.text,
-                // Announce the restore outcome: it is the only feedback for
-                // a destructive, data-replacing operation, and it used to
-                // appear and disappear silently.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (status.success) CatGreen else CatPeach,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    status.text,
+                    // Announce the restore outcome: it is the only feedback for
+                    // a destructive, data-replacing operation, and it used to
+                    // appear and disappear silently.
+                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (status.success) CatGreen else CatPeach,
+                )
+                if (restoreUndo != null) {
+                    TextButton(
+                        onClick = {
+                            hapticTick(context)
+                            viewModel.undoRestore()
+                        },
+                    ) {
+                        Text(stringResource(R.string.backup_restore_undo), color = CatBlue)
+                    }
+                }
+            }
             LaunchedEffect(status) {
-                // Long enough for a screen reader to reach and read it.
-                kotlinx.coroutines.delay(12_000)
+                // Long enough for a screen reader to reach and read it, and
+                // longer while a Replace can still be undone.
+                kotlinx.coroutines.delay(if (restoreUndo != null) 30_000 else 12_000)
                 viewModel.clearRestoreResult()
             }
         }

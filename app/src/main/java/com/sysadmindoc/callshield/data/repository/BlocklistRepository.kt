@@ -225,6 +225,70 @@ class BlocklistRepository(
         return undo
     }
 
+    /** A number's block and allow rows in every spelling, as they were before a change. */
+    data class DecisionSnapshot(
+        val number: String,
+        val blocked: List<SpamNumber>,
+        val allowed: List<WhitelistEntry>,
+    )
+
+    private suspend fun snapshotDecision(normalized: String): DecisionSnapshot {
+        val forms = equivalentForms(normalized)
+        return DecisionSnapshot(
+            number = normalized,
+            blocked = forms.mapNotNull { dao.findByNumber(it) },
+            allowed = forms.mapNotNull { dao.findWhitelistEntry(it) },
+        )
+    }
+
+    /**
+     * A temporary block or allow that returns what it replaced, or null when it
+     * changed nothing (a permanent rule of the other kind wins, or the number
+     * can't be blocked).
+     */
+    suspend fun temporaryDecisionUndoable(
+        number: String,
+        allow: Boolean,
+        expiresAt: Long,
+        type: String = "unknown",
+        description: String = "",
+    ): DecisionSnapshot? {
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return null
+        var snapshot: DecisionSnapshot? = null
+        runInTransaction {
+            val before = snapshotDecision(normalized)
+            val changed =
+                if (allow) {
+                    temporaryAllowNumber(number, expiresAt, description)
+                } else {
+                    temporaryBlockNumber(number, expiresAt, type, description)
+                }
+            if (changed) snapshot = before
+        }
+        return snapshot
+    }
+
+    /** Put a number's rows back the way [temporaryDecisionUndoable] found them. */
+    suspend fun restoreDecision(snapshot: DecisionSnapshot) {
+        runInTransaction {
+            equivalentForms(snapshot.number).forEach { form ->
+                val blockedBefore = snapshot.blocked.firstOrNull { it.number == form }
+                val blockedNow = dao.findByNumber(form)
+                when {
+                    blockedBefore != null -> dao.insertNumber(blockedBefore)
+                    blockedNow != null && blockedNow.isUserBlocked -> unblockNumber(blockedNow)
+                }
+                val allowedBefore = snapshot.allowed.firstOrNull { it.number == form }
+                val allowedNow = dao.findWhitelistEntry(form)
+                when {
+                    allowedBefore != null -> dao.insertWhitelistEntry(allowedBefore)
+                    allowedNow != null -> dao.deleteWhitelistEntry(allowedNow)
+                }
+            }
+        }
+    }
+
     /** Put back what [blockNumberUndoable] replaced. */
     suspend fun undoBlock(undo: BlockUndo) {
         runInTransaction {
@@ -263,6 +327,41 @@ class BlocklistRepository(
 
     suspend fun deleteWildcardRule(rule: WildcardRule) {
         dao.deleteWildcardRule(rule)
+        invalidateWildcardCache()
+    }
+
+    /** What adding a wildcard rule replaced: the rule that had the same pattern, if any. */
+    data class WildcardUndo(
+        val pattern: String,
+        val previous: WildcardRule?,
+    )
+
+    /** Add a rule the way [addWildcardRule] does and return what it replaced. */
+    suspend fun addWildcardRuleUndoable(
+        pattern: String,
+        isRegex: Boolean = false,
+        description: String = "",
+    ): WildcardUndo? {
+        val trimmedPattern = pattern.trim()
+        if (trimmedPattern.isBlank()) return null
+        var undo: WildcardUndo? = null
+        runInTransaction {
+            undo = WildcardUndo(trimmedPattern, dao.findWildcardRule(trimmedPattern))
+            addWildcardRule(trimmedPattern, isRegex, description)
+        }
+        return undo
+    }
+
+    /** Put back the rule [addWildcardRuleUndoable] replaced, or remove the one it added. */
+    suspend fun undoWildcardRule(undo: WildcardUndo) {
+        runInTransaction {
+            val previous = undo.previous
+            if (previous != null) {
+                dao.insertWildcardRule(previous)
+            } else {
+                dao.findWildcardRule(undo.pattern)?.let { dao.deleteWildcardRule(it) }
+            }
+        }
         invalidateWildcardCache()
     }
 
@@ -622,6 +721,20 @@ class BlocklistRepository(
     fun observeSpamCount(): Flow<Int> = dao.observeSpamCount()
 
     suspend fun clearCallLog() = dao.clearCallLog()
+
+    /** Clear the log and return the rows it held, so an Undo can put them back. */
+    suspend fun clearCallLogUndoable(): List<BlockedCall> {
+        var cleared = emptyList<BlockedCall>()
+        runInTransaction {
+            cleared = dao.getAllCallLogOnce()
+            dao.clearCallLog()
+        }
+        return cleared
+    }
+
+    suspend fun restoreCallLog(calls: List<BlockedCall>) {
+        if (calls.isNotEmpty()) dao.insertBlockedCalls(calls)
+    }
 
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
 

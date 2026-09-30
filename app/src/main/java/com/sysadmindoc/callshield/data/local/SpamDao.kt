@@ -461,6 +461,10 @@ interface SpamDao {
     @Query("DELETE FROM call_log")
     suspend fun clearCallLog()
 
+    /** Every log row, for an Undo of clearing the log. */
+    @Query("SELECT * FROM call_log")
+    suspend fun getAllCallLogOnce(): List<BlockedCall>
+
     @Delete
     suspend fun deleteBlockedCall(call: BlockedCall)
 
@@ -530,6 +534,9 @@ interface SpamDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWildcardRule(rule: WildcardRule)
+
+    @Query("SELECT * FROM wildcard_rules WHERE pattern = :pattern LIMIT 1")
+    suspend fun findWildcardRule(pattern: String): WildcardRule?
 
     @Query("DELETE FROM wildcard_rules")
     suspend fun clearWildcardRules()

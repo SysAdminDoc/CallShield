@@ -123,11 +123,9 @@
     <string name="dashboard_smart_suggestions">智能建议</string>
     <string name="dashboard_spam_from_area">垃圾电话数：%1$s | %2$s（%3$s）</string>
     <string name="dashboard_block_area">拦截 %s</string>
-    <string name="dashboard_block_area_confirm_title">拦截区号 %s？</string>
-    <string name="dashboard_block_area_confirm_body">这将添加一条规则，拦截所有来自 +1 %1$s（%2$s）的电话和短信——约 790 万个号码。你之后可在拦截列表中移除。</string>
-    <string name="dashboard_block_area_confirm_action">拦截该区号</string>
     <string name="dashboard_block_area_description">区号 %1$s（%2$s）</string>
-    <string name="dashboard_block_area_added">已拦截区号 %s</string>
+    <string name="dashboard_block_area_added">已拦截区号 %s，约 790 万个号码</string>
+    <string name="dashboard_block_area_failed">无法拦截区号 %s，请重试。</string>
     <string name="blocked_log_action_delete">删除条目</string>
     <string name="blocked_log_action_block">拦截号码</string>
     <string name="blocked_log_filter_all">全部（%d）</string>
@@ -142,9 +140,6 @@
     <string name="blocked_log_undo">撤销</string>
     <string name="blocked_log_undo_failed">无法撤销这次拦截。你可以在“拦截列表”中移除它。</string>
     <string name="blocked_log_number_blocked">%s 已拦截</string>
-    <string name="blocked_log_clear_title">清空拦截日志？</string>
-    <string name="blocked_log_clear_all">清空全部</string>
-    <string name="blocked_log_cancel">取消</string>
     <string name="blocked_log_log_cleared">日志已清空</string>
     <string name="blocked_log_copied">已复制 %s</string>
     <string name="blocked_log_blocked_call">已拦截通话</string>
@@ -359,6 +354,8 @@
     <string name="overlay_action_search">搜索</string>
     <string name="overlay_action_block">拦截</string>
     <string name="overlay_action_dismiss">忽略</string>
+    <string name="overlay_blocked_status">已拦截</string>
+    <string name="overlay_block_undone">已撤销拦截</string>
     <string name="overlay_action_sit_tone">播放 SIT 提示音</string>
     <string name="overlay_source_flagged">已标记</string>
     <string name="overlay_source_result">%1$s %2$s：%3$s</string>
@@ -903,6 +900,9 @@
     <string name="temporary_decision_24_hours">24 小时</string>
     <string name="temporary_decision_allowed">%1$s 已放行 %2$s</string>
     <string name="temporary_decision_blocked">%1$s 已拦截 %2$s</string>
+    <string name="temporary_decision_unchanged">未作更改。%1$s 有永久规则或是紧急号码。</string>
+    <string name="temporary_decision_failed">无法更改 %1$s，请重试。</string>
+    <string name="undo_failed">无法撤销。</string>
     <string name="detail_copied">已复制</string>
     <string name="detail_block_area_code">拦截所有 %s 号码</string>
     <string name="detail_statistics">统计</string>
@@ -998,6 +998,9 @@
     <string name="backup_restore_success_merge">通过合并恢复：%1$d 个号码，%2$d 条白名单，%3$d 条通配符规则，%4$d 条关键词规则，%5$d 条号段规则，%6$d 个设置部分，%7$d 条日志</string>
     <string name="backup_restore_success_replace">通过替换恢复：%1$d 个号码，%2$d 条白名单，%3$d 条通配符规则，%4$d 条关键词规则，%5$d 条号段规则，%6$d 个设置部分，%7$d 条日志</string>
     <string name="backup_restore_error_generic">无法读取此备份。文件可能已损坏、用不同口令加密，或来自更新的应用版本。</string>
+    <string name="backup_restore_undo">撤销</string>
+    <string name="backup_restore_undone">已撤销恢复，之前的内容已放回。</string>
+    <string name="backup_restore_undo_failed">无法撤销恢复。</string>
     <string name="clip_label_phone">电话</string>
     <string name="clip_label_phone_number">电话号码</string>
     <string name="clip_label_spam_number">CallShield 垃圾号码</string>

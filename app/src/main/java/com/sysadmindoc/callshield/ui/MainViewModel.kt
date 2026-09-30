@@ -601,6 +601,11 @@ class MainViewModel
         private val _restoreResult = MutableStateFlow<StatusMessage?>(null)
         val restoreResult: StateFlow<StatusMessage?> = _restoreResult
 
+        private val _restoreUndo = MutableStateFlow<BackupRestore.RestoreUndo?>(null)
+
+        /** What the last Replace overwrote, while its result still offers to put it back. */
+        val restoreUndo: StateFlow<BackupRestore.RestoreUndo?> = _restoreUndo
+
         private val _restorePreview = MutableStateFlow<BackupRestore.RestorePreview?>(null)
         val restorePreview: StateFlow<BackupRestore.RestorePreview?> = _restorePreview
 
@@ -624,6 +629,7 @@ class MainViewModel
 
         fun clearRestoreResult() {
             _restoreResult.value = null
+            _restoreUndo.value = null
         }
 
         fun clearRestorePreview() {
@@ -880,6 +886,75 @@ class MainViewModel
             viewModelScope.launch { manageBlocklist.temporaryAllowNumber(number, expiresAt, description) }
         }
 
+        /**
+         * A temporary allow or block that returns what it replaced, for an Undo.
+         * Success with null means nothing changed: a permanent rule of the other
+         * kind wins, or the number is an emergency number.
+         */
+        suspend fun temporaryDecisionUndoable(
+            number: String,
+            allow: Boolean,
+            durationMillis: Long,
+            description: String,
+        ): Result<BlocklistRepository.DecisionSnapshot?> {
+            val expiresAt = System.currentTimeMillis() + durationMillis.coerceAtLeast(0L)
+            return try {
+                Result.success(repo.temporaryDecisionUndoable(number, allow, expiresAt, "spam", description))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Temporary decision failed", e)
+                Result.failure(e)
+            }
+        }
+
+        fun undoDecision(snapshot: BlocklistRepository.DecisionSnapshot) = launchUndo("temporary decision") { repo.restoreDecision(snapshot) }
+
+        /** Clear the log and return its rows, which the snackbar's Undo puts back. */
+        suspend fun clearLogUndoable(): Result<List<BlockedCall>> =
+            try {
+                Result.success(repo.clearCallLogUndoable())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Clearing the log failed", e)
+                Result.failure(e)
+            }
+
+        fun undoClearLog(calls: List<BlockedCall>) = launchUndo("clearing the log") { repo.restoreCallLog(calls) }
+
+        /** Block every +1 number in an area code and return what the rule replaced, for an Undo. */
+        suspend fun blockAreaCodeUndoable(
+            areaCode: String,
+            description: String,
+        ): Result<BlocklistRepository.WildcardUndo?> =
+            try {
+                Result.success(repo.addWildcardRuleUndoable("+1$areaCode*", isRegex = false, description = description))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Blocking an area code failed", e)
+                Result.failure(e)
+            }
+
+        fun undoWildcardRule(undo: BlocklistRepository.WildcardUndo) = launchUndo("an area code block") { repo.undoWildcardRule(undo) }
+
+        private fun launchUndo(
+            what: String,
+            undo: suspend () -> Unit,
+        ) {
+            viewModelScope.launch {
+                try {
+                    undo()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Undo of $what failed", e)
+                    Toast.makeText(appContext, appContext.getString(R.string.undo_failed), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
         fun unblockNumber(number: SpamNumber) {
             viewModelScope.launch { manageBlocklist.unblockNumber(number) }
         }
@@ -1125,6 +1200,7 @@ class MainViewModel
         ) {
             val ownedPassphrase = passphrase?.copyOf()
             passphrase?.fill('\u0000')
+            _restoreUndo.value = null
             viewModelScope.launch {
                 try {
                     val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections, ownedPassphrase)
@@ -1150,10 +1226,26 @@ class MainViewModel
                 }
             viewModelScope.launch {
                 val result = BackupRestore.restoreFromPreview(appContext, preview, mode)
+                _restoreUndo.value = result.undo
                 _restoreResult.value = StatusMessage(result.message, result.success)
                 if (result.success) {
                     _restorePreview.value = null
                 }
+            }
+        }
+
+        fun undoRestore() {
+            val undo = _restoreUndo.value ?: return
+            _restoreUndo.value = null
+            viewModelScope.launch {
+                val result = BackupRestore.undoRestore(appContext, undo)
+                _restoreResult.value =
+                    StatusMessage(
+                        appContext.getString(
+                            if (result.success) R.string.backup_restore_undone else R.string.backup_restore_undo_failed,
+                        ),
+                        result.success,
+                    )
             }
         }
 

@@ -2,10 +2,14 @@
 
 package com.sysadmindoc.callshield.ui
 
+import android.content.res.Resources
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +20,46 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 
 data class TemporaryDecisionDuration(
     val label: String,
     val durationMillis: Long,
 )
+
+/**
+ * Apply a temporary allow or block and say what happened on [snackbar], with
+ * Undo while it shows. A decision that changed nothing, or failed, says so
+ * instead of claiming it worked.
+ */
+suspend fun applyTemporaryDecision(
+    viewModel: MainViewModel,
+    snackbar: SnackbarHostState,
+    resources: Resources,
+    number: String,
+    allow: Boolean,
+    duration: TemporaryDecisionDuration,
+    description: String = "",
+) {
+    val shown = PhoneFormatter.formatIsolated(number)
+    val result = viewModel.temporaryDecisionUndoable(number, allow, duration.durationMillis, description)
+    val snapshot = result.getOrNull()
+    val message =
+        when {
+            result.isFailure -> resources.getString(R.string.temporary_decision_failed, shown)
+            snapshot == null -> resources.getString(R.string.temporary_decision_unchanged, shown)
+            allow -> resources.getString(R.string.temporary_decision_allowed, shown, duration.label)
+            else -> resources.getString(R.string.temporary_decision_blocked, shown, duration.label)
+        }
+    snackbar.currentSnackbarData?.dismiss()
+    if (snapshot == null) {
+        snackbar.showSnackbar(message)
+        return
+    }
+    val choice = snackbar.showSnackbar(message, actionLabel = resources.getString(R.string.blocked_log_undo), duration = SnackbarDuration.Long)
+    if (choice == SnackbarResult.ActionPerformed) viewModel.undoDecision(snapshot)
+}
 
 @Composable
 fun rememberTemporaryDecisionDurations(): List<TemporaryDecisionDuration> {

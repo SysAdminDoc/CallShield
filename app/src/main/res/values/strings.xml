@@ -165,11 +165,9 @@
     <string name="dashboard_smart_suggestions">Smart suggestions</string>
     <string name="dashboard_spam_from_area">Spam count: %1$s | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
-    <string name="dashboard_block_area_confirm_title">Block area code %s?</string>
-    <string name="dashboard_block_area_confirm_body">This adds a rule that blocks every call and text from a +1 %1$s number (%2$s). That\'s roughly 7.9 million numbers. You can remove it later from the blocklist.</string>
-    <string name="dashboard_block_area_confirm_action">Block area code</string>
     <string name="dashboard_block_area_description">Area code %1$s (%2$s)</string>
-    <string name="dashboard_block_area_added">Blocked area code %s</string>
+    <string name="dashboard_block_area_added">Blocked area code %s, about 7.9 million numbers</string>
+    <string name="dashboard_block_area_failed">Couldn\'t block area code %s. Try again.</string>
 
     <!-- Blocked Log Screen -->
     <string name="blocked_log_heading">Blocked activity</string>
@@ -193,13 +191,6 @@
     <string name="blocked_log_undo">Undo</string>
     <string name="blocked_log_undo_failed">Couldn\'t undo that block. You can remove it from the Rules tab.</string>
     <string name="blocked_log_number_blocked">%s blocked</string>
-    <string name="blocked_log_clear_title">Clear blocked log?</string>
-    <plurals name="blocked_log_clear_message">
-        <item quantity="one">This will permanently delete the log of blocked calls and flagged texts. Total record: %d. This cannot be undone.</item>
-        <item quantity="other">This will permanently delete the log of blocked calls and flagged texts. Total records: %d. This cannot be undone.</item>
-    </plurals>
-    <string name="blocked_log_clear_all">Clear all</string>
-    <string name="blocked_log_cancel">Cancel</string>
     <string name="blocked_log_log_cleared">Log cleared</string>
     <string name="blocked_log_copied">Copied %s</string>
     <string name="blocked_log_blocked_call">Blocked call</string>
@@ -548,6 +539,8 @@
     <string name="overlay_action_search">Search</string>
     <string name="overlay_action_block">Block</string>
     <string name="overlay_action_dismiss">Dismiss</string>
+    <string name="overlay_blocked_status">Blocked</string>
+    <string name="overlay_block_undone">Block undone</string>
     <string name="overlay_action_sit_tone">Play SIT tone</string>
     <string name="overlay_source_flagged">Flagged</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
@@ -1246,6 +1239,9 @@
     <string name="temporary_decision_24_hours">24 hours</string>
     <string name="temporary_decision_allowed">%1$s allowed for %2$s</string>
     <string name="temporary_decision_blocked">%1$s blocked for %2$s</string>
+    <string name="temporary_decision_unchanged">Nothing changed. %1$s has a permanent rule or is an emergency number.</string>
+    <string name="temporary_decision_failed">Couldn\'t change %1$s. Try again.</string>
+    <string name="undo_failed">Couldn\'t undo that.</string>
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>
@@ -1297,7 +1293,6 @@
     <string name="detail_share">Share</string>
     <string name="detail_block_area_code_description">Block area code %s</string>
     <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>
-    <string name="detail_unknown_location">Unknown region</string>
     <string name="detail_blocked_from_detail">Blocked from detail</string>
     <string name="detail_whitelisted_from_detail">Trusted from detail screen</string>
     <!-- The report title and body open a GitHub issue on the English-language tracker, so they stay in English in every locale. -->
@@ -1415,6 +1410,9 @@
     <string name="backup_restore_success_merge">Restored by merge: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_error_generic">Couldn\'t read this backup. The file may be corrupt, encrypted with a different passphrase, or from a newer app version.</string>
+    <string name="backup_restore_undo">Undo</string>
+    <string name="backup_restore_undone">Restore undone. What you had before is back.</string>
+    <string name="backup_restore_undo_failed">Couldn\'t undo the restore.</string>
     <string name="clip_label_phone">Phone</string>
     <string name="clip_label_phone_number">Phone number</string>
     <string name="clip_label_spam_number">CallShield spam number</string>

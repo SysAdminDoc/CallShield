@@ -52,6 +52,7 @@ import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -85,6 +86,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
     val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
+    val snackbarHost = remember { SnackbarHostState() }
     var calls by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
@@ -230,199 +232,181 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             ),
         )
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                stringResource(R.string.recent_heading),
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = CatText,
-            )
-            Text(
-                stringResource(R.string.recent_intro),
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-            )
-        }
-        if (!hasCallLogPermission) {
-            RecentCallsPermissionState(
-                onOpenSettings = {
-                    context.startActivitySafely(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}"),
-                        ),
-                    )
-                },
-            )
-        } else if (!loading) {
-            if (!loadFailed || calls.isNotEmpty()) {
-                RecentCallsSummaryCard(
-                    totalCount = calls.size,
-                    spamCount = spamCount,
-                    missedCount = missedCount,
-                    contactCount = contactCount,
-                    refreshing = refreshing,
-                    onRefresh = { refreshRecentCalls(false) },
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    stringResource(R.string.recent_heading),
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(R.string.recent_intro),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
                 )
             }
-            if (calls.isNotEmpty()) {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(filterOptions.size) { index ->
-                        val option = filterOptions[index]
-                        FilterChip(
-                            selected = filterMode == option.mode,
-                            onClick = { filterMode = option.mode },
-                            label = { Text(option.label) },
-                            shape = RoundedCornerShape(8.dp),
-                            border = null,
-                            colors =
-                                FilterChipDefaults.filterChipColors(
-                                    containerColor = Color.Transparent,
-                                    selectedContainerColor = option.color.copy(alpha = 0.1f),
-                                    selectedLabelColor = option.color,
-                                ),
+            if (!hasCallLogPermission) {
+                RecentCallsPermissionState(
+                    onOpenSettings = {
+                        context.startActivitySafely(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            ),
                         )
-                    }
+                    },
+                )
+            } else if (!loading) {
+                if (!loadFailed || calls.isNotEmpty()) {
+                    RecentCallsSummaryCard(
+                        totalCount = calls.size,
+                        spamCount = spamCount,
+                        missedCount = missedCount,
+                        contactCount = contactCount,
+                        refreshing = refreshing,
+                        onRefresh = { refreshRecentCalls(false) },
+                    )
                 }
-                Spacer(Modifier.height(4.dp))
-            }
-            if (loadFailed) {
-                PremiumCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                if (calls.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.Default.SyncProblem, null, tint = CatPeach, modifier = Modifier.size(28.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.recent_load_error), color = CatText, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                stringResource(R.string.recent_load_error_body),
-                                color = CatSubtext,
-                                style = MaterialTheme.typography.bodySmall,
+                        items(filterOptions.size) { index ->
+                            val option = filterOptions[index]
+                            FilterChip(
+                                selected = filterMode == option.mode,
+                                onClick = { filterMode = option.mode },
+                                label = { Text(option.label) },
+                                shape = RoundedCornerShape(8.dp),
+                                border = null,
+                                colors =
+                                    FilterChipDefaults.filterChipColors(
+                                        containerColor = Color.Transparent,
+                                        selectedContainerColor = option.color.copy(alpha = 0.1f),
+                                        selectedLabelColor = option.color,
+                                    ),
                             )
                         }
-                        TextButton(onClick = { refreshRecentCalls(false) }) {
-                            Text(stringResource(R.string.recent_retry), color = CatGreen)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+                if (loadFailed) {
+                    PremiumCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Icon(Icons.Default.SyncProblem, null, tint = CatPeach, modifier = Modifier.size(28.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.recent_load_error), color = CatText, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    stringResource(R.string.recent_load_error_body),
+                                    color = CatSubtext,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            TextButton(onClick = { refreshRecentCalls(false) }) {
+                                Text(stringResource(R.string.recent_retry), color = CatGreen)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hasCallLogPermission && loading) {
+                // Premium shimmer skeleton while loading
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    repeat(8) { SkeletonListItem(modifier = Modifier.fillMaxWidth()) }
+                }
+            } else if (hasCallLogPermission && filtered.isEmpty() && !loadFailed) {
+                RecentEmptyStateCard(
+                    title =
+                        if (filterMode == 0) {
+                            stringResource(R.string.recent_no_calls)
+                        } else {
+                            stringResource(R.string.recent_no_matching)
+                        },
+                    subtitle =
+                        if (filterMode == 0) {
+                            stringResource(R.string.recent_no_calls_desc)
+                        } else {
+                            stringResource(R.string.recent_no_matching_desc)
+                        },
+                    accentColor = if (filterMode == 0) CatBlue else CatPeach,
+                    actionLabel = if (filterMode == 0) null else stringResource(R.string.recent_show_all),
+                    onAction =
+                        if (filterMode == 0) {
+                            null
+                        } else {
+                            { filterMode = 0 }
+                        },
+                )
+            } else if (hasCallLogPermission) {
+                // Stable keys: the (number,date,type) triple is not guaranteed unique
+                // (dual-SIM duplicates, MMS group rows, sync re-inserts), so disambiguate
+                // collisions with a per-triple occurrence counter rather than the raw
+                // index. A raw index shifts every key when one new call arrives at the
+                // top, which re-keys — and so re-animates — every row on each refresh.
+                val itemKeys =
+                    remember(filtered) {
+                        val seen = HashMap<String, Int>()
+                        filtered.map { call ->
+                            val base = "${call.number}|${call.date}|${call.type}"
+                            val occurrence = seen.getOrDefault(base, 0)
+                            seen[base] = occurrence + 1
+                            if (occurrence == 0) base else "$base#$occurrence"
+                        }
+                    }
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    itemsIndexed(
+                        items = filtered,
+                        key = { index, _ -> itemKeys[index] },
+                    ) { index, call ->
+                        // rememberSaveable persists across LazyColumn disposal (via the
+                        // item's saveable registry) so a row that scrolls off and back does
+                        // not replay its entrance animation.
+                        var visible by rememberSaveable(itemKeys[index]) { mutableStateOf(false) }
+                        LaunchedEffect(itemKeys[index]) {
+                            kotlinx.coroutines.delay(index.toLong().coerceAtMost(20) * 25)
+                            visible = true
+                        }
+                        AnimatedVisibility(visible = visible, enter = slideInVertically { 30 } + fadeIn()) {
+                            val allowReason = stringResource(R.string.recent_temporary_allow_reason)
+                            val blockReason = stringResource(R.string.recent_temporary_block_reason)
+                            RecentCallItem(
+                                call = call,
+                                onOpenDetail = { viewModel.openNumberDetail(call.number) },
+                                onTemporaryAllow = { duration ->
+                                    scope.launch {
+                                        applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = true, duration = duration, description = allowReason)
+                                    }
+                                },
+                                onTemporaryBlock = { duration ->
+                                    scope.launch {
+                                        applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = false, duration = duration, description = blockReason)
+                                    }
+                                },
+                            )
                         }
                     }
                 }
             }
         }
-
-        if (hasCallLogPermission && loading) {
-            // Premium shimmer skeleton while loading
-            Column(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                repeat(8) { SkeletonListItem(modifier = Modifier.fillMaxWidth()) }
-            }
-        } else if (hasCallLogPermission && filtered.isEmpty() && !loadFailed) {
-            RecentEmptyStateCard(
-                title =
-                    if (filterMode == 0) {
-                        stringResource(R.string.recent_no_calls)
-                    } else {
-                        stringResource(R.string.recent_no_matching)
-                    },
-                subtitle =
-                    if (filterMode == 0) {
-                        stringResource(R.string.recent_no_calls_desc)
-                    } else {
-                        stringResource(R.string.recent_no_matching_desc)
-                    },
-                accentColor = if (filterMode == 0) CatBlue else CatPeach,
-                actionLabel = if (filterMode == 0) null else stringResource(R.string.recent_show_all),
-                onAction =
-                    if (filterMode == 0) {
-                        null
-                    } else {
-                        { filterMode = 0 }
-                    },
-            )
-        } else if (hasCallLogPermission) {
-            // Stable keys: the (number,date,type) triple is not guaranteed unique
-            // (dual-SIM duplicates, MMS group rows, sync re-inserts), so disambiguate
-            // collisions with a per-triple occurrence counter rather than the raw
-            // index. A raw index shifts every key when one new call arrives at the
-            // top, which re-keys — and so re-animates — every row on each refresh.
-            val itemKeys =
-                remember(filtered) {
-                    val seen = HashMap<String, Int>()
-                    filtered.map { call ->
-                        val base = "${call.number}|${call.date}|${call.type}"
-                        val occurrence = seen.getOrDefault(base, 0)
-                        seen[base] = occurrence + 1
-                        if (occurrence == 0) base else "$base#$occurrence"
-                    }
-                }
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                itemsIndexed(
-                    items = filtered,
-                    key = { index, _ -> itemKeys[index] },
-                ) { index, call ->
-                    // rememberSaveable persists across LazyColumn disposal (via the
-                    // item's saveable registry) so a row that scrolls off and back does
-                    // not replay its entrance animation.
-                    var visible by rememberSaveable(itemKeys[index]) { mutableStateOf(false) }
-                    LaunchedEffect(itemKeys[index]) {
-                        kotlinx.coroutines.delay(index.toLong().coerceAtMost(20) * 25)
-                        visible = true
-                    }
-                    AnimatedVisibility(visible = visible, enter = slideInVertically { 30 } + fadeIn()) {
-                        val allowReason = stringResource(R.string.recent_temporary_allow_reason)
-                        val blockReason = stringResource(R.string.recent_temporary_block_reason)
-                        RecentCallItem(
-                            call = call,
-                            onOpenDetail = { viewModel.openNumberDetail(call.number) },
-                            onTemporaryAllow = { duration ->
-                                viewModel.temporaryAllowNumber(call.number, duration.durationMillis, allowReason)
-                                Toast
-                                    .makeText(
-                                        context,
-                                        resources.getString(
-                                            R.string.temporary_decision_allowed,
-                                            PhoneFormatter.formatIsolated(call.number),
-                                            duration.label,
-                                        ),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                            },
-                            onTemporaryBlock = { duration ->
-                                viewModel.temporaryBlockNumber(
-                                    call.number,
-                                    duration.durationMillis,
-                                    "spam",
-                                    blockReason,
-                                )
-                                Toast
-                                    .makeText(
-                                        context,
-                                        resources.getString(
-                                            R.string.temporary_decision_blocked,
-                                            PhoneFormatter.formatIsolated(call.number),
-                                            duration.label,
-                                        ),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                            },
-                        )
-                    }
-                }
-            }
-        }
+        SnackbarHost(snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
 

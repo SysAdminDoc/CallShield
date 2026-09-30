@@ -45,6 +45,14 @@ All notable changes to CallShield will be documented in this file.
   category sit together there. Most of them were among the detection engines
   on Advanced, where they read like more ways to catch spam. Appearance moved
   to the end of Basic.
+- Clearing the blocked log and blocking a whole area code happen straight
+  away now, with Undo on the message that follows, instead of asking first.
+  Undo puts back every log entry, or the area code rule you had before.
+  Temporary allows and blocks from the log and Recent calls offer Undo too.
+  Block on the caller ID popup shows Blocked with Undo for six seconds, and
+  the community report waits until that's over, so an undone block is never
+  reported. Restore with Replace keeps a copy of the sections it's about to
+  clear, and Undo next to the result puts them back for 30 seconds.
 
 ## v1.10.0 (2026-09-28)
 

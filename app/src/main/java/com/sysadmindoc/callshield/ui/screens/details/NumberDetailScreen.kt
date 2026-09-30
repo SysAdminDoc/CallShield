@@ -260,7 +260,6 @@ fun NumberDetailScreen(
                 }
             }
 
-            var showAreaBlockConfirm by rememberSaveable { mutableStateOf(false) }
             PremiumCard {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionHeader(stringResource(R.string.detail_take_action), CatGreen)
@@ -308,48 +307,32 @@ fun NumberDetailScreen(
                         )
                     }
                     if (areaCode != null) {
+                        val areaAddedMessage = stringResource(R.string.dashboard_block_area_added, areaCode)
+                        val areaFailedMessage = stringResource(R.string.dashboard_block_area_failed, areaCode)
+                        val undoLabel = stringResource(R.string.detail_undo)
                         PremiumActionButton(
                             label = stringResource(R.string.detail_block_area_code, areaCode),
                             icon = Icons.Default.FilterAlt,
                             color = CatYellow,
-                            onClick = { showAreaBlockConfirm = true },
+                            onClick = {
+                                coroutineScope.launch {
+                                    val undo = viewModel.blockAreaCodeUndoable(areaCode, blockAreaCodeDescription.orEmpty()).getOrNull()
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    if (undo == null) {
+                                        snackbarHostState.showSnackbar(areaFailedMessage)
+                                    } else if (
+                                        snackbarHostState.showSnackbar(areaAddedMessage, actionLabel = undoLabel, duration = SnackbarDuration.Long) ==
+                                        SnackbarResult.ActionPerformed
+                                    ) {
+                                        viewModel.undoWildcardRule(undo)
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             outlined = true,
                         )
                     }
                 }
-            }
-            if (showAreaBlockConfirm && areaCode != null) {
-                val areaAddedToast = stringResource(R.string.dashboard_block_area_added, areaCode)
-                AlertDialog(
-                    onDismissRequest = { showAreaBlockConfirm = false },
-                    title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, areaCode)) },
-                    text = {
-                        Text(
-                            stringResource(
-                                R.string.dashboard_block_area_confirm_body,
-                                areaCode,
-                                location ?: stringResource(R.string.detail_unknown_location),
-                            ),
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty())
-                            android.widget.Toast
-                                .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
-                                .show()
-                            showAreaBlockConfirm = false
-                        }) {
-                            Text(stringResource(R.string.dashboard_block_area_confirm_action))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showAreaBlockConfirm = false }) {
-                            Text(stringResource(R.string.dialog_cancel))
-                        }
-                    },
-                )
             }
 
             // Stats

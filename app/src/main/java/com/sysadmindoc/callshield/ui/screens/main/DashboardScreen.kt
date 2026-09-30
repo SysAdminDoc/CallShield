@@ -254,16 +254,9 @@ fun DashboardScreen(
         }
     }
 
-    // Pending "Block area code" confirmation: (areaCode, locationLabel).
-    // Saved as a two-element list so the confirm dialog survives rotation
-    // (Pair itself has no Bundle saver).
-    var pendingAreaBlock by rememberSaveable(
-        stateSaver =
-            androidx.compose.runtime.saveable.listSaver<Pair<String, String>?, String>(
-                save = { it?.let { pair -> listOf(pair.first, pair.second) } ?: emptyList() },
-                restore = { if (it.size == 2) it[0] to it[1] else null },
-            ),
-    ) { mutableStateOf<Pair<String, String>?>(null) }
+    // An area code block takes effect at once; its snackbar offers Undo.
+    val areaSnackbar = remember { SnackbarHostState() }
+    val areaUndoLabel = stringResource(R.string.blocked_log_undo)
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -1162,6 +1155,9 @@ fun DashboardScreen(
                             GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
                         }
                         val loc = AreaCodeLookup.lookup("+1$ac", homeRegionIso = null) ?: ac
+                        val areaRuleDescription = stringResource(R.string.dashboard_block_area_description, ac, loc)
+                        val areaAddedMessage = stringResource(R.string.dashboard_block_area_added, ac)
+                        val areaFailedMessage = stringResource(R.string.dashboard_block_area_failed, ac)
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 stringResource(R.string.dashboard_spam_from_area, numberFormatter.format(count), ac, loc),
@@ -1172,39 +1168,27 @@ fun DashboardScreen(
                                 label = stringResource(R.string.dashboard_block_area, ac),
                                 icon = Icons.Default.FilterAlt,
                                 color = CatYellow,
-                                onClick = { pendingAreaBlock = ac to loc },
+                                onClick = {
+                                    profileScope.launch {
+                                        val undo = viewModel.blockAreaCodeUndoable(ac, areaRuleDescription).getOrNull()
+                                        areaSnackbar.currentSnackbarData?.dismiss()
+                                        if (undo == null) {
+                                            areaSnackbar.showSnackbar(areaFailedMessage)
+                                        } else if (
+                                            areaSnackbar.showSnackbar(areaAddedMessage, actionLabel = areaUndoLabel, duration = SnackbarDuration.Long) ==
+                                            SnackbarResult.ActionPerformed
+                                        ) {
+                                            viewModel.undoWildcardRule(undo)
+                                        }
+                                    }
+                                },
                             )
                         }
                     }
+                    SnackbarHost(areaSnackbar)
                 }
             }
         }
-    }
-
-    pendingAreaBlock?.let { (ac, loc) ->
-        val areaRuleDescription = stringResource(R.string.dashboard_block_area_description, ac, loc)
-        val areaAddedToast = stringResource(R.string.dashboard_block_area_added, ac)
-        AlertDialog(
-            onDismissRequest = { pendingAreaBlock = null },
-            title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, ac)) },
-            text = { Text(stringResource(R.string.dashboard_block_area_confirm_body, ac, loc)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.addWildcardRule("+1$ac*", false, areaRuleDescription)
-                    android.widget.Toast
-                        .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
-                        .show()
-                    pendingAreaBlock = null
-                }) {
-                    Text(stringResource(R.string.dashboard_block_area_confirm_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingAreaBlock = null }) {
-                    Text(stringResource(R.string.dialog_cancel))
-                }
-            },
-        )
     }
 }
 

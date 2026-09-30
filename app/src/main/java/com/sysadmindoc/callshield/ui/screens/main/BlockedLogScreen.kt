@@ -55,6 +55,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.firstPageFailed
@@ -86,7 +87,33 @@ fun BlockedLogScreen(
     var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    val allowReason = stringResource(R.string.blocked_log_temporary_allow_reason)
+    val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
+    val logClearedMessage = stringResource(R.string.blocked_log_log_cleared)
+    val undoLabel = stringResource(R.string.blocked_log_undo)
+
+    fun temporaryDecision(
+        number: String,
+        allow: Boolean,
+        duration: TemporaryDecisionDuration,
+    ) {
+        hapticConfirm(context)
+        scope.launch {
+            applyTemporaryDecision(viewModel, snackbarHost, resources, number, allow, duration, if (allow) allowReason else blockReason)
+        }
+    }
+
+    // No confirmation: the log clears at once and its rows wait in memory
+    // until the snackbar goes, so Undo puts every one back.
+    fun clearLog() {
+        hapticConfirm(context)
+        scope.launch {
+            val cleared = viewModel.clearLogUndoable().getOrNull() ?: return@launch
+            snackbarHost.currentSnackbarData?.dismiss()
+            val choice = snackbarHost.showSnackbar(logClearedMessage, actionLabel = undoLabel, duration = SnackbarDuration.Long)
+            if (choice == SnackbarResult.ActionPerformed) viewModel.undoClearLog(cleared)
+        }
+    }
     val selectedReasonCode = BlockReasonCode.fromStored(selectedReasonCodeWire).takeIf { selectedReasonCodeWire.isNotBlank() }
     val mediaFilter =
         when (filterMode) {
@@ -191,7 +218,7 @@ fun BlockedLogScreen(
                     )
                 }
                 if (logCount > 0) {
-                    IconButton(onClick = { showClearDialog = true }) {
+                    IconButton(onClick = ::clearLog) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.cd_clear_log), tint = CatRed)
                     }
                 }
@@ -294,6 +321,7 @@ fun BlockedLogScreen(
                     LogSearchResultsList(
                         results = logSearchResults,
                         viewModel = viewModel,
+                        onTemporaryDecision = ::temporaryDecision,
                     )
                 }
             } else if (firstPageFailed(activeRefreshState, stale, activeItemCount)) {
@@ -511,48 +539,11 @@ fun BlockedLogScreen(
                                     }
                                 },
                             ) {
-                                val allowReason = stringResource(R.string.blocked_log_temporary_allow_reason)
-                                val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
                                 BlockedCallItem(
                                     call = call,
                                     onTap = { viewModel.openNumberDetail(call.number) },
-                                    onTemporaryAllow = { duration ->
-                                        viewModel.temporaryAllowNumber(
-                                            call.number,
-                                            duration.durationMillis,
-                                            allowReason,
-                                        )
-                                        hapticConfirm(context)
-                                        scope.launch {
-                                            snackbarHost.showSnackbar(
-                                                resources.getString(
-                                                    R.string.temporary_decision_allowed,
-                                                    PhoneFormatter.formatIsolated(call.number),
-                                                    duration.label,
-                                                ),
-                                                duration = SnackbarDuration.Short,
-                                            )
-                                        }
-                                    },
-                                    onTemporaryBlock = { duration ->
-                                        viewModel.temporaryBlockNumber(
-                                            call.number,
-                                            duration.durationMillis,
-                                            "spam",
-                                            blockReason,
-                                        )
-                                        hapticConfirm(context)
-                                        scope.launch {
-                                            snackbarHost.showSnackbar(
-                                                resources.getString(
-                                                    R.string.temporary_decision_blocked,
-                                                    PhoneFormatter.formatIsolated(call.number),
-                                                    duration.label,
-                                                ),
-                                                duration = SnackbarDuration.Short,
-                                            )
-                                        }
-                                    },
+                                    onTemporaryAllow = { temporaryDecision(call.number, allow = true, duration = it) },
+                                    onTemporaryBlock = { temporaryDecision(call.number, allow = false, duration = it) },
                                 )
                             }
                         }
@@ -560,50 +551,6 @@ fun BlockedLogScreen(
                 }
             }
         }
-    }
-
-    // Clear log confirmation dialog
-    if (showClearDialog) {
-        val logClearedMessage = stringResource(R.string.blocked_log_log_cleared)
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            containerColor = SurfaceBright,
-            icon = { Icon(Icons.Default.DeleteSweep, null, tint = CatRed, modifier = Modifier.size(32.dp)) },
-            title = { Text(stringResource(R.string.blocked_log_clear_title)) },
-            text = {
-                Text(
-                    pluralStringResource(
-                        R.plurals.blocked_log_clear_message,
-                        logCount,
-                        logCount,
-                    ),
-                    color = CatSubtext,
-                )
-            },
-            confirmButton = {
-                PremiumActionButton(
-                    label = stringResource(R.string.blocked_log_clear_all),
-                    icon = Icons.Default.DeleteSweep,
-                    color = CatRed,
-                    onClick = {
-                        viewModel.clearLog()
-                        hapticConfirm(context)
-                        showClearDialog = false
-                        scope.launch {
-                            snackbarHost.showSnackbar(
-                                logClearedMessage,
-                                duration = SnackbarDuration.Short,
-                            )
-                        }
-                    },
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(stringResource(R.string.blocked_log_cancel), color = CatSubtext)
-                }
-            },
-        )
     }
 }
 
@@ -954,6 +901,7 @@ fun GroupedCallItem(
 private fun LogSearchResultsList(
     results: List<BlockedCall>,
     viewModel: MainViewModel,
+    onTemporaryDecision: (number: String, allow: Boolean, duration: TemporaryDecisionDuration) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
@@ -963,8 +911,8 @@ private fun LogSearchResultsList(
             BlockedCallItem(
                 call = call,
                 onTap = { viewModel.openNumberDetail(call.number) },
-                onTemporaryAllow = { viewModel.temporaryAllowNumber(call.number, it.durationMillis) },
-                onTemporaryBlock = { viewModel.temporaryBlockNumber(call.number, it.durationMillis) },
+                onTemporaryAllow = { onTemporaryDecision(call.number, true, it) },
+                onTemporaryBlock = { onTemporaryDecision(call.number, false, it) },
             )
         }
     }

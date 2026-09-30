@@ -822,6 +822,24 @@ class SpamRepository(
 
     suspend fun undoBlock(undo: BlocklistRepository.BlockUndo) = blocklistRepository.undoBlock(undo)
 
+    suspend fun temporaryDecisionUndoable(
+        number: String,
+        allow: Boolean,
+        expiresAt: Long,
+        type: String = "unknown",
+        description: String = "",
+    ) = blocklistRepository.temporaryDecisionUndoable(number, allow, expiresAt, type, description)
+
+    suspend fun restoreDecision(snapshot: BlocklistRepository.DecisionSnapshot) = blocklistRepository.restoreDecision(snapshot)
+
+    suspend fun addWildcardRuleUndoable(
+        pattern: String,
+        isRegex: Boolean = false,
+        description: String = "",
+    ) = blocklistRepository.addWildcardRuleUndoable(pattern, isRegex, description)
+
+    suspend fun undoWildcardRule(undo: BlocklistRepository.WildcardUndo) = blocklistRepository.undoWildcardRule(undo)
+
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = blocklistRepository.getAllWildcardRules()
 
@@ -1042,6 +1060,10 @@ class SpamRepository(
     fun observeSpamCount(): Flow<Int> = blocklistRepository.observeSpamCount()
 
     suspend fun clearCallLog() = blocklistRepository.clearCallLog()
+
+    suspend fun clearCallLogUndoable() = blocklistRepository.clearCallLogUndoable()
+
+    suspend fun restoreCallLog(calls: List<BlockedCall>) = blocklistRepository.restoreCallLog(calls)
 
     suspend fun deleteBlockedCall(call: BlockedCall) = blocklistRepository.deleteBlockedCall(call)
 

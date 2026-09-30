@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1664-94e2d5?style=flat-square" alt="1664 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1675-94e2d5?style=flat-square" alt="1675 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -231,7 +231,7 @@ by locale and message type without shipping personal data:
 
 ### Recent Calls & Blocked Log
 - Recent calls with contact names, risk indicators, call type icons and filter chips (All, Incoming, Outgoing, Missed, Spam)
-- Blocked log with swipe-to-dismiss and Undo, grouping with severity-scaled accent bars, and Calls, Texts and Reason filters.
+- Blocked log with swipe-to-dismiss and Undo, a Clear log button that offers Undo, grouping with severity-scaled accent bars, and Calls, Texts and Reason filters.
   Swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
 - Staggered entrance animations, shimmer loading skeletons
 
@@ -256,7 +256,7 @@ by locale and message type without shipping personal data:
 
 ### Smart Features
 - Expecting a call. From Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight, with a countdown notification and End now
-- Smart suggestions. Detects area code spam patterns, one-tap block entire area code
+- Smart suggestions. Detects area code spam patterns, one-tap block of a whole area code, with Undo
 - Weekly trend indicator. Shows if spam is increasing or decreasing vs last week
 - Last blocked preview card on dashboard with tap-to-inspect
 - Blocking profiles: Recommended / Strict / Contacts only / Personal / Sleep / Off, with Undo
@@ -509,12 +509,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1664 tests
+./gradlew testDebugUnitTest   # 1675 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1664 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1675 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -551,8 +551,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1664 JVM unit tests (JUnit) |
-| Strings | 1713 string resources and 38 plural groups (translation-ready) |
+| Tests | 1675 JVM unit tests (JUnit) |
+| Strings | 1715 string resources and 37 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

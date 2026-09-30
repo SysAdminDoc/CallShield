@@ -27,6 +27,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
+import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.paletteFor
@@ -203,6 +204,14 @@ class CallerIdOverlayService : Service() {
         private const val EXTRA_CONFIDENCE = "confidence"
         private const val EXTRA_REASON = "reason"
         private const val FAST_SPAM_HIT_TIMEOUT_MS = 1_500L
+        private const val AUTO_DISMISS_MS = 20_000L
+
+        /** How long the Blocked strip offers Undo before the overlay closes. */
+        private const val UNDO_WINDOW_MS = 6_000L
+
+        /** The report waits past the window, so Undo can't lose a race with it. */
+        private const val REPORT_DELAY_MS = UNDO_WINDOW_MS + 1_000L
+        private const val UNDONE_LINGER_MS = 1_500L
 
         internal fun outgoingRiskIntent(
             context: Context,
@@ -251,6 +260,13 @@ class CallerIdOverlayService : Service() {
     private var statusText: TextView? = null
     private var sourcesContainer: LinearLayout? = null
     private var progressBar: ProgressBar? = null
+
+    // Block swaps the buttons for a "Blocked" strip that offers Undo.
+    private var actionRow: LinearLayout? = null
+    private var sitToneButton: Button? = null
+    private var blockedStrip: LinearLayout? = null
+    private var blockedStripText: TextView? = null
+    private var blockedStripUndo: Button? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -458,6 +474,7 @@ class CallerIdOverlayService : Service() {
                 addView(
                     LinearLayout(context).apply {
                         orientation = LinearLayout.HORIZONTAL
+                        actionRow = this
                         setPadding(0, context.overlayDp(16f), 0, 0)
 
                         // Google search
@@ -505,8 +522,8 @@ class CallerIdOverlayService : Service() {
                                         android.view.View.VISIBLE
                                     }
                                 setOnClickListener {
-                                    blockFromOverlay(number)
-                                    dismiss(sessionId)
+                                    isEnabled = false
+                                    blockFromOverlay(number, sessionId)
                                 }
                             },
                         )
@@ -536,6 +553,7 @@ class CallerIdOverlayService : Service() {
                 addView(
                     Button(context).apply {
                         text = context.getString(R.string.overlay_action_sit_tone)
+                        sitToneButton = this
                         setTextColor(palette.subtext)
                         setBackgroundColor(palette.surfaceVariant)
                         textSize = OVERLAY_TEXT_SP
@@ -558,6 +576,9 @@ class CallerIdOverlayService : Service() {
                         setOnClickListener { playSitToneFromOverlay() }
                     },
                 )
+
+                // In place of the buttons after Block, while Undo is offered
+                addView(blockedStripView(context, palette, sessionId))
             }
 
         val params =
@@ -590,8 +611,7 @@ class CallerIdOverlayService : Service() {
         // Auto-dismiss after 20 seconds (backstop). The call-state watcher below
         // dismisses sooner, right when the call ends, so a 2-3 s blocked/rejected
         // call's overlay doesn't hover over unrelated UI for the full 20 s.
-        dismissRunnable = Runnable { dismiss(sessionId) }
-        handler.postDelayed(dismissRunnable!!, 20_000)
+        scheduleDismiss(sessionId, AUTO_DISMISS_MS)
         registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId
     }
@@ -1012,27 +1032,137 @@ class CallerIdOverlayService : Service() {
     }
 
     /**
-     * Block + community-report the overlay's caller off the main thread.
+     * Block the overlay's caller off the main thread, then offer Undo on a
+     * strip; the community report goes out only after the Undo window.
      * appScope has no CoroutineExceptionHandler: an uncaught SQLiteException
      * (disk full, corruption — a failure class this app explicitly self-heals
      * elsewhere) would kill the whole process mid-call. Same guard pattern as
      * SpamActionReceiver.
      */
-    private fun blockFromOverlay(number: String) {
+    private fun blockFromOverlay(
+        number: String,
+        sessionId: Long,
+    ) {
+        // The strip outlives the call, so a caller who hangs up right after
+        // the tap doesn't take the Undo window with them.
+        unregisterCallStateWatcher()
         val description = getString(R.string.desc_blocked_from_overlay)
         val appContext = applicationContext
         CallShieldApp.appScope.launch {
             try {
-                val repository =
-                    com.sysadmindoc.callshield.data.SpamRepository
-                        .getInstance(appContext)
-                repository.blockNumber(number, "spam", description)
-                com.sysadmindoc.callshield.data.CommunityContributor
-                    .contribute(appContext, repository.normalizeNumber(number), "spam")
+                val repository = SpamRepository.getInstance(appContext)
+                val undo = repository.blockNumberUndoable(number, "spam", description)
+                val normalized = repository.normalizeNumber(number)
+                val send: suspend () -> Unit = {
+                    try {
+                        com.sysadmindoc.callshield.data.CommunityContributor
+                            .contribute(appContext, normalized, "spam")
+                    } catch (e: Exception) {
+                        android.util.Log.w("CallerIdOverlay", "Overlay report failed", e)
+                    }
+                }
+                if (undo == null) {
+                    // Nothing changed, so there's nothing to undo.
+                    send()
+                    handler.post { dismiss(sessionId) }
+                } else {
+                    val report = DeferredReport(CallShieldApp.appScope, wait = { delay(REPORT_DELAY_MS) }, send = send)
+                    handler.post { showBlockedStrip(sessionId, undo, report) }
+                }
             } catch (e: Exception) {
                 android.util.Log.w("CallerIdOverlay", "Overlay block failed", e)
+                handler.post { dismiss(sessionId) }
             }
         }
+    }
+
+    /** The "Blocked" line with Undo that replaces the buttons after Block. */
+    private fun blockedStripView(
+        context: Context,
+        palette: CallerIdOverlayPalette,
+        sessionId: Long,
+    ): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = android.view.View.GONE
+            setPadding(0, context.overlayDp(16f), 0, 0)
+            blockedStrip = this
+            addView(
+                TextView(context).apply {
+                    text = context.getString(R.string.overlay_blocked_status)
+                    setTextColor(palette.error)
+                    textSize = OVERLAY_TEXT_SP
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    blockedStripText = this
+                },
+            )
+            addView(
+                Button(context).apply {
+                    text = context.getString(R.string.blocked_log_undo)
+                    setTextColor(palette.primary)
+                    setBackgroundColor(palette.surfaceVariant)
+                    textSize = OVERLAY_TEXT_SP
+                    isAllCaps = false
+                    minHeight = context.touchTargetPx()
+                    minimumHeight = context.touchTargetPx()
+                    minWidth = context.touchTargetPx()
+                    minimumWidth = context.touchTargetPx()
+                    setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
+                    blockedStripUndo = this
+                },
+            )
+            addView(
+                Button(context).apply {
+                    text = context.getString(R.string.overlay_action_dismiss)
+                    setTextColor(palette.overlay)
+                    setBackgroundColor(Color.TRANSPARENT)
+                    textSize = OVERLAY_TEXT_SP
+                    isAllCaps = false
+                    minHeight = context.touchTargetPx()
+                    minimumHeight = context.touchTargetPx()
+                    minWidth = context.touchTargetPx()
+                    minimumWidth = context.touchTargetPx()
+                    setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
+                    setOnClickListener { dismiss(sessionId) }
+                },
+            )
+        }
+
+    private fun showBlockedStrip(
+        sessionId: Long,
+        undo: BlocklistRepository.BlockUndo,
+        report: DeferredReport,
+    ) {
+        if (!isCurrentSession(sessionId)) return
+        actionRow?.visibility = android.view.View.GONE
+        sitToneButton?.visibility = android.view.View.GONE
+        blockedStrip?.visibility = android.view.View.VISIBLE
+        blockedStripUndo?.setOnClickListener { button ->
+            button.visibility = android.view.View.GONE
+            blockedStripText?.text = getString(R.string.overlay_block_undone)
+            report.cancel()
+            val appContext = applicationContext
+            CallShieldApp.appScope.launch {
+                try {
+                    SpamRepository.getInstance(appContext).undoBlock(undo)
+                } catch (e: Exception) {
+                    android.util.Log.w("CallerIdOverlay", "Overlay undo failed", e)
+                }
+            }
+            scheduleDismiss(sessionId, UNDONE_LINGER_MS)
+        }
+        scheduleDismiss(sessionId, UNDO_WINDOW_MS)
+    }
+
+    private fun scheduleDismiss(
+        sessionId: Long,
+        delayMillis: Long,
+    ) {
+        clearDismissCallback()
+        val runnable = Runnable { dismiss(sessionId) }
+        dismissRunnable = runnable
+        handler.postDelayed(runnable, delayMillis)
     }
 
     /**
@@ -1095,6 +1225,11 @@ class CallerIdOverlayService : Service() {
         statusText = null
         sourcesContainer = null
         progressBar = null
+        actionRow = null
+        sitToneButton = null
+        blockedStrip = null
+        blockedStripText = null
+        blockedStripUndo = null
         windowManager = null
     }
 

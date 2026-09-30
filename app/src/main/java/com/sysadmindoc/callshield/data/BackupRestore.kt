@@ -280,6 +280,14 @@ object BackupRestore {
     data class RestoreResult(
         val success: Boolean,
         val message: String,
+        /** Set after a Replace: what it overwrote, so it can be put back. */
+        val undo: RestoreUndo? = null,
+    )
+
+    /** The sections a Replace was about to clear, as they stood just before it ran. */
+    class RestoreUndo internal constructor(
+        internal val payload: RestorePayload,
+        internal val sections: Set<BackupSection>,
     )
 
     internal enum class RestoreFailure {
@@ -303,116 +311,129 @@ object BackupRestore {
         ) : RestoreValidation
     }
 
-    @Suppress("LongMethod")
     suspend fun createBackup(
         context: Context,
         sections: Set<BackupSection> = defaultExportSections,
     ): String =
         withContext(Dispatchers.IO) {
-            val dao = AppDatabase.getInstance(context).spamDao()
-            val repo = SpamRepository.getInstance(context)
-
-            val numbers =
-                if (BackupSection.BLOCKED_NUMBERS in sections) {
-                    dao.getUserBlockedNumbers().first().map {
-                        // Export pulls only user-sourced rows, and restore always
-                        // recreates them as source="user" (so sync's replaceBySource
-                        // can't wipe them), so provenance isn't part of the schema.
-                        BackupNumber(it.number, it.type, it.description, it.expiresAt)
-                    }
-                } else {
-                    emptyList()
-                }
-            val whitelist =
-                if (BackupSection.WHITELIST in sections) {
-                    dao.getAllWhitelist().first().map {
-                        BackupWhitelist(it.number, it.description, it.isEmergency, it.expiresAt)
-                    }
-                } else {
-                    emptyList()
-                }
-            val wildcards =
-                if (BackupSection.WILDCARD_RULES in sections) {
-                    dao.getAllWildcardRules().first().map {
-                        BackupWildcard(
-                            pattern = it.pattern,
-                            isRegex = it.isRegex,
-                            description = it.description,
-                            enabled = it.enabled,
-                            scheduleDays = it.scheduleDays,
-                            scheduleStartHour = it.scheduleStartHour,
-                            scheduleEndHour = it.scheduleEndHour,
-                        )
-                    }
-                } else {
-                    emptyList()
-                }
-            val keywords =
-                if (BackupSection.KEYWORD_RULES in sections) {
-                    dao.getAllKeywordRules().first().map {
-                        BackupKeyword(
-                            keyword = it.keyword,
-                            caseSensitive = it.caseSensitive,
-                            description = it.description,
-                            enabled = it.enabled,
-                            scheduleDays = it.scheduleDays,
-                            scheduleStartHour = it.scheduleStartHour,
-                            scheduleEndHour = it.scheduleEndHour,
-                        )
-                    }
-                } else {
-                    emptyList()
-                }
-            val ranges =
-                if (BackupSection.RANGE_RULES in sections) {
-                    dao.getAllHashWildcardRules().first().map {
-                        BackupRangeRule(
-                            pattern = it.pattern,
-                            description = it.description,
-                            enabled = it.enabled,
-                            scheduleDays = it.scheduleDays,
-                            scheduleStartHour = it.scheduleStartHour,
-                            scheduleEndHour = it.scheduleEndHour,
-                        )
-                    }
-                } else {
-                    emptyList()
-                }
-            val settings =
-                if (BackupSection.SETTINGS in sections) {
-                    repo.readPrefsSnapshot().toBackupSettings()
-                } else {
-                    null
-                }
-            val nonLogRows =
-                numbers.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
-                    if (settings != null) 1 else 0
-            val logBudget = (MAX_BACKUP_RESTORE_ROWS - nonLogRows).coerceAtLeast(0)
-            // Keep the export within the same row cap that restore enforces, so a
-            // large device never produces a backup the app then refuses to import.
-            // Read only the newest bounded batches; the log is re-generable and
-            // absorbs the trim while user-authored sections remain in full.
-            val logs =
-                if (BackupSection.LOGS in sections) {
-                    BackupLogReader.read(dao, logBudget)
-                } else {
-                    emptyList()
-                }
-
             val backup =
-                Backup(
-                    blockedNumbers = numbers,
-                    whitelistNumbers = whitelist,
-                    wildcardRules = wildcards,
-                    keywordRules = keywords,
-                    rangeRules = ranges,
-                    settings = settings,
-                    logs = logs,
+                buildBackup(
+                    dao = AppDatabase.getInstance(context).spamDao(),
+                    repo = SpamRepository.getInstance(context),
+                    sections = sections,
                 )
-
             val adapter = moshi.adapter(Backup::class.java).indent("  ")
             adapter.toJson(backup)
         }
+
+    /**
+     * The selected sections as a [Backup]. [rowCap] bounds the export to what
+     * restore accepts; the log absorbs the trim.
+     */
+    @Suppress("LongMethod")
+    internal suspend fun buildBackup(
+        dao: SpamDao,
+        repo: SpamRepository,
+        sections: Set<BackupSection>,
+        rowCap: Int = MAX_BACKUP_RESTORE_ROWS,
+    ): Backup {
+        val numbers =
+            if (BackupSection.BLOCKED_NUMBERS in sections) {
+                dao.getUserBlockedNumbers().first().map {
+                    // Export pulls only user-sourced rows, and restore always
+                    // recreates them as source="user" (so sync's replaceBySource
+                    // can't wipe them), so provenance isn't part of the schema.
+                    BackupNumber(it.number, it.type, it.description, it.expiresAt)
+                }
+            } else {
+                emptyList()
+            }
+        val whitelist =
+            if (BackupSection.WHITELIST in sections) {
+                dao.getAllWhitelist().first().map {
+                    BackupWhitelist(it.number, it.description, it.isEmergency, it.expiresAt)
+                }
+            } else {
+                emptyList()
+            }
+        val wildcards =
+            if (BackupSection.WILDCARD_RULES in sections) {
+                dao.getAllWildcardRules().first().map {
+                    BackupWildcard(
+                        pattern = it.pattern,
+                        isRegex = it.isRegex,
+                        description = it.description,
+                        enabled = it.enabled,
+                        scheduleDays = it.scheduleDays,
+                        scheduleStartHour = it.scheduleStartHour,
+                        scheduleEndHour = it.scheduleEndHour,
+                    )
+                }
+            } else {
+                emptyList()
+            }
+        val keywords =
+            if (BackupSection.KEYWORD_RULES in sections) {
+                dao.getAllKeywordRules().first().map {
+                    BackupKeyword(
+                        keyword = it.keyword,
+                        caseSensitive = it.caseSensitive,
+                        description = it.description,
+                        enabled = it.enabled,
+                        scheduleDays = it.scheduleDays,
+                        scheduleStartHour = it.scheduleStartHour,
+                        scheduleEndHour = it.scheduleEndHour,
+                    )
+                }
+            } else {
+                emptyList()
+            }
+        val ranges =
+            if (BackupSection.RANGE_RULES in sections) {
+                dao.getAllHashWildcardRules().first().map {
+                    BackupRangeRule(
+                        pattern = it.pattern,
+                        description = it.description,
+                        enabled = it.enabled,
+                        scheduleDays = it.scheduleDays,
+                        scheduleStartHour = it.scheduleStartHour,
+                        scheduleEndHour = it.scheduleEndHour,
+                    )
+                }
+            } else {
+                emptyList()
+            }
+        val settings =
+            if (BackupSection.SETTINGS in sections) {
+                repo.readPrefsSnapshot().toBackupSettings()
+            } else {
+                null
+            }
+        val nonLogRows =
+            numbers.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
+                if (settings != null) 1 else 0
+        val logBudget = (rowCap - nonLogRows).coerceAtLeast(0)
+        // Keep the export within the same row cap that restore enforces, so a
+        // large device never produces a backup the app then refuses to import.
+        // Read only the newest bounded batches; the log is re-generable and
+        // absorbs the trim while user-authored sections remain in full.
+        val logs =
+            if (BackupSection.LOGS in sections) {
+                BackupLogReader.read(dao, logBudget)
+            } else {
+                emptyList()
+            }
+
+        return Backup(
+            blockedNumbers = numbers,
+            whitelistNumbers = whitelist,
+            wildcardRules = wildcards,
+            keywordRules = keywords,
+            rangeRules = ranges,
+            settings = settings,
+            logs = logs,
+        )
+    }
 
     suspend fun shareBackup(
         context: Context,
@@ -576,7 +597,7 @@ object BackupRestore {
         mode: RestoreMode,
     ): RestoreResult =
         withContext(Dispatchers.IO) {
-            restorePayload(
+            restoreWithUndo(
                 context = context,
                 payload = preview.payload,
                 mode = mode,
@@ -585,6 +606,51 @@ object BackupRestore {
                 selectedSections = preview.selectedSections,
             )
         }
+
+    /**
+     * Restore, taking the selected sections as they stand before a Replace so
+     * the result can put them back. A Merge only adds, so it keeps nothing.
+     */
+    internal suspend fun restoreWithUndo(
+        context: Context,
+        payload: RestorePayload,
+        mode: RestoreMode,
+        dao: SpamDao,
+        repo: SpamRepository,
+        selectedSections: Set<BackupSection>,
+    ): RestoreResult {
+        val before =
+            if (mode == RestoreMode.REPLACE) {
+                // Uncapped: the snapshot never leaves the device, and a trimmed
+                // log would lose rows on Undo.
+                buildBackup(dao, repo, selectedSections, rowCap = Int.MAX_VALUE)
+                    .toRestorePayload(selectedSections)
+            } else {
+                null
+            }
+        val result = restorePayload(context, payload, mode, dao, repo, selectedSections)
+        return if (result.success && before != null) {
+            result.copy(undo = RestoreUndo(before, selectedSections))
+        } else {
+            result
+        }
+    }
+
+    /** Put back what a Replace overwrote. */
+    suspend fun undoRestore(
+        context: Context,
+        undo: RestoreUndo,
+    ): RestoreResult =
+        withContext(Dispatchers.IO) {
+            undoRestore(context, undo, AppDatabase.getInstance(context).spamDao(), SpamRepository.getInstance(context))
+        }
+
+    internal suspend fun undoRestore(
+        context: Context,
+        undo: RestoreUndo,
+        dao: SpamDao,
+        repo: SpamRepository,
+    ): RestoreResult = restorePayload(context, undo.payload, RestoreMode.REPLACE, dao, repo, undo.sections)
 
     /** Reconcile a restore interrupted between its DataStore and Room commits. */
     suspend fun reconcilePendingRestore(context: Context): Boolean =
