@@ -4,6 +4,17 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- SMS checks catch reply bait: a first text from a phone number you've never
+  texted or heard from that fishes for an answer without a link. "Hi mum,
+  this is my new number, my phone broke" is caught in English, Spanish, German,
+  Dutch, Portuguese, Italian, French and a few more, and so are "Is this
+  Sarah?" and "sorry, wrong number". On its own it blocks only in aggressive
+  mode, since a real kid with a new phone writes the same words. Someone
+  else's parent ("this is Maya's mom, here's my new number") doesn't count.
+- The SMS regression test runs 5,000 real smishing reports from the IMC 2025
+  dataset (CC BY 4.0) and reports recall for each language. Content rules
+  catch 13% of them, up from 10% before reply bait, and 35% of the wrong
+  number and "hi mum" scams, up from 4.5%.
 - The report Worker runs the current code. It had been serving a build from
   March, so reports carried no reporter identity and the trending lists and
   spam domains couldn't count independent reporters. It now records a daily

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1693-94e2d5?style=flat-square" alt="1693 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1711-94e2d5?style=flat-square" alt="1711 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -140,7 +140,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 |  1500 | **Meeting Mode** | Silence | Opt-in. While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail. Runs on notification access, with no calendar permission |
 
-SMS-specific layers run after the shared chain, in their own priority order: **SMS Keyword Rules** (5400, with schedules) → **Carrier Scam Label** (4750, a sender your carrier renamed to its scam label, such as Singapore's Likely-SCAM) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900, with 30+ regex patterns, URL shorteners, suspicious TLDs and the spam-domain list). Both SMS rule layers read the text after fullwidth letters, invisible characters and Cyrillic or Greek letters posing as Latin are undone, and a link or brand name hiding such characters counts against the message.
+SMS-specific layers run after the shared chain, in their own priority order: **SMS Keyword Rules** (5400, with schedules) → **Carrier Scam Label** (4750, a sender your carrier renamed to its scam label, such as Singapore's Likely-SCAM) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900, with 30+ regex patterns, URL shorteners, suspicious TLDs and the spam-domain list). Both SMS rule layers read the text after fullwidth letters, invisible characters and Cyrillic or Greek letters posing as Latin are undone, and a link or brand name hiding such characters counts against the message. A stranger's first text that fishes for a reply without a link counts too: "Hi mum, this is my new number", "Is this Sarah?", "sorry, wrong number". It has to come from a phone number you've never texted or heard from, and on its own it only blocks in aggressive mode, because a real kid with a new phone writes the same words.
 
 > **A flagged text still reaches your inbox.** Calls are different from
 > messages here, and the table above is about verdicts, not delivery. CallShield
@@ -215,6 +215,8 @@ An on-device **gradient-boosted tree** of 50 trees over 20 features, with a logi
 The maintainer trains it by hand from the CallShield database (50K positive and 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.648 for the model that ships today. A quality gate scores the 20% of rows training held out, with the same inference the app runs, and fails when F1 drops below 0.45.
 
 SMS content regressions use a separate CC0 corpus that CallShield wrote itself. It covers eight languages, the three sender forms, each kind of link, legitimate messages and hard negatives, and the test reports precision, recall and false-positive rate by language and message type without shipping personal data. Every spam message it catches is checked again in disguise (zero-width characters between letters, Cyrillic look-alike letters, fullwidth text, a hidden character in its link) and each copy has to be caught too: `./gradlew :app:testDebugUnitTest --tests com.sysadmindoc.callshield.data.SmsEvaluationCorpusTest`.
+
+The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset (Agarwal, Papasavva, Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0) in 63 languages. It prints recall for each language, with precision and false alarms taken from the clean messages above, and each large language has a floor it can't drop below. The number is humbling. Content rules alone catch 13% of those reports, and 35% of the wrong number and "hi mum" scams. Part of the gap is the dataset: it replaced every link with a placeholder, so the link rules see a link but never its host. `python scripts/sample_imc25_corpus.py` redraws the sample from a pinned copy of the dataset, and `IMC25-NOTICE.txt` next to it in `app/src/test/resources/sms-corpus/` credits it.
 
 ## Features
 
@@ -511,12 +513,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1693 tests
+./gradlew testDebugUnitTest   # 1711 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1693 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1711 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -553,8 +555,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1693 JVM unit tests (JUnit) |
-| Strings | 1717 string resources and 37 plural groups (translation-ready) |
+| Tests | 1711 JVM unit tests (JUnit) |
+| Strings | 1718 string resources and 37 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
@@ -562,3 +564,5 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 ## License
 
 MIT
+
+The IMC 2025 smishing sample in `app/src/test/resources/sms-corpus/` is CC BY 4.0, credited in `IMC25-NOTICE.txt` there.

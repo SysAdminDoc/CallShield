@@ -522,6 +522,7 @@
     <string name="signal_special_chars">Heavy use of symbols</string>
     <string name="signal_short_message_with_link">Short message with a link</string>
     <string name="signal_disguised_text">A link or brand name hides characters</string>
+    <string name="signal_reply_bait">A stranger\'s first text fishing for a reply</string>
     <string name="signal_spam_domain">Link to a known spam site</string>
     <string name="signal_lookalike_host">Link imitating a real site</string>
     <!-- Joins the signals that fired. Labels never contain it, so the log can split them again. -->

@@ -272,6 +272,13 @@ class SpamRepositoryImpl(
         val smsContextTrusted =
             canonicalPhone.isNotBlank() &&
                 checkerDependencies.smsContextChecker.isTrustedSender(context, canonicalPhone)
+        // Reply bait only means something in a stranger's first text. A rescan
+        // finds the old message itself in the inbox, so it applies only live.
+        val smsFirstContact =
+            realtimeCall &&
+                !smsContextTrusted &&
+                canonicalPhone.isNotBlank() &&
+                checkerDependencies.smsContextChecker.isFirstMessageFrom(context, canonicalPhone)
         var trustedAllowSource: String? = null
         var sharedDiagnostics: ScreeningDiagnostics? = null
         if (canonicalPhone.isNotBlank()) {
@@ -311,6 +318,7 @@ class SpamRepositoryImpl(
                 prefs = prefs,
                 trustedAllowSource = trustedAllowSource,
                 smsContextTrusted = smsContextTrusted,
+                smsFirstContact = smsFirstContact,
                 senderProvenance = senderProvenance,
             )
         val pipelineRun = CheckerPipeline.runWithDiagnostics(smsExtensions, ctx)

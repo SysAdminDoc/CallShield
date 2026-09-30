@@ -336,8 +336,15 @@ class SmsContentAnalyzer
          * multi-MB string is a real ReDoS risk on the 5-second screening
          * deadline — at this length the message is almost certainly spam
          * anyway, so we sample the first 16 KB and stop.
+         *
+         * [firstContact] says it's the first text from a phone number the user
+         * has never texted or heard from, the only place a friendly opener with
+         * no link is suspicious (see [SmsReplyBait]).
          */
-        fun analyze(body: String): SmsAnalysisResult {
+        fun analyze(
+            body: String,
+            firstContact: Boolean = false,
+        ): SmsAnalysisResult {
             var score = 0
             val reasons = mutableListOf<String>()
 
@@ -429,6 +436,11 @@ class SmsContentAnalyzer
                 reasons.add("short_msg_with_url")
             }
 
+            if (firstContact && SmsReplyBait.matches(ruleText, urls, visibleText.length)) {
+                score += REPLY_BAIT_SCORE
+                reasons.add("reply_bait")
+            }
+
             return SmsAnalysisResult(score.coerceAtMost(100), reasons)
         }
 
@@ -437,6 +449,11 @@ class SmsContentAnalyzer
 
             internal const val MAX_ANALYSIS_LENGTH = 16_384
             internal const val MAX_REPORT_DOMAINS = 10
+
+            // On its own, reply bait clears aggressive mode's bar (25) but not
+            // the default one (50): a real child with a new phone writes the
+            // same words, so it takes a second signal to block by default.
+            internal const val REPLY_BAIT_SCORE = 30
             private const val MAX_VERIFICATION_BODY_LENGTH = 1_024
             private const val MIN_REPORT_DOMAIN_LENGTH = 5
             private const val MAX_REPORT_DOMAIN_LENGTH = 253
@@ -539,7 +556,10 @@ class SmsContentAnalyzer
                 return normalized.takeIf { isValid }
             }
 
-            fun analyze(body: String): SmsAnalysisResult = shared.analyze(body)
+            fun analyze(
+                body: String,
+                firstContact: Boolean = false,
+            ): SmsAnalysisResult = shared.analyze(body, firstContact)
 
             fun extractReportableIndicators(body: String): SmsReportIndicators = shared.extractReportableIndicators(body)
 

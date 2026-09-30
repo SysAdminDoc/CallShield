@@ -72,6 +72,7 @@ fun signalLabelRes(signal: String): Int? =
         "special_chars" -> R.string.signal_special_chars
         "short_msg_with_url" -> R.string.signal_short_message_with_link
         "disguised_text" -> R.string.signal_disguised_text
+        "reply_bait" -> R.string.signal_reply_bait
         "spam_domain" -> R.string.signal_spam_domain
         "lookalike_host" -> R.string.signal_lookalike_host
         else -> overlayReasonLabelRes(signal)

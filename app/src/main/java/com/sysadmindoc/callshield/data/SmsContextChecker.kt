@@ -61,6 +61,41 @@ class SmsContextChecker
         }
 
         /**
+         * True when [number] is a full phone number (not a short code) with no
+         * inbox message older than a two-minute grace, so the one arriving is
+         * its first. The grace keeps the arriving message itself from counting
+         * when the SMS app has already stored it. False when the inbox can't
+         * be read, so an unreadable inbox never makes a sender a stranger.
+         */
+        fun isFirstMessageFrom(
+            context: Context,
+            number: String,
+            nowMillis: Long = System.currentTimeMillis(),
+        ): Boolean {
+            val normalized = normalize(number)
+            if (normalized.length < MIN_FIRST_CONTACT_DIGITS) return false
+
+            return try {
+                context.contentResolver
+                    .query(
+                        Telephony.Sms.Inbox.CONTENT_URI,
+                        arrayOf(Telephony.Sms.Inbox.ADDRESS),
+                        "${Telephony.Sms.Inbox.ADDRESS} LIKE ? AND ${Telephony.Sms.Inbox.DATE} < ?",
+                        arrayOf("%${normalized.takeLast(7)}", (nowMillis - FIRST_CONTACT_GRACE_MS).toString()),
+                        null,
+                    )?.use { cursor ->
+                        while (cursor.moveToNext()) {
+                            val address = cursor.getString(0) ?: continue
+                            if (normalize(address) == normalized) return false
+                        }
+                        true
+                    } ?: false
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /**
          * Strong trust check backed exclusively by prior outbound history.
          * Called from SpamRepository before keyword/content analysis.
          */
@@ -248,6 +283,8 @@ class SmsContextChecker
             private const val MAX_SMS_BURST_ROWS = 500
             private const val SMS_BURST_PHONE_DIGITS = 10
             private const val SMS_BURST_PREFIX_DIGITS = 6
+            private const val MIN_FIRST_CONTACT_DIGITS = 8
+            private const val FIRST_CONTACT_GRACE_MS = 2 * MILLIS_PER_MINUTE
 
             fun hasSentMessageTo(
                 context: Context,

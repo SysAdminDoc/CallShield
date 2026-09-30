@@ -1283,7 +1283,7 @@ internal class SmsContentChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val body = ctx.smsBody ?: return null
-        val result = smsContentAnalyzer.analyze(body)
+        val result = smsContentAnalyzer.analyze(body, firstContact = ctx.smsFirstContact)
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
         val threshold = if (aggressive) 25 else 50
         return if (result.score >= threshold) {

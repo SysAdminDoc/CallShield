@@ -132,6 +132,12 @@ data class CheckContext(
      * relationship so the later, globally ordered SMS trust rule can decide.
      */
     val smsContextTrusted: Boolean = false,
+    /**
+     * True for a live SMS that is the first text from a full phone number the
+     * user has never texted and has no earlier message from. Only the reply
+     * bait rule in [com.sysadmindoc.callshield.data.SmsContentAnalyzer] reads it.
+     */
+    val smsFirstContact: Boolean = false,
     /** Region-scoped sender-ID/numbering evidence for SMS only. */
     val senderProvenance: SenderProvenance? = null,
     /**

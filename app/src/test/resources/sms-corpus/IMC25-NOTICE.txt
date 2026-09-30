@@ -1,0 +1,26 @@
+IMC 2025 smishing sample (imc25-sample.tsv)
+
+imc25-sample.tsv holds 5,000 rows drawn from the dataset published with:
+
+  Sharad Agarwal, Antonis Papasavva, Guillermo Suarez-Tangil and Marie Vasek.
+  Fishing for Smishing: Understanding SMS Phishing Infrastructure and
+  Strategies by Mining Public User Reports. Proceedings of the 2025 ACM
+  Internet Measurement Conference (IMC '25).
+  https://doi.org/10.1145/3730567.3764431
+
+Source: https://github.com/reportsmishing/Smishing-Dataset-IMC25
+  dataset/final_dataset_output.csv at commit a6175560b57387199871e51fbef6bc523d2516b4
+  SHA-256 1bbd1e9e82c3ea023112207b80da268a5c4a07d2353c2b0898360ab037fa9a64
+
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://creativecommons.org/licenses/by/4.0/
+The rest of CallShield's code and data keep their own licenses. This license
+covers only imc25-sample.tsv.
+
+Changes: scripts/sample_imc25_corpus.py dropped duplicate texts and kept every
+wrong-number and hey mum/dad report. It then sampled the rest by language, with
+a floor so small languages have enough rows to measure. Only six fields were kept:
+row number, language (as a BCP 47 tag), scam type, sender type, URL shortener
+and message text. The text itself is unchanged. The authors had already replaced
+links, phone numbers and names with placeholders such as <URL>, and
+SmsEvaluationCorpusTest swaps those for neutral stand-ins when it reads a row.

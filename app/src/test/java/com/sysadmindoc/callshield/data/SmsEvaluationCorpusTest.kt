@@ -48,6 +48,10 @@ private data class SmsCorpusExample(
 ) {
     val expectedSpam: Boolean
         get() = category == SmsCorpusCategory.SCAM || category == SmsCorpusCategory.SPAM
+
+    /** Scored as a stranger's first text whenever it comes from a phone number, the case that lets reply bait count. */
+    val firstContact: Boolean
+        get() = senderForm == SmsCorpusSenderForm.PHONE_NUMBER
 }
 
 private data class SmsCorpusMetrics(
@@ -487,6 +491,98 @@ private object SmsEvaluationCorpus {
                 linkKind = SmsCorpusLinkKind.BENIGN_DOMAIN,
                 body = "您的包裹已经安全送达。您可以在应用内查看配送状态，也可以访问 https://商店.example.invalid/状态 了解详情。",
             ),
+            // A first text that asks for a reply or brings a new number for a
+            // real reason, next to the reply-bait scams it resembles.
+            example(
+                id = "en_hard_negative_parent_new_number",
+                languageTag = "en",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hi, this is Maya's mom. Here's my new number for the carpool list, see you Monday.",
+            ),
+            example(
+                id = "en_hard_negative_child_pickup",
+                languageTag = "en",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Mom, practice ran late. Can you pick me up at 6?",
+            ),
+            example(
+                id = "en_hard_negative_flyer_reply",
+                languageTag = "en",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hi, is this the number on the lost dog flyer? I think I saw him on Elm Street near the park this morning.",
+            ),
+            example(
+                id = "en_hard_negative_appointment_reply",
+                languageTag = "en",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hi, this is Dana from Maple Street Dental. Please reply C to confirm your cleaning on Tuesday at 3.",
+            ),
+            example(
+                id = "en_hard_negative_new_friend_whatsapp",
+                languageTag = "en",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "GB",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hey it's Chris from the climbing gym, great meeting you! Text me on WhatsApp if you want to go Saturday.",
+            ),
+            example(
+                id = "es_hard_negative_parent_new_number",
+                languageTag = "es",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "ES",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hola, soy la mamá de Lucía. Este es mi número nuevo para el grupo del cole.",
+            ),
+            example(
+                id = "de_hard_negative_child_train_late",
+                languageTag = "de",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "DE",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Hallo Mama, mein Zug hat Verspätung, bin gegen 8 zu Hause.",
+            ),
+            example(
+                id = "pt_hard_negative_parent_new_number",
+                languageTag = "pt",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "PT",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Olá, sou o pai do Tiago. Este é o meu número novo para o grupo da turma.",
+            ),
+            example(
+                id = "it_hard_negative_parent_new_number",
+                languageTag = "it",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "IT",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Ciao, sono la mamma di Giulia. Questo è il mio nuovo numero per la gita di sabato.",
+            ),
+            example(
+                id = "fr_hard_negative_parent_new_number",
+                languageTag = "fr",
+                category = SmsCorpusCategory.HARD_NEGATIVE,
+                region = "FR",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Bonjour, c'est le papa de Léo. Voici mon nouveau numéro pour le covoiturage.",
+            ),
         )
 
     val falsePositiveBudgetByLanguage =
@@ -516,7 +612,7 @@ private object SmsEvaluationCorpus {
     fun evaluate(analyzer: SmsContentAnalyzer = SmsContentAnalyzer()): SmsCorpusReport {
         val predictions =
             examples.associate { example ->
-                example.id to (analyzer.analyze(example.body).score >= SCORE_THRESHOLD)
+                example.id to (analyzer.analyze(example.body, firstContact = example.firstContact).score >= SCORE_THRESHOLD)
             }
         return SmsCorpusReport(
             byLanguage = examples.groupMetrics(predictions) { it.languageTag },
@@ -675,6 +771,205 @@ private object SmsDisguises {
     }
 }
 
+/**
+ * A stratified sample of the IMC 2025 smishing reports (Agarwal, Papasavva,
+ * Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0), drawn by
+ * scripts/sample_imc25_corpus.py. Every row is a scam, so recall comes from
+ * the sample and precision and false alarms from the clean messages above in
+ * the same language. See sms-corpus/IMC25-NOTICE.txt.
+ */
+private object Imc25Sample {
+    data class Row(
+        val row: Int,
+        val languageTag: String,
+        val scamType: String,
+        val sender: String,
+        val shortener: String,
+        val text: String,
+    ) {
+        val replyBased: Boolean
+            get() = scamType in REPLY_BASED
+
+        /** Only a phone number can be texted back; an alphanumeric or email sender can't. */
+        val fromPhoneNumber: Boolean
+            get() = sender == "phone" || sender == "unknown"
+
+        /**
+         * The dataset replaced links, numbers and names with placeholders. A
+         * link becomes one on its reported shortener, or on a neutral host, so
+         * link rules see a link but no host evidence the report didn't carry.
+         */
+        val body: String
+            get() =
+                PLACEHOLDER.replace(text) { match ->
+                    when (val kind = match.groupValues[1]) {
+                        "URL" -> "https://${shortener.ifEmpty { "example.com" }}/a1B2c3"
+                        in STAND_INS -> STAND_INS.getValue(kind)
+                        in NUMBERS -> "4821907"
+                        else -> "Sam"
+                    }
+                }
+    }
+
+    const val MAX_ROWS = 5_000
+    private const val RESOURCE = "sms-corpus/imc25-sample.tsv"
+    private const val HEADER = "row\tlanguage\tscam_type\tsender\tshortener\ttext"
+
+    /**
+     * Recall each group keeps at the evaluator threshold, measured 2026-09-30
+     * once reply bait landed: all 0.130 and reply-based 0.353, from 0.103 and
+     * 0.045 before it. A floor only moves up.
+     */
+    val recallFloors =
+        mapOf(
+            "all" to 0.13,
+            "reply-based" to 0.35,
+            "en" to 0.18,
+            "es" to 0.18,
+            "nl" to 0.07,
+            "fr" to 0.08,
+            "de" to 0.17,
+            "it" to 0.18,
+            "id" to 0.10,
+            "pt" to 0.15,
+            "ja" to 0.04,
+            "hi" to 0.04,
+            "ms" to 0.10,
+            "pl" to 0.03,
+        )
+
+    /** Languages with fewer sampled rows are reported together. */
+    const val MIN_LANGUAGE_ROWS = 25
+    const val OTHER = "other"
+
+    private val REPLY_BASED = setOf("wrong number", "hey mum/dad")
+    private val PLACEHOLDER = Regex("<([A-Z_]+)>")
+    private val STAND_INS =
+        mapOf(
+            "PHONE_NUMBER" to "+1 555 010 0199",
+            "EMAIL_ADDRESS" to "someone@example.com",
+            "IP_ADDRESS" to "192.0.2.10",
+            "DATE_TIME" to "12 May",
+            "LOCATION" to "Springfield",
+            "NRP" to "local",
+        )
+    private val NUMBERS =
+        setOf(
+            "US_DRIVER_LICENSE",
+            "US_BANK_NUMBER",
+            "UK_NHS",
+            "US_PASSPORT",
+            "US_SSN",
+            "US_ITIN",
+            "CREDIT_CARD",
+            "IBAN_CODE",
+            "MEDICAL_LICENSE",
+            "CRYPTO",
+        )
+
+    val rows: List<Row> by lazy(::load)
+
+    private fun load(): List<Row> {
+        val stream = requireNotNull(Imc25Sample::class.java.classLoader?.getResourceAsStream(RESOURCE)) { "$RESOURCE is missing" }
+        val lines = stream.bufferedReader(Charsets.UTF_8).use { it.readLines() }
+        check(lines.first() == HEADER) { "unexpected header ${lines.first()}" }
+        return lines.drop(1).filter(String::isNotEmpty).map { line ->
+            val fields = line.split('\t').map(::unescape)
+            check(fields.size == 6) { "row has ${fields.size} fields: $line" }
+            Row(fields[0].toInt(), fields[1], fields[2], fields[3], fields[4], fields[5])
+        }
+    }
+
+    private fun unescape(field: String): String =
+        buildString {
+            var i = 0
+            while (i < field.length) {
+                val c = field[i]
+                if (c == '\\' && i + 1 < field.length) {
+                    when (val next = field[i + 1]) {
+                        't' -> append('\t')
+                        'n' -> append('\n')
+                        'r' -> append('\r')
+                        else -> append(next)
+                    }
+                    i += 2
+                } else {
+                    append(c)
+                    i++
+                }
+            }
+        }
+
+    fun reportLanguage(tag: String): String = if (rows.count { it.languageTag == tag } >= MIN_LANGUAGE_ROWS) tag else OTHER
+
+    fun evaluate(analyzer: SmsContentAnalyzer = SmsContentAnalyzer()): Imc25Report {
+        val caught = rows.associateWith { analyzer.analyze(it.body, firstContact = it.fromPhoneNumber).score >= SmsEvaluationCorpus.SCORE_THRESHOLD }
+        val clean = SmsEvaluationCorpus.examples.filterNot { it.expectedSpam }
+        val cleanFlagged =
+            clean.associateWith { analyzer.analyze(it.body, firstContact = it.firstContact).score >= SmsEvaluationCorpus.SCORE_THRESHOLD }
+
+        fun metrics(
+            spam: List<Row>,
+            cleanInGroup: List<SmsCorpusExample>,
+        ): SmsCorpusMetrics {
+            val truePositives = spam.count { caught.getValue(it) }
+            val falsePositives = cleanInGroup.count { cleanFlagged.getValue(it) }
+            return SmsCorpusMetrics(
+                examples = spam.size + cleanInGroup.size,
+                actualPositives = spam.size,
+                predictedPositives = truePositives + falsePositives,
+                truePositives = truePositives,
+                falsePositives = falsePositives,
+                trueNegatives = cleanInGroup.size - falsePositives,
+                falseNegatives = spam.size - truePositives,
+            )
+        }
+
+        val byLanguage =
+            rows.groupBy { reportLanguage(it.languageTag) }.toSortedMap().mapValues { (language, spam) ->
+                val cleanInGroup =
+                    if (language == OTHER) emptyList() else clean.filter { it.languageTag == language }
+                metrics(spam, cleanInGroup)
+            }
+        return Imc25Report(
+            byLanguage = byLanguage,
+            all = metrics(rows, clean),
+            replyBased = metrics(rows.filter(Row::replyBased), emptyList()),
+        )
+    }
+}
+
+private data class Imc25Report(
+    val byLanguage: Map<String, SmsCorpusMetrics>,
+    val all: SmsCorpusMetrics,
+    val replyBased: SmsCorpusMetrics,
+) {
+    fun format(): String =
+        buildString {
+            appendLine("IMC 2025 smishing sample, ${all.actualPositives} reports")
+            line("all", all)
+            line("reply-based", replyBased)
+            byLanguage.forEach { (language, metrics) -> line("language=$language", metrics) }
+        }
+
+    private fun StringBuilder.line(
+        label: String,
+        metrics: SmsCorpusMetrics,
+    ) {
+        val clean = metrics.falsePositives + metrics.trueNegatives
+        append(label)
+        append(" reports=").append(metrics.actualPositives)
+        append(" clean=").append(clean)
+        append(" recall=").append(metrics.recall?.let(::format4) ?: "n/a")
+        // Without clean messages in the language, precision and the false
+        // alarm rate would read as perfect, so they say so instead.
+        append(" precision=").append(if (clean == 0) "n/a" else metrics.precision?.let(::format4) ?: "n/a")
+        append(" fpr=").appendLine(if (clean == 0) "n/a" else format4(metrics.falsePositiveRate))
+    }
+
+    private fun format4(value: Double): String = String.format(Locale.ROOT, "%.4f", value)
+}
+
 class SmsEvaluationCorpusTest {
     @Test
     fun `manifest covers multilingual licensed redacted examples`() {
@@ -788,5 +1083,41 @@ class SmsEvaluationCorpusTest {
         // None was before the rules read normalized text (2026-09-30), hard
         // negatives included, so normalizing may not add one.
         assertEquals(emptyList<String>(), SmsEvaluationCorpus.evaluate().falseAlarms)
+    }
+
+    @Test
+    fun `IMC 2025 sample reports precision, recall and false-positive rate per language`() {
+        val report = Imc25Sample.evaluate()
+        println(report.format())
+
+        assertTrue(Imc25Sample.rows.size in 4_000..Imc25Sample.MAX_ROWS)
+        assertEquals(
+            "sampled texts are distinct",
+            Imc25Sample.rows.size,
+            Imc25Sample.rows
+                .map { it.text }
+                .toSet()
+                .size,
+        )
+        assertTrue(report.byLanguage.keys.count { it != Imc25Sample.OTHER } >= 20)
+        Imc25Sample.recallFloors.forEach { (group, floor) ->
+            val metrics =
+                when (group) {
+                    "all" -> report.all
+                    "reply-based" -> report.replyBased
+                    else -> report.byLanguage.getValue(group)
+                }
+            val recall = requireNotNull(metrics.recall)
+            assertTrue("$group recall $recall fell below its floor $floor", recall >= floor)
+        }
+        assertEquals("clean messages flagged", 0, report.all.falsePositives)
+    }
+
+    @Test
+    fun `the IMC 2025 sample carries its attribution`() {
+        val notice = requireNotNull(javaClass.classLoader?.getResource("sms-corpus/IMC25-NOTICE.txt")).readText()
+        listOf("CC BY 4.0", "Agarwal", "a6175560b57387199871e51fbef6bc523d2516b4", "10.1145/3730567.3764431").forEach {
+            assertTrue(it, it in notice)
+        }
     }
 }
