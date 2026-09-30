@@ -375,6 +375,7 @@
     <string name="signal_callback_number">包含回拨号码</string>
     <string name="signal_special_chars">符号过多</string>
     <string name="signal_short_message_with_link">带链接的简短消息</string>
+    <string name="signal_disguised_text">链接或品牌名中藏有伪装字符</string>
     <string name="signal_spam_domain">链接指向已知垃圾网站</string>
     <string name="signal_lookalike_host">链接仿冒知名网站</string>
     <string name="signal_list_separator">、</string>

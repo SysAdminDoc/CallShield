@@ -301,7 +301,8 @@ class SmsContentAnalyzer
             val domains = linkedSetOf<String>()
             val indicators = linkedSetOf<String>()
 
-            urlPattern.findAll(analysisBody).forEach { match ->
+            // Invisible characters would split a host and hide it from the pattern.
+            urlPattern.findAll(SmsTextNormalizer.normalize(analysisBody).visible).forEach { match ->
                 val url = match.value.lowercase()
                 val domain = normalizeDomainCandidate(extractDomain(url))
                 indicators.add("url_present")
@@ -352,11 +353,17 @@ class SmsContentAnalyzer
                 } else {
                     body
                 }
+            // Hosts are read without invisible characters but keep their own
+            // letters, so a Cyrillic look-alike of a real domain doesn't pass
+            // for it. Every other rule reads look-alikes as Latin.
+            val normalized = SmsTextNormalizer.normalize(analysisBody)
+            val visibleText = normalized.visible
+            val ruleText = normalized.folded
 
             // Check for URL shorteners (high spam signal)
             val urls =
-                if ('.' in analysisBody || analysisBody.contains("http", ignoreCase = true)) {
-                    urlPattern.findAll(analysisBody).map { it.value.lowercase() }.toList()
+                if ('.' in visibleText || visibleText.contains("http", ignoreCase = true)) {
+                    urlPattern.findAll(visibleText).map { it.value.lowercase() }.toList()
                 } else {
                     emptyList()
                 }
@@ -372,10 +379,15 @@ class SmsContentAnalyzer
                 }
             }
 
+            if (normalized.disguised) {
+                score += 30
+                reasons.add("disguised_text")
+            }
+
             // Check spam keyword patterns
             var patternHits = 0
             for (pattern in spamPatterns) {
-                if (pattern.containsMatchIn(analysisBody)) {
+                if (pattern.containsMatchIn(ruleText)) {
                     patternHits++
                     if (patternHits == 1) {
                         score += 25
@@ -388,7 +400,7 @@ class SmsContentAnalyzer
             }
 
             // All caps text (>50% of message) — shouting is a spam signal
-            val alphaChars = analysisBody.filter { it.isLetter() }
+            val alphaChars = ruleText.filter { it.isLetter() }
             if (alphaChars.length > 10 && alphaChars.count { it.isUpperCase() }.toFloat() / alphaChars.length > 0.5f) {
                 score += 15
                 reasons.add("excessive_caps")
@@ -396,24 +408,23 @@ class SmsContentAnalyzer
 
             // Contains phone number in body (callback scam) — regex is
             // case-insensitive so we match the original body instead of lowercasing.
-            if (phoneInBody.containsMatchIn(analysisBody)) {
+            if (phoneInBody.containsMatchIn(ruleText)) {
                 score += 10
                 reasons.add("callback_number")
             }
 
             // Excessive special characters / emoji (common in spam)
             val specialRatio =
-                analysisBody.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() /
-                    analysisBody.length.coerceAtLeast(1)
-            if (specialRatio > 0.15f && analysisBody.length > 20) {
+                ruleText.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() /
+                    ruleText.length.coerceAtLeast(1)
+            if (specialRatio > 0.15f && ruleText.length > 20) {
                 score += 10
                 reasons.add("special_chars")
             }
 
-            // Very short message with URL (likely phishing).
-            // Uses original body length so a 20-char SMS still triggers when
-            // [analysisBody] hasn't been truncated.
-            if (body.length < 50 && urls.isNotEmpty()) {
+            // Very short message with URL (likely phishing). Counted without
+            // invisible characters, which would otherwise pad it past the limit.
+            if (visibleText.length < 50 && urls.isNotEmpty()) {
                 score += 20
                 reasons.add("short_msg_with_url")
             }

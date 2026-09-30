@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.model
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.sysadmindoc.callshield.data.SmsTextNormalizer
 import com.sysadmindoc.callshield.data.TimeSchedule
 import java.util.Calendar
 
@@ -37,18 +38,29 @@ data class SmsKeywordRule(
     fun matchesNow(
         text: String,
         calendar: Calendar = Calendar.getInstance(),
+        foldedText: String = SmsTextNormalizer.fold(text),
     ): Boolean {
         if (!schedule.isActiveAt(calendar)) return false
-        return matches(text)
+        return matches(text, foldedText)
     }
 
-    fun matches(text: String): Boolean {
+    /**
+     * Matches the message as written, or with fullwidth, invisible and
+     * look-alike characters undone on both sides ([SmsTextNormalizer]).
+     * Checkers fold the message once and pass [foldedText] to every rule.
+     */
+    fun matches(
+        text: String,
+        foldedText: String = SmsTextNormalizer.fold(text),
+    ): Boolean {
         val normalizedKeyword = keyword.trim()
         if (!enabled || normalizedKeyword.isBlank()) return false
+        val foldedKeyword = SmsTextNormalizer.fold(normalizedKeyword)
         return if (caseSensitive) {
-            text.contains(normalizedKeyword)
+            text.contains(normalizedKeyword) || foldedText.contains(foldedKeyword)
         } else {
-            text.lowercase().contains(normalizedKeyword.lowercase())
+            text.lowercase().contains(normalizedKeyword.lowercase()) ||
+                foldedText.lowercase().contains(foldedKeyword.lowercase())
         }
     }
 }

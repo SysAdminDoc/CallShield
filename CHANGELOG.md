@@ -53,6 +53,12 @@ All notable changes to CallShield will be documented in this file.
   the community report waits until that's over, so an undone block is never
   reported. Restore with Replace keeps a copy of the sections it's about to
   clear, and Undo next to the result puts them back for 30 seconds.
+- Text rules see through disguised spam. Fullwidth and math-style letters,
+  zero-width and other invisible characters, and Cyrillic or Greek letters
+  that look Latin are undone before the SMS content checks and your keyword
+  rules run. A link or brand name with hidden or look-alike characters in it
+  counts against the message. Russian and Greek messages are read as written,
+  and a look-alike web address is never mistaken for the real one.
 
 ## v1.10.0 (2026-09-28)
 

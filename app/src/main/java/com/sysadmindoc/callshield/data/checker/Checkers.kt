@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
+import com.sysadmindoc.callshield.data.SmsTextNormalizer
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
@@ -1255,8 +1256,9 @@ internal class SmsKeywordChecker(
         val rules = repo.getActiveKeywordsCachedInternal()
         if (rules.isEmpty()) return null
         val now = java.util.Calendar.getInstance()
+        val folded = SmsTextNormalizer.fold(body)
         for (rule in rules) {
-            if (rule.matchesNow(body, now)) {
+            if (rule.matchesNow(body, now, folded)) {
                 return BlockResult.block(
                     "keyword",
                     "sms_spam",

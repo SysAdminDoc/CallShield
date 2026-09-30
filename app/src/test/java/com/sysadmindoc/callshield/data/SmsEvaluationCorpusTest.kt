@@ -615,7 +615,64 @@ private object SmsEvaluationCorpus {
             provenance = manifest.provenance,
         )
 
-    private const val SCORE_THRESHOLD = 25
+    const val SCORE_THRESHOLD = 25
+}
+
+/** Copies of a message hidden from plain-text rules the ways spammers do it. */
+private object SmsDisguises {
+    private const val ZWSP = 0x200B.toChar()
+    private const val FULLWIDTH_OFFSET = 0xFEE0
+
+    private val lookalikes =
+        mapOf(
+            'a' to 0x0430,
+            'c' to 0x0441,
+            'e' to 0x0435,
+            'o' to 0x043E,
+            'p' to 0x0440,
+            'x' to 0x0445,
+            'y' to 0x0443,
+            'A' to 0x0410,
+            'B' to 0x0412,
+            'C' to 0x0421,
+            'E' to 0x0415,
+            'H' to 0x041D,
+            'K' to 0x041A,
+            'M' to 0x041C,
+            'O' to 0x041E,
+            'P' to 0x0420,
+            'T' to 0x0422,
+            'X' to 0x0425,
+        )
+
+    fun of(body: String): Map<String, String> =
+        buildMap {
+            put("zero-width", words(body, ::zeroWidth))
+            put("look-alike", words(body) { word -> word.map { lookalikes[it]?.toChar() ?: it }.joinToString("") })
+            put("fullwidth", words(body) { word -> word.map { if (it in '!'..'~') (it.code + FULLWIDTH_OFFSET).toChar() else it }.joinToString("") })
+            if (body.split(' ').any(::isLink)) put("hidden in the link", body.split(' ').joinToString(" ") { if (isLink(it)) hideInHost(it) else it })
+        }
+
+    /** Rewrites the words and leaves links alone, as a sender wants them to open. */
+    private fun words(
+        body: String,
+        disguise: (String) -> String,
+    ): String = body.split(' ').joinToString(" ") { if (isLink(it)) it else disguise(it) }
+
+    private fun isLink(word: String): Boolean = "://" in word || word.startsWith("www.")
+
+    private fun zeroWidth(word: String): String =
+        buildString {
+            word.forEachIndexed { i, c ->
+                append(c)
+                if (c.isLetter() && word.getOrNull(i + 1)?.isLetter() == true) append(ZWSP)
+            }
+        }
+
+    private fun hideInHost(link: String): String {
+        val hostStart = link.indexOf("://").let { if (it < 0) 0 else it + 3 }
+        return link.substring(0, hostStart + 1) + ZWSP + link.substring(hostStart + 1)
+    }
 }
 
 class SmsEvaluationCorpusTest {
@@ -709,5 +766,27 @@ class SmsEvaluationCorpusTest {
             assertTrue(precision == null || precision in 0.0..1.0)
             assertTrue(recall == null || recall in 0.0..1.0)
         }
+    }
+
+    @Test
+    fun `disguised copies of flagged spam stay flagged`() {
+        val analyzer = SmsContentAnalyzer()
+        val flaggedSpam =
+            SmsEvaluationCorpus.examples.filter {
+                it.expectedSpam && analyzer.analyze(it.body).score >= SmsEvaluationCorpus.SCORE_THRESHOLD
+            }
+        val copies = flaggedSpam.flatMap { example -> SmsDisguises.of(example.body).map { (kind, body) -> "${example.id} ($kind)" to body } }
+        val escaped = copies.filter { (_, body) -> analyzer.analyze(body).score < SmsEvaluationCorpus.SCORE_THRESHOLD }.map { it.first }
+
+        assertTrue("only ${flaggedSpam.size} flagged spam examples", flaggedSpam.size >= 40)
+        assertTrue(copies.size >= flaggedSpam.size * 3)
+        assertEquals(emptyList<String>(), escaped)
+    }
+
+    @Test
+    fun `no clean message is flagged`() {
+        // None was before the rules read normalized text (2026-09-30), hard
+        // negatives included, so normalizing may not add one.
+        assertEquals(emptyList<String>(), SmsEvaluationCorpus.evaluate().falseAlarms)
     }
 }
