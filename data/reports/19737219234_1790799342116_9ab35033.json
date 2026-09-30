@@ -1,0 +1,14 @@
+{
+  "number": "+19737219234",
+  "type": "sms_spam",
+  "reported_at": "2026-09-30T20:15:42.116Z",
+  "source": "community_app",
+  "reporter_bucket": "e07add86494bbc5f",
+  "reporter_device": "17e930408fa19341",
+  "sms_domains": [
+    "actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
