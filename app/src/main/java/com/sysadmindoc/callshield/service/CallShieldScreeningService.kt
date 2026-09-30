@@ -181,6 +181,7 @@ class CallShieldScreeningService : CallScreeningService() {
                             val source = ExpectingCall.withheldCallBlockSource(prefs, now, MeetingModeChecker.meetingAppInUse(prefs))
                             if (source == null) {
                                 respondAllow(responseGate)
+                                CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, matchSource = "")
                             } else {
                                 respondBlock(callDetails, responseGate, number, source, prefs = prefs)
                             }
@@ -250,6 +251,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                     ?: CategoryCallAction.INHERIT
                             if (categoryAction == CategoryCallAction.ALLOW) {
                                 respondAllow(responseGate)
+                                CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, result.matchSource)
                                 logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
                             } else {
                                 respondBlock(
@@ -277,6 +279,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                 }
                             }
                             respondAllow(responseGate)
+                            CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, result.matchSource)
                             logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
 
                             if (repeatedUrgentAllow) {

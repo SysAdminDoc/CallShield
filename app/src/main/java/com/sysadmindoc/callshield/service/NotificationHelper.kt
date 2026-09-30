@@ -57,6 +57,7 @@ object NotificationHelper {
     const val CHANNEL_PROTECTION_HEALTH = "protection_health"
     const val CHANNEL_APP_UPDATES = "app_updates"
     const val CHANNEL_OUTGOING_HOLD = "outgoing_call_hold"
+    const val CHANNEL_CODE_DURING_CALL = "code_during_call"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -247,6 +248,16 @@ object NotificationHelper {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = context.getString(R.string.notif_channel_outgoing_hold_desc)
+            },
+        )
+        // High importance: the caller may be asking for the code right now.
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_CODE_DURING_CALL,
+                context.getString(R.string.notif_channel_code_during_call),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.notif_channel_code_during_call_desc)
             },
         )
     }
@@ -756,6 +767,44 @@ object NotificationHelper {
                 .setAutoCancel(true)
 
         safeNotify(context, nid, builder)
+    }
+
+    /** A one-time code arrived during or just after a call from [caller], who isn't a contact ("" when hidden). */
+    fun notifyCodeDuringCall(
+        context: Context,
+        caller: String,
+    ): Boolean {
+        val shown =
+            if (caller.isEmpty()) {
+                context.getString(R.string.notif_code_during_call_hidden_caller)
+            } else {
+                PhoneFormatter.formatIsolated(caller)
+            }
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(caller, 81),
+                Intent(context, MainActivity::class.java).apply {
+                    if (caller.isNotEmpty()) putExtra("open_number", caller)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_CODE_DURING_CALL)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_code_during_call_title))
+                .setContentText(context.getString(R.string.notif_code_during_call_text, shown))
+                .setStyle(
+                    NotificationCompat
+                        .BigTextStyle()
+                        .bigText(context.getString(R.string.notif_code_during_call_big_text, shown)),
+                ).setContentIntent(openIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+
+        return safeNotify(context, stableId(caller, 80), builder)
     }
 
     /**

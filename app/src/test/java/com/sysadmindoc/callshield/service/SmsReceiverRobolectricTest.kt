@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.UnknownCallWindow
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -57,6 +58,7 @@ class SmsReceiverRobolectricTest {
 
     @After
     fun tearDown() {
+        UnknownCallWindow.shared.clear()
         SmsContentAnalyzer.updateSpamDomains(emptySet())
         scope.cancel()
         notificationManager.cancelAll()
@@ -101,9 +103,35 @@ class SmsReceiverRobolectricTest {
         assertFalse(text, text.contains("known_spam_domain"))
     }
 
-    private fun awaitPhishingNotification(): Notification =
+    @Test
+    fun `a code texted during an unknown call warns even when SMS blocking is disabled`() {
+        val receiver =
+            SmsReceiver().apply {
+                repo = repository
+                applicationScope = scope
+            }
+        UnknownCallWindow.shared.callStarted("+12025550143")
+        val intent =
+            Intent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION).apply {
+                putExtra("format", "3gpp")
+                putExtra("pdus", arrayOf(buildDeliverPdu("15551234567", "Your Chase verification code is 482913")))
+            }
+        val pendingResult =
+            ReflectionHelpers.callConstructor(
+                android.content.BroadcastReceiver.PendingResult::class.java,
+            )
+        ReflectionHelpers.setField(receiver, "mPendingResult", pendingResult)
+
+        receiver.onReceive(context, intent)
+
+        val warning = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_code_during_call_title))
+        assertEquals(NotificationHelper.CHANNEL_CODE_DURING_CALL, warning.channelId)
+    }
+
+    private fun awaitPhishingNotification(): Notification = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title))
+
+    private fun awaitNotification(expectedTitle: String): Notification =
         runBlocking {
-            val expectedTitle = context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title)
             withTimeout(5_000L) {
                 var phishingNotification: Notification? = null
                 while (phishingNotification == null) {

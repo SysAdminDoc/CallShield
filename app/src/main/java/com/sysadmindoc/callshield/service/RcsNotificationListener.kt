@@ -241,6 +241,9 @@ class RcsNotificationListener : NotificationListenerService() {
             ),
         )
 
+        // The same text also reaches the SMS receiver; the call window warns once.
+        effectiveBody?.let { CodeDuringCallWarning.onMessage(applicationContext, it) }
+
         if (sender.isEmpty()) return
 
         val senderNumber = senderNumber(sender)

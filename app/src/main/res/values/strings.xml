@@ -1469,6 +1469,12 @@
     <string name="notif_app_update_open">Open release</string>
     <string name="notif_channel_outgoing_hold">Stopped outgoing calls</string>
     <string name="notif_channel_outgoing_hold_desc">Why CallShield stopped a call you started, with a way to call anyway</string>
+    <string name="notif_channel_code_during_call">Codes during unknown calls</string>
+    <string name="notif_channel_code_during_call_desc">Warns when a one-time code arrives during or just after a call from someone who isn\'t in your contacts</string>
+    <string name="notif_code_during_call_title">Don\'t read out this code</string>
+    <string name="notif_code_during_call_text">A code arrived during your call with %1$s</string>
+    <string name="notif_code_during_call_big_text">A one-time code arrived during or just after your call with %1$s, who isn\'t in your contacts. Your bank and real companies never ask you to read one out. If the caller asked for it, hang up and call the company back on a number you trust.</string>
+    <string name="notif_code_during_call_hidden_caller">a hidden number</string>
     <string name="notif_outgoing_held_title">Call to %1$s stopped</string>
     <string name="notif_outgoing_held_big_text">%1$s Tap Call anyway if you meant to call it.</string>
     <string name="notif_outgoing_call_anyway">Call anyway</string>

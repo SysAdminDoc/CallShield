@@ -119,6 +119,8 @@ class SmsReceiver : BroadcastReceiver() {
                     return@launch
                 }
                 body = reassembleBody(messages.map { it.messageBody })
+                // A warning, not a verdict, so it runs whether or not texts are screened.
+                CodeDuringCallWarning.onMessage(appContext, body)
 
                 // Spam classification + block logging is gated behind the
                 // Block-SMS toggle. Local phishing-URL checks below run

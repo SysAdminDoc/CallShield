@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A one-time code that arrives during a call from someone who isn't in your
+  contacts, or in the 10 minutes after it, brings up a warning not to read
+  it out to the caller. Imposters posing as a bank ask for exactly that code.
+  It shows once per call, never for a contact or a number on your allow list,
+  and works for hidden numbers too. It has its own notification channel, so
+  it can be turned off in Android's settings without touching other alerts.
 - A trusted number can let its whole number block through. A doctor's office
   that calls from 555-234-5601 one day and 555-234-5617 the next needed every
   line allowed by hand. Now the entry's menu offers the numbers that differ

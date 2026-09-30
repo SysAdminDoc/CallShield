@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sysadmindoc.callshield.data.UnknownCallWindow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -77,6 +78,27 @@ class NotificationStyleInstrumentedTest {
         assertEquals(
             context.resources.getQuantityString(com.sysadmindoc.callshield.R.plurals.notif_summary_text_recent, 1, 1),
             summary.notification.extras.getString(Notification.EXTRA_TEXT),
+        )
+        if (InstrumentationRegistry.getArguments().getString("visualNotification") == "true") {
+            Thread.sleep(VISUAL_REVIEW_WINDOW_MS)
+        }
+    }
+
+    @Test
+    fun codeDuringUnknownCallWarningPopsUpOnItsOwnChannel() {
+        val window = UnknownCallWindow()
+        window.callStarted("+12125550143")
+
+        assertTrue(CodeDuringCallWarning.onMessage(context, "Your Chase verification code is 482913", window))
+
+        val warning = postedNotifications(1).single { it.notification.channelId == NotificationHelper.CHANNEL_CODE_DURING_CALL }
+        assertEquals(
+            NotificationManager.IMPORTANCE_HIGH,
+            notificationManager.getNotificationChannel(NotificationHelper.CHANNEL_CODE_DURING_CALL).importance,
+        )
+        assertEquals(
+            context.getString(com.sysadmindoc.callshield.R.string.notif_code_during_call_title),
+            warning.notification.extras.getString(Notification.EXTRA_TITLE),
         )
         if (InstrumentationRegistry.getArguments().getString("visualNotification") == "true") {
             Thread.sleep(VISUAL_REVIEW_WINDOW_MS)

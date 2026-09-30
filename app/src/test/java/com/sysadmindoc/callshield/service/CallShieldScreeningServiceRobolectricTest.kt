@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.UnknownCallWindow
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
@@ -35,6 +36,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -67,6 +69,7 @@ class CallShieldScreeningServiceRobolectricTest {
         // ordinary screening case unlocked so direct-boot state from a prior
         // test cannot divert this class into the device-encrypted mirror.
         Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(true)
+        UnknownCallWindow.shared.clear()
         fixture = IsolatedRepositoryFixture(context)
         repository = fixture.repository
         runBlocking {
@@ -106,6 +109,7 @@ class CallShieldScreeningServiceRobolectricTest {
     fun tearDown() {
         Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(true)
         DirectBootScreeningStore.clearForTest(context)
+        UnknownCallWindow.shared.clear()
         scope.cancel()
         fixture.close()
     }
@@ -386,6 +390,32 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
         awaitScopeIdle()
+    }
+
+    @Test
+    fun `a stranger's call that rings opens the one-time code window`() {
+        val number = "+12125550184"
+
+        service.onScreenCall(callDetails(number))
+
+        assertFalse(awaitResponse().disallowCall)
+        runBlocking {
+            withTimeout(5_000L) {
+                while (UnknownCallWindow.shared.openCaller() != number) delay(10L)
+            }
+        }
+    }
+
+    @Test
+    fun `a contact's call never opens the one-time code window`() {
+        runBlocking { repository.setContactWhitelist(true) }
+        service.contactLookup = { _, _, _ -> true }
+
+        service.onScreenCall(callDetails("+12125550186"))
+
+        assertFalse(awaitResponse().disallowCall)
+        awaitScopeIdle()
+        assertNull(UnknownCallWindow.shared.openCaller())
     }
 
     @Test
