@@ -33,11 +33,14 @@ internal class IsolatedRepositoryFixture(
             .build()
     val dao = database.spamDao()
 
+    /** The settings store under [repository], for tests that seed preferences directly. */
+    val settingsStore = preferenceStore("settings")
+
     val repository =
         SpamRepository(
             context = context,
             database = database,
-            settingsDataStore = preferenceStore("settings"),
+            settingsDataStore = settingsStore,
             privateSettingsDataStore = preferenceStore("private"),
             externalBlocklistDataSource = externalBlocklistDataSource,
             remote = remote,

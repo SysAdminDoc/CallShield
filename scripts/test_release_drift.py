@@ -123,8 +123,9 @@ class ReleaseDriftTest(unittest.TestCase):
         self.assertEqual([], verify_release_drift.settings_guide_audit(ROOT))
         self.assertIn("Detection engines", verify_release_drift.settings_card_titles(ROOT))
 
+        package = ROOT / verify_release_drift.SETTINGS_PACKAGE
         copied = [
-            verify_release_drift.SETTINGS_SCREEN,
+            *(str(path.relative_to(ROOT)) for path in package.glob("*.kt")),
             verify_release_drift.GETTING_STARTED,
             "app/src/main/res/values/strings.xml",
         ]

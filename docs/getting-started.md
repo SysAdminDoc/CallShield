@@ -51,13 +51,6 @@ Recommended, Strict or Contacts only (`active_profile_name`, Recommended after s
 
 Shows whether Phone & messages, Call screening, the caller ID overlay, notifications and notification access are granted, with a Grant or Enable button for each one that isn't. Advanced always shows it. Basic shows it only while something required is missing.
 
-### Appearance
-
-| Setting | Key | Default |
-|---------|-----|---------|
-| Theme | `app_theme` | AMOLED black |
-| Language | Android's per-app language | System default |
-
 ### Blocking
 
 | Setting | Key | Default |
@@ -65,6 +58,15 @@ Shows whether Phone & messages, Call screening, the caller ID overlay, notificat
 | Block spam calls | `block_calls_enabled` | on |
 | Analyze spam SMS | `block_sms_enabled` | on |
 | Block unknown numbers | `block_unknown_enabled` | off |
+
+### When a call is blocked
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Silent voicemail mode | `silent_voicemail_mode` | off |
+| Auto-mute low-confidence blocks | `automute_low_confidence_enabled` | off |
+| Answer & hang up blocked calls | `answer_hang_up_mode` | off |
+| Hang up after (seconds) | `hang_up_delay_seconds` | 1 |
 | Call handling by category | `category_call_actions` | every category follows the global setting |
 
 ### Safety
@@ -94,6 +96,13 @@ Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`
 | Block unknowns during quiet hours | `time_block_enabled` | off |
 | Start | `time_block_start_hour` | 22 |
 | End | `time_block_end_hour` | 7 |
+
+### Appearance
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Theme | `app_theme` | AMOLED black |
+| Language | Android's per-app language | System default |
 
 ### Telemarketing ranges
 
@@ -129,10 +138,6 @@ Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`
 | Choose screened apps | `notification_screening_packages` | the built-in list of messaging apps |
 | Push-alert bridge | `push_alert_enabled` | on |
 | Configure trusted sources | `push_alert_disabled_packages` | every source trusted |
-| Silent voicemail mode | `silent_voicemail_mode` | off |
-| Auto-mute low-confidence blocks | `automute_low_confidence_enabled` | off |
-| Answer & hang up blocked calls | `answer_hang_up_mode` | off |
-| Hang up after (seconds) | `hang_up_delay_seconds` | 1 |
 
 ### Meeting mode
 

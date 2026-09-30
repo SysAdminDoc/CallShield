@@ -40,6 +40,11 @@ All notable changes to CallShield will be documented in this file.
   every six hours, so it needs no extra server and nothing unsigned can fake
   it. Hide it and it stays hidden until the next release. The optional weekly
   update check in Settings works as before.
+- Settings has a When a call is blocked card on Basic. Silent voicemail,
+  muting low-confidence blocks, answer and hang up, and call handling by
+  category sit together there. Most of them were among the detection engines
+  on Advanced, where they read like more ways to catch spam. Appearance moved
+  to the end of Basic.
 
 ## v1.10.0 (2026-09-28)
 

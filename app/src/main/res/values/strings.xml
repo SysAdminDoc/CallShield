@@ -600,6 +600,7 @@
     <string name="settings_language_dialog_title">Choose app language</string>
     <string name="settings_language_debug_only">Pseudolocales are available in debug builds for layout testing.</string>
     <string name="settings_blocking">Blocking</string>
+    <string name="settings_when_blocked">When a call is blocked</string>
     <string name="settings_category_actions">Call handling by category</string>
     <string name="settings_category_actions_summary">%1$d customized · others inherit global blocking</string>
     <string name="settings_category_actions_title">Category call actions</string>

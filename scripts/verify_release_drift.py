@@ -427,13 +427,16 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     return issues
 
 
-SETTINGS_SCREEN = "app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt"
+SETTINGS_PACKAGE = "app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings"
 GETTING_STARTED = "docs/getting-started.md"
 
 
 def settings_card_titles(root: Path) -> list[str]:
-    """The English title of every card and section header on the Settings screen."""
-    screen = read_text(root / SETTINGS_SCREEN)
+    """The English title of every card and section header on the Settings screen.
+
+    The screen is split into a file per section, so this reads the whole package.
+    """
+    screen = "\n".join(read_text(path) for path in sorted((root / SETTINGS_PACKAGE).glob("*.kt")))
     resources = read_text(root / "app/src/main/res/values/strings.xml")
     keys = re.findall(r"(?:SettingsCard|SectionHeader)\(\s*stringResource\(R\.string\.([a-z0-9_]+)\)", screen)
     titles = []
@@ -450,8 +453,8 @@ def settings_guide_audit(root: Path) -> list[str]:
     The guide listed a toggle that doesn't exist and left out about 15 settings,
     because nothing compared it with the screen.
     """
-    for relative in (SETTINGS_SCREEN, GETTING_STARTED, "app/src/main/res/values/strings.xml"):
-        if not (root / relative).is_file():
+    for relative in (SETTINGS_PACKAGE, GETTING_STARTED, "app/src/main/res/values/strings.xml"):
+        if not (root / relative).exists():
             return [f"Settings guide check is missing {relative}."]
     titles = settings_card_titles(root)
     if len(titles) < 10:

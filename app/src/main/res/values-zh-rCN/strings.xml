@@ -426,6 +426,7 @@
     <string name="settings_language_dialog_title">选择应用语言</string>
     <string name="settings_language_debug_only">伪 locale 仅在调试版中用于布局测试。</string>
     <string name="settings_blocking">拦截</string>
+    <string name="settings_when_blocked">来电被拦截时</string>
     <string name="settings_category_actions">按类别处理来电</string>
     <string name="settings_category_actions_summary">%1$d 项已自定义 · 其余继承全局拦截设置</string>
     <string name="settings_category_actions_title">分类来电动作</string>

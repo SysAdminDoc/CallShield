@@ -302,6 +302,9 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.work.testing)
+    // Robolectric renders whole screens for checks that belong in every unit run.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Instrumentation tests (emulator / device)
     androidTestImplementation(platform(libs.androidx.compose.bom))
