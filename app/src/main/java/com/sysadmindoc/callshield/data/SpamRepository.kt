@@ -694,6 +694,7 @@ class SpamRepository(
 
     internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =
         spamRepositoryImpl.findWhitelistEntryInternal(normalized) != null ||
+            spamRepositoryImpl.findWhitelistRangeEntryInternal(lookupForms(normalized)) != null ||
             spamRepositoryImpl.findTemporaryWhitelistEntryInternal(normalized) != null
 
     internal suspend fun editPreferences(transform: suspend (MutablePreferences) -> Unit) {
@@ -1095,7 +1096,8 @@ class SpamRepository(
         description: String = "",
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
-    ) = blocklistRepository.addToWhitelist(number, description, isEmergency, expiresAt)
+        rangeDigits: Int? = null,
+    ) = blocklistRepository.addToWhitelist(number, description, isEmergency, expiresAt, rangeDigits)
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = blocklistRepository.removeFromWhitelist(entry)
 
@@ -1104,6 +1106,12 @@ class SpamRepository(
         id: Long,
         emergency: Boolean,
     ) = blocklistRepository.setWhitelistEmergency(id, emergency)
+
+    /** Let an entry also allow the numbers that differ only in their last [rangeDigits] digits (0 for the exact number). */
+    suspend fun setWhitelistRange(
+        id: Long,
+        rangeDigits: Int,
+    ) = blocklistRepository.setWhitelistRange(id, rangeDigits)
 
     val dismissedRuleConflictKeys: Flow<Set<String>> = settingsRepository.dismissedRuleConflictKeys
 

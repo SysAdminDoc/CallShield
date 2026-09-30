@@ -29,11 +29,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -50,6 +53,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -155,6 +160,7 @@ import com.sysadmindoc.callshield.util.hasMinAsciiDigits
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
 import com.sysadmindoc.callshield.util.sanitizePhoneNumberInput
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
 
 private const val BLOCKLIST_TAB_BLOCKED = 0
 private const val BLOCKLIST_TAB_WILDCARDS = 1
@@ -164,6 +170,7 @@ private const val BLOCKLIST_TAB_WHITELIST = 4
 private const val BLOCKLIST_TAB_DATABASE = 5
 internal const val BLOCKLIST_SWIPE_ITEM_TAG = "blocklist_swipe_item"
 internal const val BLOCKLIST_REGEX_CHECKBOX_TAG = "blocklist_regex_checkbox"
+internal const val WHITELIST_RANGE_TAG = "whitelist_range"
 
 private data class BlocklistWorkspaceModel(
     val title: String,
@@ -624,6 +631,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                             )
                                         },
                                         onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) },
+                                        onSetRange = { digits -> viewModel.setWhitelistRange(entry.id, digits) },
                                     )
                                 }
                             }
@@ -1175,6 +1183,7 @@ fun WhitelistItem(
     entry: WhitelistEntry,
     onRemove: () -> Unit,
     onToggleEmergency: () -> Unit,
+    onSetRange: (Int) -> Unit = {},
 ) {
     val accent = if (entry.isEmergency) CatRed else CatGreen
     val emergencyDescription =
@@ -1215,6 +1224,9 @@ fun WhitelistItem(
                         textStyle = MaterialTheme.typography.labelSmall,
                     )
                 }
+                if (entry.canCoverRange) {
+                    WhitelistRangeControl(entry, onSetRange)
+                }
             }
             IconButton(
                 onClick = onToggleEmergency,
@@ -1232,6 +1244,80 @@ fun WhitelistItem(
         }
     }
 }
+
+/**
+ * Shows the number block a permanent entry lets through, or offers one. Off
+ * by default: the entry allows its exact number until the user picks a block.
+ */
+@Composable
+private fun WhitelistRangeControl(
+    entry: WhitelistEntry,
+    onSetRange: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val covered = entry.rangeDigits > 0
+    val tint = if (covered) CatGreen else CatSubtext
+    Box {
+        TextButton(
+            onClick = { expanded = true },
+            contentPadding = PaddingValues(horizontal = 0.dp),
+            modifier = Modifier.testTag(WHITELIST_RANGE_TAG),
+        ) {
+            Icon(Icons.Default.Dialpad, null, tint = tint, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (covered) {
+                    stringResource(R.string.whitelist_range_covers, PhoneFormatter.formatBlockIsolated(entry.number, entry.rangeDigits))
+                } else {
+                    stringResource(R.string.whitelist_range_offer)
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = tint,
+            )
+            Icon(Icons.Default.ArrowDropDown, null, tint = tint, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                stringResource(R.string.whitelist_range_menu_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = CatSubtext,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            WhitelistEntry.RANGE_DIGIT_OPTIONS.forEach { digits ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (digits == 0) {
+                                stringResource(R.string.whitelist_range_exact)
+                            } else {
+                                stringResource(
+                                    R.string.whitelist_range_block,
+                                    PhoneFormatter.formatBlockIsolated(entry.number, digits),
+                                    NumberFormat.getIntegerInstance().format(blockSize(digits)),
+                                )
+                            },
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSetRange(digits)
+                    },
+                    trailingIcon =
+                        if (digits == entry.rangeDigits) {
+                            { Icon(Icons.Default.Check, null, tint = CatGreen) }
+                        } else {
+                            null
+                        },
+                )
+            }
+        }
+    }
+}
+
+private const val DIGIT_VALUES = 10
+
+/** How many numbers a block of the last [digits] digits holds: 100 for 2. */
+private fun blockSize(digits: Int): Int = (1..digits).fold(1) { size, _ -> size * DIGIT_VALUES }
 
 @Composable
 private fun DatabaseTabContent(viewModel: MainViewModel) {

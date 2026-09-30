@@ -612,6 +612,24 @@ interface SpamDao {
     @Query("SELECT * FROM whitelist WHERE number = :number AND expiresAt IS NULL LIMIT 1")
     suspend fun findPermanentWhitelistEntry(number: String): WhitelistEntry?
 
+    /**
+     * A permanent entry that covers [number] as part of its block: same length,
+     * and the same up to the entry's last [WhitelistEntry.rangeDigits] digits.
+     * An emergency entry wins, then the narrower range.
+     */
+    @Query(
+        """SELECT * FROM whitelist
+              WHERE rangeDigits > 0 AND expiresAt IS NULL
+                AND length(number) = length(:number)
+                AND substr(number, 1, length(number) - rangeDigits) = substr(:number, 1, length(:number) - rangeDigits)
+              ORDER BY isEmergency DESC, rangeDigits ASC, id ASC
+              LIMIT 1""",
+    )
+    suspend fun findWhitelistRangeEntry(number: String): WhitelistEntry?
+
+    @Query("SELECT * FROM whitelist WHERE id = :id LIMIT 1")
+    suspend fun findWhitelistEntryById(id: Long): WhitelistEntry?
+
     @Query("SELECT * FROM whitelist WHERE number = :number AND expiresAt IS NOT NULL AND expiresAt > :now LIMIT 1")
     suspend fun findActiveTemporaryWhitelistEntry(
         number: String,
@@ -631,6 +649,12 @@ interface SpamDao {
     suspend fun setWhitelistEmergency(
         id: Long,
         emergency: Boolean,
+    )
+
+    @Query("UPDATE whitelist SET rangeDigits = :rangeDigits WHERE id = :id")
+    suspend fun setWhitelistRange(
+        id: Long,
+        rangeDigits: Int,
     )
 
     @Query("DELETE FROM whitelist WHERE expiresAt IS NOT NULL AND expiresAt <= :now")

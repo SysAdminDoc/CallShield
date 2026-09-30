@@ -141,8 +141,9 @@ class SpamRepositoryAdapter(
         number: String,
         description: String,
         isEmergency: Boolean,
+        rangeDigits: Int?,
     ) {
-        repository.addToWhitelist(number, description, isEmergency)
+        repository.addToWhitelist(number, description, isEmergency, rangeDigits = rangeDigits)
     }
 
     override suspend fun removeFromWhitelist(entry: WhitelistEntry) {
@@ -155,4 +156,9 @@ class SpamRepositoryAdapter(
     ) {
         repository.setWhitelistEmergency(id, emergency)
     }
+
+    override suspend fun setWhitelistRange(
+        id: Long,
+        rangeDigits: Int,
+    ): Boolean = repository.setWhitelistRange(id, rangeDigits)
 }

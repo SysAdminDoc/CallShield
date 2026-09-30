@@ -31,6 +31,26 @@ object PhoneFormatter {
     fun formatIsolated(number: String): String = isolate(format(number))
 
     /**
+     * [formatIsolated] with the last [digits] digits shown as X, the way an
+     * allow-list entry that covers a number block reads: `+1 555-123-45XX`.
+     */
+    fun formatBlockIsolated(
+        number: String,
+        digits: Int,
+    ): String {
+        val chars = format(number).toCharArray()
+        var left = digits
+        for (i in chars.indices.reversed()) {
+            if (left == 0) break
+            if (chars[i] in '0'..'9') {
+                chars[i] = 'X'
+                left--
+            }
+        }
+        return isolate(String(chars))
+    }
+
+    /**
      * A number that explicitly carries a non-NANP country code (`+CC`, CC != 1).
      * Such a number must never be run through the NANP formatter — a 10-digit
      * `+45########` (Denmark) would otherwise render as `(451) 234-5678`.

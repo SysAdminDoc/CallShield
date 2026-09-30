@@ -75,7 +75,8 @@ internal class VerificationMessageFloorChecker(
 /**
  * User-added whitelist — the highest-priority allow. Emergency-flagged
  * entries surface with `emergency_contact` matchSource so the block log
- * and detail screen can distinguish them.
+ * and detail screen can distinguish them. An entry for the exact number
+ * comes before one that covers it as part of a number block.
  */
 internal class WhitelistChecker(
     private val repo: SpamRepositoryImpl,
@@ -84,7 +85,10 @@ internal class WhitelistChecker(
     override val name = "manual_whitelist"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val entry = ctx.lookupForms.firstNotNullOfOrNull { repo.findWhitelistEntryInternal(it) } ?: return null
+        val entry =
+            ctx.lookupForms.firstNotNullOfOrNull { repo.findWhitelistEntryInternal(it) }
+                ?: repo.findWhitelistRangeEntryInternal(ctx.lookupForms)
+                ?: return null
         return BlockResult.allow(
             matchSource = if (entry.isEmergency) "emergency_contact" else "manual_whitelist",
             ruleId = entry.id,

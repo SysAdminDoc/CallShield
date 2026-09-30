@@ -776,12 +776,18 @@ class BlocklistRepository(
             rows.filterNot { it.isExpired(now) }
         }
 
-    /** @return true when the number is whitelisted afterwards; false when refused (invalid input or a permanent block wins). */
+    /**
+     * @param rangeDigits the number block a permanent entry covers (see
+     *   [WhitelistEntry.rangeDigits]); null keeps what an existing permanent
+     *   entry for the number already covers.
+     * @return true when the number is whitelisted afterwards; false when refused (invalid input or a permanent block wins).
+     */
     suspend fun addToWhitelist(
         number: String,
         description: String = "",
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
+        rangeDigits: Int? = null,
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
@@ -802,14 +808,15 @@ class BlocklistRepository(
                             is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
                         }
                     }
-                dao.insertWhitelistEntry(
+                val range = rangeDigits ?: dao.findWhitelistEntry(normalized)?.takeIf { it.expiresAt == null }?.rangeDigits ?: 0
+                val entry =
                     WhitelistEntry(
                         number = normalized,
                         description = description.trim(),
                         isEmergency = isEmergency && expiresAt == null,
                         expiresAt = expiresAt,
-                    ),
-                )
+                    )
+                dao.insertWhitelistEntry(entry.copy(rangeDigits = if (entry.canCover(range)) range else 0))
                 whitelisted = true
             }
         }
@@ -822,6 +829,22 @@ class BlocklistRepository(
         id: Long,
         emergency: Boolean,
     ) = dao.setWhitelistEmergency(id, emergency)
+
+    /** @return false when the entry is gone or can't cover a block that size (temporary, or too short a number). */
+    suspend fun setWhitelistRange(
+        id: Long,
+        rangeDigits: Int,
+    ): Boolean {
+        var applied = false
+        runInTransaction {
+            val entry = dao.findWhitelistEntryById(id)
+            if (entry != null && entry.canCover(rangeDigits)) {
+                dao.setWhitelistRange(id, rangeDigits)
+                applied = true
+            }
+        }
+        return applied
+    }
 
     suspend fun cleanupOldLogs() {
         cleanupExpiredTemporaryDecisions()

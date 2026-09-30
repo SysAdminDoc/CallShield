@@ -75,6 +75,7 @@ interface BlocklistRepository {
         number: String,
         description: String,
         isEmergency: Boolean,
+        rangeDigits: Int?,
     )
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry)
@@ -83,4 +84,9 @@ interface BlocklistRepository {
         id: Long,
         emergency: Boolean,
     )
+
+    suspend fun setWhitelistRange(
+        id: Long,
+        rangeDigits: Int,
+    ): Boolean
 }

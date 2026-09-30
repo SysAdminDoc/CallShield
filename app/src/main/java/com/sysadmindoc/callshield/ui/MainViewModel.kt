@@ -1165,6 +1165,13 @@ class MainViewModel
             viewModelScope.launch { manageBlocklist.setWhitelistEmergency(id, emergency) }
         }
 
+        fun setWhitelistRange(
+            id: Long,
+            rangeDigits: Int,
+        ) {
+            viewModelScope.launch { manageBlocklist.setWhitelistRange(id, rangeDigits) }
+        }
+
         // ── Undo support for rule deletion ────────────────────────────────
         // Deleting a rule used to be instant, silent, and unrecoverable, with
         // the X sitting right next to each rule's enable switch. Re-adding
@@ -1183,7 +1190,7 @@ class MainViewModel
         }
 
         fun restoreWhitelistEntry(entry: WhitelistEntry) {
-            addToWhitelist(entry.number, entry.description, entry.isEmergency)
+            viewModelScope.launch { manageBlocklist.addToWhitelist(entry.number, entry.description, entry.isEmergency, entry.rangeDigits) }
         }
 
         // Export/import

@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A trusted number can let its whole number block through. A doctor's office
+  that calls from 555-234-5601 one day and 555-234-5617 the next needed every
+  line allowed by hand. Now the entry's menu offers the numbers that differ
+  only in the last 2 digits (100 numbers) or 3 (1,000), and the entry shows
+  the block it covers as `(555) 234-56XX`. It's off by default, only a
+  permanent entry of 8 digits or more can take one, and a number inside the
+  block that you blocked by itself stays blocked. Backups carry the block.
 - Settings > External blocklists opens with Recommended lists: OpenCallShield
   (Colombia), SpamChile (Chile) and Turkish Spam Numbers (Turkey), each showing
   its country and license beside an Add button. Nothing is downloaded until you

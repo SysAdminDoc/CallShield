@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
+import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.service.AnswerHangUpController
@@ -45,6 +46,9 @@ import java.util.UUID
  * - **v7**: preserves the privacy-safe keys for selected contact-group scope.
  * - **v8**: includes stable block reason codes and deciding rule IDs in logs.
  * - **v9**: includes privacy-safe checker cutoff/error diagnostics in logs.
+ *   Since 1.11.0 a whitelist entry may also carry `rangeDigits`, the number
+ *   block it covers; an older reader ignores the field and keeps the exact
+ *   number, so the version stays 9.
  *   The reader accepts v1-v9; the writer emits v9.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
@@ -111,6 +115,7 @@ object BackupRestore {
         val description: String,
         val isEmergency: Boolean = false,
         val expiresAt: Long? = null,
+        val rangeDigits: Int = 0,
     )
 
     data class BackupWildcard(
@@ -351,7 +356,7 @@ object BackupRestore {
         val whitelist =
             if (BackupSection.WHITELIST in sections) {
                 dao.getAllWhitelist().first().map {
-                    BackupWhitelist(it.number, it.description, it.isEmergency, it.expiresAt)
+                    BackupWhitelist(it.number, it.description, it.isEmergency, it.expiresAt, it.rangeDigits)
                 }
             } else {
                 emptyList()
@@ -796,6 +801,9 @@ object BackupRestore {
                                 description = w.description,
                                 isEmergency = w.isEmergency,
                                 expiresAt = w.expiresAt,
+                                // A backup from before ranges says 0; that keeps
+                                // the block a local entry already covers.
+                                rangeDigits = w.rangeDigits.takeIf { it > 0 },
                             )
                         if (applied) whitelistRestored++
                     }
@@ -1120,6 +1128,7 @@ object BackupRestore {
             copy(
                 number = it,
                 description = description.trim(),
+                rangeDigits = rangeDigits.takeIf { digits -> digits in WhitelistEntry.RANGE_DIGIT_OPTIONS } ?: 0,
             )
         }
     }

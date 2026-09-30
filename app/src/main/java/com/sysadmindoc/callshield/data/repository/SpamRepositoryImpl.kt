@@ -92,6 +92,16 @@ class SpamRepositoryImpl(
 
     internal suspend fun findWhitelistEntryInternal(normalized: String): WhitelistEntry? = dao.findPermanentWhitelistEntry(normalized)
 
+    /**
+     * A permanent entry whose number block covers one of [forms] (see
+     * [WhitelistEntry.rangeDigits]). The allow list outranks the user's blocks,
+     * so a number the user blocked by itself stays blocked inside an allowed block.
+     */
+    internal suspend fun findWhitelistRangeEntryInternal(forms: List<String>): WhitelistEntry? {
+        val entry = forms.firstNotNullOfOrNull { dao.findWhitelistRangeEntry(it) } ?: return null
+        return entry.takeUnless { forms.any { form -> findByNumberInternal(form)?.isUserBlocked == true } }
+    }
+
     internal suspend fun findTemporaryWhitelistEntryInternal(normalized: String): WhitelistEntry? = dao.findActiveTemporaryWhitelistEntry(normalized, System.currentTimeMillis())
 
     internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision(wallClock())

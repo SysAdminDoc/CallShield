@@ -236,6 +236,11 @@
     <string name="blocklist_empty_keywords_sub">当垃圾短信复用相同措辞时，添加如“银行提醒”或“领取奖品”等短语。</string>
     <string name="blocklist_empty_whitelist">无可信号码</string>
     <string name="blocklist_empty_whitelist_sub">即使激进防护开启，可信号码也始终通过筛查。</string>
+    <string name="whitelist_range_offer">同时放行它所在的号段</string>
+    <string name="whitelist_range_covers">同时放行 %1$s</string>
+    <string name="whitelist_range_menu_title">办公室和诊所常用一组只有最后几位不同的号码来电。</string>
+    <string name="whitelist_range_exact">仅此号码</string>
+    <string name="whitelist_range_block">%1$s（%2$s 个号码）</string>
     <string name="blocklist_empty_database">尚未加载垃圾号码库</string>
     <string name="blocklist_empty_database_sub">从主页运行同步以下载当前垃圾数据，再在此查看本地数据库条目。</string>
     <string name="database_filter_all_types">所有类型</string>

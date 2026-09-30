@@ -318,6 +318,11 @@
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
     <string name="blocklist_empty_whitelist_sub">Trusted numbers always pass through screening, even when aggressive protection is active.</string>
+    <string name="whitelist_range_offer">Let its number block through too</string>
+    <string name="whitelist_range_covers">Also lets through %1$s</string>
+    <string name="whitelist_range_menu_title">Offices and practices often call from a block of lines that share all but the last digits.</string>
+    <string name="whitelist_range_exact">This number only</string>
+    <string name="whitelist_range_block">%1$s (%2$s numbers)</string>
     <string name="blocklist_empty_database">No spam database loaded</string>
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
     <string name="database_filter_all_types">All types</string>

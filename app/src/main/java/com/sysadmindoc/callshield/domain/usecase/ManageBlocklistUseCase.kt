@@ -81,7 +81,8 @@ class ManageBlocklistUseCase
             number: String,
             description: String = "",
             isEmergency: Boolean = false,
-        ) = repository.addToWhitelist(number, description, isEmergency)
+            rangeDigits: Int? = null,
+        ) = repository.addToWhitelist(number, description, isEmergency, rangeDigits)
 
         suspend fun removeFromWhitelist(entry: WhitelistEntry) = repository.removeFromWhitelist(entry)
 
@@ -89,4 +90,9 @@ class ManageBlocklistUseCase
             id: Long,
             emergency: Boolean,
         ) = repository.setWhitelistEmergency(id, emergency)
+
+        suspend fun setWhitelistRange(
+            id: Long,
+            rangeDigits: Int,
+        ) = repository.setWhitelistRange(id, rangeDigits)
     }

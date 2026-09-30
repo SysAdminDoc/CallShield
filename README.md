@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1727-94e2d5?style=flat-square" alt="1727 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1740-94e2d5?style=flat-square" alt="1740 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -108,7 +108,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |---------:|-------|---------|-------------|
 | 11000 | **Emergency Number Floor** | Allow | Recognized emergency and public-safety numbers always ring, ahead of every rule (calls only) |
 | 10900 | **One-Time Code Floor** | Allow | Short texts carrying a verification code are never flagged, so sign-ins keep working (texts only) |
-| 10000 | **Manual Whitelist** | Allow | Numbers you marked as always allowed, emergency contacts included |
+| 10000 | **Manual Whitelist** | Allow | Numbers you marked as always allowed, emergency contacts included, and the number block an entry covers when you chose one |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
 |  8800 | **Contacts-Only Mode** | Block | Calls outside your contacts and trusted numbers are blocked |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
@@ -244,6 +244,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - Export/import blocklists as JSON, per-rule enable/disable toggles
 - Regex validation before adding wildcard rules
 - Inline priority-conflict warnings name the whitelist, emergency allow, or block rule that wins before an overlapping rule is saved
+- A trusted number can also let its number block through, for an office or a practice that calls from a row of lines. Pick the numbers that differ only in the last 2 or 3 digits and the entry reads `(555) 234-56XX`. It's off until you pick it, and a number in the block that you blocked by itself stays blocked
 
 ### Statistics
 - Weekly bar chart with daily breakdown
@@ -514,12 +515,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1727 tests
+./gradlew testDebugUnitTest   # 1740 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1727 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1740 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -556,8 +557,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1727 JVM unit tests (JUnit) |
-| Strings | 1726 string resources and 37 plural groups (translation-ready) |
+| Tests | 1740 JVM unit tests (JUnit) |
+| Strings | 1731 string resources and 37 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

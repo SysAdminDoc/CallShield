@@ -11,7 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 18
+const val DB_VERSION = 19
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -22,6 +22,7 @@ private const val DB_VERSION_15 = 15
 private const val DB_VERSION_16 = 16
 private const val DB_VERSION_17 = 17
 private const val DB_VERSION_18 = 18
+private const val DB_VERSION_19 = 19
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -275,6 +276,14 @@ val MIGRATION_17_18 =
         }
     }
 
+/** v18 -> v19: let an allow-list entry cover the numbers that differ only in their last digits. */
+val MIGRATION_18_19 =
+    object : Migration(DB_VERSION_18, DB_VERSION_19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE whitelist ADD COLUMN rangeDigits INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -372,6 +381,7 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_15_16,
                     MIGRATION_16_17,
                     MIGRATION_17_18,
+                    MIGRATION_18_19,
                 )
 
         /** SQLite corruption messages that a rebuild can recover from. */
