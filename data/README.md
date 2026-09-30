@@ -239,7 +239,8 @@ then publishes it, keeping the pending community reports in its count, and the
 review is the row's own evidence, so later reports can't demote it.
 
 Every evidence record carries `expires_at_epoch_ms`, and phones stop matching
-a downloaded number or range once its earliest record expires. The manifest's
+a downloaded number or range once its last record expires, so a row
+stays live while any of its evidence is. The manifest's
 `evidence_ttl_days` sets that lifetime for each source: a year for complaint
 feeds, 90 days for Saracroche ranges, two years for a maintainer review and ten
 years for the database's own snapshot record. `stale_after_days` only decides
