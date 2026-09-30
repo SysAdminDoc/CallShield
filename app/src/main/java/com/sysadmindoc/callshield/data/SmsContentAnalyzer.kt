@@ -522,6 +522,14 @@ class SmsContentAnalyzer
             private val numericVerificationCodePattern = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
             private val alphaNumericVerificationCodePattern = Regex("(?i)(?<![a-z0-9])[a-z0-9]{4,10}(?![a-z0-9])")
 
+            /** An optional 1 or +1, then area code, exchange and line, spaced, dotted or dashed. */
+            private val nanpNumber =
+                Regex("(?<![\\d+])(\\+?1[\\s.-]?)?\\(?([2-9]\\d{2})\\)?[\\s.-]?([2-9]\\d{2})[\\s.-]?(\\d{4})(?!\\d)")
+            private val internationalNumber = Regex("(?<![\\d+])\\+[1-9](?:[\\s.()-]{0,2}\\d){6,14}(?!\\d)")
+            private const val MAX_CALLBACK_SCAN_CHARS = 2_048
+            private const val MAX_CALLBACK_NUMBERS = 5
+            private val INTERNATIONAL_DIGITS = 8..15
+
             fun updateSpamDomains(domains: Collection<String>) {
                 shared.updateSpamDomains(domains)
             }
@@ -529,6 +537,36 @@ class SmsContentAnalyzer
             fun hasSpamDomains(): Boolean = shared.hasSpamDomains()
 
             fun isVerificationMessage(body: String): Boolean = shared.isVerificationMessage(body)
+
+            /**
+             * Phone numbers a flagged text asks the reader to call, in E.164. A
+             * number written with "+" and its country code counts anywhere. A
+             * ten-digit North American number counts on a phone in that plan
+             * ([nanpHome]) or when a 1 or +1 comes first. Bare national numbers
+             * from other plans are left alone.
+             */
+            fun extractCallbackNumbers(
+                body: String,
+                nanpHome: Boolean,
+            ): List<String> {
+                val text = body.take(MAX_CALLBACK_SCAN_CHARS)
+                val found = LinkedHashSet<String>()
+                val international = mutableListOf<IntRange>()
+                internationalNumber.findAll(text).forEach { match ->
+                    val digits = match.value.filter { it in '0'..'9' }
+                    if (!digits.startsWith("1") && digits.length in INTERNATIONAL_DIGITS) {
+                        found += "+$digits"
+                        international += match.range
+                    }
+                }
+                nanpNumber.findAll(text).forEach { match ->
+                    val groups = match.groupValues
+                    // "+49 301 234 5678" holds a NANP-shaped run that isn't one.
+                    val insideInternational = international.any { it.first <= match.range.last && match.range.first <= it.last }
+                    if (!insideInternational && (nanpHome || groups[1].isNotEmpty())) found += "+1" + groups.drop(2).joinToString("")
+                }
+                return found.take(MAX_CALLBACK_NUMBERS)
+            }
 
             fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)
 

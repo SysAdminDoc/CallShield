@@ -3,12 +3,15 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.paging.PagingSource
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamNumberWhitelistResolution
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.escapeLikeQuery
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
+import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
@@ -89,6 +92,8 @@ class BlocklistRepository(
         const val PENDING_LOG_BATCH_LIMIT = 50
         const val PENDING_LOG_RETRY_DELAY_MS = 60_000L
         const val MIN_SEARCH_DIGITS = 4
+        const val FLAGGED_TEXT_NUMBER_TTL_MS = 30L * MILLIS_PER_DAY
+        const val MAX_FLAGGED_TEXT_NUMBERS = 500
 
         // One SQL variable each, and older Android allows 999; the published hot
         // list stops at 500.
@@ -474,6 +479,9 @@ class BlocklistRepository(
     ): Boolean =
         textLogLock.withLock {
             val sender = normalizeLogIdentity(number)
+            // Every sighting, repeats too: the notification copy can be cut
+            // short before the number and still be the one that got logged.
+            rememberCallbackNumbers(smsBody, timestamp)
             val recent = dao.flaggedTextsSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS)
             val listener = fromListener(matchReason)
             val repeat = recent.any { sameFlaggedText(it.body, smsBody, samePath = fromListener(it.matchReason) == listener) }
@@ -490,6 +498,26 @@ class BlocklistRepository(
             )
             true
         }
+
+    /** Keeps the numbers a flagged text asks the reader to call, for [FLAGGED_TEXT_NUMBER_TTL_MS]. */
+    private suspend fun rememberCallbackNumbers(
+        smsBody: String?,
+        timestamp: Long,
+    ) {
+        if (smsBody.isNullOrBlank()) return
+        val homeRegion = PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso
+        val numbers = SmsContentAnalyzer.extractCallbackNumbers(smsBody, PhoneIdentityCanonicalizer.readsBareDigitsAsNanp(homeRegion))
+        if (numbers.isEmpty()) return
+        dao.upsertFlaggedTextNumbers(numbers.map { FlaggedTextNumber(number = it, seenAt = timestamp) })
+        dao.deleteFlaggedTextNumbersBefore(timestamp - FLAGGED_TEXT_NUMBER_TTL_MS)
+        dao.trimFlaggedTextNumbers(MAX_FLAGGED_TEXT_NUMBERS)
+    }
+
+    /** When one of [forms] last appeared in a flagged text, within [FLAGGED_TEXT_NUMBER_TTL_MS] of [now], or null. */
+    suspend fun lastFlaggedTextSighting(
+        forms: List<String>,
+        now: Long,
+    ): Long? = forms.takeIf { it.isNotEmpty() }?.let { dao.lastFlaggedTextSighting(it, now - FLAGGED_TEXT_NUMBER_TTL_MS) }
 
     /**
      * Retain an allowed safety-floor decision for auditability without

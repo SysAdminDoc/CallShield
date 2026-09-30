@@ -160,6 +160,7 @@ class CallShieldRedirectionService : CallRedirectionService() {
                         if (row.isUserBlocked) OutgoingCallGuard.Reason.USER_BLOCKLIST else OutgoingCallGuard.Reason.DATABASE
                     }
                 },
+                mentioned = { n -> repository.lastFlaggedTextSighting(n) },
             )
         return Outcome(number, decision)
     }
@@ -181,7 +182,7 @@ class CallShieldRedirectionService : CallRedirectionService() {
                 is OutgoingCallGuard.Decision.Hold -> {
                     // Post first: if the notification can't go up after all, the
                     // call goes through rather than vanishing without a word.
-                    if (NotificationHelper.notifyOutgoingCallHeld(context, outcome.number, decision.reason)) {
+                    if (NotificationHelper.notifyOutgoingCallHeld(context, outcome.number, decision.reason, decision.seenAt)) {
                         cancelCall()
                     } else {
                         placeCallUnmodified()

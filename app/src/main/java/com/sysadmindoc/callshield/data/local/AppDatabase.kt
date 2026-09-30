@@ -11,7 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 19
+const val DB_VERSION = 20
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -23,6 +23,7 @@ private const val DB_VERSION_16 = 16
 private const val DB_VERSION_17 = 17
 private const val DB_VERSION_18 = 18
 private const val DB_VERSION_19 = 19
+private const val DB_VERSION_20 = 20
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -284,6 +285,17 @@ val MIGRATION_18_19 =
         }
     }
 
+/** v19 -> v20: numbers found in flagged texts, so a callback to one can be held. */
+val MIGRATION_19_20 =
+    object : Migration(DB_VERSION_19, DB_VERSION_20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `flagged_text_numbers` " +
+                    "(`number` TEXT NOT NULL, `seenAt` INTEGER NOT NULL, PRIMARY KEY(`number`))",
+            )
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -330,6 +342,7 @@ private fun reasonCodeSql(column: String): String =
         PendingBlockedCallLog::class,
         RestoreJournal::class,
         CampaignObservation::class,
+        FlaggedTextNumber::class,
     ],
     version = DB_VERSION,
     exportSchema = true,
@@ -382,6 +395,7 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_16_17,
                     MIGRATION_17_18,
                     MIGRATION_18_19,
+                    MIGRATION_19_20,
                 )
 
         /** SQLite corruption messages that a rebuild can recover from. */

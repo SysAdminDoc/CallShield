@@ -484,6 +484,7 @@
     <string name="outgoing_hold_reason_database">该号码在垃圾号码库中。</string>
     <string name="outgoing_hold_reason_premium">这是可能按分钟收费的付费号码。</string>
     <string name="outgoing_hold_reason_wangiri">该号码的区号常见于诱导你回拨并收费的诈骗。</string>
+    <string name="outgoing_hold_reason_flagged_text">该号码出现在 %1$s 被标记为垃圾信息的短信中。</string>
     <string name="settings_db_prefix_expansion">号码库前缀扩展</string>
     <string name="settings_db_prefix_expansion_desc">拦截共享已知垃圾前缀的营销号码</string>
     <string name="settings_detection_engines">检测引擎</string>

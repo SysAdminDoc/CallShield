@@ -5,6 +5,7 @@ import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.CampaignObservation
+import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import com.sysadmindoc.callshield.data.model.FlaggedTextSighting
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
@@ -499,6 +500,25 @@ interface SpamDao {
             "WHERE id NOT IN (SELECT id FROM campaign_observations ORDER BY observedAt DESC LIMIT :maxRows)",
     )
     suspend fun trimCampaignObservations(maxRows: Int)
+
+    // Numbers seen in flagged texts, for the outgoing-call hold
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFlaggedTextNumbers(rows: List<FlaggedTextNumber>)
+
+    @Query("SELECT MAX(seenAt) FROM flagged_text_numbers WHERE number IN (:numbers) AND seenAt > :since")
+    suspend fun lastFlaggedTextSighting(
+        numbers: List<String>,
+        since: Long,
+    ): Long?
+
+    @Query("DELETE FROM flagged_text_numbers WHERE seenAt <= :before")
+    suspend fun deleteFlaggedTextNumbersBefore(before: Long)
+
+    @Query(
+        "DELETE FROM flagged_text_numbers " +
+            "WHERE number NOT IN (SELECT number FROM flagged_text_numbers ORDER BY seenAt DESC LIMIT :maxRows)",
+    )
+    suspend fun trimFlaggedTextNumbers(maxRows: Int)
 
     // Bounded digest aggregates — avoid materializing the full 24h window
     // (including smsBody) in a constrained background process on heavy-spam

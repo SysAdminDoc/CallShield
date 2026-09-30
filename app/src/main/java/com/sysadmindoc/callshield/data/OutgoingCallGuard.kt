@@ -31,6 +31,9 @@ internal object OutgoingCallGuard {
         DATABASE(R.string.outgoing_hold_reason_database),
         PREMIUM_RATE(R.string.outgoing_hold_reason_premium),
         WANGIRI(R.string.outgoing_hold_reason_wangiri),
+
+        /** Takes the date of the flagged text, [Decision.Hold.seenAt]. */
+        FLAGGED_TEXT(R.string.outgoing_hold_reason_flagged_text),
     }
 
     sealed interface Decision {
@@ -38,6 +41,8 @@ internal object OutgoingCallGuard {
 
         data class Hold(
             val reason: Reason,
+            /** When the flagged text naming the number arrived, for [Reason.FLAGGED_TEXT]. */
+            val seenAt: Long? = null,
         ) : Decision
     }
 
@@ -54,7 +59,8 @@ internal object OutgoingCallGuard {
     /**
      * [trusted] covers contacts and the user's allow list, which outrank every
      * flag the way they do for incoming calls. [listed] reports a blocklist or
-     * database row. Both run inside [budgetMs]. Running over places the call,
+     * database row, and [mentioned] when the number last appeared in a text
+     * CallShield flagged. All run inside [budgetMs]. Running over places the call,
      * unless the number matches a premium-rate or callback-scam rule: those
      * need no lookup, so a slow contacts query can't wave one through, and
      * the user still has Call anyway. [bypassKey] is where a Call anyway pass
@@ -65,20 +71,24 @@ internal object OutgoingCallGuard {
         nowElapsed: Long,
         trusted: suspend (String) -> Boolean,
         listed: suspend (String) -> Reason?,
+        mentioned: suspend (String) -> Long? = { null },
         budgetMs: Long = DECISION_BUDGET_MS,
         bypassKey: String = number,
     ): Decision {
         if (number.isBlank() || EmergencyNumberFloor.isProtected(number) || isBypassed(bypassKey, nowElapsed)) {
             return Decision.Proceed
         }
-        val rule = ruleReason(number)
+        val rule = ruleReason(number)?.let { Decision.Hold(it) }
         return withTimeoutOrNull(budgetMs) {
             if (trusted(number)) {
                 Decision.Proceed
             } else {
-                (listed(number) ?: rule)?.let(Decision::Hold) ?: Decision.Proceed
+                listed(number)?.let { Decision.Hold(it) }
+                    ?: mentioned(number)?.let { Decision.Hold(Reason.FLAGGED_TEXT, seenAt = it) }
+                    ?: rule
+                    ?: Decision.Proceed
             }
-        } ?: rule?.let(Decision::Hold) ?: Decision.Proceed
+        } ?: rule ?: Decision.Proceed
     }
 
     /**

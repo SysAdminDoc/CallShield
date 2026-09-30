@@ -690,6 +690,12 @@ class SpamRepository(
     /** Forms of a normalized number to match stored rows against, as the screening pipeline does. */
     internal fun lookupForms(normalized: String): List<String> = phoneIdentityCanonicalizer.equivalentForms(normalized)
 
+    /** When [normalized] last appeared in a text CallShield flagged, within the last 30 days, or null. */
+    internal suspend fun lastFlaggedTextSighting(
+        normalized: String,
+        now: Long = System.currentTimeMillis(),
+    ): Long? = blocklistRepository.lastFlaggedTextSighting(lookupForms(normalized), now)
+
     internal suspend fun warmScreeningCaches() = spamRepositoryImpl.warmScreeningCaches()
 
     internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =

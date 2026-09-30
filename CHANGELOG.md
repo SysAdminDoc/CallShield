@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The outgoing call check now also holds a call to a number that appeared
+  in a text CallShield flagged as spam during the last 30 days. Fake bank
+  and delivery texts ask you to call a number back, and the hold notice
+  says which day that text arrived. Numbers written with a + and a country
+  code are picked up anywhere, and ten-digit North American numbers are
+  picked up on phones set to that region. Contacts and allowed numbers still
+  ring straight through.
 - A one-time code that arrives during a call from someone who isn't in your
   contacts, or in the 10 minutes after it, brings up a warning not to read
   it out to the caller. Imposters posing as a bank ask for exactly that code.

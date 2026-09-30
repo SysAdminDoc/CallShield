@@ -1482,6 +1482,7 @@
     <string name="outgoing_hold_reason_database">It\'s in the spam database.</string>
     <string name="outgoing_hold_reason_premium">It\'s a premium-rate number that can charge you by the minute.</string>
     <string name="outgoing_hold_reason_wangiri">Its code is common in scams that get you to call back at your cost.</string>
+    <string name="outgoing_hold_reason_flagged_text">It appeared in a text flagged as spam on %1$s.</string>
     <string name="notif_message_screening_title">Possible spam in %1$s</string>
     <string name="notif_message_screening_text">From %1$s · %2$d%% confidence</string>
     <string name="notif_message_screening_big_text">CallShield flagged a %1$s notification from %2$s at %3$d%% confidence. Signal: %4$s. The original notification was not removed.</string>

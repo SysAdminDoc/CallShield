@@ -20,6 +20,7 @@ class OutgoingCallGuardTest {
         trusted: Boolean = false,
         listed: Reason? = null,
         at: Long = now,
+        mentioned: Long? = null,
     ): Decision =
         runBlocking {
             OutgoingCallGuard.decide(
@@ -33,6 +34,7 @@ class OutgoingCallGuardTest {
                     lookups += "listed:$it"
                     listed
                 },
+                mentioned = { mentioned },
             )
         }
 
@@ -62,6 +64,22 @@ class OutgoingCallGuardTest {
         assertEquals(Decision.Hold(Reason.PREMIUM_RATE), decide("+19005550123"))
         assertEquals(Decision.Hold(Reason.WANGIRI), decide("+23276123456"))
         assertEquals(Decision.Hold(Reason.WANGIRI), decide("+18095550123"))
+    }
+
+    @Test
+    fun `a number from a flagged text is held with the text's date`() {
+        assertEquals(Decision.Hold(Reason.FLAGGED_TEXT, seenAt = SEEN_AT), decide("+18003451234", mentioned = SEEN_AT))
+    }
+
+    @Test
+    fun `a listed number keeps its own reason and a flagged text outranks a premium code`() {
+        assertEquals(Decision.Hold(Reason.DATABASE), decide("+18003451234", listed = Reason.DATABASE, mentioned = SEEN_AT))
+        assertEquals(Decision.Hold(Reason.FLAGGED_TEXT, seenAt = SEEN_AT), decide("+19005550123", mentioned = SEEN_AT))
+    }
+
+    @Test
+    fun `a contact named in a flagged text still rings through`() {
+        assertEquals(Decision.Proceed, decide("+18003451234", trusted = true, mentioned = SEEN_AT))
     }
 
     @Test
@@ -169,5 +187,9 @@ class OutgoingCallGuardTest {
     @Test
     fun `the lookup budget leaves room inside Telecom's five seconds`() {
         assertTrue(OutgoingCallGuard.DECISION_BUDGET_MS < 5_000L)
+    }
+
+    private companion object {
+        const val SEEN_AT = 1_790_000_000_000L
     }
 }

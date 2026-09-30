@@ -25,6 +25,8 @@ import com.sysadmindoc.callshield.ui.CallAnywayActivity
 import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
+import java.text.DateFormat
+import java.util.Date
 
 private const val STABLE_ID_MULTIPLIER = 0x9E3779B9.toInt()
 private const val STABLE_ID_MASK = 0x7FFFFFFF
@@ -292,6 +294,7 @@ object NotificationHelper {
         context: Context,
         number: String,
         reason: OutgoingCallGuard.Reason,
+        seenAt: Long? = null,
     ): Boolean {
         val notificationId = stableId(number, OUTGOING_HOLD_ID_SALT)
         val callAnyway =
@@ -314,7 +317,13 @@ object NotificationHelper {
                 },
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        val reasonText = context.getString(reason.textRes)
+        val reasonText =
+            if (reason == OutgoingCallGuard.Reason.FLAGGED_TEXT) {
+                val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(seenAt ?: System.currentTimeMillis()))
+                context.getString(reason.textRes, date)
+            } else {
+                context.getString(reason.textRes)
+            }
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_OUTGOING_HOLD)

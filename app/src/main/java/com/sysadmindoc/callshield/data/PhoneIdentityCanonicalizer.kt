@@ -152,6 +152,9 @@ class PhoneIdentityCanonicalizer internal constructor(
                 else -> null
             }
 
+        /** Whether bare ten-digit numbers read as North American here: a NANP home region, or none known. */
+        fun readsBareDigitsAsNanp(homeRegionIso: String?): Boolean = homeRegionIso == null || normalizeRegion(homeRegionIso) in NANP_REGIONS
+
         /** The ten national digits of a NANP number on a NANP home region, whichever way it's spelled. */
         private fun nanpNational(
             canonical: String,

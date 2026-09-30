@@ -39,7 +39,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+import java.text.DateFormat
 import java.time.Duration
+import java.util.Date
 import java.util.concurrent.CopyOnWriteArrayList
 
 @RunWith(RobolectricTestRunner::class)
@@ -134,6 +136,41 @@ class OutgoingCallHoldRobolectricTest {
         assertEquals(listOf("cancelCall"), call.awaitAnswers())
         val notification = shadowOf(notificationManager).allNotifications.single()
         assertEquals(context.getString(R.string.outgoing_hold_reason_premium), notification.extras.getString(Notification.EXTRA_TEXT))
+    }
+
+    @Test
+    fun `a call to a number from a flagged text is held with the text's date`() {
+        val callback = "+18003451234"
+        val seenAt = System.currentTimeMillis() - 2 * DAY_MS
+        runBlocking {
+            fixture.repository.logFlaggedText("+12025550143", "Order on hold. Call 1-800-345-1234 to cancel.", "sms_content", 80, timestamp = seenAt)
+        }
+        val call = TelecomCall()
+        redirectionService().place(callback, call)
+
+        assertEquals(listOf("cancelCall"), call.awaitAnswers())
+        val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(seenAt))
+        assertEquals(
+            context.getString(R.string.outgoing_hold_reason_flagged_text, date),
+            heldNotifications().single().extras.getString(Notification.EXTRA_TEXT),
+        )
+    }
+
+    /** Logging the flagged text posts its own alert; only the hold's channel matters here. */
+    private fun heldNotifications() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_OUTGOING_HOLD }
+
+    @Test
+    fun `a number from a flagged text that's on the allow list rings through`() {
+        val callback = "+18003451234"
+        runBlocking {
+            fixture.repository.logFlaggedText("+12025550143", "Order on hold. Call 1-800-345-1234 to cancel.", "sms_content", 80)
+            fixture.repository.addToWhitelist(callback)
+        }
+        val call = TelecomCall()
+        redirectionService().place(callback, call)
+
+        assertEquals(listOf("placeCallUnmodified"), call.awaitAnswers())
+        assertTrue(heldNotifications().isEmpty())
     }
 
     @Test
@@ -334,6 +371,8 @@ class OutgoingCallHoldRobolectricTest {
     }
 
     private companion object {
+        const val DAY_MS = 86_400_000L
+
         // Telecom's side of the redirection binder is hidden API, so the test
         // reaches it the way the framework does, by interface.
         val ADAPTER: Class<*> = Class.forName("com.android.internal.telecom.ICallRedirectionAdapter")
