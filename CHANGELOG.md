@@ -90,8 +90,12 @@ All notable changes to CallShield will be documented in this file.
   zero-width and other invisible characters, and Cyrillic or Greek letters
   that look Latin are undone before the SMS content checks and your keyword
   rules run. A link or brand name with hidden or look-alike characters in it
-  counts against the message. Russian and Greek messages are read as written,
-  and a look-alike web address is never mistaken for the real one.
+  counts against the message. Russian, Greek and Hebrew messages are read as
+  written, even with a missing space after a full stop or a direction mark
+  before a brand name. A look-alike web address is never reported as the
+  real one, or as the address left after its first letter. The phishing link
+  warning reads links the same way, so an invisible character inside a known
+  spam domain no longer hides it.
 
 ## v1.10.0 (2026-09-28)
 

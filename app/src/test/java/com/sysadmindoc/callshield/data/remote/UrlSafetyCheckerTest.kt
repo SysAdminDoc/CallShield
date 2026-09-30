@@ -147,6 +147,16 @@ class UrlSafetyCheckerTest {
         }
 
     @Test
+    fun `a spam domain split by an invisible character is still flagged`() =
+        runBlocking {
+            SmsContentAnalyzer.updateSpamDomains(listOf("scam.xyz"))
+
+            val malicious = UrlSafetyChecker.checkSmsBody("Pay now https://sc​am.xyz/x")
+
+            assertEquals(listOf("https://scam.xyz/x"), malicious.map { it.url })
+        }
+
+    @Test
     fun `local spam-domain result honors query-preserving setting but never keeps fragments`() {
         SmsContentAnalyzer.updateSpamDomains(listOf("evil.test"))
 

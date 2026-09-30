@@ -16,6 +16,7 @@ internal object SmsNormalizerCases {
     val WORD_JOINER = ch(0x2060)
     val SOFT_HYPHEN = ch(0x00AD)
     val RIGHT_TO_LEFT_OVERRIDE = ch(0x202E)
+    val LEFT_TO_RIGHT_MARK = ch(0x200E)
     val POP_DIRECTIONAL = ch(0x202C)
     val TAG_A = ch(0xE0041)
     val NO_BREAK_SPACE = ch(0x00A0)
@@ -49,6 +50,10 @@ internal object SmsNormalizerCases {
             Case("Russian stays Russian", "Ваш код подтверждения 4821", "Ваш код подтверждения 4821", false),
             Case("Greek stays Greek", "Καλημέρα σας", "Καλημέρα σας", false),
             Case("Persian joiner is not a disguise", "می${ZWNJ}خواهم", "میخواهم", false),
+            // A sentence missing its space reads like a host, "доставлен.Не", but folds to no Latin address.
+            Case("Russian with no space after a full stop", "Заказ доставлен.Не забудьте оценить", "Заказ доставлен.Не забудьте оценить", false),
+            Case("Greek with no space after a full stop", "Η παραγγελία ολοκληρώθηκε.Το δέμα έρχεται", "Η παραγγελία ολοκληρώθηκε.Το δέμα έρχεται", false),
+            Case("Hebrew direction mark before a brand", "הזמנה מ${LEFT_TO_RIGHT_MARK}-Amazon נשלחה", "הזמנה מ-Amazon נשלחה", false),
             Case(
                 "emoji sequences are not a disguise",
                 "Family " + ch(0x1F468) + ZWJ + ch(0x1F469) + " ok " + ch(0x2714) + VARIATION_16,
@@ -79,12 +84,10 @@ class SmsTextNormalizerTest {
 
         assertTrue(result.visible.contains(ch(0x0430)))
         assertEquals("visit apple.com/id", result.folded)
-        assertFalse(
-            SmsContentAnalyzer()
-                .extractReportableIndicators("visit " + ch(0x0430) + "pple.com/id")
-                .domains
-                .contains("apple.com"),
-        )
+        val domains = SmsContentAnalyzer().extractReportableIndicators("visit " + ch(0x0430) + "pple.com/id").domains
+        assertFalse(domains.toString(), "apple.com" in domains)
+        // Nor the unrelated domain left after the look-alike letter.
+        assertFalse(domains.toString(), "pple.com" in domains)
     }
 
     @Test

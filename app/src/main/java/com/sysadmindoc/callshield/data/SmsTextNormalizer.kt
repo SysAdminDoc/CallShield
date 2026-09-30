@@ -72,10 +72,10 @@ internal object SmsTextNormalizer {
             val cp = raw.codePointAt(i)
             i += Character.charCount(cp)
             if (isInvisible(cp)) {
-                if (visible.isNotEmpty() && isWordChar(visible.codePointBefore(visible.length))) hiddenAfterWordChar = true
+                if (visible.isNotEmpty() && isLatinWordChar(visible.codePointBefore(visible.length))) hiddenAfterWordChar = true
                 continue
             }
-            if (hiddenAfterWordChar && isWordChar(cp)) hiddenInside = true
+            if (hiddenAfterWordChar && isLatinWordChar(cp)) hiddenInside = true
             hiddenAfterWordChar = false
             visible.appendCodePoint(cp)
             when {
@@ -145,14 +145,22 @@ internal object SmsTextNormalizer {
                 .substringBefore('#')
                 .trimEnd('.')
         val tld = host.substringAfterLast('.', "")
-        if (host.indexOf('.') > 0 && tld.length >= 2 && tld.all { it in 'a'..'z' }) return true
+        // Only a host that reads as all Latin once folded poses as one. "доставлен.Не" is a
+        // Russian sentence missing a space, not a disguised ".he" address.
+        val readsLatin = host.all { it.code < ASCII_LIMIT }
+        if (readsLatin && host.indexOf('.') > 0 && tld.length >= 2 && tld.all { it in 'a'..'z' }) return true
         val letters = trimmed.filter { it in 'a'..'z' || it in '0'..'9' }
         return BRANDS.any { brand -> letters == brand || (brand.length >= MIN_CONTAINED_BRAND && brand in letters) }
     }
 
     private fun isSpace(cp: Int): Boolean = Character.isWhitespace(cp) || Character.isSpaceChar(cp)
 
-    private fun isWordChar(cp: Int): Boolean = Character.isLetterOrDigit(cp) || cp == '.'.code || cp == '-'.code
+    /**
+     * What a Latin host or brand is made of: ASCII letters, digits, dots and
+     * hyphens, or a look-alike standing in for one. An invisible character
+     * between Hebrew and a hyphen is how bidi text is written, not a disguise.
+     */
+    private fun isLatinWordChar(cp: Int): Boolean = (cp < ASCII_LIMIT && (Character.isLetterOrDigit(cp) || cp == '.'.code || cp == '-'.code)) || LOOKALIKES.containsKey(cp)
 
     private fun isCyrillicOrGreek(cp: Int): Boolean = cp in GREEK_START..GREEK_END || cp in CYRILLIC_START..CYRILLIC_END
 

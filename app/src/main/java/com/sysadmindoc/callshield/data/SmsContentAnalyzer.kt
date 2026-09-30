@@ -166,7 +166,9 @@ class SmsContentAnalyzer
         private val urlPattern =
             Regex(
                 "https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|" +
-                    "(?<![a-zA-Z0-9-])[a-zA-Z0-9][a-zA-Z0-9-]{0,62}" +
+                    // A Cyrillic а in front of pple.com is part of the word, so
+                    // the edge is any letter, not only an ASCII one.
+                    "(?<![\\p{L}\\p{N}-])[a-zA-Z0-9][a-zA-Z0-9-]{0,62}" +
                     "\\.[a-zA-Z]{2,63}/[^\\s]{0,2048}",
             )
 

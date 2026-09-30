@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.remote
 
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
+import com.sysadmindoc.callshield.data.SmsTextNormalizer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -177,12 +178,13 @@ object UrlSafetyChecker {
         )
     }
 
+    /** Links in [body], read without invisible characters so `sc\u200Bam.xyz` is `scam.xyz`. */
     internal fun extractCandidateUrls(
         body: String,
         limit: Int = 5,
     ): List<String> =
         urlPattern
-            .findAll(body)
+            .findAll(SmsTextNormalizer.normalize(body).visible)
             .map { normalizeCandidateUrl(it.value) }
             .filter { it.isNotBlank() }
             .distinct()
