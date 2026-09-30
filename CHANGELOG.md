@@ -29,6 +29,11 @@ All notable changes to CallShield will be documented in this file.
   caller ID check. On a locked phone the Quick Settings tile asks you to unlock
   before it opens the window, and a window that has ended stays ended even if
   the phone's clock moves back.
+- The community report queue was merged for the first time since reports
+  started carrying a reporter bucket, which clears the weekly pipeline check
+  before it would have failed on October 12. None of the 93 reports reached the
+  publishing threshold, so the database (version 52) gained no new numbers and
+  372 numbers wait for more reporters.
 
 ## v1.10.0 (2026-09-28)
 

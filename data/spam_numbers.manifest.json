@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "version": 51,
-  "updated": "2026-09-28",
+  "version": 52,
+  "updated": "2026-09-30",
   "legacy_path": "data/spam_numbers.json",
   "shard_directory": "data/spam_number_shards",
   "shard_count": 256,
@@ -201,8 +201,8 @@
     {
       "id": "18",
       "path": "data/spam_number_shards/18.json",
-      "sha256": "5d5a09d43bda790517457318aae5d3a4f453b7848836a4696848c03c252b4dfe",
-      "bytes": 192580,
+      "sha256": "8451873e0f48705b31836a973857b25904ce1c4cac9789328533c450be59d33d",
+      "bytes": 192601,
       "numbers": 195,
       "prefixes": 2
     },
@@ -1113,7 +1113,7 @@
     {
       "id": "8a",
       "path": "data/spam_number_shards/8a.json",
-      "sha256": "28f22f2eb837b92aef661fb0d97f18004f625caa47b3190b110f67ce33d1276a",
+      "sha256": "62463f2ce8c1c81209f53e91bf74d03048202a9d04b5816f5157b1aa2ed08810",
       "bytes": 189509,
       "numbers": 186,
       "prefixes": 5

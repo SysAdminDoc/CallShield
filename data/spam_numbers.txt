@@ -1,4 +1,4 @@
-# CallShield spam numbers, database version 51 (updated 2026-09-28)
+# CallShield spam numbers, database version 52 (updated 2026-09-30)
 # One E.164 number per line. spam_numbers.txt.sig signs this file; data/README.md says how to check it.
 # Numbers come from US FCC and FTC complaint data and CallShield community reports.
 # Licence: MIT, with each source's terms in data/source-manifest.json.
