@@ -126,6 +126,7 @@
     <string name="dashboard_block_area_description">区号 %1$s（%2$s）</string>
     <string name="dashboard_block_area_added">已拦截区号 %s，约 790 万个号码</string>
     <string name="dashboard_block_area_failed">无法拦截区号 %s，请重试。</string>
+    <string name="dashboard_block_area_already">区号 %s 已被拦截</string>
     <string name="blocked_log_action_delete">删除条目</string>
     <string name="blocked_log_action_block">拦截号码</string>
     <string name="blocked_log_filter_all">全部（%d）</string>

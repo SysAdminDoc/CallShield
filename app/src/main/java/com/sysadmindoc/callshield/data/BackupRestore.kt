@@ -624,7 +624,7 @@ object BackupRestore {
                 // Uncapped: the snapshot never leaves the device, and a trimmed
                 // log would lose rows on Undo.
                 buildBackup(dao, repo, selectedSections, rowCap = Int.MAX_VALUE)
-                    .toRestorePayload(selectedSections)
+                    .toUndoPayload(selectedSections)
             } else {
                 null
             }
@@ -984,6 +984,22 @@ object BackupRestore {
     private fun Backup.toRestorePayload(
         sections: Set<BackupSection>,
     ): RestorePayload = toRestorePayload(sections, System.currentTimeMillis())
+
+    /**
+     * This device's own rows, as they are. The import checks would drop a
+     * hidden caller's log entries and short numbers the user blocked, and an
+     * Undo has to put those back too.
+     */
+    private fun Backup.toUndoPayload(sections: Set<BackupSection>): RestorePayload =
+        RestorePayload(
+            blockedNumbers = if (BackupSection.BLOCKED_NUMBERS in sections) blockedNumbers else emptyList(),
+            whitelistNumbers = if (BackupSection.WHITELIST in sections) whitelistNumbers else emptyList(),
+            wildcardRules = if (BackupSection.WILDCARD_RULES in sections) wildcardRules else emptyList(),
+            keywordRules = if (BackupSection.KEYWORD_RULES in sections) keywordRules else emptyList(),
+            rangeRules = if (BackupSection.RANGE_RULES in sections) rangeRules else emptyList(),
+            settings = if (BackupSection.SETTINGS in sections) settings else null,
+            logs = if (BackupSection.LOGS in sections) logs else emptyList(),
+        )
 
     private fun Backup.toRestorePayload(
         sections: Set<BackupSection>,

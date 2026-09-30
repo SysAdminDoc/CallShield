@@ -1066,8 +1066,7 @@ class CallerIdOverlayService : Service() {
                     send()
                     handler.post { dismiss(sessionId) }
                 } else {
-                    val report = DeferredReport(CallShieldApp.appScope, wait = { delay(REPORT_DELAY_MS) }, send = send)
-                    handler.post { showBlockedStrip(sessionId, undo, report) }
+                    handler.post { showBlockedStrip(sessionId, undo, send) }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("CallerIdOverlay", "Overlay block failed", e)
@@ -1132,9 +1131,16 @@ class CallerIdOverlayService : Service() {
     private fun showBlockedStrip(
         sessionId: Long,
         undo: BlocklistRepository.BlockUndo,
-        report: DeferredReport,
+        send: suspend () -> Unit,
     ) {
-        if (!isCurrentSession(sessionId)) return
+        if (!isCurrentSession(sessionId)) {
+            // The popup closed before the block landed, so nothing can undo it.
+            CallShieldApp.appScope.launch { send() }
+            return
+        }
+        // Started with the strip, so the report always waits out the window
+        // however late this runs on the main thread.
+        val report = DeferredReport(CallShieldApp.appScope, wait = { delay(REPORT_DELAY_MS) }, send = send)
         actionRow?.visibility = android.view.View.GONE
         sitToneButton?.visibility = android.view.View.GONE
         blockedStrip?.visibility = android.view.View.VISIBLE

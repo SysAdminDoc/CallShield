@@ -37,14 +37,15 @@ All notable changes to CallShield will be documented in this file.
   366 numbers wait for more reporters.
 - Home shows a card when a newer CallShield release is out, with a link to its
   release page. The notice is a signed file that syncs with the spam database
-  every six hours, so it needs no extra server and nothing unsigned can fake
-  it. Hide it and it stays hidden until the next release. The optional weekly
-  update check in Settings works as before.
-- Settings has a When a call is blocked card on Basic. Silent voicemail,
+  every six hours and when you tap Sync database, so it needs no extra server
+  and nothing unsigned can fake it. Hide it and it stays hidden until the next
+  release, and an older copy served late can't bring back a card you hid. The
+  optional weekly update check in Settings works as before.
+- Settings opens on Blocking, Safety, Notifications and Appearance. Advanced
+  now starts with a When a call is blocked card, where silent voicemail,
   muting low-confidence blocks, answer and hang up, and call handling by
-  category sit together there. Most of them were among the detection engines
-  on Advanced, where they read like more ways to catch spam. Appearance moved
-  to the end of Basic.
+  category sit together, then Quiet hours. Most of those were among the
+  detection engines, where they read like more ways to catch spam.
 - Clearing the blocked log and blocking a whole area code happen straight
   away now, with Undo on the message that follows, instead of asking first.
   Undo puts back every log entry, or the area code rule you had before.
@@ -52,7 +53,10 @@ All notable changes to CallShield will be documented in this file.
   Block on the caller ID popup shows Blocked with Undo for six seconds, and
   the community report waits until that's over, so an undone block is never
   reported. Restore with Replace keeps a copy of the sections it's about to
-  clear, and Undo next to the result puts them back for 30 seconds.
+  clear, and Undo next to the result puts them back for 30 seconds, hidden
+  callers' log entries and short codes included. A second tap on Clear log
+  or Block area code, or a second temporary decision for the same number,
+  keeps the first Undo working.
 - Text rules see through disguised spam. Fullwidth and math-style letters,
   zero-width and other invisible characters, and Cyrillic or Greek letters
   that look Latin are undone before the SMS content checks and your keyword

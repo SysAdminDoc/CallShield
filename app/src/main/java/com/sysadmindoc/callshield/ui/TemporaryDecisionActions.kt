@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 
 data class TemporaryDecisionDuration(
@@ -52,13 +54,64 @@ suspend fun applyTemporaryDecision(
             allow -> resources.getString(R.string.temporary_decision_allowed, shown, duration.label)
             else -> resources.getString(R.string.temporary_decision_blocked, shown, duration.label)
         }
+    // A repeat on the same number keeps the state from before the first
+    // one, which the snackbar being replaced was holding.
+    val earlier = (snackbar.currentSnackbarData?.visuals as? DecisionUndoVisuals)?.snapshot
     snackbar.currentSnackbarData?.dismiss()
     if (snapshot == null) {
         snackbar.showSnackbar(message)
         return
     }
-    val choice = snackbar.showSnackbar(message, actionLabel = resources.getString(R.string.blocked_log_undo), duration = SnackbarDuration.Long)
-    if (choice == SnackbarResult.ActionPerformed) viewModel.undoDecision(snapshot)
+    val undoTo = earlier?.takeIf { it.number == snapshot.number } ?: snapshot
+    val choice = snackbar.showSnackbar(DecisionUndoVisuals(message, resources.getString(R.string.blocked_log_undo), undoTo))
+    if (choice == SnackbarResult.ActionPerformed) viewModel.undoDecision(undoTo)
+}
+
+/** A temporary decision's snackbar, carrying what its Undo puts back. */
+private class DecisionUndoVisuals(
+    override val message: String,
+    override val actionLabel: String,
+    val snapshot: BlocklistRepository.DecisionSnapshot,
+) : SnackbarVisuals {
+    override val withDismissAction = false
+    override val duration = SnackbarDuration.Long
+}
+
+/**
+ * Block a whole area code at once and offer Undo. A repeat tap while the
+ * area code is already blocked leaves the first snackbar, and its Undo, alone.
+ */
+suspend fun blockAreaCodeWithUndo(
+    viewModel: MainViewModel,
+    snackbar: SnackbarHostState,
+    resources: Resources,
+    areaCode: String,
+    description: String,
+) {
+    val undo = viewModel.blockAreaCodeUndoable(areaCode, description).getOrNull()
+    when {
+        undo == null -> {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(resources.getString(R.string.dashboard_block_area_failed, areaCode))
+        }
+
+        !undo.changed -> {
+            if (snackbar.currentSnackbarData == null) {
+                snackbar.showSnackbar(resources.getString(R.string.dashboard_block_area_already, areaCode))
+            }
+        }
+
+        else -> {
+            snackbar.currentSnackbarData?.dismiss()
+            val choice =
+                snackbar.showSnackbar(
+                    resources.getString(R.string.dashboard_block_area_added, areaCode),
+                    actionLabel = resources.getString(R.string.blocked_log_undo),
+                    duration = SnackbarDuration.Long,
+                )
+            if (choice == SnackbarResult.ActionPerformed) viewModel.undoWildcardRule(undo)
+        }
+    }
 }
 
 @Composable

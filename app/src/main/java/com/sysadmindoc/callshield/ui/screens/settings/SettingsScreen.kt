@@ -325,7 +325,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
         if (!showAdvanced) {
             BlockingSettings(viewModel)
-            BlockedCallSettings(viewModel)
             SafetySettings(
                 viewModel = viewModel,
                 contactsPermissionGranted = contactsPermissionGranted,
@@ -343,6 +342,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 notificationsGranted = notificationsGranted,
                 onEnableNotifications = ::requestNotifications,
             )
+            AppearanceSettings(viewModel)
+        }
+
+        if (showAdvanced) {
+            BlockedCallSettings(viewModel)
             QuietHoursSettings(
                 enabled = timeBlock,
                 startHour = timeStart,
@@ -351,10 +355,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 onStartChange = { viewModel.setTimeBlockStart(it) },
                 onEndChange = { viewModel.setTimeBlockEnd(it) },
             )
-            AppearanceSettings(viewModel)
-        }
-
-        if (showAdvanced) {
             RegulatoryPrefixSettings(
                 enabled = enabledRegulatoryPrefixes,
                 onToggle = viewModel::setRegulatoryPrefix,

@@ -278,7 +278,7 @@ endings included. Shards aren't signed one by one: the signed manifest carries
 each shard's SHA-256, and the app checks every shard against it.
 
 `app_release.json` names the newest release: its versionCode and versionName,
-its tag page and the APK's SHA-256. Phones read it on their six-hour sync, and
+its tag page and the APK's SHA-256. Phones read it on their six-hour sync and when someone taps Sync database, and
 a build with a lower versionCode shows a Home card linking to the release page.
 `python scripts/write_app_release.py` writes and signs it from the Gradle
 version and the release APK (or `--sha256` with the hash from the release's

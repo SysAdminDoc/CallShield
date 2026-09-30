@@ -139,6 +139,39 @@ class UndoActionsTest {
         }
 
     @Test
+    fun `a repeat area code block changes nothing, so the first undo still removes it`() =
+        runBlocking {
+            val first = requireNotNull(repo.addWildcardRuleUndoable("+1212*", description = "New York"))
+            val second = requireNotNull(repo.addWildcardRuleUndoable("+1212*", description = "again"))
+
+            assertFalse(second.changed)
+            assertEquals("New York", dao.findWildcardRule("+1212*")?.description)
+            repo.undoWildcardRule(first)
+            assertNull(dao.findWildcardRule("+1212*"))
+        }
+
+    @Test
+    fun `undoing a replace restore puts back rows an import would refuse`() =
+        runBlocking {
+            val shortCode = repo.normalizeNumber("7726")
+            assertTrue(repo.blockNumber(shortCode, "spam", "carrier short code"))
+            dao.insertBlockedCall(BlockedCall(number = "", timestamp = 5_000L, type = "unknown", logKey = "hidden"))
+            val sections = setOf(BackupRestore.BackupSection.BLOCKED_NUMBERS, BackupRestore.BackupSection.LOGS)
+            val incoming = BackupRestore.RestorePayload(blockedNumbers = listOf(BackupRestore.BackupNumber("+15559876543", "spam", "theirs")))
+
+            val result = BackupRestore.restoreWithUndo(context, incoming, BackupRestore.RestoreMode.REPLACE, dao, repo, sections)
+            assertTrue(result.message, result.success)
+            assertNull(dao.findByNumber(shortCode))
+            assertTrue(dao.getAllCallLogOnce().isEmpty())
+
+            BackupRestore.undoRestore(context, requireNotNull(result.undo), dao, repo)
+
+            assertEquals("carrier short code", dao.findByNumber(shortCode)?.description)
+            assertEquals(listOf("hidden"), dao.getAllCallLogOnce().map { it.logKey })
+            assertNull(dao.findByNumber("+15559876543"))
+        }
+
+    @Test
     fun `undoing a replace restore puts back the rules and settings it cleared`() =
         runBlocking {
             repo.blockNumber(NUMBER, "spam", "kept")

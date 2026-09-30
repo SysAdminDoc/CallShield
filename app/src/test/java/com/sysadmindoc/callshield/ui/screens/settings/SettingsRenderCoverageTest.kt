@@ -4,10 +4,14 @@ import android.app.Application
 import android.content.Context
 import android.os.Looper
 import androidx.annotation.StringRes
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
@@ -59,11 +63,11 @@ class SettingsRenderCoverageTest {
             "KEY_BLOCK_CALLS" to Control(Tab.BASIC, R.string.settings_block_spam_calls),
             "KEY_BLOCK_SMS" to Control(Tab.BASIC, R.string.settings_block_spam_sms),
             "KEY_BLOCK_UNKNOWN" to Control(Tab.BASIC, R.string.settings_block_unknown),
-            "KEY_SILENT_VOICEMAIL" to Control(Tab.BASIC, R.string.settings_silent_voicemail),
-            "KEY_AUTOMUTE_LOW_CONFIDENCE" to Control(Tab.BASIC, R.string.settings_automute_low_confidence),
-            "KEY_ANSWER_HANG_UP" to Control(Tab.BASIC, R.string.settings_answer_hang_up),
-            "KEY_HANG_UP_DELAY_SECONDS" to Control(Tab.BASIC, R.string.settings_hang_up_delay),
-            "KEY_CATEGORY_CALL_ACTIONS" to Control(Tab.BASIC, R.string.settings_category_actions),
+            "KEY_SILENT_VOICEMAIL" to Control(Tab.ADVANCED, R.string.settings_silent_voicemail),
+            "KEY_AUTOMUTE_LOW_CONFIDENCE" to Control(Tab.ADVANCED, R.string.settings_automute_low_confidence),
+            "KEY_ANSWER_HANG_UP" to Control(Tab.ADVANCED, R.string.settings_answer_hang_up),
+            "KEY_HANG_UP_DELAY_SECONDS" to Control(Tab.ADVANCED, R.string.settings_hang_up_delay),
+            "KEY_CATEGORY_CALL_ACTIONS" to Control(Tab.ADVANCED, R.string.settings_category_actions),
             "KEY_CONTACT_WHITELIST" to Control(Tab.BASIC, R.string.settings_contact_whitelist),
             "KEY_SELECTED_CONTACT_GROUPS" to Control(Tab.BASIC, R.string.settings_contact_scope),
             "KEY_CONTACTS_ONLY" to Control(Tab.BASIC, R.string.settings_contacts_only),
@@ -74,9 +78,9 @@ class SettingsRenderCoverageTest {
             "KEY_CNAP_TRUST_PATTERNS" to Control(Tab.BASIC, R.string.settings_region_cnap_rules),
             "KEY_CNAP_BLOCK_PATTERNS" to Control(Tab.BASIC, R.string.settings_region_cnap_rules),
             "KEY_POST_CALL_SCREEN" to Control(Tab.BASIC, R.string.settings_post_call_screen),
-            "KEY_TIME_BLOCK" to Control(Tab.BASIC, R.string.settings_quiet_hours_toggle),
-            "KEY_TIME_BLOCK_START" to Control(Tab.BASIC, R.string.settings_time_start),
-            "KEY_TIME_BLOCK_END" to Control(Tab.BASIC, R.string.settings_time_end),
+            "KEY_TIME_BLOCK" to Control(Tab.ADVANCED, R.string.settings_quiet_hours_toggle),
+            "KEY_TIME_BLOCK_START" to Control(Tab.ADVANCED, R.string.settings_time_start),
+            "KEY_TIME_BLOCK_END" to Control(Tab.ADVANCED, R.string.settings_time_end),
             "KEY_APP_THEME" to Control(Tab.BASIC, R.string.settings_theme),
             "KEY_REG_SPAIN_400" to Control(Tab.ADVANCED, RegulatoryPrefix.SPAIN_400.titleRes),
             "KEY_REG_INDIA_140" to Control(Tab.ADVANCED, RegulatoryPrefix.INDIA_140.titleRes),
@@ -226,7 +230,26 @@ class SettingsRenderCoverageTest {
     }
 
     @Test
-    fun `what happens to a blocked call is one card on Basic, not among the detection engines`() {
+    fun `Basic shows Blocking, Safety, Notifications and Appearance and nothing else`() {
+        composeRule.setContent { CallShieldTheme { SettingsScreen(viewModel) } }
+
+        // Card titles are headings. The protection level header sits above the
+        // tabs, and the access card shows on Basic only while setup is missing.
+        val aboveTheCards = setOf(R.string.settings_protection_level, R.string.settings_permissions_access).map(::heading)
+        val cards =
+            composeRule
+                .onAllNodes(isHeading(), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .sortedBy { it.positionInRoot.y }
+                .map { node -> node.config[SemanticsProperties.Text].joinToString().uppercase() }
+                .filterNot { it in aboveTheCards }
+        val basic =
+            listOf(R.string.settings_blocking, R.string.settings_safety, R.string.settings_notifications, R.string.settings_appearance)
+        assertEquals(basic.map(::heading), cards)
+    }
+
+    @Test
+    fun `what happens to a blocked call is one card on Advanced, ahead of the detection engines`() {
         composeRule.setContent { CallShieldTheme { SettingsScreen(viewModel) } }
         val moved =
             listOf(
@@ -235,17 +258,38 @@ class SettingsRenderCoverageTest {
                 R.string.settings_answer_hang_up,
                 R.string.settings_category_actions,
             )
+        moved.forEach { label -> assertEquals(context.getString(label), 0, count(label)) }
 
+        composeRule.onNodeWithTag(SETTINGS_ADVANCED_TAB_TAG).performClick()
         val card = top(R.string.settings_when_blocked)
-        val nextCard = top(R.string.settings_safety)
+        val nextCard = top(R.string.settings_quiet_hours)
         moved.forEach { label ->
             val y = top(label)
             assertTrue("${context.getString(label)} sits outside its card", y > card && y < nextCard)
         }
-        assertTrue("Blocking comes first", top(R.string.settings_blocking) < card)
+        assertTrue("detection comes after", top(R.string.settings_detection_engines) > nextCard)
+    }
 
-        composeRule.onNodeWithTag(SETTINGS_ADVANCED_TAB_TAG).performClick()
-        moved.forEach { label -> assertEquals(context.getString(label), 0, count(label)) }
+    @Test
+    fun `the region and caller name sheet edits each of its settings`() {
+        composeRule.setContent { CallShieldTheme { SettingsScreen(viewModel) } }
+        composeRule
+            .onAllNodes(hasText(context.getString(R.string.settings_region_cnap_rules), ignoreCase = true), useUnmergedTree = true)
+            .onFirst()
+            .performScrollTo()
+            .performClick()
+        composeRule.waitForIdle()
+
+        val sheetFields =
+            mapOf(
+                "KEY_REGION_BLOCK" to R.string.region_rules_block_outside,
+                "KEY_ALLOWED_REGIONS" to R.string.region_rules_allowed_regions,
+                "KEY_CNAP_TRUST_PATTERNS" to R.string.cnap_trust_patterns,
+                "KEY_CNAP_BLOCK_PATTERNS" to R.string.cnap_block_patterns,
+            )
+        assertEquals(rendered.filterValues { it.label == R.string.settings_region_cnap_rules }.keys, sheetFields.keys)
+        val missing = sheetFields.filterValues { count(it) == 0 }.keys
+        assertEquals("sheet fields not rendered", emptySet<String>(), missing)
     }
 
     private fun assertShown(tab: Tab) {
@@ -260,6 +304,10 @@ class SettingsRenderCoverageTest {
             .onAllNodes(hasText(context.getString(label), ignoreCase = true), useUnmergedTree = true)
             .fetchSemanticsNodes()
             .size
+
+    private fun heading(
+        @StringRes title: Int,
+    ): String = context.getString(title).uppercase()
 
     private fun top(
         @StringRes label: Int,

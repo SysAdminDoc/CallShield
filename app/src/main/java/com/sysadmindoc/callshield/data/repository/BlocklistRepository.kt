@@ -334,6 +334,8 @@ class BlocklistRepository(
     data class WildcardUndo(
         val pattern: String,
         val previous: WildcardRule?,
+        /** False when an always-on rule for the pattern was already there; nothing was written. */
+        val changed: Boolean = true,
     )
 
     /** Add a rule the way [addWildcardRule] does and return what it replaced. */
@@ -346,8 +348,12 @@ class BlocklistRepository(
         if (trimmedPattern.isBlank()) return null
         var undo: WildcardUndo? = null
         runInTransaction {
-            undo = WildcardUndo(trimmedPattern, dao.findWildcardRule(trimmedPattern))
-            addWildcardRule(trimmedPattern, isRegex, description)
+            val existing = dao.findWildcardRule(trimmedPattern)
+            // A repeat tap keeps the first rule, so the first Undo still
+            // removes it instead of putting back a copy of itself.
+            val alreadyBlocks = existing != null && existing.enabled && existing.isRegex == isRegex && existing.scheduleDays == 0
+            undo = WildcardUndo(trimmedPattern, existing, changed = !alreadyBlocks)
+            if (!alreadyBlocks) addWildcardRule(trimmedPattern, isRegex, description)
         }
         return undo
     }

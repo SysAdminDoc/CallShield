@@ -102,6 +102,9 @@ class MainViewModel
     ) : ViewModel() {
         private companion object {
             const val TAG = "MainViewModel"
+
+            /** How long a Replace restore can be undone. */
+            const val RESTORE_UNDO_WINDOW_MS = 30_000L
             const val KEY_DATABASE_TYPE = "database_type_filter"
             const val KEY_DATABASE_SOURCE = "database_source_filter"
             const val DATABASE_PAGE_SIZE = 50
@@ -602,6 +605,7 @@ class MainViewModel
         val restoreResult: StateFlow<StatusMessage?> = _restoreResult
 
         private val _restoreUndo = MutableStateFlow<BackupRestore.RestoreUndo?>(null)
+        private var restoreUndoExpiry: Job? = null
 
         /** What the last Replace overwrote, while its result still offers to put it back. */
         val restoreUndo: StateFlow<BackupRestore.RestoreUndo?> = _restoreUndo
@@ -629,7 +633,24 @@ class MainViewModel
 
         fun clearRestoreResult() {
             _restoreResult.value = null
-            _restoreUndo.value = null
+            setRestoreUndo(null)
+        }
+
+        /**
+         * Offers [undo] for [RESTORE_UNDO_WINDOW_MS] and no longer. The window
+         * runs here, not on the screen, so leaving Settings can't keep an old
+         * snapshot waiting to wipe everything added since.
+         */
+        private fun setRestoreUndo(undo: BackupRestore.RestoreUndo?) {
+            restoreUndoExpiry?.cancel()
+            _restoreUndo.value = undo
+            restoreUndoExpiry =
+                undo?.let {
+                    viewModelScope.launch {
+                        delay(RESTORE_UNDO_WINDOW_MS)
+                        _restoreUndo.value = null
+                    }
+                }
         }
 
         fun clearRestorePreview() {
@@ -699,6 +720,17 @@ class MainViewModel
                 if (showProgress) NotificationHelper.showSyncProgress(appContext)
                 try {
                     val result = syncDatabase(force = true)
+                    // Sync now also picks up a new release notice, as the
+                    // six-hour worker does.
+                    if (result.success) {
+                        try {
+                            repo.refreshAppReleaseNotice()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Release notice refresh failed", e)
+                        }
+                    }
                     _syncState.value =
                         if (result.success) {
                             if (result.warning) {
@@ -1200,7 +1232,7 @@ class MainViewModel
         ) {
             val ownedPassphrase = passphrase?.copyOf()
             passphrase?.fill('\u0000')
-            _restoreUndo.value = null
+            setRestoreUndo(null)
             viewModelScope.launch {
                 try {
                     val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections, ownedPassphrase)
@@ -1226,7 +1258,7 @@ class MainViewModel
                 }
             viewModelScope.launch {
                 val result = BackupRestore.restoreFromPreview(appContext, preview, mode)
-                _restoreUndo.value = result.undo
+                setRestoreUndo(result.undo)
                 _restoreResult.value = StatusMessage(result.message, result.success)
                 if (result.success) {
                     _restorePreview.value = null
@@ -1236,7 +1268,7 @@ class MainViewModel
 
         fun undoRestore() {
             val undo = _restoreUndo.value ?: return
-            _restoreUndo.value = null
+            setRestoreUndo(null)
             viewModelScope.launch {
                 val result = BackupRestore.undoRestore(appContext, undo)
                 _restoreResult.value =

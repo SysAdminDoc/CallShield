@@ -54,6 +54,12 @@ class AppReleaseNoticeTest {
         assertTrue(notice.copy(versionCode = 72).shouldShow(installedCode = 70, dismissedCode = 71))
     }
 
+    @Test
+    fun `a dismissed release also hides an older one served late`() {
+        val stale = AppReleaseNotice(71, "1.11.0", "https://github.com/SysAdminDoc/CallShield/releases/tag/v1.11.0", sha)
+        assertFalse(stale.shouldShow(installedCode = 70, dismissedCode = 72))
+    }
+
     private fun assertRefused(body: String) {
         try {
             GitHubDataSource.parseAppReleaseNotice(body)

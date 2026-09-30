@@ -109,6 +109,8 @@ fun BlockedLogScreen(
         hapticConfirm(context)
         scope.launch {
             val cleared = viewModel.clearLogUndoable().getOrNull() ?: return@launch
+            // A second tap finds nothing to clear; the first snackbar keeps the rows.
+            if (cleared.isEmpty()) return@launch
             snackbarHost.currentSnackbarData?.dismiss()
             val choice = snackbarHost.showSnackbar(logClearedMessage, actionLabel = undoLabel, duration = SnackbarDuration.Long)
             if (choice == SnackbarResult.ActionPerformed) viewModel.undoClearLog(cleared)

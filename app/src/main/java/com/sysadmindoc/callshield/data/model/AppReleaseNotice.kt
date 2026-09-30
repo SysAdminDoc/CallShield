@@ -16,5 +16,5 @@ data class AppReleaseNotice(
     fun shouldShow(
         installedCode: Int,
         dismissedCode: Int,
-    ): Boolean = versionCode > installedCode && versionCode != dismissedCode
+    ): Boolean = versionCode > installedCode && versionCode > dismissedCode
 }

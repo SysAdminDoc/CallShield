@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1688-94e2d5?style=flat-square" alt="1688 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1693-94e2d5?style=flat-square" alt="1693 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -480,6 +480,12 @@ Generate the release hash sidecar with:
 .\scripts\write-release-sha256.ps1
 ```
 
+After `gh release create` has published the tag, write and sign the release notice that older builds show on Home, then commit `data/app_release.json` and its `.sig`:
+
+```powershell
+python scripts/write_app_release.py
+```
+
 `verifyReleaseSbom` also writes `<release-apk-stem>.cdx.json`,
 `<release-apk-stem>.provenance.json`, and `<release-apk-stem>.sha256` beside the
 APK. The SBOM contains the exact `releaseRuntimeClasspath` coordinates from
@@ -505,12 +511,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1688 tests
+./gradlew testDebugUnitTest   # 1693 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1688 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1693 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -547,8 +553,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1688 JVM unit tests (JUnit) |
-| Strings | 1716 string resources and 37 plural groups (translation-ready) |
+| Tests | 1693 JVM unit tests (JUnit) |
+| Strings | 1717 string resources and 37 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

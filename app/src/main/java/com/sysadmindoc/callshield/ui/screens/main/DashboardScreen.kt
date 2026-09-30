@@ -126,6 +126,7 @@ import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
+import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -256,7 +257,7 @@ fun DashboardScreen(
 
     // An area code block takes effect at once; its snackbar offers Undo.
     val areaSnackbar = remember { SnackbarHostState() }
-    val areaUndoLabel = stringResource(R.string.blocked_log_undo)
+    val areaResources = LocalContext.current.resources
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -1156,8 +1157,6 @@ fun DashboardScreen(
                         }
                         val loc = AreaCodeLookup.lookup("+1$ac", homeRegionIso = null) ?: ac
                         val areaRuleDescription = stringResource(R.string.dashboard_block_area_description, ac, loc)
-                        val areaAddedMessage = stringResource(R.string.dashboard_block_area_added, ac)
-                        val areaFailedMessage = stringResource(R.string.dashboard_block_area_failed, ac)
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 stringResource(R.string.dashboard_spam_from_area, numberFormatter.format(count), ac, loc),
@@ -1170,16 +1169,7 @@ fun DashboardScreen(
                                 color = CatYellow,
                                 onClick = {
                                     profileScope.launch {
-                                        val undo = viewModel.blockAreaCodeUndoable(ac, areaRuleDescription).getOrNull()
-                                        areaSnackbar.currentSnackbarData?.dismiss()
-                                        if (undo == null) {
-                                            areaSnackbar.showSnackbar(areaFailedMessage)
-                                        } else if (
-                                            areaSnackbar.showSnackbar(areaAddedMessage, actionLabel = areaUndoLabel, duration = SnackbarDuration.Long) ==
-                                            SnackbarResult.ActionPerformed
-                                        ) {
-                                            viewModel.undoWildcardRule(undo)
-                                        }
+                                        blockAreaCodeWithUndo(viewModel, areaSnackbar, areaResources, ac, areaRuleDescription)
                                     }
                                 },
                             )

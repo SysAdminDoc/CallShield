@@ -41,7 +41,7 @@ A few things are off by default and worth a look:
 
 ## Settings reference
 
-Settings opens on **Basic**, the everyday switches. **Advanced** holds detection, lists, exports and backup. Each section below matches a card in the app, with the DataStore key and default of every setting it holds. Rows without a key open a list, a dialog or an Android screen.
+Settings opens on **Basic**: Blocking, Safety, Notifications and Appearance. **Advanced** holds what happens to a blocked call, quiet hours, detection, lists, exports and backup. Each section below matches a card in the app, with the DataStore key and default of every setting it holds. Rows without a key open a list, a dialog or an Android screen.
 
 ### Protection level
 
@@ -58,16 +58,6 @@ Shows whether Phone & messages, Call screening, the caller ID overlay, notificat
 | Block spam calls | `block_calls_enabled` | on |
 | Analyze spam SMS | `block_sms_enabled` | on |
 | Block unknown numbers | `block_unknown_enabled` | off |
-
-### When a call is blocked
-
-| Setting | Key | Default |
-|---------|-----|---------|
-| Silent voicemail mode | `silent_voicemail_mode` | off |
-| Auto-mute low-confidence blocks | `automute_low_confidence_enabled` | off |
-| Answer & hang up blocked calls | `answer_hang_up_mode` | off |
-| Hang up after (seconds) | `hang_up_delay_seconds` | 1 |
-| Call handling by category | `category_call_actions` | every category follows the global setting |
 
 ### Safety
 
@@ -89,6 +79,23 @@ Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`
 | Android post-call screen | `post_call_screen_enabled` | off |
 | Notifications | Android's notification permission | asked during setup |
 
+### Appearance
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Theme | `app_theme` | AMOLED black |
+| Language | Android's per-app language | System default |
+
+### When a call is blocked
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Silent voicemail mode | `silent_voicemail_mode` | off |
+| Auto-mute low-confidence blocks | `automute_low_confidence_enabled` | off |
+| Answer & hang up blocked calls | `answer_hang_up_mode` | off |
+| Hang up after (seconds) | `hang_up_delay_seconds` | 1 |
+| Call handling by category | `category_call_actions` | every category follows the global setting |
+
 ### Quiet hours
 
 | Setting | Key | Default |
@@ -96,13 +103,6 @@ Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`
 | Block unknowns during quiet hours | `time_block_enabled` | off |
 | Start | `time_block_start_hour` | 22 |
 | End | `time_block_end_hour` | 7 |
-
-### Appearance
-
-| Setting | Key | Default |
-|---------|-----|---------|
-| Theme | `app_theme` | AMOLED black |
-| Language | Android's per-app language | System default |
 
 ### Telemarketing ranges
 

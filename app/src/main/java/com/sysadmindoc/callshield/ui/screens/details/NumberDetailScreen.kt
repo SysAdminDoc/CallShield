@@ -41,6 +41,7 @@ import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
@@ -307,25 +308,19 @@ fun NumberDetailScreen(
                         )
                     }
                     if (areaCode != null) {
-                        val areaAddedMessage = stringResource(R.string.dashboard_block_area_added, areaCode)
-                        val areaFailedMessage = stringResource(R.string.dashboard_block_area_failed, areaCode)
-                        val undoLabel = stringResource(R.string.detail_undo)
                         PremiumActionButton(
                             label = stringResource(R.string.detail_block_area_code, areaCode),
                             icon = Icons.Default.FilterAlt,
                             color = CatYellow,
                             onClick = {
                                 coroutineScope.launch {
-                                    val undo = viewModel.blockAreaCodeUndoable(areaCode, blockAreaCodeDescription.orEmpty()).getOrNull()
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    if (undo == null) {
-                                        snackbarHostState.showSnackbar(areaFailedMessage)
-                                    } else if (
-                                        snackbarHostState.showSnackbar(areaAddedMessage, actionLabel = undoLabel, duration = SnackbarDuration.Long) ==
-                                        SnackbarResult.ActionPerformed
-                                    ) {
-                                        viewModel.undoWildcardRule(undo)
-                                    }
+                                    blockAreaCodeWithUndo(
+                                        viewModel,
+                                        snackbarHostState,
+                                        context.resources,
+                                        areaCode,
+                                        blockAreaCodeDescription.orEmpty(),
+                                    )
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
