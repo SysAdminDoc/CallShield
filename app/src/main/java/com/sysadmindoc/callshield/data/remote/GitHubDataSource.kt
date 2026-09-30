@@ -2,10 +2,12 @@ package com.sysadmindoc.callshield.data.remote
 
 import android.content.Context
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.AppUpdateRelease
+import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
@@ -34,6 +36,14 @@ internal enum class GitHubFeedFailureReason {
     /** The feed's `.sig` was missing or didn't verify under a trusted key. */
     SIGNATURE,
 }
+
+/** `data/app_release.json` as published; every field is checked before use. */
+internal data class AppReleaseJson(
+    @param:Json(name = "version_code") val versionCode: Int? = null,
+    @param:Json(name = "version_name") val versionName: String? = null,
+    @param:Json(name = "release_url") val releaseUrl: String? = null,
+    @param:Json(name = "apk_sha256") val apkSha256: String? = null,
+)
 
 internal class GitHubFeedValidationException(
     val reason: GitHubFeedFailureReason,
@@ -177,6 +187,7 @@ class GitHubDataSource internal constructor(
         const val HOT_RANGES_PATH = "data/hot_ranges.json"
         const val SPAM_DOMAINS_PATH = "data/spam_domains.json"
         const val MODEL_WEIGHTS_PATH = "data/spam_model_weights.json"
+        const val APP_RELEASE_PATH = "data/app_release.json"
 
         const val BUNDLED_DATABASE_ASSET = "spam_numbers.json"
         const val BUNDLED_SHARD_MANIFEST_ASSET = "spam_numbers.manifest.json"
@@ -191,6 +202,7 @@ class GitHubDataSource internal constructor(
         internal const val MAX_HOT_LIST_BYTES = 1L * 1024L * 1024L
         internal const val MAX_HOT_RANGES_BYTES = 512L * 1024L
         internal const val MAX_SPAM_DOMAINS_BYTES = 2L * 1024L * 1024L
+        internal const val MAX_APP_RELEASE_BYTES = 4L * 1024L
         internal const val MAX_MODEL_WEIGHTS_BYTES = 1L * 1024L * 1024L
 
         internal const val MAX_SPAM_DATABASE_NUMBERS = 250_000
@@ -226,6 +238,7 @@ class GitHubDataSource internal constructor(
                 HOT_RANGES_PATH to RawFeedSpec("hot ranges", MAX_HOT_RANGES_BYTES),
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
                 MODEL_WEIGHTS_PATH to RawFeedSpec("model weights", MAX_MODEL_WEIGHTS_BYTES),
+                APP_RELEASE_PATH to RawFeedSpec("release notice", MAX_APP_RELEASE_BYTES),
             )
 
         /**
@@ -234,7 +247,49 @@ class GitHubDataSource internal constructor(
          * scripts/feed_signing.py signs the same files; its test checks the lists agree.
          */
         internal val SIGNED_FEED_PATHS =
-            setOf(DATA_PATH, SHARD_MANIFEST_PATH, HOT_LIST_PATH, HOT_RANGES_PATH, SPAM_DOMAINS_PATH, MODEL_WEIGHTS_PATH)
+            setOf(
+                DATA_PATH,
+                SHARD_MANIFEST_PATH,
+                HOT_LIST_PATH,
+                HOT_RANGES_PATH,
+                SPAM_DOMAINS_PATH,
+                MODEL_WEIGHTS_PATH,
+                APP_RELEASE_PATH,
+            )
+
+        private val VERSION_NAME_REGEX = Regex("\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}")
+        private val SHA256_REGEX = Regex("[0-9a-f]{64}")
+        private val releaseNoticeAdapter =
+            Moshi
+                .Builder()
+                .addLast(KotlinJsonAdapterFactory())
+                .build()
+                .adapter(AppReleaseJson::class.java)
+
+        /**
+         * The release notice in [body], refused unless every field is usable and
+         * the link is this repo's tag page for that version. The file is signed,
+         * but a notice can only ever point at CallShield's own release page.
+         */
+        internal fun parseAppReleaseNotice(body: String): AppReleaseNotice {
+            val json =
+                try {
+                    releaseNoticeAdapter.fromJson(body)
+                } catch (e: IOException) {
+                    failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, "release notice isn't JSON: ${e.message}")
+                } catch (e: JsonDataException) {
+                    failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, "release notice has the wrong shape: ${e.message}")
+                }
+            val versionCode = json?.versionCode ?: 0
+            val versionName = json?.versionName.orEmpty()
+            val apkSha256 = json?.apkSha256.orEmpty()
+            requireFeed(versionCode > 0, GitHubFeedFailureReason.MISSING_SCHEMA_FIELD) { "release notice has no version_code" }
+            requireFeed(VERSION_NAME_REGEX.matches(versionName), GitHubFeedFailureReason.INVALID_SCHEMA) { "release notice version_name is unusable" }
+            requireFeed(SHA256_REGEX.matches(apkSha256), GitHubFeedFailureReason.INVALID_SCHEMA) { "release notice apk_sha256 is unusable" }
+            val releaseUrl = "https://github.com/$DEFAULT_REPO_OWNER/$DEFAULT_REPO_NAME/releases/tag/v$versionName"
+            requireFeed(json?.releaseUrl == releaseUrl, GitHubFeedFailureReason.INVALID_SCHEMA) { "release notice links somewhere other than its tag page" }
+            return AppReleaseNotice(versionCode, versionName, releaseUrl, apkSha256)
+        }
 
         /** Throws unless a signed feed arrived with a signature the app accepts. */
         internal fun requireFeedSignature(
@@ -412,6 +467,22 @@ class GitHubDataSource internal constructor(
             // A signed file that isn't this feed is refused, not thrown out of the refresh.
             try {
                 Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
+        }
+
+    override suspend fun fetchAppReleaseNotice(
+        owner: String,
+        repo: String,
+    ): Result<AppReleaseNotice> =
+        withContext(Dispatchers.IO) {
+            val result = fetchRawText(APP_RELEASE_PATH, owner, repo)
+            if (result.isFailure) {
+                return@withContext Result.failure(result.exceptionOrNull()!!)
+            }
+            try {
+                Result.success(parseAppReleaseNotice(result.getOrThrow()))
             } catch (refused: GitHubFeedValidationException) {
                 Result.failure(refused)
             }

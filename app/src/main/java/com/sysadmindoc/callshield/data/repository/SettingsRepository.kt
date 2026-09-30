@@ -27,6 +27,7 @@ import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
@@ -259,6 +260,34 @@ class SettingsRepository(
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
     val appTheme: Flow<String> = dataStore.data.map { sanitizeAppTheme(it[SpamRepository.KEY_APP_THEME]) }
     val appUpdateChecksEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false }
+
+    /** The stored release notice while [installedCode] is older and the user hasn't dismissed that release. */
+    fun appReleaseNotice(installedCode: Int = BuildConfig.VERSION_CODE): Flow<AppReleaseNotice?> =
+        dataStore.data
+            .map { prefs ->
+                val notice =
+                    AppReleaseNotice(
+                        versionCode = prefs[SpamRepository.KEY_RELEASE_NOTICE_CODE] ?: return@map null,
+                        versionName = prefs[SpamRepository.KEY_RELEASE_NOTICE_NAME] ?: return@map null,
+                        releaseUrl = prefs[SpamRepository.KEY_RELEASE_NOTICE_URL] ?: return@map null,
+                        apkSha256 = prefs[SpamRepository.KEY_RELEASE_NOTICE_SHA256].orEmpty(),
+                    )
+                notice.takeIf { it.shouldShow(installedCode, prefs[SpamRepository.KEY_RELEASE_NOTICE_DISMISSED] ?: 0) }
+            }.distinctUntilChanged()
+
+    suspend fun saveAppReleaseNotice(notice: AppReleaseNotice) {
+        dataStore.edit {
+            it[SpamRepository.KEY_RELEASE_NOTICE_CODE] = notice.versionCode
+            it[SpamRepository.KEY_RELEASE_NOTICE_NAME] = notice.versionName
+            it[SpamRepository.KEY_RELEASE_NOTICE_URL] = notice.releaseUrl
+            it[SpamRepository.KEY_RELEASE_NOTICE_SHA256] = notice.apkSha256
+        }
+    }
+
+    suspend fun dismissAppReleaseNotice(versionCode: Int) {
+        dataStore.edit { it[SpamRepository.KEY_RELEASE_NOTICE_DISMISSED] = versionCode }
+    }
+
     val appUpdateState: Flow<AppUpdateState> =
         dataStore.data.map { prefs ->
             AppUpdateState(

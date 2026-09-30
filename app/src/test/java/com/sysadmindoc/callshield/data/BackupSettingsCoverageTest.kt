@@ -60,6 +60,11 @@ class BackupSettingsCoverageTest {
             "KEY_SMS_CAPABILITY_STATE" to "a measurement of this phone",
             "KEY_THEME_DEFAULT_SETTLED" to "the theme migration's record; the theme itself is backed up",
             "KEY_TRENDING_APPLIED_AT" to "sync state of this phone's trending feeds",
+            "KEY_RELEASE_NOTICE_CODE" to "the last release notice this phone downloaded, not a setting",
+            "KEY_RELEASE_NOTICE_NAME" to "the last release notice this phone downloaded, not a setting",
+            "KEY_RELEASE_NOTICE_URL" to "the last release notice this phone downloaded, not a setting",
+            "KEY_RELEASE_NOTICE_SHA256" to "the last release notice this phone downloaded, not a setting",
+            "KEY_RELEASE_NOTICE_DISMISSED" to "a notice this phone already showed",
             "KEY_TRENDING_NUMBERS" to "sync state of this phone's trending feeds",
         )
 

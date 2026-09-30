@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1654-94e2d5?style=flat-square" alt="1654 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1661-94e2d5?style=flat-square" alt="1661 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -283,7 +283,7 @@ by locale and message type without shipping personal data:
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
 - Home leads with localized blocked-call/text outcomes and collapses completed setup into a review row
-- Optional weekly GitHub Releases update checks are off by default and only offer release/SHA256 links
+- Home shows a card when a newer release is out, read from a signed file that syncs with the spam database, so no extra host is contacted. Optional weekly GitHub Releases update checks are off by default and only offer release/SHA256 links
 - Maintainer data regeneration uses the gated `scripts/import_all_sources.py` pipeline. Legacy direct writers aren't supported
 - Onboarding wizard with permission requests
 
@@ -380,7 +380,7 @@ scrape Nomorobo's restricted carrier feed.
 ## Privacy
 
 Call and message decisions run on the phone. No personal data is collected. CallShield makes these network requests:
-- The spam database and trending feeds, from this public repository on GitHub, or from the feed mirror if you set one
+- The spam database, trending feeds and the new-release notice, from this public repository on GitHub, or from the feed mirror if you set one
 - Live caller enrichment, which is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
 - Community reports to the Cloudflare Worker. Each report is committed as a public JSON file to this repository's `data/reports` folder, and the next merge folds it into the database. It holds the reported number, the report type and time, the report's random id, and two reporter IDs that change every day (keyed HMACs of your network's /48 and /64, so the same network can't be linked across days or turned back into an address). An SMS report adds the linked domains and link labels, never message text. The report never holds your IP address. To stop floods and repeat reports, the Worker's short-lived store keys a duplicate check on your IPv4 address or IPv6 /64 for five minutes, and when Cloudflare's rate limiter is unavailable its fallback counter does the same for one minute. Both expire on their own
 - Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain, and the OpenPhish feed is downloaded for local matching. Neither receives message text
@@ -509,12 +509,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1654 tests
+./gradlew testDebugUnitTest   # 1661 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1654 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1661 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -551,7 +551,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1654 JVM unit tests (JUnit) |
+| Tests | 1661 JVM unit tests (JUnit) |
 | Strings | 1708 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

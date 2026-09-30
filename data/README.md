@@ -270,12 +270,21 @@ fails the validation run if it's pushed as it is. Commit the regenerated
 
 ### Feed signatures
 
-Six files carry a detached signature beside them: `spam_numbers.json`,
+Seven files carry a detached signature beside them: `spam_numbers.json`,
 `spam_numbers.manifest.json`, `hot_numbers.json`, `hot_ranges.json`,
-`spam_domains.json` and `spam_model_weights.json`. Each `<file>.sig` holds a
+`spam_domains.json`, `spam_model_weights.json` and `app_release.json`. Each `<file>.sig` holds a
 base64 DER ECDSA P-256 (SHA-256) signature over the file's exact bytes, line
 endings included. Shards aren't signed one by one: the signed manifest carries
 each shard's SHA-256, and the app checks every shard against it.
+
+`app_release.json` names the newest release: its versionCode and versionName,
+its tag page and the APK's SHA-256. Phones read it on their six-hour sync, and
+a build with a lower versionCode shows a Home card linking to the release page.
+`python scripts/write_app_release.py` writes and signs it from the Gradle
+version and the release APK (or `--sha256` with the hash from the release's
+sidecar). Commit it only after `gh release create` has published the tag, or
+the card links to a page that isn't there yet. The app refuses a notice whose
+link isn't this repository's tag page for that version.
 
 `spam_numbers.txt` is signed the same way for anyone who takes the list
 without the app. It's written with the shards, holds every number whose

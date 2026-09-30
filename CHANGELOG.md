@@ -35,6 +35,11 @@ All notable changes to CallShield will be documented in this file.
   before it would have failed on October 12. None of the 93 reports reached the
   publishing threshold, so the database (version 52) gained no new numbers and
   366 numbers wait for more reporters.
+- Home shows a card when a newer CallShield release is out, with a link to its
+  release page. The notice is a signed file that syncs with the spam database
+  every six hours, so it needs no extra server and nothing unsigned can fake
+  it. Hide it and it stays hidden until the next release. The optional weekly
+  update check in Settings works as before.
 
 ## v1.10.0 (2026-09-28)
 

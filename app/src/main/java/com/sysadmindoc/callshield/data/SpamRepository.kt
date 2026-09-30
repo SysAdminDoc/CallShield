@@ -296,6 +296,13 @@ class SpamRepository(
         /** Set once stored rows carry the latest-evidence expiry; see SyncRepository.applyLatestEvidenceExpiryRule. */
         internal val KEY_EVIDENCE_EXPIRY_RULE_APPLIED = booleanPreferencesKey("evidence_expiry_rule_applied")
         val KEY_APP_UPDATE_CHECKS = booleanPreferencesKey("app_update_checks_enabled")
+
+        /** The newest release the signed feed announced, and the one Home's card was last dismissed for. */
+        internal val KEY_RELEASE_NOTICE_CODE = intPreferencesKey("release_notice_version_code")
+        internal val KEY_RELEASE_NOTICE_NAME = stringPreferencesKey("release_notice_version_name")
+        internal val KEY_RELEASE_NOTICE_URL = stringPreferencesKey("release_notice_url")
+        internal val KEY_RELEASE_NOTICE_SHA256 = stringPreferencesKey("release_notice_apk_sha256")
+        internal val KEY_RELEASE_NOTICE_DISMISSED = intPreferencesKey("release_notice_dismissed_code")
         internal val KEY_APP_UPDATE_STATUS = stringPreferencesKey("app_update_status")
         internal val KEY_APP_UPDATE_TAG = stringPreferencesKey("app_update_latest_tag")
         internal val KEY_APP_UPDATE_RELEASE_URL = stringPreferencesKey("app_update_release_url")
@@ -551,6 +558,13 @@ class SpamRepository(
     suspend fun setExpectingCallUntil(until: Long) = settingsRepository.setExpectingCallUntil(until)
 
     suspend fun clearEndedExpectingCall(now: Long) = settingsRepository.clearEndedExpectingCall(now)
+
+    /** The release Home offers, or null when this build is current or the user dismissed it. */
+    val appReleaseNotice: Flow<AppReleaseNotice?> = settingsRepository.appReleaseNotice()
+
+    suspend fun refreshAppReleaseNotice(): Boolean = syncRepository.refreshAppReleaseNotice()
+
+    suspend fun dismissAppReleaseNotice(versionCode: Int) = settingsRepository.dismissAppReleaseNotice(versionCode)
 
     suspend fun togglePushAlertPackage(
         pkg: String,

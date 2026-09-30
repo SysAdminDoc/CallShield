@@ -36,6 +36,13 @@ class SyncWorker
             // Also sync the ML model weights file — lightweight, same GitHub repo
             spamMLScorer.syncWeights(applicationContext)
 
+            // And the signed release notice Home offers to older builds.
+            try {
+                repo.refreshAppReleaseNotice()
+            } catch (e: Exception) {
+                android.util.Log.w("SyncWorker", "Release notice refresh failed", e)
+            }
+
             // A pin failure still reports success when older data is on the
             // device, so it is surfaced here rather than through the result.
             FeedTrustNotice.maybeNotify(applicationContext, repo)

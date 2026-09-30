@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.remote
 
+import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
@@ -32,6 +33,12 @@ interface SpamDataSource {
     fun parseSpamShardManifestJson(body: String): Result<SpamShardManifest> = Result.failure(UnsupportedOperationException("Content-addressed spam shards are unavailable"))
 
     fun parseSpamShardJson(body: String): Result<SpamDatabaseShard> = Result.failure(UnsupportedOperationException("Content-addressed spam shards are unavailable"))
+
+    /** The signed release notice (`data/app_release.json`), fetched like the other feeds. */
+    suspend fun fetchAppReleaseNotice(
+        owner: String = GitHubDataSource.DEFAULT_REPO_OWNER,
+        repo: String = GitHubDataSource.DEFAULT_REPO_NAME,
+    ): Result<AppReleaseNotice> = Result.failure(UnsupportedOperationException("Release notices are unavailable"))
 
     /** True while GitHub itself fails certificate verification, even when a mirror is serving the feeds. */
     val gitHubTrustFailing: Boolean get() = false

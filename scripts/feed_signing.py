@@ -2,7 +2,7 @@
 """Sign the published protection feeds and check their signatures.
 
 Devices download the database manifest, the legacy database, the three hot
-feeds and the ML weights from raw.githubusercontent.com. Until now nothing but
+feeds, the ML weights and the release notice from raw.githubusercontent.com. Until now nothing but
 TLS pinning stood between a device and a tampered file, and pinning is exactly
 what broke from 2026-08-02 when GitHub's certificate moved to a new Let's
 Encrypt hierarchy. Each of those files now has a detached signature beside it:
@@ -50,6 +50,7 @@ SIGNED_FEEDS = (
     "hot_ranges.json",
     "spam_domains.json",
     "spam_model_weights.json",
+    "app_release.json",
 )
 
 # Signed for downstream consumers of the data. The app doesn't download these,

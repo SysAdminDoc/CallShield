@@ -563,6 +563,7 @@ class MainViewModel
             )
         val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val expectingCallUntil = repo.expectingCallUntil.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+        val appReleaseNotice = repo.appReleaseNotice.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
         val pushAlertDisabledPackages =
             repo.pushAlertDisabledPackages
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -1334,6 +1335,8 @@ class MainViewModel
         fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch { repo.setHangUpDelaySeconds(seconds) }
 
         fun setPushAlert(v: Boolean) = viewModelScope.launch { repo.setPushAlert(v) }
+
+        fun dismissAppReleaseNotice(versionCode: Int) = viewModelScope.launch { repo.dismissAppReleaseNotice(versionCode) }
 
         internal fun startExpectingCall(length: com.sysadmindoc.callshield.data.ExpectingCall.Length) =
             viewModelScope.launch {

@@ -1688,6 +1688,10 @@
     <string name="tile_protection_on">Protection on</string>
     <string name="tile_protection_off">Protection off</string>
     <string name="expecting_call_title">Expecting a call</string>
+    <string name="release_notice_title">CallShield %1$s is out</string>
+    <string name="release_notice_body">This version fixes things your copy still has. The release page has the download and what changed.</string>
+    <string name="release_notice_open">Get it</string>
+    <string name="release_notice_dismiss">Hide until the next release</string>
     <string name="expecting_call_subtitle">Let unknown and hidden callers ring for a while. Your blocked numbers, wildcard rules and a failed caller ID check still block.</string>
     <string name="expecting_call_active">Unknown callers can ring until %1$s.</string>
     <string name="expecting_call_start">Start</string>

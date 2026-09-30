@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Layers
@@ -61,6 +62,7 @@ import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.SpeakerNotesOff
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
@@ -117,6 +119,7 @@ import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionStatus
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
@@ -175,6 +178,7 @@ fun DashboardScreen(
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
     val expectingCallUntil by viewModel.expectingCallUntil.collectAsStateWithLifecycle()
+    val appReleaseNotice by viewModel.appReleaseNotice.collectAsStateWithLifecycle()
     val pushAlert by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val meetingMode by viewModel.meetingModeEnabled.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
@@ -801,6 +805,14 @@ fun DashboardScreen(
             )
         }
 
+        appReleaseNotice?.let { notice ->
+            AppReleaseNoticeCard(
+                notice = notice,
+                onOpen = { context.startActivitySafely(Intent(Intent.ACTION_VIEW, Uri.parse(notice.releaseUrl))) },
+                onDismiss = { viewModel.dismissAppReleaseNotice(notice.versionCode) },
+            )
+        }
+
         PremiumCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(18.dp)) {
                 SectionHeader(stringResource(R.string.dashboard_quick_controls), CatGreen)
@@ -1193,6 +1205,57 @@ fun DashboardScreen(
                 }
             },
         )
+    }
+}
+
+/** A newer release announced by the signed feed: open its page, or hide it until the next one. */
+@Composable
+internal fun AppReleaseNoticeCard(
+    notice: AppReleaseNotice,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatGreen) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PremiumIconTile(
+                icon = Icons.Default.SystemUpdate,
+                color = CatGreen,
+                size = 38.dp,
+                iconSize = 20.dp,
+                showContainer = true,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = stringResource(R.string.release_notice_title, notice.versionName),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CatText,
+                )
+                Text(
+                    text = stringResource(R.string.release_notice_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    maxLines = 2,
+                )
+            }
+            PremiumCompactButton(
+                label = stringResource(R.string.release_notice_open),
+                icon = Icons.Default.SystemUpdate,
+                color = CatGreen,
+                onClick = onOpen,
+            )
+            IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.release_notice_dismiss),
+                    tint = CatSubtext,
+                )
+            }
+        }
     }
 }
 
