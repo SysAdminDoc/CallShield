@@ -25,8 +25,8 @@ class ExpectingCallTileService : TileService() {
         updateTile()
     }
 
-    override fun onClick() {
-        super.onClick()
+    /** Starts an hour, or ends the running window. Replaced in tests. */
+    internal var toggleWindow: () -> Unit = {
         // The process-wide scope, so closing the shade mid-tap can't cancel the write.
         CallShieldApp.appScope.launch {
             try {
@@ -43,12 +43,21 @@ class ExpectingCallTileService : TileService() {
         }
     }
 
+    override fun onClick() {
+        super.onClick()
+        // Opening the window lets strangers ring, so on a locked phone it waits for the unlock.
+        if (isLocked) unlockAndRun { toggleWindow() } else toggleWindow()
+    }
+
     private fun updateTile() {
         if (qsTile == null) return
         scope.launch {
             try {
-                val until = SpamRepository.getInstance(applicationContext).expectingCallUntil.first()
-                val active = until > System.currentTimeMillis()
+                val repo = SpamRepository.getInstance(applicationContext)
+                val until = repo.expectingCallUntil.first()
+                val now = System.currentTimeMillis()
+                val active = until > now
+                if (!active) repo.clearEndedExpectingCall(now)
                 withContext(Dispatchers.Main) {
                     val tile = qsTile ?: return@withContext
                     tile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE

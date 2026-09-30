@@ -10,6 +10,7 @@ import android.util.Log
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
@@ -154,6 +155,10 @@ class CallShieldScreeningService : CallScreeningService() {
                         // One snapshot of all prefs — the 5-second deadline is tight
                         // and individual Flow.first() calls each spin up a collector.
                         val prefs = repository.readPrefsSnapshot()
+                        val now = System.currentTimeMillis()
+                        if (ExpectingCall.hasEnded(prefs, now)) {
+                            applicationScope.launch { repository.clearEndedExpectingCall(now) }
+                        }
 
                         if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
                             respondAllow(responseGate)
@@ -164,20 +169,14 @@ class CallShieldScreeningService : CallScreeningService() {
                         val number = repository.normalizeNumber(handle?.schemeSpecificPart.orEmpty())
 
                         if (number.isEmpty()) {
-                            // A withheld number never reaches the checkers, so meeting
-                            // mode is applied here; "block unknown" still rejects first.
-                            when {
-                                prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false -> {
-                                    respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
-                                }
-
-                                MeetingModeChecker.meetingAppInUse(prefs) != null -> {
-                                    respondBlock(callDetails, responseGate, number, MeetingModeChecker.MATCH_SOURCE, prefs = prefs)
-                                }
-
-                                else -> {
-                                    respondAllow(responseGate)
-                                }
+                            // A withheld number never reaches the checkers, so the
+                            // expecting-a-call window, "block unknown" and meeting mode
+                            // are applied here, in that order.
+                            val source = ExpectingCall.withheldCallBlockSource(prefs, now, MeetingModeChecker.meetingAppInUse(prefs))
+                            if (source == null) {
+                                respondAllow(responseGate)
+                            } else {
+                                respondBlock(callDetails, responseGate, number, source, prefs = prefs)
                             }
                             return@withTimeoutOrNull
                         }

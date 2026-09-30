@@ -574,6 +574,12 @@ class SettingsRepository(
 
     suspend fun setMeetingMode(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_MEETING_MODE] = enabled }
 
+    suspend fun clearEndedExpectingCall(now: Long) =
+        dataStore.edit {
+            val until = it[SpamRepository.KEY_EXPECTING_CALL_UNTIL]
+            if (until != null && until <= now) it.remove(SpamRepository.KEY_EXPECTING_CALL_UNTIL)
+        }
+
     suspend fun setExpectingCallUntil(until: Long) =
         dataStore.edit {
             if (until > 0L) it[SpamRepository.KEY_EXPECTING_CALL_UNTIL] = until else it.remove(SpamRepository.KEY_EXPECTING_CALL_UNTIL)

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C363-f38ba8?style=flat-square" alt="51,363 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1646-94e2d5?style=flat-square" alt="1646 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1652-94e2d5?style=flat-square" alt="1652 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -82,7 +82,7 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 Let unknown callers ring when you're waiting for a call, and a fix that keeps the spam database blocking between updates.
 
-- **Expecting a call.** From Home or its own Quick Settings tile, unknown callers ring for an hour, three hours or until midnight. Your blocked numbers, wildcard rules and a failed caller ID check still block, and a countdown notification offers End now.
+- **Expecting a call.** From Home or its own Quick Settings tile, unknown and hidden callers ring for an hour, three hours or until midnight. Your blocked numbers, wildcard rules and a failed caller ID check still block, and a countdown notification offers End now. On a locked phone the tile asks you to unlock first.
 - **The database keeps working.** Every number's evidence was due to expire in October, and a phone stops matching a number once that happens. Complaint evidence now lasts a year, and the weekly data check warns a month ahead. Phones on 1.9.0 get this with their next sync.
 - **Reviewed numbers.** A number the maintainer checks by hand can join the database when no imported source covers it, starting with a Munich number reported on GitHub.
 - **Easier to use.** The caller ID popup works with TalkBack, the Blocked log and Blocklist fit small screens with large text, and a blocked-call alert offers Not spam for a day.
@@ -116,7 +116,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract`. Respects stock Phone/Messages blocks |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
-|  5360 | **Expecting a Call** | Allow | Opt-in window (1 hour, 3 hours or until midnight) from Home or a Quick Settings tile. Unknown callers ring, and contacts-only mode steps aside. Your own blocks, wildcard and range rules and a failed caller ID check still win |
+|  5360 | **Expecting a Call** | Allow | Opt-in window (1 hour, 3 hours or until midnight) from Home or a Quick Settings tile. Unknown and hidden callers ring, and contacts-only mode and meeting mode step aside. Your own blocks, wildcard and range rules and a failed caller ID check still win |
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log. Beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
@@ -509,12 +509,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1646 tests
+./gradlew testDebugUnitTest   # 1652 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1646 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1652 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -551,7 +551,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1646 JVM unit tests (JUnit) |
+| Tests | 1652 JVM unit tests (JUnit) |
 | Strings | 1708 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

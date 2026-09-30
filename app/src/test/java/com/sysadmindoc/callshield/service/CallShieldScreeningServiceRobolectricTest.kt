@@ -8,6 +8,7 @@ import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
@@ -454,6 +455,37 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.disallowCall)
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `a hidden caller rings during an expecting-a-call window under the Contacts only profile`() {
+        runBlocking {
+            val profile = BlockingProfiles.Profile.CONTACTS_ONLY
+            repository.replaceBlockingSettings(profile.settings, profile.name)
+            repository.setExpectingCallUntil(System.currentTimeMillis() + 60L * 60L * 1_000L)
+        }
+
+        service.onScreenCall(callDetails(""))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `a screened call clears an ended window and hidden callers are rejected again`() {
+        runBlocking {
+            repository.setBlockUnknown(true)
+            repository.setExpectingCallUntil(System.currentTimeMillis() - 1_000L)
+        }
+
+        service.onScreenCall(callDetails(""))
+
+        val response = awaitResponse()
+        assertTrue(response.rejectCall)
+        awaitScopeIdle()
+        assertEquals(0L, runBlocking { repository.expectingCallUntil.first() })
     }
 
     @Test

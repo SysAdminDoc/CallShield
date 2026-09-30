@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.checker.MeetingModeChecker
 import java.time.Instant
 import java.time.ZoneId
 
@@ -51,4 +52,29 @@ internal object ExpectingCall {
         prefs: Preferences,
         now: Long,
     ): Boolean = until(prefs) > now
+
+    /** A window that ran out. Its end time is removed once seen, so a clock stepped back can't reopen it. */
+    fun hasEnded(
+        prefs: Preferences,
+        now: Long,
+    ): Boolean = until(prefs) in 1..now
+
+    /**
+     * What rejects or silences a call that came with no number, or null to let it
+     * ring. A window lets it ring: the expected caller may withhold their number,
+     * and the window promises unknown callers get through, so it outranks both
+     * "block hidden numbers" (set by the Contacts only, Personal, Sleep and
+     * Maximum profiles) and meeting mode.
+     */
+    fun withheldCallBlockSource(
+        prefs: Preferences,
+        now: Long,
+        meetingApp: String?,
+    ): String? =
+        when {
+            isActive(prefs, now) -> null
+            prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false -> "hidden_number"
+            meetingApp != null -> MeetingModeChecker.MATCH_SOURCE
+            else -> null
+        }
 }

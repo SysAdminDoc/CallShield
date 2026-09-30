@@ -31,14 +31,14 @@ internal object ExpectingCallController {
         refreshTile(context)
     }
 
-    /** A reboot clears the ongoing notification while the window may still be running. */
+    /** A reboot clears the ongoing notification while the window may still be running; an ended one is cleared. */
     suspend fun restoreNotification(
         context: Context,
         repo: SpamRepository,
         now: Long = System.currentTimeMillis(),
     ) {
         val until = repo.expectingCallUntil.first()
-        if (until > now) NotificationHelper.showExpectingCall(context, until, now)
+        if (until > now) NotificationHelper.showExpectingCall(context, until, now) else repo.clearEndedExpectingCall(now)
     }
 
     private fun refreshTile(context: Context) {

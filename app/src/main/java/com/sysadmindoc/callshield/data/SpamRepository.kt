@@ -549,6 +549,8 @@ class SpamRepository(
 
     suspend fun setExpectingCallUntil(until: Long) = settingsRepository.setExpectingCallUntil(until)
 
+    suspend fun clearEndedExpectingCall(now: Long) = settingsRepository.clearEndedExpectingCall(now)
+
     suspend fun togglePushAlertPackage(
         pkg: String,
         allowed: Boolean,

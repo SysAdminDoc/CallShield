@@ -1155,14 +1155,14 @@
     <string name="tile_protection_on">防护已开启</string>
     <string name="tile_protection_off">防护已关闭</string>
     <string name="expecting_call_title">等待来电</string>
-    <string name="expecting_call_subtitle">暂时让陌生来电响铃。你拦截的号码和规则仍然有效。</string>
+    <string name="expecting_call_subtitle">暂时让陌生来电和隐藏号码来电响铃。你拦截的号码、通配规则以及来电号码验证失败仍会拦截。</string>
     <string name="expecting_call_active">在 %1$s 之前，陌生来电可以响铃。</string>
     <string name="expecting_call_start">开始</string>
     <string name="expecting_call_end">立即结束</string>
     <string name="expecting_call_one_hour">1 小时</string>
     <string name="expecting_call_three_hours">3 小时</string>
     <string name="expecting_call_until_midnight">到午夜</string>
-    <string name="expecting_call_notification_text">在 %1$s 之前，陌生来电可以响铃。你拦截的号码和规则仍然有效。</string>
+    <string name="expecting_call_notification_text">在 %1$s 之前，陌生来电和隐藏号码来电可以响铃。你拦截的号码、通配规则以及来电号码验证失败仍会拦截。</string>
     <string name="tile_expecting_call_off">点按开启 1 小时</string>
     <string name="tile_expecting_call_on">到 %1$s</string>
     <string name="settings_region_cnap_rules">地区与主叫姓名规则</string>

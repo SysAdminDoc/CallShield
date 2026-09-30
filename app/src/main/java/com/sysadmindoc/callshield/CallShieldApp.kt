@@ -173,6 +173,14 @@ class CallShieldApp :
                     Log.w("CallShieldApp", "Failed to update stored evidence expiry", e)
                 }
             }
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).clearEndedExpectingCall(System.currentTimeMillis())
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to clear an ended expecting-a-call window", e)
+                }
+            }
             appScope.launch {
                 try {
                     DirectBootScreeningStore.observeAndMirror(

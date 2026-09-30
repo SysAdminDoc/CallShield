@@ -23,6 +23,12 @@ All notable changes to CallShield will be documented in this file.
   database fix their stored copy once, on the first start after the update.
   A trending number blocks again when its database entry has run out, and the
   weekly pipeline check counts expiry the same way the app does.
+- Expecting a call lets hidden callers ring too, including under the Contacts
+  only, Personal, Sleep and Maximum profiles and during a meeting. Its text now
+  says what still blocks: your blocked numbers, wildcard rules and a failed
+  caller ID check. On a locked phone the Quick Settings tile asks you to unlock
+  before it opens the window, and a window that has ended stays ended even if
+  the phone's clock moves back.
 
 ## v1.10.0 (2026-09-28)
 

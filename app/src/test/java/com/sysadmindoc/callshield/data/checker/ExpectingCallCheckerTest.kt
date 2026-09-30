@@ -6,12 +6,14 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.ExpectingCall
+import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,6 +80,46 @@ class ExpectingCallCheckerTest {
             now = until
             assertFalse(checker.isEnabled(call(prefs(until))))
             assertFalse(checker.isEnabled(call(emptyPreferences())))
+        }
+
+    @Test
+    fun `a hidden caller rings during the window under Contacts only and meeting mode`() {
+        val contactsOnly =
+            preferencesOf(
+                SpamRepository.KEY_EXPECTING_CALL_UNTIL to start + hour,
+                SpamRepository.KEY_CONTACTS_ONLY to true,
+                SpamRepository.KEY_BLOCK_UNKNOWN to true,
+            )
+        val zoom = "us.zoom.videomeetings"
+        assertNull(ExpectingCall.withheldCallBlockSource(contactsOnly, start, meetingApp = null))
+        assertNull(ExpectingCall.withheldCallBlockSource(contactsOnly, start, meetingApp = zoom))
+        // Once it ends, the settings decide again.
+        assertEquals("hidden_number", ExpectingCall.withheldCallBlockSource(contactsOnly, start + hour, meetingApp = zoom))
+        val meetingOnly = preferencesOf(SpamRepository.KEY_EXPECTING_CALL_UNTIL to start + hour)
+        assertEquals(MeetingModeChecker.MATCH_SOURCE, ExpectingCall.withheldCallBlockSource(meetingOnly, start + hour, meetingApp = zoom))
+        assertNull(ExpectingCall.withheldCallBlockSource(emptyPreferences(), start, meetingApp = null))
+    }
+
+    @Test
+    fun `an ended window is cleared once seen, so a clock stepped back finds it closed`() =
+        runBlocking {
+            val fixture = IsolatedRepositoryFixture(context)
+            try {
+                val repo = fixture.repository
+                repo.setExpectingCallUntil(start + hour)
+                // Still running: nothing is cleared.
+                repo.clearEndedExpectingCall(start + hour - 1)
+                assertTrue(ExpectingCall.isActive(repo.readPrefsSnapshot(), start))
+
+                assertTrue(ExpectingCall.hasEnded(repo.readPrefsSnapshot(), start + hour))
+                repo.clearEndedExpectingCall(start + hour)
+                val prefs = repo.readPrefsSnapshot()
+                assertFalse(ExpectingCall.hasEnded(prefs, start + hour))
+                // The clock steps back half an hour after the end.
+                assertFalse(ExpectingCall.isActive(prefs, start + hour / 2))
+            } finally {
+                fixture.close()
+            }
         }
 
     @Test

@@ -1688,14 +1688,14 @@
     <string name="tile_protection_on">Protection on</string>
     <string name="tile_protection_off">Protection off</string>
     <string name="expecting_call_title">Expecting a call</string>
-    <string name="expecting_call_subtitle">Let unknown callers ring for a while. Your blocked numbers and rules still apply.</string>
+    <string name="expecting_call_subtitle">Let unknown and hidden callers ring for a while. Your blocked numbers, wildcard rules and a failed caller ID check still block.</string>
     <string name="expecting_call_active">Unknown callers can ring until %1$s.</string>
     <string name="expecting_call_start">Start</string>
     <string name="expecting_call_end">End now</string>
     <string name="expecting_call_one_hour">For 1 hour</string>
     <string name="expecting_call_three_hours">For 3 hours</string>
     <string name="expecting_call_until_midnight">Until midnight</string>
-    <string name="expecting_call_notification_text">Unknown callers can ring until %1$s. Your blocked numbers and rules still apply.</string>
+    <string name="expecting_call_notification_text">Unknown and hidden callers can ring until %1$s. Your blocked numbers, wildcard rules and a failed caller ID check still block.</string>
     <string name="tile_expecting_call_off">Tap for 1 hour</string>
     <string name="tile_expecting_call_on">Until %1$s</string>
 
