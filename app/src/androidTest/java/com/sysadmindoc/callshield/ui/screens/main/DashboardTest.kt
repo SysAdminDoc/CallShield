@@ -170,11 +170,13 @@ class DashboardTest {
                 callScreenerReady = true,
                 overlayGranted = true,
                 notificationsGranted = true,
+                notificationAccessNeeded = false,
                 onReviewPermissions = {},
                 onSyncDatabase = {},
                 onEnableCallScreener = {},
                 onEnableOverlay = {},
                 onEnableNotifications = {},
+                onEnableNotificationAccess = {},
             )
         }
 
@@ -216,12 +218,14 @@ class DashboardTest {
                 callScreenerReady = false,
                 overlayGranted = true,
                 notificationsGranted = true,
+                notificationAccessNeeded = false,
                 onReviewPermissions = {},
                 onSyncDatabase = {},
                 // The phone can't be asked for the role, so the row can only say what's missing.
                 onEnableCallScreener = null,
                 onEnableOverlay = {},
                 onEnableNotifications = {},
+                onEnableNotificationAccess = {},
             )
         }
 
@@ -262,11 +266,13 @@ class DashboardTest {
                 callScreenerReady = false,
                 overlayGranted = true,
                 notificationsGranted = true,
+                notificationAccessNeeded = false,
                 onReviewPermissions = {},
                 onSyncDatabase = {},
                 onEnableCallScreener = { screenerRequests++ },
                 onEnableOverlay = {},
                 onEnableNotifications = {},
+                onEnableNotificationAccess = {},
             )
         }
 
