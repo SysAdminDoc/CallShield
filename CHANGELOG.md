@@ -18,11 +18,13 @@ All notable changes to CallShield will be documented in this file.
   footer alone. "Reply STOP to opt out" scored 40 against aggressive mode's
   bar of 25, so a clinic's appointment reminder or a pharmacy's refill notice
   was blocked on its last line. Answer and opt-out wording now counts only
-  next to a real spam pattern, or in a text that doesn't say who sent it. The
-  carrier rules make a business open with its name ("Lakeside Family Clinic:
-  ..." or "this is Dana from Maple Street Dental"), while scams paste the
-  footer onto a chatty opener that never says. Recall on the IMC 2025
-  smishing sample stays at its floors.
+  next to another spam signal (a lure, a suspicious link, shouting or a
+  callback number), or in a text that doesn't say who sent it. The carrier
+  rules make a business open with its name ("Lakeside Family Clinic: ...",
+  "[Corner Market] ..." or "this is Dana from Maple Street Dental"), while
+  scams paste the footer onto a chatty opener that never says. A time like
+  3:30, a link, a greeting or a word like Alert in front of the colon isn't
+  a name. Recall on the IMC 2025 smishing sample went up slightly.
 - A number the maintainer approved can now be taken back. Its entry in
   `spam_numbers_approved.json` gets `"revoked": true` and a date, and the next
   merge strips the review from the row. A row the review alone was holding up

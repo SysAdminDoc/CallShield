@@ -157,8 +157,8 @@ class SmsContentAnalyzer
         // confirm"), and alone they blocked a clinic's appointment reminder in
         // aggressive mode. Scams copy the footer onto a chatty opener too
         // ("Hey Sam, are you free for coffee? Reply STOP to unsubscribe"), so
-        // they still count after a pattern above, or when the text doesn't say
-        // who sent it (see [namedSender]).
+        // they still count next to any other signal, or when the text doesn't
+        // say who sent it (see [namesItsSender]).
         private val responseCues =
             listOf(
                 Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
@@ -167,13 +167,47 @@ class SmsContentAnalyzer
             )
 
         // The carrier rules also make a business say who it is first:
-        // "Lakeside Family Clinic: your visit is..." or "this is Dana from
-        // Maple Street Dental". A greeting or a link before the colon isn't a name.
-        private val namedSender =
-            Regex(
-                "^[^\\p{L}\\p{N}]*(?!(?i:hi|hey|hello|dear|good|https?)(?![\\p{L}\\p{N}]))\\p{L}[\\p{L}\\p{N}&'’. -]{0,38}:" +
-                    "|(?i:this is)$SPACE+[\\p{L}'’. ]{1,30}$SPACE+(?i:from|at|with)$SPACE+\\p{Lu}",
-            )
+        // "Lakeside Family Clinic: your visit is...", "[Corner Market] your
+        // order..." or "this is Dana from Maple Street Dental". The colon has to
+        // be followed by a space, so "3:30", "https://" and "tel:" aren't names.
+        private val senderPrefix =
+            Regex("^[^\\p{L}\\p{N}\\[]*(?:\\[([^\\]\\n]{1,40})]|([\\p{L}\\p{N}][\\p{L}\\p{N}&'’.\\- ]{0,39}):(?:$SPACE|\$))")
+
+        // Each name word is its own run of letters, never spaces, so a long run
+        // of spaces after "this is" can't make the engine try every split.
+        private val senderIntroduction =
+            Regex("(?i:\\bthis is)$SPACE+(?:\\p{L}[\\p{L}'’.-]*$SPACE+){1,3}?(?i:from|at|with)$SPACE+\\p{Lu}")
+
+        private val nameWordSeparator = Regex("$SPACE+")
+
+        // Openers that start a notice or a greeting, not a business's name:
+        // "Alert:", "Valued customer:", "Hi Sam:", "Quick question:".
+        private val notANameOpener =
+            (
+                "hi hey hello hiya howdy yo greetings dear good valued customer member user client friend sir madam " +
+                    "alert notice warning urgent important attention final reminder update info notification action " +
+                    "security account message msg re fwd fw your our my the a congrats congratulations quick question " +
+                    "note ps http https www tel sms"
+            ).split(' ').toSet()
+
+        // Lowercase words a business name can carry: "Bank of America", "Smith & Sons".
+        private val nameConnectors = "of the and for at on de del la le du des da do y & + -".split(' ').toSet()
+
+        // A sender's name is a few capitalized words or digits ("Rosa's Kitchen",
+        // "Bank of America", "7-Eleven", "24 Hour Fitness") that doesn't open
+        // with a greeting or a notice word.
+        private fun looksLikeName(name: String): Boolean {
+            val words = name.split(nameWordSeparator).filter { it.isNotEmpty() }
+            if (words.isEmpty() || words.size > 5 || name.none { it.isLetter() }) return false
+            if (words.first().lowercase().trim { !it.isLetterOrDigit() } in notANameOpener) return false
+            return words.all { word -> word.lowercase() in nameConnectors || word.any { it.isUpperCase() || it.isDigit() } }
+        }
+
+        private fun namesItsSender(text: String): Boolean {
+            val prefix = senderPrefix.find(text)
+            val name = prefix?.let { it.groupValues[1].ifEmpty { it.groupValues[2] } }
+            return (name != null && looksLikeName(name)) || senderIntroduction.containsMatchIn(text)
+        }
 
         // Phone number in SMS body (common in callback scams)
         private val phoneInBody =
@@ -418,6 +452,19 @@ class SmsContentAnalyzer
                 reasons.add("disguised_text")
             }
 
+            // The signals scored below, worked out first so the footer decision
+            // can see every one of them.
+            val alphaChars = ruleText.filter { it.isLetter() }
+            val shouting = alphaChars.length > 10 && alphaChars.count { it.isUpperCase() }.toFloat() / alphaChars.length > 0.5f
+            val callback = phoneInBody.containsMatchIn(ruleText)
+            val specialRatio =
+                ruleText.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() /
+                    ruleText.length.coerceAtLeast(1)
+            val specialHeavy = specialRatio > 0.15f && ruleText.length > 20
+            val shortWithUrl = visibleText.length < 50 && urls.isNotEmpty()
+            val replyBait = firstContact && SmsReplyBait.matches(ruleText, urls, visibleText.length)
+            val otherSignal = score > 0 || shouting || callback || specialHeavy || shortWithUrl || replyBait
+
             // Check spam keyword patterns
             var patternHits = 0
             val countPatternHit = {
@@ -433,7 +480,7 @@ class SmsContentAnalyzer
                 if (patternHits >= 3) break // Cap pattern contribution
                 if (pattern.containsMatchIn(ruleText)) countPatternHit()
             }
-            if (patternHits > 0 || !namedSender.containsMatchIn(ruleText)) {
+            if (patternHits > 0 || otherSignal || !namesItsSender(ruleText)) {
                 for (cue in responseCues) {
                     if (patternHits >= 3) break
                     if (cue.containsMatchIn(ruleText)) countPatternHit()
@@ -441,36 +488,32 @@ class SmsContentAnalyzer
             }
 
             // All caps text (>50% of message) — shouting is a spam signal
-            val alphaChars = ruleText.filter { it.isLetter() }
-            if (alphaChars.length > 10 && alphaChars.count { it.isUpperCase() }.toFloat() / alphaChars.length > 0.5f) {
+            if (shouting) {
                 score += 15
                 reasons.add("excessive_caps")
             }
 
             // Contains phone number in body (callback scam) — regex is
             // case-insensitive so we match the original body instead of lowercasing.
-            if (phoneInBody.containsMatchIn(ruleText)) {
+            if (callback) {
                 score += 10
                 reasons.add("callback_number")
             }
 
             // Excessive special characters / emoji (common in spam)
-            val specialRatio =
-                ruleText.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() /
-                    ruleText.length.coerceAtLeast(1)
-            if (specialRatio > 0.15f && ruleText.length > 20) {
+            if (specialHeavy) {
                 score += 10
                 reasons.add("special_chars")
             }
 
             // Very short message with URL (likely phishing). Counted without
             // invisible characters, which would otherwise pad it past the limit.
-            if (visibleText.length < 50 && urls.isNotEmpty()) {
+            if (shortWithUrl) {
                 score += 20
                 reasons.add("short_msg_with_url")
             }
 
-            if (firstContact && SmsReplyBait.matches(ruleText, urls, visibleText.length)) {
+            if (replyBait) {
                 score += REPLY_BAIT_SCORE
                 reasons.add("reply_bait")
             }

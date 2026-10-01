@@ -786,6 +786,77 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `any other signal brings a named sender's footer back`() {
+        // A brand name up front doesn't make a link or a callback lure safe.
+        listOf(
+            "USPS: your parcel is on hold. Reschedule at https://usps-parcel.top/r" to 70,
+            "Lakeside Clinic: confirm your visit at https://bit.ly/3xYz" to 75,
+            "CVS: YOUR PRESCRIPTION IS READY FOR PICKUP TODAY" to 55,
+            "Lakeside Clinic: call 800-555-0100 about your visit." to 50,
+        ).forEach { (lure, expected) ->
+            val footed = SmsContentAnalyzer.analyze("$lure Reply STOP to opt out.")
+            assertEquals(lure, expected, footed.score)
+            assertTrue(lure, "spam_keywords" in footed.reasons)
+        }
+    }
+
+    @Test
+    fun `a time, a link or a notice word before a colon doesn't name a sender`() {
+        listOf(
+            "Are you free Saturday at 3:30? Reply STOP to unsubscribe.",
+            // Capitalized and short, but the colon sits inside a time.
+            "Saturday 3:30 works for me? Reply STOP to unsubscribe.",
+            "Meet me at 5:30 by the fountain. Reply STOP to unsubscribe.",
+            "Look at these pics https://photos.example.com/abc Reply STOP to unsubscribe.",
+            "tel:8005551234 is our new line. Reply STOP to opt out.",
+            "Valued customer: we miss you. Reply STOP to unsubscribe.",
+            "Valued Customer: we miss you. Reply STOP to unsubscribe.",
+            "Hiya: long time no see! Reply STOP to unsubscribe.",
+            "Greetings: we have news for you. Reply STOP to unsubscribe.",
+            "Quick question: are you free this week? Reply STOP to unsubscribe.",
+            "Hi Sam: are you free this week? Reply STOP to unsubscribe.",
+            "[1/2] Hey, are you free? Reply STOP to unsubscribe.",
+            // A sentence isn't a name: lowercase words, or more than five.
+            "are you around tonight: text me back. Reply STOP to unsubscribe.",
+            "We Want You Back At The Gym: Reply STOP to unsubscribe.",
+        ).forEach { body ->
+            assertEquals(body, 40, SmsContentAnalyzer.analyze(body).score)
+        }
+        assertEquals(25, SmsContentAnalyzer.analyze("Alert: your parcel is waiting. Reply Y to confirm.").score)
+        assertEquals(25, SmsContentAnalyzer.analyze("Notice: your package is at the depot. Reply 1 for help.").score)
+    }
+
+    @Test
+    fun `a business named with digits, connectors or brackets is a sender`() {
+        listOf(
+            "7-Eleven: your order is ready for pickup. Reply STOP to opt out.",
+            "24 Hour Fitness: your class starts at 6 PM. Reply STOP to opt out.",
+            "Smith & Sons Plumbing: we're on our way. Reply STOP to opt out.",
+            "[Lakeside Clinic] Your visit is tomorrow at 9:00. Reply Y to confirm.",
+        ).forEach { body ->
+            assertEquals(body, 0, SmsContentAnalyzer.analyze(body).score)
+        }
+    }
+
+    @Test
+    fun `a long run of spaces can't stall the sender check`() {
+        // The first version of the "this is Dana from" rule let spaces sit
+        // inside and around the name, and 16,000 of them took over a minute.
+        listOf(
+            "this is" + " ".repeat(16_000) + "x",
+            "this is Dana" + " ".repeat(16_000) + "from",
+            "this is " + "a ".repeat(8_000),
+            "[" + " ".repeat(16_000),
+            "Lakeside" + " ".repeat(16_000) + ":",
+        ).forEach { body ->
+            val started = System.nanoTime()
+            SmsContentAnalyzer.analyze(body)
+            val millis = (System.nanoTime() - started) / 1_000_000
+            assertTrue("${body.take(12).trim()}... took $millis ms", millis < 2_000)
+        }
+    }
+
+    @Test
     fun `interview and payslip texts stay clean`() {
         listOf(
             "Reminder: your job interview is tomorrow at 10:00 at our Main Street office. Please bring a photo ID.",
