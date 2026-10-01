@@ -980,6 +980,20 @@ object BackupRestore {
 
     internal fun backupToJson(backup: Backup): String = moshi.adapter(Backup::class.java).toJson(backup)
 
+    internal fun backupFromJson(json: String): Backup? = moshi.adapter(Backup::class.java).fromJson(json)
+
+    /**
+     * Adds rows this device wrote itself back without the import checks, the
+     * way an Undo does (see [toUndoPayload]).
+     */
+    internal suspend fun restoreOwnRows(
+        context: Context,
+        backup: Backup,
+        dao: SpamDao,
+        repo: SpamRepository,
+        sections: Set<BackupSection>,
+    ): RestoreResult = restorePayload(context, backup.toUndoPayload(sections), RestoreMode.MERGE, dao, repo, sections)
+
     private fun Backup.rawItemCount(): Long =
         blockedNumbers.size.toLong() +
             whitelistNumbers.size +

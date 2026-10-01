@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
@@ -56,6 +57,12 @@ internal class IsolatedRepositoryFixture(
 
     /** Closes the database under the repository, so its next write throws. */
     fun breakDatabase() = database.close()
+
+    /** The database as SQLite hands it to a corruption callback. */
+    val sqlite: SupportSQLiteDatabase get() = database.openHelper.writableDatabase
+
+    /** Drops [table], so every query on it throws while the rest of the database reads. */
+    fun damageTable(table: String) = sqlite.execSQL("DROP TABLE `$table`")
 
     override fun close() {
         database.close()

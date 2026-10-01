@@ -7,6 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
@@ -370,9 +372,19 @@ abstract class AppDatabase : RoomDatabase() {
         internal fun builder(
             context: Context,
             name: String,
+            afterRebuild: () -> Unit = { CorruptionRescue.afterRebuild(context) },
         ): RoomDatabase.Builder<AppDatabase> =
             Room
                 .databaseBuilder(context, AppDatabase::class.java, name)
+                // SQLite deletes a damaged database on the spot; the user's own
+                // rows are read out of it first and put back afterwards.
+                .openHelperFactory(
+                    RescuingOpenHelperFactory(
+                        delegate = FrameworkSQLiteOpenHelperFactory(),
+                        beforeDelete = { db -> CorruptionRescue.save(context, db) },
+                        afterDelete = afterRebuild,
+                    ),
+                )
                 // Destructive migration is restricted to legacy schema versions (1–4)
                 // whose schemas were never exported, so retroactive Migration objects
                 // cannot be written. From DB_VERSION 5 onward EVERY version bump
@@ -425,23 +437,5 @@ abstract class AppDatabase : RoomDatabase() {
             }
             return false
         }
-
-        /**
-         * Delete a corrupt on-disk database and drop the cached instance so
-         * the next [getInstance] rebuilds a clean schema. Spam numbers are
-         * re-syncable from GitHub/bundled data, so wiping the local copy is an
-         * acceptable recovery from an otherwise-unrecoverable file — far
-         * better than the DAO throwing forever and the screener failing open.
-         * Returns true if a database file was deleted.
-         */
-        fun recoverFromCorruption(context: Context): Boolean =
-            synchronized(this) {
-                try {
-                    instance?.close()
-                } catch (_: Exception) {
-                }
-                instance = null
-                context.applicationContext.deleteDatabase("callshield.db")
-            }
     }
 }

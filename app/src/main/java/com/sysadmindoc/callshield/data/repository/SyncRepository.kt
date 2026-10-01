@@ -88,7 +88,15 @@ class SyncRepository(
                     val currentShardHashes = settingsRepository.readLastDataShardHashes()
                     if (!force) {
                         val currentSha = settingsRepository.readLastDataSha()
-                        if (preFetchSha != null && preFetchSha == currentSha && currentShardHashes != null) {
+                        // The stored commit describes the rows only while they're here. A
+                        // database rebuilt after corruption, or settings restored from a
+                        // cloud backup (which leaves the database out), keeps the commit
+                        // and loses the rows.
+                        if (preFetchSha != null &&
+                            preFetchSha == currentSha &&
+                            currentShardHashes != null &&
+                            dao.getCountBySource(GITHUB_SOURCE) > 0
+                        ) {
                             return@withContext SyncResult(
                                 success = true,
                                 message = context.getString(R.string.sync_database_up_to_date),
@@ -519,8 +527,19 @@ class SyncRepository(
                 } else {
                     settingsRepository.readLastDataShardHashes().orEmpty()
                 }
+            val storedNumbers = dao.getNumbersBySource(GITHUB_SOURCE)
+            val storedPrefixes = dao.getAllPrefixesForSync()
+            val storedShardIds =
+                storedNumbers.mapTo(HashSet()) { spamShardIdFor(it.number) }.also { ids ->
+                    storedPrefixes.mapTo(ids) { spamShardIdFor(it.prefix) }
+                }
             val descriptorsById = manifest.shards.associateBy { it.id }
-            val changedDescriptors = manifest.shards.filter { previousHashes[it.id] != it.sha256 }
+            // A shard whose hash matches but whose rows are all gone lost them
+            // under that hash (see syncFromGitHub), so it's fetched again.
+            val changedDescriptors =
+                manifest.shards.filter {
+                    previousHashes[it.id] != it.sha256 || (it.numbers + it.prefixes > 0 && it.id !in storedShardIds)
+                }
             val changedIds = changedDescriptors.map { it.id }.toSet()
             val removedIds = previousHashes.keys - descriptorsById.keys
             val fetchedShards =
@@ -530,12 +549,10 @@ class SyncRepository(
 
             val preservedUserBlocks = readPreservedUserBlocks()
             val retainedNumbers =
-                dao
-                    .getNumbersBySource("github")
-                    .filter { number ->
-                        val shardId = spamShardIdFor(number.number)
-                        shardId in descriptorsById && shardId !in changedIds
-                    }
+                storedNumbers.filter { number ->
+                    val shardId = spamShardIdFor(number.number)
+                    shardId in descriptorsById && shardId !in changedIds
+                }
             val importedNumbers =
                 fetchedShards.values.flatMap { shard ->
                     sanitizeDatabaseNumbers(
@@ -547,12 +564,10 @@ class SyncRepository(
             val numbers = mergeNumbers(retainedNumbers, importedNumbers)
 
             val retainedPrefixes =
-                dao
-                    .getAllPrefixesForSync()
-                    .filter { prefix ->
-                        val shardId = spamShardIdFor(prefix.prefix)
-                        shardId in descriptorsById && shardId !in changedIds
-                    }
+                storedPrefixes.filter { prefix ->
+                    val shardId = spamShardIdFor(prefix.prefix)
+                    shardId in descriptorsById && shardId !in changedIds
+                }
             val importedPrefixes = fetchedShards.values.flatMap { shard -> sanitizeDatabasePrefixes(shard.prefixes) }
             val prefixes = mergePrefixes(retainedPrefixes, importedPrefixes)
 
@@ -1126,6 +1141,9 @@ class SyncRepository(
 }
 
 private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500
+
+/** The source every row of the published spam database is stored under. */
+private const val GITHUB_SOURCE = "github"
 
 /** How saving a feed mirror went. */
 enum class FeedMirrorSave {

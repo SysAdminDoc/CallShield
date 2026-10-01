@@ -10,6 +10,7 @@ import android.util.Log
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
@@ -317,19 +318,12 @@ class CallShieldScreeningService : CallScreeningService() {
                             respondAllow(responseGate)
                         } catch (_: Exception) {
                         }
-                        // A corrupt on-disk database would otherwise fail every DAO
-                        // call and leave the screener permanently fail-open with no
-                        // signal. Detect that specific case, rebuild a clean DB, and
-                        // re-sync so protection self-heals on the next call.
+                        // SQLite has already swapped a damaged database for an empty
+                        // one by the time its error gets here. Make sure the user's
+                        // own rows and the spam data come back, so the next call is
+                        // screened against them.
                         if (AppDatabase.isCorruptionException(e)) {
-                            try {
-                                if (AppDatabase.recoverFromCorruption(appContext)) {
-                                    Log.w(TAG, "Recovered from corrupt database; re-syncing spam data")
-                                    SyncWorker.syncNow(appContext)
-                                    HotListSyncWorker.schedule(appContext)
-                                }
-                            } catch (_: Exception) {
-                            }
+                            CorruptionRescue.afterRebuild(appContext)
                         }
                     }
                 }

@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.RestoreSentinel
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -99,6 +100,17 @@ class CallShieldApp :
                 }
             } catch (e: Exception) {
                 Log.e("CallShieldApp", "Failed to reconcile an interrupted restore", e)
+            }
+            try {
+                // Rows saved from a damaged database that the last process
+                // didn't get to put back go in before a worker or the screener
+                // reads the database.
+                if (CorruptionRescue.isPending(this)) {
+                    runBlocking { CorruptionRescue.importPending(this@CallShieldApp) }
+                    SyncWorker.syncNow(this)
+                }
+            } catch (e: Exception) {
+                Log.e("CallShieldApp", "Failed to put back the rows saved from a corrupt database", e)
             }
             val restoreCheckMillis = SystemClock.elapsedRealtime() - restoreCheckStartedAt
             // After the restore check, so the caches hold the restored rules.

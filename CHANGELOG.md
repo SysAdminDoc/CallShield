@@ -4,6 +4,14 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Your own blocks, allow list and rules now survive a damaged database.
+  Android deletes the file as soon as it finds a bad page, which used to
+  take all of them with it. CallShield now copies them out first and puts
+  them back into the new database. The screener also stopped letting every
+  call through after a rebuild until the app restarted.
+- A phone that comes back from a cloud backup, or whose database had to be
+  rebuilt, downloads the whole spam list again. Before, the restored
+  settings claimed the list was current and only changed parts came down.
 - The outgoing call check now also holds a call to a number that appeared
   in a text CallShield flagged as spam during the last 30 days. Fake bank
   and delivery texts ask you to call a number back, and the hold notice

@@ -1,27 +1,42 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.Context
+import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class FlaggedTextNumbersTest {
-    private val fixture = IsolatedRepositoryFixture(ApplicationProvider.getApplicationContext())
+    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val fixture = IsolatedRepositoryFixture(context)
     private val repository = fixture.repository
     private val now = 1_800_000_000_000L
     private val sender = "+12025550143"
     private val callback = "+18003451234"
     private val text = "Your order is on hold. Call 1-800-345-1234 to cancel."
 
+    /** Bare ten-digit numbers count only on a North American phone, and the region is cached across tests. */
+    @Before
+    fun setUp() {
+        shadowOf(context.getSystemService(TelephonyManager::class.java)).setSimCountryIso("us")
+        PhoneIdentityCanonicalizer.resetCacheForTests()
+    }
+
     @After
-    fun tearDown() = fixture.close()
+    fun tearDown() {
+        fixture.close()
+        PhoneIdentityCanonicalizer.resetCacheForTests()
+    }
 
     @Test
     fun `a number in a flagged text is kept for 30 days`() =
