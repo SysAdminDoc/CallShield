@@ -146,9 +146,11 @@ data class CheckContext(
      * [com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer.equivalentForms]).
      */
     val alternateForms: List<String> = emptyList(),
+    /** The phone's home region, which decides how a bare number reads ([NumberingPlan.from]). */
+    val homeRegionIso: String? = null,
 ) {
     /** Shared plan classification for NANP-only checkers in this evaluation. */
-    val numberingPlan: NumberingPlan = NumberingPlan.from(number)
+    val numberingPlan: NumberingPlan = NumberingPlan.from(number, homeRegionIso)
 
     /**
      * Forms to try when matching stored numbers exactly, canonical first.

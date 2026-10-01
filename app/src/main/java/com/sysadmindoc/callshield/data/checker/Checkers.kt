@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
+import com.sysadmindoc.callshield.data.NumberingPlan
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
@@ -978,6 +979,7 @@ internal class HeuristicChecker(
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp },
                 enableNeighborSpoof = ctx.prefs[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true,
                 senderProvenance = ctx.senderProvenance,
+                homeRegionIso = ctx.homeRegionIso,
             )
 
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
@@ -1137,6 +1139,9 @@ internal class MlScorerChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_ML_SCORER] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
+        // The model learned North American numbers only, and on a phone elsewhere
+        // ten bare digits are some other plan's number.
+        if (ctx.numberingPlan != NumberingPlan.NANP) return null
         val verdict = spamMLScorer.verdict(ctx.number, ctx.callerIdentity)
         return if (verdict.isSpam) {
             BlockResult.block(

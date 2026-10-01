@@ -386,6 +386,7 @@ class SpamHeuristics
             windowMs: Long = 3600_000,
             threshold: Int = 3,
             numberingPlan: NumberingPlan = NumberingPlan.from(number),
+            homeRegionIso: String? = null,
         ): Boolean {
             // Short codes and other unreadable senders never count: repeated 2FA
             // texts would look like rapid fire.
@@ -398,7 +399,7 @@ class SpamHeuristics
             val normalized = if (nanp) filterAsciiDigitsLast(number, 10) else filterAsciiDigits(number)
             val count =
                 recentNumbers.count { (num, time) ->
-                    val samePlan = NumberingPlan.from(num) == numberingPlan
+                    val samePlan = NumberingPlan.from(num, homeRegionIso) == numberingPlan
                     val sameCaller = if (nanp) filterAsciiDigitsLast(num, 10) == normalized else filterAsciiDigits(num) == normalized
                     samePlan && sameCaller && (now - time) < windowMs
                 }
@@ -423,6 +424,7 @@ class SpamHeuristics
             recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
             enableNeighborSpoof: Boolean = true,
             senderProvenance: SenderProvenance? = null,
+            homeRegionIso: String? = null,
         ): HeuristicResult {
             var score = 0
             val reasons = mutableListOf<String>()
@@ -468,7 +470,7 @@ class SpamHeuristics
             }
 
             // Rapid-fire calling
-            if (isRapidFire(recentBlockedNumbers, number, numberingPlan = numberingPlan)) {
+            if (isRapidFire(recentBlockedNumbers, number, numberingPlan = numberingPlan, homeRegionIso = homeRegionIso)) {
                 score += 40
                 reasons.add("rapid_fire")
             }

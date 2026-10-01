@@ -258,6 +258,7 @@ class SpamRepositoryImpl(
                 smsContextTrusted = smsContextTrusted,
                 senderProvenance = senderProvenance,
                 alternateForms = equivalentForms(normalized).drop(1),
+                homeRegionIso = senderRegionIso,
             )
 
         val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
@@ -334,6 +335,7 @@ class SpamRepositoryImpl(
                 smsContextTrusted = smsContextTrusted,
                 smsFirstContact = smsFirstContact,
                 senderProvenance = senderProvenance,
+                homeRegionIso = senderRegionIso,
             )
         val pipelineRun = CheckerPipeline.runWithDiagnostics(smsExtensions, ctx)
         val verdict = pipelineRun.result
@@ -363,6 +365,7 @@ class SpamRepositoryImpl(
                 realtimeCall = false,
                 prefs = prefs,
                 alternateForms = equivalentForms(normalized).drop(1),
+                homeRegionIso = senderRegionIso,
             )
         return CheckerPipeline.traceAll(callChain, ctx)
     }

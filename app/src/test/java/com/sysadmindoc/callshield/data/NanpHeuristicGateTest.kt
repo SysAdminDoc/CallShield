@@ -89,7 +89,64 @@ class NanpHeuristicGateTest {
         assertTrue(heuristics.isHighSpamVoipRange("+12025551234"))
     }
 
-    private fun checkContext(number: String) = CheckContext(appContext = context, number = number, realtimeCall = true, prefs = emptyPreferences())
+    @Test
+    fun `a bare ten-digit number is North American only on a North American phone`() {
+        for (region in listOf("US", "CA", null)) {
+            assertEquals("$region", NumberingPlan.NANP, checkContext("2025551234", region).numberingPlan)
+            assertEquals("$region", NumberingPlan.NANP, checkContext("12025551234", region).numberingPlan)
+        }
+        for (region in listOf("AU", "GB")) {
+            assertEquals(region, NumberingPlan.OTHER, checkContext("2025551234", region).numberingPlan)
+            assertEquals(region, NumberingPlan.OTHER, checkContext("12025551234", region).numberingPlan)
+            assertEquals("a short code stays unreadable", NumberingPlan.UNREADABLE, checkContext("72345", region).numberingPlan)
+            assertEquals("a +1 number is North American anywhere", NumberingPlan.NANP, checkContext("+12025551234", region).numberingPlan)
+        }
+    }
+
+    @Test
+    fun `outside North America a bare number gets none of the NANP scores`() {
+        setOwnNumber("2025559999")
+        heuristics.updateHotRanges(listOf("202555"))
+        val now = System.currentTimeMillis()
+        // A VoIP range, a hot range and the phone's own exchange, all at once.
+        val ranged = "2025551234"
+        val tollFree = "8885551234"
+        // The same line written the North American way, three times in the hour.
+        val history = List(3) { "12025551234" to now - 1000L }
+
+        for (region in listOf("US", "CA", null)) {
+            assertEquals(
+                "$region",
+                listOf("voip_spam_range", "hot_campaign_range", "neighbor_spoof", "rapid_fire"),
+                analyze(ranged, region, history).reasons,
+            )
+            assertEquals("$region", listOf("toll_free"), analyze(tollFree, region, emptyList()).reasons)
+        }
+        for (region in listOf("AU", "GB")) {
+            assertEquals(region, 0, analyze(ranged, region, history).score)
+            assertEquals(region, 0, analyze(tollFree, region, emptyList()).score)
+            // The same digits again are still a repeat caller; rapid fire isn't a NANP rule.
+            val repeats = List(3) { ranged to now - 1000L }
+            assertEquals(region, listOf("rapid_fire"), analyze(ranged, region, repeats).reasons)
+        }
+    }
+
+    private fun analyze(
+        number: String,
+        region: String?,
+        history: List<Pair<String, Long>>,
+    ) = heuristics.analyze(
+        context,
+        number,
+        numberingPlan = checkContext(number, region).numberingPlan,
+        recentBlockedNumbers = history,
+        homeRegionIso = region,
+    )
+
+    private fun checkContext(
+        number: String,
+        region: String? = null,
+    ) = CheckContext(appContext = context, number = number, realtimeCall = true, prefs = emptyPreferences(), homeRegionIso = region)
 
     private fun setOwnNumber(number: String) {
         val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager

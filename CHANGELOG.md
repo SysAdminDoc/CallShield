@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- On a phone outside North America, a ten-digit number the phone couldn't
+  place is no longer scored by North American rules. An Australian phone
+  gave `8881234567` the toll-free score, and the VoIP-range, campaign-range,
+  neighbor and model scores could pile onto a spoofed number the same way.
+  Repeat calls from the same number still count everywhere. Phones in the
+  US or Canada, or with no known region, behave as before.
 - A link whose host ends in a dot, like `https://evil.com./login`, is now
   checked against the phishing feed and the spam-domain list. Browsers open
   it like the plain address, but the dot hid it from both, and from the
