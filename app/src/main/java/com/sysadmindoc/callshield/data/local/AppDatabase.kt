@@ -293,7 +293,7 @@ val MIGRATION_19_20 =
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `flagged_text_numbers` " +
-                    "(`number` TEXT NOT NULL, `seenAt` INTEGER NOT NULL, PRIMARY KEY(`number`))",
+                    "(`number` TEXT NOT NULL, `sender` TEXT NOT NULL, `seenAt` INTEGER NOT NULL, PRIMARY KEY(`number`, `sender`))",
             )
         }
     }

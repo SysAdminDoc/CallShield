@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -68,7 +69,57 @@ class FlaggedTextNumbersTest {
             assertEquals(now + 1_000L, repository.lastFlaggedTextSighting(callback, now + 2_000L))
         }
 
+    @Test
+    fun `not spam on a sender forgets only that sender's numbers`() =
+        runBlocking {
+            repository.logFlaggedText(sender, text, "sms_content", 80, timestamp = now - DAY)
+            repository.logFlaggedText(OTHER_SENDER, "Final notice. Call 800.345.1234", "sms_content", 80, timestamp = now - 2 * DAY)
+
+            repository.forgetFlaggedTextNumbers(sender)
+
+            assertEquals("the other sender's text still counts", now - 2 * DAY, repository.lastFlaggedTextSighting(callback, now))
+            repository.forgetFlaggedTextNumbers(OTHER_SENDER)
+            assertNull(repository.lastFlaggedTextSighting(callback, now))
+        }
+
+    @Test
+    fun `a sender written another way is the same sender`() =
+        runBlocking {
+            repository.logFlaggedText("(202) 555-0143", text, "rcs_sms_content", 80, timestamp = now)
+
+            repository.forgetFlaggedTextNumbers(sender)
+
+            assertNull(repository.lastFlaggedTextSighting(callback, now))
+        }
+
+    @Test
+    fun `not spam on the callback number itself lets it be called`() =
+        runBlocking {
+            repository.logFlaggedText(sender, text, "sms_content", 80, timestamp = now - DAY)
+
+            repository.forgetFlaggedTextNumbers(callback)
+
+            assertNull(repository.lastFlaggedTextSighting(callback, now))
+        }
+
+    @Test
+    fun `only the newest rows are kept`() =
+        runBlocking {
+            val max = 10
+            val rows = (0..max + 1).map { FlaggedTextNumber(number = "+1800345" + it.toString().padStart(4, '0'), sender = sender, seenAt = now - it) }
+            fixture.dao.upsertFlaggedTextNumbers(rows)
+            // The same number from a second sender is a row of its own.
+            fixture.dao.upsertFlaggedTextNumbers(listOf(rows.first().copy(sender = OTHER_SENDER)))
+
+            fixture.dao.trimFlaggedTextNumbers(max)
+
+            assertEquals(now, fixture.dao.lastFlaggedTextSighting(listOf(rows.first().number), 0L))
+            assertEquals(now - (max - 2), fixture.dao.lastFlaggedTextSighting(listOf(rows[max - 2].number), 0L))
+            assertNull(fixture.dao.lastFlaggedTextSighting(listOf(rows[max - 1].number), 0L))
+        }
+
     private companion object {
         const val DAY = 86_400_000L
+        const val OTHER_SENDER = "+13125550199"
     }
 }

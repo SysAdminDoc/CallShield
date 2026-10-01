@@ -481,7 +481,7 @@ class BlocklistRepository(
             val sender = normalizeLogIdentity(number)
             // Every sighting, repeats too: the notification copy can be cut
             // short before the number and still be the one that got logged.
-            rememberCallbackNumbers(smsBody, timestamp)
+            rememberCallbackNumbersFrom(sender, smsBody, timestamp)
             val recent = dao.flaggedTextsSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS)
             val listener = fromListener(matchReason)
             val repeat = recent.any { sameFlaggedText(it.body, smsBody, samePath = fromListener(it.matchReason) == listener) }
@@ -499,8 +499,25 @@ class BlocklistRepository(
             true
         }
 
+    /** Keeps the numbers a flagged text that gets no log row of its own asks the reader to call. */
+    suspend fun rememberCallbackNumbers(
+        sender: String,
+        smsBody: String?,
+        timestamp: Long = System.currentTimeMillis(),
+    ) = rememberCallbackNumbersFrom(normalizeLogIdentity(sender), smsBody, timestamp)
+
+    /**
+     * Forgets the numbers from [sender]'s flagged texts, and the number itself
+     * in any of its [forms] as a callback number, once the user says it isn't spam.
+     */
+    suspend fun forgetFlaggedTextNumbers(
+        sender: String,
+        forms: List<String>,
+    ) = dao.deleteFlaggedTextNumbers(normalizeLogIdentity(sender), forms)
+
     /** Keeps the numbers a flagged text asks the reader to call, for [FLAGGED_TEXT_NUMBER_TTL_MS]. */
-    private suspend fun rememberCallbackNumbers(
+    private suspend fun rememberCallbackNumbersFrom(
+        sender: String,
         smsBody: String?,
         timestamp: Long,
     ) {
@@ -508,7 +525,7 @@ class BlocklistRepository(
         val homeRegion = PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso
         val numbers = SmsContentAnalyzer.extractCallbackNumbers(smsBody, PhoneIdentityCanonicalizer.readsBareDigitsAsNanp(homeRegion))
         if (numbers.isEmpty()) return
-        dao.upsertFlaggedTextNumbers(numbers.map { FlaggedTextNumber(number = it, seenAt = timestamp) })
+        dao.upsertFlaggedTextNumbers(numbers.map { FlaggedTextNumber(number = it, sender = sender, seenAt = timestamp) })
         dao.deleteFlaggedTextNumbersBefore(timestamp - FLAGGED_TEXT_NUMBER_TTL_MS)
         dao.trimFlaggedTextNumbers(MAX_FLAGGED_TEXT_NUMBERS)
     }

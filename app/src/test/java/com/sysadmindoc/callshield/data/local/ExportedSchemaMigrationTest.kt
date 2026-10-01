@@ -202,14 +202,16 @@ class ExportedSchemaMigrationTest {
                         }
                         // Two rows with every nullable column NULL, so a unique index on a
                         // nullable column (call_log.logKey) holds two NULLs, the way a
-                        // migration finds real rows.
+                        // migration finds real rows. Each row gives every column its own
+                        // value, so the first key column names the row even when the
+                        // primary key spans several (flagged_text_numbers).
                         val keyColumn =
                             entity
                                 .getValue("primaryKey")
                                 .jsonObject
                                 .getValue("columnNames")
                                 .jsonArray
-                                .single()
+                                .first()
                                 .jsonPrimitive.content
                         val nullRowKeys =
                             listOf(NULL_ROW_A, NULL_ROW_B).map { variant ->

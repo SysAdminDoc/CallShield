@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,6 +85,21 @@ class CommunityContributorWiringTest {
         assertEquals(ContributeOutcome.ALREADY_SUBMITTED, second.outcome)
         assertEquals(1, sent.size)
         assertEquals("delivered, so taken back out", WorkInfo.State.CANCELLED, work("+12122340101", "spam").state)
+    }
+
+    @Test
+    fun `not spam stops holding calls over the sender's texts even while the report waits`() {
+        outcome = ContributeOutcome.NETWORK_ERROR
+        val now = System.currentTimeMillis()
+        runBlocking {
+            fixture.repository.logFlaggedText("+12122340102", "Your account is locked. Call +1 800 345 1234", "sms_content", 80, timestamp = now)
+            fixture.repository.logFlaggedText("+13125550199", "Final notice. Call +1 800 345 1299", "sms_content", 80, timestamp = now)
+        }
+
+        runBlocking { CommunityContributor.reportNotSpam(context, "+12122340102") }
+
+        assertNull(runBlocking { fixture.repository.lastFlaggedTextSighting("+18003451234", now) })
+        assertEquals("another sender's text still counts", now, runBlocking { fixture.repository.lastFlaggedTextSighting("+18003451299", now) })
     }
 
     @Test

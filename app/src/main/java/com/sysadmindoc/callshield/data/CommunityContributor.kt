@@ -107,12 +107,16 @@ object CommunityContributor {
 
     /**
      * Report a false positive: this number is NOT spam. The merge files it as
-     * a review candidate rather than a vote against the number.
+     * a review candidate rather than a vote against the number. Calls stop
+     * being held over its texts here and now, whatever the report's fate.
      */
     suspend fun reportNotSpam(
         context: Context,
         number: String,
-    ): ContributeResult = submitter(context).submit(number, "not_spam", null)
+    ): ContributeResult {
+        repositoryFor(context.applicationContext).forgetFlaggedTextNumbers(number)
+        return submitter(context).submit(number, "not_spam", null)
+    }
 
     /** The network half of a report. Tests replace it to watch what would be sent. */
     internal var transport: suspend (CommunityReport) -> ContributeResult = ::send

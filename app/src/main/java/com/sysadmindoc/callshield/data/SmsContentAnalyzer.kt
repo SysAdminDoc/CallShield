@@ -522,10 +522,25 @@ class SmsContentAnalyzer
             private val numericVerificationCodePattern = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
             private val alphaNumericVerificationCodePattern = Regex("(?i)(?<![a-z0-9])[a-z0-9]{4,10}(?![a-z0-9])")
 
-            /** An optional 1 or +1, then area code, exchange and line, spaced, dotted or dashed. */
+            /**
+             * Not part of a Latin word, a longer number or a link path. Spelled
+             * out because Android's \w also covers Chinese and other letters,
+             * which are written right against a number.
+             */
+            private const val NOT_AFTER = "(?<![0-9A-Za-z_/+])"
+
+            /** Between the parts of a number: a space or two, or a dot or dash with spaces around it. */
+            private const val NUMBER_GAP = "(?:[ \\t]{0,2}[.-][ \\t]{0,2}|[ \\t]{1,3})?"
+
+            /**
+             * An optional 1 or +1, then area code, exchange and line.
+             */
             private val nanpNumber =
-                Regex("(?<![\\d+])(\\+?1[\\s.-]?)?\\(?([2-9]\\d{2})\\)?[\\s.-]?([2-9]\\d{2})[\\s.-]?(\\d{4})(?!\\d)")
-            private val internationalNumber = Regex("(?<![\\d+])\\+[1-9](?:[\\s.()-]{0,2}\\d){6,14}(?!\\d)")
+                Regex("$NOT_AFTER(\\+?1$NUMBER_GAP)?\\(?([2-9]\\d{2})\\)?$NUMBER_GAP([2-9]\\d{2})$NUMBER_GAP(\\d{4})(?!\\d)")
+            private val internationalNumber = Regex("$NOT_AFTER\\+[1-9](?:[ \\t.()-]{0,3}\\d){6,14}(?!\\d)")
+
+            /** The national trunk 0 some write after the country code: +44 (0)20. */
+            private val trunkZero = Regex("(\\+\\d{1,3})[ \\t]*\\(0\\)")
             private const val MAX_CALLBACK_SCAN_CHARS = 2_048
             private const val MAX_CALLBACK_NUMBERS = 5
             private val INTERNATIONAL_DIGITS = 8..15
@@ -542,14 +557,15 @@ class SmsContentAnalyzer
              * Phone numbers a flagged text asks the reader to call, in E.164. A
              * number written with "+" and its country code counts anywhere. A
              * ten-digit North American number counts on a phone in that plan
-             * ([nanpHome]) or when a 1 or +1 comes first. Bare national numbers
-             * from other plans are left alone.
+             * ([nanpHome]); elsewhere only with +1 in front, since 1 and ten
+             * digits is also how a Chinese mobile number looks. Bare national
+             * numbers from other plans are left alone.
              */
             fun extractCallbackNumbers(
                 body: String,
                 nanpHome: Boolean,
             ): List<String> {
-                val text = body.take(MAX_CALLBACK_SCAN_CHARS)
+                val text = plainNumberText(body.take(MAX_CALLBACK_SCAN_CHARS))
                 val found = LinkedHashSet<String>()
                 val international = mutableListOf<IntRange>()
                 internationalNumber.findAll(text).forEach { match ->
@@ -563,9 +579,28 @@ class SmsContentAnalyzer
                     val groups = match.groupValues
                     // "+49 301 234 5678" holds a NANP-shaped run that isn't one.
                     val insideInternational = international.any { it.first <= match.range.last && match.range.first <= it.last }
-                    if (!insideInternational && (nanpHome || groups[1].isNotEmpty())) found += "+1" + groups.drop(2).joinToString("")
+                    if (!insideInternational && (nanpHome || groups[1].startsWith("+"))) found += "+1" + groups.drop(2).joinToString("")
                 }
                 return found.take(MAX_CALLBACK_NUMBERS)
+            }
+
+            /** Fullwidth digits, typographic dashes and odd spaces as plain ones, without a trunk "(0)". */
+            private fun plainNumberText(text: String): String {
+                val plain =
+                    buildString(text.length) {
+                        text.forEach { c ->
+                            append(
+                                when (c) {
+                                    in '\uFF10'..'\uFF19' -> '0' + (c - '\uFF10')
+                                    '\uFF0B' -> '+'
+                                    '\u2010', '\u2011', '\u2012', '\u2013', '\u2014', '\u2015', '\u2212' -> '-'
+                                    '\u00A0', '\u2007', '\u2009', '\u202F' -> ' '
+                                    else -> c
+                                },
+                            )
+                        }
+                    }
+                return trunkZero.replace(plain, "$1 ")
             }
 
             fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)

@@ -516,9 +516,15 @@ interface SpamDao {
 
     @Query(
         "DELETE FROM flagged_text_numbers " +
-            "WHERE number NOT IN (SELECT number FROM flagged_text_numbers ORDER BY seenAt DESC LIMIT :maxRows)",
+            "WHERE rowid NOT IN (SELECT rowid FROM flagged_text_numbers ORDER BY seenAt DESC LIMIT :maxRows)",
     )
     suspend fun trimFlaggedTextNumbers(maxRows: Int)
+
+    @Query("DELETE FROM flagged_text_numbers WHERE sender = :sender OR number IN (:numbers)")
+    suspend fun deleteFlaggedTextNumbers(
+        sender: String,
+        numbers: List<String>,
+    )
 
     // Bounded digest aggregates — avoid materializing the full 24h window
     // (including smsBody) in a constrained background process on heavy-spam

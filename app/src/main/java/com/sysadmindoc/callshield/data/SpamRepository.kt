@@ -927,6 +927,15 @@ class SpamRepository(
         origid = origid,
     )
 
+    /** Keeps the numbers [smsBody] asks the reader to call, for a flagged text that gets no log row. */
+    suspend fun rememberCallbackNumbers(
+        sender: String,
+        smsBody: String?,
+    ) = blocklistRepository.rememberCallbackNumbers(sender, smsBody)
+
+    /** Stops holding calls over [normalized]'s flagged texts, or over it as a callback number. */
+    suspend fun forgetFlaggedTextNumbers(normalized: String) = blocklistRepository.forgetFlaggedTextNumbers(normalized, lookupForms(normalized))
+
     /** Logs a flagged text once, however many screening paths saw it ([BlocklistRepository.logFlaggedText]). */
     suspend fun logFlaggedText(
         number: String,

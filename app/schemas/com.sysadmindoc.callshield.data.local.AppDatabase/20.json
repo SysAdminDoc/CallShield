@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 20,
-    "identityHash": "79e87c360dfcbb9a686051d991831fe5",
+    "identityHash": "1bec3d5a7db5168099a811da0a063511",
     "entities": [
       {
         "tableName": "spam_numbers",
@@ -805,11 +805,17 @@
       },
       {
         "tableName": "flagged_text_numbers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`number` TEXT NOT NULL, `seenAt` INTEGER NOT NULL, PRIMARY KEY(`number`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`number` TEXT NOT NULL, `sender` TEXT NOT NULL, `seenAt` INTEGER NOT NULL, PRIMARY KEY(`number`, `sender`))",
         "fields": [
           {
             "fieldPath": "number",
             "columnName": "number",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sender",
+            "columnName": "sender",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -823,14 +829,15 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "number"
+            "number",
+            "sender"
           ]
         }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '79e87c360dfcbb9a686051d991831fe5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1bec3d5a7db5168099a811da0a063511')"
     ]
   }
 }

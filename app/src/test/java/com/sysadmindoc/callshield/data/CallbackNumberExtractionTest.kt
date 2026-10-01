@@ -35,7 +35,9 @@ class CallbackNumberExtractionTest {
     fun `outside North America a bare number needs its country code`() {
         assertEquals(emptyList<String>(), extract("Llame al 3131918305 hoy", nanpHome = false))
         assertEquals(emptyList<String>(), extract("Call (800) 345-1234", nanpHome = false))
-        assertEquals(listOf("+18003451234"), extract("Call 1-800-345-1234", nanpHome = false))
+        assertEquals(emptyList<String>(), extract("Call 1-800-345-1234", nanpHome = false))
+        assertEquals("a Chinese mobile number", emptyList<String>(), extract("\u8BF7\u81F4\u753513812345678", nanpHome = false))
+        assertEquals(listOf("+18003451234"), extract("Call +1 800 345 1234", nanpHome = false))
         assertEquals(listOf("+573131918305"), extract("Llame al +57 313 191 8305 hoy", nanpHome = false))
     }
 
@@ -43,6 +45,33 @@ class CallbackNumberExtractionTest {
     fun `an international number isn't also read as a North American one`() {
         assertEquals(listOf("+493012345678"), extract("Rufen Sie +49 301 234 5678 an"))
         assertEquals(listOf("+442079460958"), extract("Ring +44 20 7946 0958 now"))
+    }
+
+    @Test
+    fun `fullwidth digits, typographic dashes and odd spaces are read too`() {
+        listOf(
+            "Call \uFF18\uFF10\uFF10-\uFF13\uFF14\uFF15-\uFF11\uFF12\uFF13\uFF14 now",
+            "Call 800\u2013345\u20131234 now",
+            "Call 800\u00A0345\u00A01234 now",
+            "Call 800 - 345 - 1234 now",
+            "\u8BF7\u81F4\u75358003451234",
+        ).forEach { assertEquals(it, listOf("+18003451234"), extract(it)) }
+        assertEquals(listOf("+493012345678"), extract("Rufen Sie +49 30 \u2013 1234 5678 an"))
+    }
+
+    @Test
+    fun `a trunk zero after the country code is dropped`() {
+        assertEquals(listOf("+442079460958"), extract("Ring +44 (0)20 7946 0958 now"))
+        assertEquals(listOf("+442079460958"), extract("Ring +44(0) 20 7946 0958 now"))
+    }
+
+    @Test
+    fun `numbers inside a link or a word are not callback numbers`() {
+        listOf(
+            "Track it at example.com/8003451234",
+            "Pay at pay.example/+442079460958",
+            "Ref AB8003451234",
+        ).forEach { assertEquals(it, emptyList<String>(), extract(it)) }
     }
 
     @Test

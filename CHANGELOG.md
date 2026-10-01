@@ -16,9 +16,12 @@ All notable changes to CallShield will be documented in this file.
   in a text CallShield flagged as spam during the last 30 days. Fake bank
   and delivery texts ask you to call a number back, and the hold notice
   says which day that text arrived. Numbers written with a + and a country
-  code are picked up anywhere, and ten-digit North American numbers are
-  picked up on phones set to that region. Contacts and allowed numbers still
-  ring straight through.
+  code are picked up anywhere. Ten-digit North American numbers are picked
+  up on phones set to that region and need the +1 elsewhere, since a Chinese
+  mobile number has the same shape. Fullwidth digits, typographic dashes and
+  a (0) after the country code are read too, and so are chats a messaging
+  app's notification showed. Marking the sender Not spam forgets the numbers
+  from its texts. Contacts and allowed numbers still ring straight through.
 - A one-time code that arrives during a call from someone who isn't in your
   contacts, or in the 10 minutes after it, brings up a warning not to read
   it out to the caller. Imposters posing as a bank ask for exactly that code.

@@ -286,6 +286,8 @@ class RcsNotificationListener : NotificationListenerService() {
                 pipelineDiagnostic = result.screeningDiagnostics.toWireValue().orEmpty(),
             )
         } else if (isSpam) {
+            // No log row here, so the numbers it asks the reader to call are kept on their own.
+            repo.rememberCallbackNumbers(senderNumber.ifEmpty { sender }, effectiveBody)
             NotificationHelper.notifyScreenedMessage(
                 context = applicationContext,
                 sourceName = source.stableName,
