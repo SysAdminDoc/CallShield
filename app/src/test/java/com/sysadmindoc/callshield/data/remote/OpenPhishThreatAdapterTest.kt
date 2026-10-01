@@ -93,6 +93,38 @@ class OpenPhishThreatAdapterTest {
     }
 
     @Test
+    fun `a host ending in the root's dot matches like the plain host`() =
+        runBlocking {
+            // Browsers open evil.test. like evil.test, and OkHttp keeps the dot.
+            val adapter =
+                adapterOf(
+                    feedOf(
+                        "https://evil.test./login",
+                        "https://s3.us-east-1.amazonaws.com/evil-bucket/login.html",
+                        "https://s3.us-east-1.amazonaws.com./dotted-bucket/login.html",
+                    ),
+                )
+
+            listOf(
+                "https://evil.test/login",
+                "https://EVIL.TEST./login",
+                "https://user:secret@pay.evil.test.:8443/login",
+                "https://s3.us-east-1.amazonaws.com./evil-bucket/other.html",
+                "https://s3.us-east-1.amazonaws.com/dotted-bucket/other.html",
+            ).forEach { assertEquals(it, UrlThreatVerdict.MALICIOUS, adapter.lookup(it, 0L).verdict) }
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://s3.us-east-1.amazonaws.com./acme-invoices/x.pdf", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://shop.test./", 0L).verdict)
+        }
+
+    @Test
+    fun `the on-device lookup drops the root's dot with the user info`() {
+        assertEquals(
+            "https://evil.test:8443/login",
+            UrlSafetyChecker.normalizeOnDeviceLookupUrl("HTTPS://user:secret@EVIL.TEST.:8443/login?id=1#top"),
+        )
+    }
+
+    @Test
     fun `only the on-device feed asks for the full host`() {
         assertEquals(true, OpenPhishThreatAdapter(feedOf()).matchesOnDevice)
         assertEquals(false, PhishTankThreatAdapter().matchesOnDevice)

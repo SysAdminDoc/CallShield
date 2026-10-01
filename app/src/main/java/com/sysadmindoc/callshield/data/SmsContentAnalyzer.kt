@@ -207,22 +207,24 @@ class SmsContentAnalyzer
             return numericCode || alphaNumericCode
         }
 
-        /** Extract root domain from a URL string (strips scheme, www, path, port). */
+        /** The host of a URL string, without scheme, user info, www., port, path or the root's dot. */
         private fun extractDomain(url: String): String {
             val lower =
                 url
                     .lowercase()
                     .trim()
                     .trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
-            val withoutScheme =
+            val authority =
                 lower
                     .substringAfter("://", lower)
-                    .removePrefix("www.")
-            return withoutScheme
-                .substringBefore('/')
-                .substringBefore('?')
-                .substringBefore('#')
+                    .substringBefore('/')
+                    .substringBefore('?')
+                    .substringBefore('#')
+            return authority
+                .substringAfterLast('@')
                 .substringBefore(':')
+                .trimEnd('.')
+                .removePrefix("www.")
         }
 
         fun isKnownSpamDomainUrl(url: String): Boolean {

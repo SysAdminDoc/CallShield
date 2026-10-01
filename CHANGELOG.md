@@ -4,6 +4,12 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A link whose host ends in a dot, like `https://evil.com./login`, is now
+  checked against the phishing feed and the spam-domain list. Browsers open
+  it like the plain address, but the dot hid it from both, and from the
+  link-shortener and suspicious-ending checks too. A user name in front of
+  the host, as in `https://paypal.com@evil.com/`, no longer hides the real
+  host from the spam-domain list either.
 - Your own blocks, allow list and rules now survive a damaged database.
   Android deletes the file as soon as it finds a bad page, which used to
   take all of them with it. CallShield now copies them out first and puts

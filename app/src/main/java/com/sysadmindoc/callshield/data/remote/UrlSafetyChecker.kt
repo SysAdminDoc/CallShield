@@ -233,7 +233,7 @@ object UrlSafetyChecker {
      * and any user name or password still go.
      */
     internal fun normalizeOnDeviceLookupUrl(rawUrl: String): String {
-        val parsedUrl = normalizeCandidateUrl(rawUrl).toHttpUrlOrNull() ?: return ""
+        val parsedUrl = normalizeCandidateUrl(rawUrl).toHttpUrlOrNull()?.withoutRootDot() ?: return ""
         return parsedUrl
             .newBuilder()
             .username("")

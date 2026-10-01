@@ -158,7 +158,7 @@ internal class OpenPhishThreatAdapter(
         val snapshot =
             loadSnapshot(nowMillis)
                 ?: return UrlThreatResult.unknown(source, sourceVersion, canonicalUrl, nowMillis, "feed_unavailable")
-        val url = canonicalUrl.toHttpUrlOrNull()
+        val url = canonicalUrl.toHttpUrlOrNull()?.withoutRootDot()
         val resultTtlMillis =
             minOf(
                 UrlThreatCache.DEFAULT_TTL_MILLIS,
@@ -205,7 +205,7 @@ internal class OpenPhishThreatAdapter(
                     val sharedHostDirectories = mutableMapOf<String, MutableSet<String>>()
                     body.value
                         .lineSequence()
-                        .mapNotNull { it.trim().toHttpUrlOrNull() }
+                        .mapNotNull { it.trim().toHttpUrlOrNull()?.withoutRootDot() }
                         .take(MAX_OPENPHISH_HOSTS)
                         .forEach { entry ->
                             if (entry.isOnSharedHost()) {
@@ -269,6 +269,16 @@ internal class OpenPhishThreatAdapter(
         val expiresAtMillis: Long,
         val etag: String?,
     )
+}
+
+/**
+ * The same URL without the DNS root's dot at the end of its host. Browsers
+ * open evil.com. like evil.com, but OkHttp keeps the dot, so neither the walk
+ * up the host nor a shared host's bucket list would ever match it.
+ */
+internal fun HttpUrl.withoutRootDot(): HttpUrl {
+    val plain = host.trimEnd('.')
+    return if (plain == host || plain.isEmpty()) this else newBuilder().host(plain).build()
 }
 
 private fun String.isIpLiteral(): Boolean = ':' in this || all { it.isDigit() || it == '.' }

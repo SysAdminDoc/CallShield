@@ -413,6 +413,26 @@ class SmsContentAnalyzerTest {
         assertTrue(result.reasons.contains("spam_domain"))
     }
 
+    @Test
+    fun `a link host ending in the root's dot still matches the spam list`() {
+        SmsContentAnalyzer.updateSpamDomains(listOf("evil.com"))
+
+        listOf(
+            "https://evil.com./login",
+            "HTTPS://EVIL.COM./LOGIN",
+            "https://evil.com.:8443/login",
+            "https://paypal.com@evil.com./login",
+            "https://user:secret@pay.evil.com./login",
+        ).forEach { assertTrue(it, SmsContentAnalyzer.isKnownSpamDomainUrl(it)) }
+        assertFalse(SmsContentAnalyzer.isKnownSpamDomainUrl("https://evil.com.au./login"))
+        assertFalse("user info names no host", SmsContentAnalyzer.isKnownSpamDomainUrl("https://evil.com@example.org./login"))
+    }
+
+    @Test
+    fun `a trailing dot doesn't hide a shortener`() {
+        assertTrue(SmsContentAnalyzer.analyze("Click https://bit.ly./abc123").reasons.contains("shortened_url"))
+    }
+
     // ── Lookalike hostnames ─────────────────────────────────────────────
 
     @Test
