@@ -723,8 +723,8 @@ class SmsContentAnalyzerTest {
 
     @Test
     fun `a staffing text with a pay rate stays under the default block threshold`() {
-        // Its opt-out lines already count as spam keywords (40). The pay rate
-        // must not add a job-offer hit and push it to 55, a block by default.
+        // Its reply and opt-out lines add 30 once any pattern matches, so a
+        // job-offer hit on the pay rate would push it to 55, a block by default.
         val result =
             SmsContentAnalyzer.analyze(
                 "Hi, this is Dana from Acme Staffing. Part-time front desk role in Tampa, you'd make \$17/hr. " +
@@ -732,6 +732,46 @@ class SmsContentAnalyzerTest {
             )
 
         assertTrue(result.score.toString(), result.score < 50)
+    }
+
+    @Test
+    fun `answer and opt-out wording alone stays under the aggressive bar when the text names its sender`() {
+        listOf(
+            "Lakeside Family Clinic: your visit is Tue at 3:40 PM. Reply Y to confirm or N to cancel. Reply STOP to opt out.",
+            "Main Street Pharmacy: your refill is ready for pickup. Text STOP to unsubscribe, HELP for help.",
+            "Corner Market: your order is out for delivery. Reply STOP to opt out.",
+            "Rosa's Kitchen: thanks for visiting! Reply 1 if you loved it, 2 if not. Reply STOP to unsubscribe.",
+            "Maple Elementary: text YES to get school closing alerts. Msg & data rates may apply.",
+            "Hi Sam, this is Dana from Maple Street Dental. Your cleaning is Tuesday at 3. Reply STOP to opt out.",
+        ).forEach { body ->
+            val result = SmsContentAnalyzer.analyze(body, firstContact = true)
+            assertTrue("$body scored ${result.score} ${result.reasons}", result.score < 25)
+            assertFalse(body, "spam_keywords" in result.reasons)
+        }
+    }
+
+    @Test
+    fun `a footer on a text that doesn't say who sent it still counts`() {
+        // Scams paste the footer onto a chatty opener.
+        val opener = SmsContentAnalyzer.analyze("Hey Sam, are you free Saturday? Can we grab coffee? Reply STOP to unsubscribe.")
+        assertEquals(40, opener.score)
+        assertEquals(listOf("spam_keywords"), opener.reasons)
+        // A greeting or a link before the colon doesn't name anyone.
+        assertEquals(40, SmsContentAnalyzer.analyze("Hello: are you free this weekend? Reply STOP to unsubscribe.").score)
+        assertEquals(40, SmsContentAnalyzer.analyze("Dear customer: we miss you. Reply STOP to unsubscribe.").score)
+        assertEquals(25, SmsContentAnalyzer.analyze("unsubscribe").score)
+    }
+
+    @Test
+    fun `answer and opt-out wording still adds weight to a lure`() {
+        val lure = "Final notice: your vehicle warranty is about to lapse."
+        val alone = SmsContentAnalyzer.analyze(lure)
+        val footed = SmsContentAnalyzer.analyze("$lure Reply YES to renew. Reply STOP to opt out.")
+
+        assertEquals(25, alone.score)
+        // Two more pattern hits at 15 each, enough to block by default.
+        assertEquals(55, footed.score)
+        assertEquals(listOf("spam_keywords"), footed.reasons)
     }
 
     @Test

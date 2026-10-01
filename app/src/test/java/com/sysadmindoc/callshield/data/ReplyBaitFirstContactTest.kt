@@ -57,6 +57,24 @@ class ReplyBaitFirstContactTest {
         }
 
     @Test
+    fun `a business's first text with only the opt-out footer passes in aggressive mode`() =
+        runBlocking {
+            val clinic = "Lakeside Family Clinic: your visit is Tue at 3:40 PM. Reply Y to confirm or N to cancel. Reply STOP to opt out."
+            val result = fixture.repository.isSpamSms(number, clinic)
+
+            assertFalse(result.signals.toString(), result.isSpam)
+        }
+
+    @Test
+    fun `marketing spam with the footer and a lure is still flagged in aggressive mode`() =
+        runBlocking {
+            val result = fixture.repository.isSpamSms(number, "Final notice: your vehicle warranty is about to lapse. Reply STOP to opt out.")
+
+            assertTrue(result.isSpam)
+            assertEquals(listOf("spam_keywords"), result.signals)
+        }
+
+    @Test
     fun `the arriving message already in the inbox doesn't make it a second text`() =
         runBlocking {
             provider.inbox = listOf(number to now - 10_000L)

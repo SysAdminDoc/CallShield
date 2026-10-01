@@ -106,10 +106,7 @@ class SmsContentAnalyzer
                 Regex("(?i)(lose \\d+ (lbs?|pounds|kg) (in|fast|quick))"),
                 Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order)"),
                 // Generic spam signals
-                Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
                 Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
-                Regex("(?i)text (yes|y|go|start|ok) to"),
-                Regex("(?i)reply (yes|y|stop|1|2)"),
                 // ── Spanish ────────────────────────────────────────────────
                 // "Has ganado", "te ha tocado" and "ha sido seleccionada" are ordinary
                 // Spanish (a match result, loyalty points, a work shift, a job
@@ -153,6 +150,29 @@ class SmsContentAnalyzer
                 Regex("(?i)(banca|carta|credito).{0,20}(bloccat[oa]|sospes[oa]|verificare)"),
                 // Work-from-home job offers (en, es, pt, it). See JOB_OFFER_PATTERN.
                 Regex(JOB_OFFER_PATTERN),
+            )
+
+        // How to answer or stop a text. Every business text sent under US
+        // carrier rules carries them ("Reply STOP to opt out", "Reply Y to
+        // confirm"), and alone they blocked a clinic's appointment reminder in
+        // aggressive mode. Scams copy the footer onto a chatty opener too
+        // ("Hey Sam, are you free for coffee? Reply STOP to unsubscribe"), so
+        // they still count after a pattern above, or when the text doesn't say
+        // who sent it (see [namedSender]).
+        private val responseCues =
+            listOf(
+                Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
+                Regex("(?i)text (yes|y|go|start|ok) to"),
+                Regex("(?i)reply (yes|y|stop|1|2)"),
+            )
+
+        // The carrier rules also make a business say who it is first:
+        // "Lakeside Family Clinic: your visit is..." or "this is Dana from
+        // Maple Street Dental". A greeting or a link before the colon isn't a name.
+        private val namedSender =
+            Regex(
+                "^[^\\p{L}\\p{N}]*(?!(?i:hi|hey|hello|dear|good|https?)(?![\\p{L}\\p{N}]))\\p{L}[\\p{L}\\p{N}&'’. -]{0,38}:" +
+                    "|(?i:this is)$SPACE+[\\p{L}'’. ]{1,30}$SPACE+(?i:from|at|with)$SPACE+\\p{Lu}",
             )
 
         // Phone number in SMS body (common in callback scams)
@@ -397,16 +417,23 @@ class SmsContentAnalyzer
 
             // Check spam keyword patterns
             var patternHits = 0
+            val countPatternHit = {
+                patternHits++
+                if (patternHits == 1) {
+                    score += 25
+                    reasons.add("spam_keywords")
+                } else {
+                    score += 15 // Each additional pattern is more damning
+                }
+            }
             for (pattern in spamPatterns) {
-                if (pattern.containsMatchIn(ruleText)) {
-                    patternHits++
-                    if (patternHits == 1) {
-                        score += 25
-                        reasons.add("spam_keywords")
-                    } else {
-                        score += 15 // Each additional pattern is more damning
-                    }
-                    if (patternHits >= 3) break // Cap pattern contribution
+                if (patternHits >= 3) break // Cap pattern contribution
+                if (pattern.containsMatchIn(ruleText)) countPatternHit()
+            }
+            if (patternHits > 0 || !namedSender.containsMatchIn(ruleText)) {
+                for (cue in responseCues) {
+                    if (patternHits >= 3) break
+                    if (cue.containsMatchIn(ruleText)) countPatternHit()
                 }
             }
 

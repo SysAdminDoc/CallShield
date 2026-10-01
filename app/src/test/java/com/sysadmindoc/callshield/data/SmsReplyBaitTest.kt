@@ -40,8 +40,8 @@ class SmsReplyBaitTest {
 
     @Test
     fun `a business's wrong-number line is not an opener`() {
-        // A clinic's first text: its opt-out wording already scores 40, and
-        // reply bait on top used to block it in the default mode.
+        // A clinic's first text: reply bait on top of its opt-out wording,
+        // which scored 40 on its own back then, blocked it in the default mode.
         val clinic = "Lakeside Family Clinic: your visit is confirmed for Tue 3:40 PM. Wrong number? Reply STOP to opt out."
         assertFalse(baited(clinic))
         assertTrue(analyzer.analyze(clinic, firstContact = true).score < 50)
