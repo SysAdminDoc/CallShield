@@ -842,7 +842,8 @@ internal class CampaignRecorderChecker(
     override val name = "campaign_recorder"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (shouldRecord(realtimeCall = ctx.realtimeCall, isSms = ctx.smsBody != null)) {
+        // Campaigns are grouped by NPA-NXX, which only a North American number has.
+        if (ctx.numberingPlan == NumberingPlan.NANP && shouldRecord(realtimeCall = ctx.realtimeCall, isSms = ctx.smsBody != null)) {
             campaignDetector.recordCall(ctx.number)
         }
         return null // never blocks
@@ -1081,6 +1082,7 @@ internal class CampaignBurstChecker(
     override val name = "campaign_burst"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.numberingPlan != NumberingPlan.NANP) return null
         val lookupBudget = ctx.timeLeftMillis().coerceAtMost(CAMPAIGN_LOOKUP_BUDGET_MS)
         if (lookupBudget <= 0L) return null
         val evidence =

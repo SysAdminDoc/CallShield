@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Two more North American rules stopped reading other countries' numbers as
+  North American. A campaign burst (five callers from one area code and
+  exchange in an hour) now counts only North American numbers, so five
+  spoofed calls an Australian phone couldn't place, or five Singapore numbers
+  from one block, no longer look like a campaign. The neighbor check also
+  reads the phone's own number in its own region, so an Italian SIM's number
+  no longer shares an exchange with a New York caller.
 - In aggressive mode, a business's text is no longer blocked for its opt-out
   footer alone. "Reply STOP to opt out" scored 40 against aggressive mode's
   bar of 25, so a clinic's appointment reminder or a pharmacy's refill notice

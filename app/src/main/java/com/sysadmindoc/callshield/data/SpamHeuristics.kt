@@ -86,10 +86,12 @@ class SpamHeuristics
             context: Context,
             incomingNumber: String,
             numberingPlan: NumberingPlan = NumberingPlan.from(incomingNumber),
+            homeRegionIso: String? = null,
         ): Boolean {
             if (numberingPlan != NumberingPlan.NANP) return false
             val userNumber = getUserPhoneNumber(context) ?: return false
-            if (NumberingPlan.from(userNumber) != NumberingPlan.NANP) return false
+            // The SIM often stores its own number without a country code.
+            if (NumberingPlan.from(userNumber, homeRegionIso) != NumberingPlan.NANP) return false
             val userDigits = filterAsciiDigitsLast(userNumber, 10)
             val inDigits = filterAsciiDigitsLast(incomingNumber, 10)
 
@@ -464,7 +466,7 @@ class SpamHeuristics
             }
 
             // Neighbor spoofing (gated by the Settings toggle)
-            if (enableNeighborSpoof && isNeighborSpoof(context, number, numberingPlan)) {
+            if (enableNeighborSpoof && isNeighborSpoof(context, number, numberingPlan, homeRegionIso)) {
                 score += 50
                 reasons.add("neighbor_spoof")
             }

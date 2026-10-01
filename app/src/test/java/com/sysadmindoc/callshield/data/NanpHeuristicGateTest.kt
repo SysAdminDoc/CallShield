@@ -4,7 +4,10 @@ import android.content.Context
 import android.telephony.TelephonyManager
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.checker.CampaignBurstChecker
+import com.sysadmindoc.callshield.data.checker.CampaignRecorderChecker
 import com.sysadmindoc.callshield.data.checker.CheckContext
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -129,6 +132,48 @@ class NanpHeuristicGateTest {
             val repeats = List(3) { ranged to now - 1000L }
             assertEquals(region, listOf("rapid_fire"), analyze(ranged, region, repeats).reasons)
         }
+    }
+
+    @Test
+    fun `campaign bursts group North American numbers only`() {
+        assertTrue(burstAfterFiveCalls("202555", "US"))
+        assertTrue(burstAfterFiveCalls("+1202555", "AU"))
+        // Bare digits libphonenumber couldn't place, on a phone outside North America.
+        assertFalse(burstAfterFiveCalls("202555", "AU"))
+        assertFalse(burstAfterFiveCalls("202555", "GB"))
+        // A ten-digit international number isn't an NPA-NXX: +65 6123 xxxx.
+        assertFalse(burstAfterFiveCalls("+656123", "US"))
+        // Neither side of a campaign takes the other plan's digits: bare
+        // Australian calls don't build a +1 202-555 campaign, and a Singapore
+        // caller doesn't join a +1 656-123 one.
+        assertFalse(burstAfterFiveCalls("202555", "AU", probe = "+12025550006"))
+        assertFalse(burstAfterFiveCalls("+1656123", "US", probe = "+6561230006"))
+    }
+
+    /** Five distinct callers from [prefix], then whether [probe] reads as part of a campaign. */
+    private fun burstAfterFiveCalls(
+        prefix: String,
+        region: String?,
+        probe: String = "${prefix}0006",
+    ): Boolean {
+        val detector = CampaignDetector()
+        val recorder = CampaignRecorderChecker(detector)
+        val burst = CampaignBurstChecker(detector)
+        return runBlocking {
+            (1..5).forEach { recorder.check(checkContext("${prefix}000$it", region)) }
+            burst.check(checkContext(probe, region)) != null
+        }
+    }
+
+    @Test
+    fun `the phone's own number is read in its own region`() {
+        // An Italian SIM stores its number without +39, and those ten digits
+        // would otherwise share an exchange with a New York caller.
+        setOwnNumber("3471234567")
+        val newYork = "+13471234999"
+
+        assertFalse("IT", "neighbor_spoof" in analyze(newYork, "IT", emptyList()).reasons)
+        assertTrue("US", "neighbor_spoof" in analyze(newYork, "US", emptyList()).reasons)
     }
 
     private fun analyze(
