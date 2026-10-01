@@ -86,6 +86,8 @@ object NotificationHelper {
     private const val OUTGOING_HOLD_ID_SALT = 80
     private const val OUTGOING_HOLD_CALL_SALT = 81
     private const val OUTGOING_HOLD_OPEN_SALT = 82
+    private const val CODE_DURING_CALL_ID_SALT = 90
+    private const val CODE_DURING_CALL_OPEN_SALT = 91
     private const val PROGRESS_TOTAL = 100
     internal const val SYNC_NOTIFICATION_ID = 3
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
@@ -792,7 +794,7 @@ object NotificationHelper {
         val openIntent =
             PendingIntent.getActivity(
                 context,
-                stableId(caller, 81),
+                stableId(caller, CODE_DURING_CALL_OPEN_SALT),
                 Intent(context, MainActivity::class.java).apply {
                     if (caller.isNotEmpty()) putExtra("open_number", caller)
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -813,7 +815,7 @@ object NotificationHelper {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
 
-        return safeNotify(context, stableId(caller, 80), builder)
+        return safeNotify(context, stableId(caller, CODE_DURING_CALL_ID_SALT), builder)
     }
 
     /**

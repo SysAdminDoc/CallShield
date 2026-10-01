@@ -23,8 +23,13 @@ All notable changes to CallShield will be documented in this file.
   contacts, or in the 10 minutes after it, brings up a warning not to read
   it out to the caller. Imposters posing as a bank ask for exactly that code.
   It shows once per call, never for a contact or a number on your allow list,
-  and works for hidden numbers too. It has its own notification channel, so
-  it can be turned off in Android's settings without touching other alerts.
+  and works for hidden numbers too. Calls CallShield silenced or let ring
+  without a check (blocking turned off, or a check that ran out of time)
+  count as well, since you can still answer them. It knows codes split in
+  two, like 123 456, and the words banks use for a code in Chinese, Japanese,
+  Korean, German and Turkish. The text can even arrive after Android has
+  closed the app. It has its own notification channel, so it can be turned
+  off in Android's settings without touching other alerts.
 - A trusted number can let its whole number block through. A doctor's office
   that calls from 555-234-5601 one day and 555-234-5617 the next needed every
   line allowed by hand. Now the entry's menu offers the numbers that differ

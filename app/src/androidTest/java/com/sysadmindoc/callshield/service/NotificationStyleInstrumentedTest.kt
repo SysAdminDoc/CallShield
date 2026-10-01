@@ -10,6 +10,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sysadmindoc.callshield.data.UnknownCallWindow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -102,6 +106,25 @@ class NotificationStyleInstrumentedTest {
         )
         if (InstrumentationRegistry.getArguments().getString("visualNotification") == "true") {
             Thread.sleep(VISUAL_REVIEW_WINDOW_MS)
+        }
+    }
+
+    @Test
+    fun codeAfterAnAllowedCallWarnsInAProcessThatNeverSawTheCall() {
+        val caller = "+12125550144"
+        val saved = context.getSharedPreferences("code_during_call", Context.MODE_PRIVATE)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        try {
+            CodeDuringCallWarning.onCallAllowed(scope, context, caller, matchSource = "", window = UnknownCallWindow())
+            repeat(50) { if (saved.getString("caller", null) != caller) Thread.sleep(100) }
+            assertEquals(caller, saved.getString("caller", null))
+
+            assertTrue(CodeDuringCallWarning.onMessage(context, "Your Chase verification code is 482913", UnknownCallWindow()))
+
+            postedNotifications(1).single { it.notification.channelId == NotificationHelper.CHANNEL_CODE_DURING_CALL }
+        } finally {
+            scope.cancel()
+            saved.edit().clear().commit()
         }
     }
 

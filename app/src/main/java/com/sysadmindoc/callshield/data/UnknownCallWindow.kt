@@ -7,8 +7,8 @@ import kotlinx.coroutines.delay
  * The last call CallShield let ring from someone the user doesn't know, so a
  * one-time code that arrives during it, or up to [AFTER_CALL_MS] after it,
  * can carry a warning. Imposters "from the bank" ask for the code the bank
- * just sent. Kept in memory only: it matters for minutes, and nothing about
- * the call is written down.
+ * just sent. The text that carries the code can start a fresh process, so
+ * the caller saves a [snapshot] and hands it to [restore] there.
  */
 class UnknownCallWindow(
     private val clock: () -> Long = System::currentTimeMillis,
@@ -17,6 +17,7 @@ class UnknownCallWindow(
         val id: Long,
         val caller: String,
         val startedAt: Long,
+        val restored: Boolean = false,
     ) {
         var endedAt: Long? = null
         var warned = false
@@ -76,6 +77,28 @@ class UnknownCallWindow(
         callEnded(token)
     }
 
+    /** The current call as [restore] takes it, or null when there's none. */
+    fun snapshot(): Saved? = synchronized(lock) { call?.let { Saved(it.caller, it.startedAt, it.endedAt, it.warned) } }
+
+    /**
+     * Takes back the call an earlier process saved, unless this one knows a
+     * call already. One saved without an end lost its watcher mid-call, so it
+     * counts for [RESTORED_OPEN_MS] from its start instead of [MAX_CALL_MS].
+     */
+    fun restore(saved: Saved) {
+        synchronized(lock) {
+            if (call != null) return
+            call =
+                Call(++nextId, saved.caller, saved.startedAt, restored = true).apply {
+                    endedAt = saved.endedAt
+                    warned = saved.warned
+                }
+        }
+    }
+
+    /** Whether there's a call a code could still be warned about. */
+    fun isOpen(): Boolean = synchronized(lock) { call?.let(::isOpen) == true }
+
     internal fun clear() {
         synchronized(lock) { call = null }
     }
@@ -83,14 +106,25 @@ class UnknownCallWindow(
     private fun isOpen(call: Call): Boolean {
         val now = clock()
         val ended = call.endedAt
-        return if (ended == null) now - call.startedAt <= MAX_CALL_MS else now - ended <= AFTER_CALL_MS
+        val unended = if (call.restored) RESTORED_OPEN_MS else MAX_CALL_MS
+        return if (ended == null) now - call.startedAt <= unended else now - ended <= AFTER_CALL_MS
     }
+
+    data class Saved(
+        val caller: String,
+        val startedAt: Long,
+        val endedAt: Long?,
+        val warned: Boolean,
+    )
 
     companion object {
         const val AFTER_CALL_MS = 10L * 60L * 1000L
 
         /** A call whose end is never seen stops counting after this long. */
         const val MAX_CALL_MS = 4L * 60L * 60L * 1000L
+
+        /** How long a restored call whose end nobody saw still counts, from its start. */
+        const val RESTORED_OPEN_MS = 60L * 60L * 1000L
         const val RING_START_MS = 30_000L
         private const val POLL_MS = 1_000L
         private const val MAX_CODE_TEXT_LENGTH = 320
@@ -103,8 +137,13 @@ class UnknownCallWindow(
 
         fun countsAsUnknown(matchSource: String): Boolean = matchSource !in TRUSTED_SOURCES
 
-        private val codeWord = Regex("(?iu)(?<!\\p{L})(?:code|c[oó]digo|codice|pin|otp|passcode|clave|kod|kode)(?!\\p{L})")
-        private val codeDigits = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
+        private val codeWord = Regex("(?iu)(?<!\\p{L})(?:code|c[oó]digo|codice|pin|otp|passcode|clave|kod|kode|kodu|m?tan)(?!\\p{L})")
+
+        // Chinese, Japanese and Korean write the word against its neighbours.
+        private val cjkCodeWord = Regex("验证码|驗證碼|校验码|校驗碼|动态码|動態碼|认证码|認證碼|確認コード|認証コード|인증\\s?번호")
+
+        // Codes are also sent split in two: 123-456, 123 456, 1234 5678.
+        private val codeDigits = Regex("(?<!\\d)(?:\\d{4,8}|\\d{3}[ -]\\d{3}|\\d{4}[ -]\\d{4})(?!\\d)")
 
         /**
          * A short text carrying a code: the OTP floor's strict test, or a code
@@ -114,7 +153,7 @@ class UnknownCallWindow(
         fun looksLikeOneTimeCode(body: String): Boolean {
             if (body.isBlank() || body.length > MAX_CODE_TEXT_LENGTH) return false
             if (SmsContentAnalyzer.isVerificationMessage(body)) return true
-            return codeWord.containsMatchIn(body) && codeDigits.containsMatchIn(body)
+            return (codeWord.containsMatchIn(body) || cjkCodeWord.containsMatchIn(body)) && codeDigits.containsMatchIn(body)
         }
     }
 }

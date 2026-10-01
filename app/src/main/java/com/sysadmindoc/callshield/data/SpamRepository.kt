@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
@@ -397,6 +398,12 @@ class SpamRepository(
                     checkerDependencies = checkerDependencies,
                 ).also { instance = it }
             }
+
+        /** Hands [repository] to every [getInstance] caller, or forgets it when null. */
+        @VisibleForTesting
+        internal fun replaceInstanceForTests(repository: SpamRepository?) {
+            synchronized(this) { instance = repository }
+        }
     }
 
     // Settings

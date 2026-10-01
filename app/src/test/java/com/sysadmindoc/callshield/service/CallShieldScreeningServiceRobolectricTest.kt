@@ -419,6 +419,58 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `with call blocking off a stranger's call still opens the one-time code window`() {
+        val number = "+12125550189"
+        runBlocking { repository.setBlockCalls(false) }
+
+        service.onScreenCall(callDetails(number))
+
+        assertFalse(awaitResponse().disallowCall)
+        awaitOpenCaller(number)
+    }
+
+    @Test
+    fun `with call blocking off an allow-listed number never opens the window`() {
+        val number = "+12125550190"
+        runBlocking {
+            repository.setBlockCalls(false)
+            repository.addToWhitelist(number)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        assertFalse(awaitResponse().disallowCall)
+        awaitScopeIdle()
+        assertNull(UnknownCallWindow.shared.openCaller())
+    }
+
+    @Test
+    fun `a silenced call can still be answered, so it opens the window`() {
+        val number = "+12125550191"
+        runBlocking {
+            repository.blockNumber(number, type = "test")
+            repository.setSilentVoicemail(true)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        assertTrue(awaitResponse().silenceCall)
+        awaitOpenCaller(number)
+    }
+
+    @Test
+    fun `a rejected call never opens the window`() {
+        val number = "+12125550192"
+        runBlocking { repository.blockNumber(number, type = "test") }
+
+        service.onScreenCall(callDetails(number))
+
+        assertTrue(awaitResponse().rejectCall)
+        awaitScopeIdle()
+        assertNull(UnknownCallWindow.shared.openCaller())
+    }
+
+    @Test
     fun `category allow lets a categorized database hit ring`() {
         val number = "+12125550190"
         runBlocking {
@@ -731,6 +783,14 @@ class CallShieldScreeningServiceRobolectricTest {
                 shadowService.lastRespondToCallInput.get().callResponse
             }
         }
+
+    private fun awaitOpenCaller(number: String) {
+        runBlocking {
+            withTimeout(5_000L) {
+                while (UnknownCallWindow.shared.openCaller() != number) delay(10L)
+            }
+        }
+    }
 
     private fun awaitScopeIdle() {
         runBlocking {

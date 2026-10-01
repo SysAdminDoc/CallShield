@@ -126,7 +126,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 // calls without a direction. Fail open with an explicit allow —
                 // returning without responding would make Android hold the
                 // screening slot until its timeout and delay ringing.
-                respondAllow(responseGate)
+                allowUnscreened(responseGate, callDetails)
                 return
             }
         }
@@ -168,7 +168,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         }
 
                         if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
-                            respondAllow(responseGate)
+                            allowUnscreened(responseGate, callDetails)
                             return@withTimeoutOrNull
                         }
 
@@ -315,7 +315,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     } catch (e: Exception) {
                         // Guarantee a response even on error — fail-open (allow call through).
                         try {
-                            respondAllow(responseGate)
+                            allowUnscreened(responseGate, callDetails)
                         } catch (_: Exception) {
                         }
                         // SQLite has already swapped a damaged database for an empty
@@ -327,12 +327,12 @@ class CallShieldScreeningService : CallScreeningService() {
                         }
                     }
                 }
-                    ?: respondAllow(responseGate)
+                    ?: allowUnscreened(responseGate, callDetails)
             } catch (_: CancellationException) {
                 // Even a service-scope cancellation must leave Telecom with an
                 // explicit response; otherwise it waits until its hard timeout.
                 withContext(NonCancellable) {
-                    respondAllow(responseGate)
+                    allowUnscreened(responseGate, callDetails)
                 }
             }
         }
@@ -454,17 +454,20 @@ class CallShieldScreeningService : CallScreeningService() {
             } else if (armed) {
                 responseGate.respond(response)
             } else {
-                responseGate.respond(
+                respondRinging(
+                    responseGate,
                     buildBlockResponse(
                         prefs = prefs,
                         confidence = confidence,
                         categoryAction = categoryAction,
                         silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
                     ),
+                    number,
+                    reason,
                 )
             }
         } else {
-            responseGate.respond(response)
+            respondRinging(responseGate, response, number, reason)
         }
 
         applicationScope.launch {
@@ -794,6 +797,52 @@ class CallShieldScreeningService : CallScreeningService() {
         val callTimestamp = callDetails.creationTimeMillis.takeIf { it > 0 } ?: fallbackTimestamp
         val caller = number.ifBlank { "hidden" }
         return "call:$callTimestamp:$caller:$reason:$confidence"
+    }
+
+    /**
+     * Sends a block [response]. A silenced call still reaches the phone and can
+     * be answered, so it's watched for one-time codes like an allowed one.
+     */
+    private fun respondRinging(
+        responseGate: ScreeningResponseGate<CallResponse>,
+        response: CallResponse,
+        number: String,
+        reason: String,
+    ) {
+        val unanswered = !responseGate.hasResponded
+        responseGate.respond(response)
+        if (unanswered && response.silenceCall) {
+            CodeDuringCallWarning.onCallAllowed(applicationScope, applicationContext, number, reason)
+        }
+    }
+
+    /**
+     * Lets a call ring that the checks never looked at: blocking is off, the
+     * direction is unknown, or screening failed or ran out of time. It's
+     * watched for one-time codes unless the user trusts the number.
+     */
+    private fun allowUnscreened(
+        responseGate: ScreeningResponseGate<CallResponse>,
+        callDetails: Call.Details,
+    ) {
+        val unanswered = !responseGate.hasResponded
+        respondAllow(responseGate)
+        if (!unanswered) return
+        try {
+            val number =
+                PhoneIdentityCanonicalizer
+                    .cachedFromContext(applicationContext)
+                    .canonicalizePhone(callDetails.handle?.schemeSpecificPart.orEmpty())
+            CodeDuringCallWarning.onCallAllowed(
+                applicationScope,
+                applicationContext,
+                number,
+                CodeDuringCallWarning.UNSCREENED,
+                isTrusted = { CodeDuringCallWarning.allowListed(::repository, it) },
+            )
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Couldn't watch an unscreened call for codes", e)
+        }
     }
 
     private fun respondAllow(responseGate: ScreeningResponseGate<CallResponse>) {

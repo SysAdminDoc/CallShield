@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.UnknownCallWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,6 +114,49 @@ class CodeDuringCallWarningTest {
         assertEquals(caller, window.openCaller())
         now += 1
         assertNull(window.openCaller())
+    }
+
+    @Test
+    fun `a call nothing screened is watched unless its number is on the allow list`() {
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val unscreened = CodeDuringCallWarning.UNSCREENED
+
+        CodeDuringCallWarning.onCallAllowed(scope, context, caller, unscreened, window, isTrusted = { true })
+        assertNull(window.openCaller())
+
+        CodeDuringCallWarning.onCallAllowed(scope, context, "", unscreened, window, isTrusted = { error("a hidden number is never looked up") })
+        assertEquals("", window.openCaller())
+
+        CodeDuringCallWarning.onCallAllowed(scope, context, caller, unscreened, window, isTrusted = { false })
+        assertEquals(caller, window.openCaller())
+    }
+
+    @Test
+    fun `an allow list that can't be read doesn't stop the watch`() =
+        runBlocking {
+            assertFalse(CodeDuringCallWarning.allowListed({ error("the database is locked") }, caller))
+        }
+
+    @Test
+    fun `a text that starts a new process still finds the call`() {
+        CodeDuringCallWarning.onCallAllowed(CoroutineScope(Dispatchers.Unconfined), context, caller, "", window)
+        now += 3 * MINUTE
+
+        assertTrue(CodeDuringCallWarning.onMessage(context, code, UnknownCallWindow { now }, isContact = { false }))
+        assertFalse(
+            "the warning was saved with the call",
+            CodeDuringCallWarning.onMessage(context, code, UnknownCallWindow { now }, isContact = { false }),
+        )
+        assertEquals(1, shadowOf(notificationManager).allNotifications.size)
+    }
+
+    @Test
+    fun `a saved call that has closed is forgotten`() {
+        CodeDuringCallWarning.onCallAllowed(CoroutineScope(Dispatchers.Unconfined), context, caller, "", window)
+        now += UnknownCallWindow.AFTER_CALL_MS + 1
+
+        assertFalse(CodeDuringCallWarning.onMessage(context, code, UnknownCallWindow { now }, isContact = { false }))
+        assertTrue(context.getSharedPreferences("code_during_call", Context.MODE_PRIVATE).all.isEmpty())
     }
 
     private fun warn(

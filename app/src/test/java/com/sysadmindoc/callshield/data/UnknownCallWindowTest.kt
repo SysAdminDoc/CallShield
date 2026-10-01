@@ -130,6 +130,59 @@ class UnknownCallWindowTest {
         ).forEach { assertFalse(it, UnknownCallWindow.looksLikeOneTimeCode(it)) }
     }
 
+    @Test
+    fun `codes sent split in two or named in another language are codes too`() {
+        listOf(
+            "Your verification code is 123-456",
+            "Your code: 482 913",
+            "Ihre mTAN lautet 4829 1234",
+            "TAN: 482913",
+            "Doğrulama kodu: 482913",
+            "【微信】验证码：482913，5分钟内有效",
+            "認証コード：482913",
+            "[인증번호] 482913",
+        ).forEach { assertTrue(it, UnknownCallWindow.looksLikeOneTimeCode(it)) }
+
+        assertFalse("tan inside a word", UnknownCallWindow.looksLikeOneTimeCode("Sultan Tours, booking 482913"))
+    }
+
+    @Test
+    fun `a restored call keeps its warning and its end`() {
+        val token = window.callStarted(caller)
+        assertTrue(window.claimWarning(caller))
+        window.callEnded(token)
+
+        val nextProcess = UnknownCallWindow { now }
+        nextProcess.restore(checkNotNull(window.snapshot()))
+
+        assertNull("it was already warned about", nextProcess.openCaller())
+        assertTrue(nextProcess.isOpen())
+        now += UnknownCallWindow.AFTER_CALL_MS + 1
+        assertFalse(nextProcess.isOpen())
+    }
+
+    @Test
+    fun `a restored call whose end nobody saw counts for an hour`() {
+        window.callStarted(caller)
+        val nextProcess = UnknownCallWindow { now }
+        nextProcess.restore(checkNotNull(window.snapshot()))
+
+        now += UnknownCallWindow.RESTORED_OPEN_MS
+        assertEquals(caller, nextProcess.openCaller())
+        now += 1
+        assertNull(nextProcess.openCaller())
+        assertEquals("the watched call keeps its own limit", caller, window.openCaller())
+    }
+
+    @Test
+    fun `a saved call never replaces one this process knows`() {
+        window.callStarted(caller)
+
+        window.restore(UnknownCallWindow.Saved(OTHER_CALLER, now, endedAt = null, warned = false))
+
+        assertEquals(caller, window.openCaller())
+    }
+
     private companion object {
         const val MINUTE = 60_000L
         const val OTHER_CALLER = "+13125550199"
