@@ -239,11 +239,13 @@ it goes in `spam_numbers_approved.json` with a link to the report. The merge
 then publishes it, keeping the pending community reports in its count, and the
 review is the row's own evidence, so later reports can't demote it.
 
-A revoked approval comes off at the next merge. The row keeps whatever its
-other sources say and loses the review's evidence and description. A row the
-review alone was holding up is unpublished, including one that only community
-reports back. Those reports go back to the pending ledger, counted as one day's
-reports on the row's last day, so the usual gate decides whether it returns.
+The pending ledger keeps a reviewed number's community reports, including
+ones that arrive after the review, with their real days and reporters. A
+revoked approval comes off at the next merge. The row keeps whatever its other
+sources say and loses the review's evidence and description. A row with
+community reports goes back to the usual gate on those reports alone, so it
+stays if they carry it and is held if they don't. A row the review alone was
+holding up is unpublished.
 
 Every evidence record carries `expires_at_epoch_ms`, and phones stop matching
 a downloaded number or range once its last record expires, so a row

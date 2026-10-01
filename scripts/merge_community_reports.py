@@ -382,22 +382,31 @@ def require_listed_reviews(existing: dict[str, dict], listed: set[str]) -> None:
             )
 
 
+def keeps_community_ledger(entry: dict) -> bool:
+    """A reviewed row whose only other support is community reports.
+
+    Its reports stay in the pending ledger with their real days and reporters,
+    so revoking the review hands them back to the community gate intact.
+    """
+    support = canonical_source_ids(entry)
+    return MAINTAINER_SOURCE in support and support - {MAINTAINER_SOURCE} <= {"community_reports"}
+
+
 def revoke_maintainer_approvals(
     existing: dict[str, dict],
     pending: dict[str, dict],
     revoked: set[str],
-    today: str,
-    pending_cutoff: str,
 ) -> tuple[int, int]:
     """Take the review back off every row whose approval is revoked.
 
     Its evidence, source and description come off. A row another source still
-    backs stays published without them. A row the review carried is unpublished,
-    and its community reports go back to the pending ledger as one report on the
-    row's last day, which can delay a later promotion but never hurry one. Running
-    this twice changes nothing.
+    backs stays published without them. A row with community reports in the
+    ledger goes back to the community gate, which runs right after this and
+    keeps it or unpublishes it on those reports alone. A row the review alone
+    carried, or whose reports have aged out of the ledger, is unpublished.
+    Running this twice changes nothing.
     """
-    stripped = 0
+    released = 0
     removed = 0
     for number in sorted(revoked):
         entry = existing.get(number)
@@ -416,18 +425,25 @@ def revoke_maintainer_approvals(
             part for part in entry.get("description", "").split("; ") if part != MAINTAINER_DESCRIPTION
         )
         support = canonical_source_ids(entry)
+        state = pending.get(number)
         if support - {"community_reports"}:
-            stripped += 1
+            released += 1
+            continue
+        if support and state is not None and (state["published"] or state["events"]):
+            if not state["published"]:
+                # The review published it, so its count and dates were partly
+                # the review's. The reports alone decide them now.
+                days = [event["day"] for event in state["events"]]
+                entry["reports"] = sum(event["count"] for event in state["events"])
+                entry["first_seen"], entry["last_seen"] = min(days), max(days)
+            entry["description"] = entry["description"] or COMMUNITY_DESCRIPTION
+            state["entry"] = entry
+            released += 1
             continue
         del existing[number]
         pending.pop(number, None)
         removed += 1
-        reports = max(0, int(entry.get("reports", 0)))
-        last = entry.get("last_seen")
-        if "community_reports" in support and reports and _is_valid_day(last, today) and last >= pending_cutoff:
-            event = {"key": f"revoked:{number}", "day": last, "bucket": "", "count": reports}
-            pending[number] = {"published": False, "entry": entry, "events": [event]}
-    return stripped, removed
+    return released, removed
 
 
 def apply_maintainer_approvals(
@@ -444,7 +460,8 @@ def apply_maintainer_approvals(
     GitHub waiting forever when it's a region no imported source covers
     (issue #27, a Munich number). The review is its own evidence record, so the
     row is no longer community-only and the quorum rechecks leave it alone. The
-    pending reports still count toward it. Running this twice changes nothing.
+    pending reports still count toward it and stay in the ledger, along with
+    later ones, in case the review is revoked. Running this twice changes nothing.
     """
 
     added = 0
@@ -468,7 +485,7 @@ def apply_maintainer_approvals(
             updated += 1
             continue
 
-        state = pending.pop(number, None)
+        state = pending.get(number)
         events = state["events"] if state else []
         days = [event["day"] for event in events] + [reviewed]
         base = dict(state["entry"]) if state else {}
@@ -656,16 +673,15 @@ def main(argv: list[str] | None = None):
     # as a community report day.
     approvals, revoked_numbers = validated_approvals(load_approved_numbers(), today)
     require_listed_reviews(existing, {approval["number"] for approval in approvals} | revoked_numbers)
-    revoked_stripped, revoked_removed = revoke_maintainer_approvals(
-        existing, pending, revoked_numbers, today, pending_cutoff
-    )
-    if revoked_stripped or revoked_removed:
-        print(f"Revoked approvals: {revoked_removed} rows unpublished, {revoked_stripped} kept on other sources")
+    revoked_released, revoked_removed = revoke_maintainer_approvals(existing, pending, revoked_numbers)
+    if revoked_released or revoked_removed:
+        print(f"Revoked approvals: {revoked_removed} rows unpublished, {revoked_released} left to their other sources")
 
     demoted = 0
     for number, entry in list(existing.items()):
         if canonical_source_ids(entry) != {"community_reports"}:
-            pending.pop(number, None)
+            if not keeps_community_ledger(entry):
+                pending.pop(number, None)
             continue
         state = pending.setdefault(number, legacy_community_state(entry, today))
         if state["published"] and (state.get("bucket_quorum") or not any(event["bucket"] for event in state["events"])):
@@ -776,10 +792,32 @@ def main(argv: list[str] | None = None):
                         entry["sources"] = sorted(set(entry.get("sources", [])) | {COMMUNITY_SOURCE})
                         if reported_at > entry.get("last_seen", ""):
                             entry["last_seen"] = reported_at
+                        if state is None and keeps_community_ledger(entry):
+                            state = {
+                                "published": False,
+                                "entry": {
+                                    "number": number,
+                                    "type": entry.get("type", spam_type),
+                                    "reports": 0,
+                                    "first_seen": reported_at,
+                                    "last_seen": reported_at,
+                                    "description": COMMUNITY_DESCRIPTION,
+                                    "sources": [COMMUNITY_SOURCE],
+                                },
+                                "events": [],
+                            }
+                            pending[number] = state
                         if state:
                             state["events"].append(event)
-                            state["entry"] = entry
-                            if bucket and state["published"] and not state.get("bucket_quorum") and not community_has_quorum(state):
+                            if state["published"]:
+                                state["entry"] = entry
+                            if (
+                                bucket
+                                and state["published"]
+                                and not state.get("bucket_quorum")
+                                and not has_maintainer_review(entry)
+                                and not community_has_quorum(state)
+                            ):
                                 state["published"] = False
                                 del existing[number]
                                 demoted += 1
@@ -892,7 +930,7 @@ def main(argv: list[str] | None = None):
         or demoted > 0
         or approved_added > 0
         or approved_updated > 0
-        or revoked_stripped > 0
+        or revoked_released > 0
         or revoked_removed > 0
     )
     if changed:

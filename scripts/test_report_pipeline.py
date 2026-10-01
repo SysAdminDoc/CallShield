@@ -918,8 +918,9 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
     assert evidence["source_id"] == "maintainer_review" and evidence["confidence_tier"] == "curated", evidence
     expected_expiry = datetime.fromisoformat(f"{BASE_DAY}T00:00:00+00:00") + timedelta(days=730)
     assert evidence["expires_at_epoch_ms"] == int(expected_expiry.timestamp() * 1000), evidence
+    # The report stays in the ledger, unpublished, in case the review is revoked.
     pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
-    assert munich not in pending, pending
+    assert pending[munich]["published"] is False and len(pending[munich]["events"]) == 1, pending[munich]
 
     # An imported row keeps its own evidence and counts, and gains the review.
     row = row_for(data_dir, reported)
@@ -1025,10 +1026,35 @@ def assert_maintainer_approval_can_be_revoked(data_dir: Path) -> None:
     assert not (data_dir / "not_spam_review.json").exists(), (data_dir / "not_spam_review.json").read_text(encoding="utf-8")
     assert database_version(data_dir) == 8
 
-    revoked = [{**approval, "revoked": True, "revoked_at": BASE_DAY} for approval in approvals]
-    write_json(data_dir / "spam_numbers_approved.json", {"approved": revoked})
+    # Taking the review off an imported row is a change of its own.
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [approvals[0], {**approvals[1], "revoked": True, "revoked_at": BASE_DAY}, *approvals[2:]]},
+    )
     run_script("merge_community_reports.py", data_dir)
     assert database_version(data_dir) == 9
+    assert row_for(data_dir, reported)["description"] == "FCC: Unwanted Calls", row_for(data_dir, reported)
+
+    legacy = "+13129870666"
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    database["numbers"].append(
+        {
+            "number": legacy,
+            "type": "scam",
+            "reports": 1,
+            "first_seen": BASE_DAY,
+            "last_seen": BASE_DAY,
+            "description": "Community reported; Reviewed by the maintainer",
+            "sources": ["community"],
+            "evidence": [row_for(data_dir, fresh)["evidence"][0]],
+        }
+    )
+    write_json(data_dir / "spam_numbers.json", database)
+    revoked = [{**approval, "revoked": True, "revoked_at": BASE_DAY} for approval in approvals]
+    legacy_entry = {"number": legacy, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/legacy"}
+    write_json(data_dir / "spam_numbers_approved.json", {"approved": [*revoked, {**legacy_entry, "revoked": True, "revoked_at": BASE_DAY}]})
+    run_script("merge_community_reports.py", data_dir)
+    assert database_version(data_dir) == 10
 
     # The review alone published these two.
     assert row_for(data_dir, munich) is None
@@ -1043,18 +1069,24 @@ def assert_maintainer_approval_can_be_revoked(data_dir: Path) -> None:
     assert ledger[munich]["published"] is False, ledger[munich]
     assert [(event["day"], event["bucket"], event["count"]) for event in ledger[munich]["events"]] == [(BASE_DAY, "", 1)], ledger
     assert fresh not in ledger, ledger
-    # Reports older than the 30-day pending window don't come back.
-    assert row_for(data_dir, settled) is None
-    assert settled not in ledger, ledger[settled]
+    # A row the community published on its own reports stays published.
+    row = row_for(data_dir, settled)
+    assert row is not None and row["reports"] == 3 and row["description"] == "Community reported", row
+    assert row["sources"] == ["community"] and "evidence" not in row, row
+    assert ledger[settled]["published"] is True, ledger[settled]
+    # A reviewed row with no reports left in the ledger, the way #27's number
+    # was published before the ledger kept them, is simply unpublished.
+    assert row_for(data_dir, legacy) is None
+    assert legacy not in ledger, ledger[legacy]
 
     # Nothing changed, so the next merge leaves the version alone.
     run_script("merge_community_reports.py", data_dir)
-    assert database_version(data_dir) == 9
+    assert database_version(data_dir) == 10
 
     # Lifting a revocation approves the number again.
     write_json(data_dir / "spam_numbers_approved.json", {"approved": [revoked[0], revoked[1], approvals[2], revoked[3]]})
     run_script("merge_community_reports.py", data_dir)
-    assert database_version(data_dir) == 10
+    assert database_version(data_dir) == 11
     assert row_for(data_dir, fresh)["sources"] == ["maintainer_review"]
 
     earlier = (datetime.fromisoformat(BASE_DAY) - timedelta(days=1)).date().isoformat()
@@ -1073,7 +1105,93 @@ def assert_maintainer_approval_can_be_revoked(data_dir: Path) -> None:
         result = run_script_result("merge_community_reports.py", data_dir)
         assert result.returncode != 0 and fault in result.stderr, (fault, result.stderr)
         assert fresh in result.stderr, result.stderr
-        assert database_version(data_dir) == 10
+        assert database_version(data_dir) == 11
+
+
+def assert_revoked_review_hands_reports_back_to_the_gate(data_dir: Path) -> None:
+    """A revoked review leaves the number to its community reports, with their
+    real days and reporters. The review's own date and count can't help it."""
+    hurried, bucketed, unreported, carried = "+13129870101", "+13129870102", "+13129870103", "+13129870104"
+    timed = "+13129870105"
+
+    def day(days: int, hour: int = 10) -> str:
+        return (datetime.now(timezone.utc) - timedelta(days=days)).replace(hour=hour, minute=0, second=0, microsecond=0).isoformat()
+
+    reviewed = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+    # Published by the community on report times alone, long enough ago that
+    # its reports have left the ledger.
+    timed_row = {
+        "number": timed,
+        "type": "scam",
+        "reports": 2,
+        "first_seen": day(60)[:10],
+        "last_seen": day(40)[:10],
+        "description": "Community reported",
+        "sources": ["community"],
+    }
+    write_json(data_dir / "spam_numbers.json", {"version": 7, "updated": BASE_DAY, "numbers": [timed_row], "prefixes": []})
+    write_report(data_dir, "hurried_1.json", hurried, None, day(5))
+    write_report(data_dir, "bucketed_1.json", bucketed, BUCKETS[0], day(5))
+    write_report(data_dir, "bucketed_2.json", bucketed, BUCKETS[1], day(5, 11))
+    write_report(data_dir, "carried_1.json", carried, BUCKETS[0], day(4))
+    run_drain(data_dir)
+    approvals = [
+        {"number": number, "type": "scam", "reviewed_at": reviewed, "reference": "https://example.org/review"}
+        for number in (hurried, bucketed, unreported, carried, timed)
+    ]
+    write_json(data_dir / "spam_numbers_approved.json", {"approved": approvals})
+    run_script("merge_community_reports.py", data_dir)
+    assert all(row_for(data_dir, number) for number in (hurried, bucketed, unreported, carried, timed))
+
+    # Reports that land while the review holds the row up.
+    write_report(data_dir, "unreported_1.json", unreported, BUCKETS[3], day(1))
+    for index, bucket in enumerate(BUCKETS[:3]):
+        write_report(data_dir, f"carried_{index + 2}.json", carried, bucket, day(1, 10 + index))
+    # One bucketed reporter would send a row promoted on times alone back to
+    # the gate, but not while the review holds it up.
+    write_report(data_dir, "timed_1.json", timed, BUCKETS[4], day(1))
+    run_drain(data_dir)
+    row = row_for(data_dir, timed)
+    assert row is not None and row["reports"] == 3 and row["first_seen"] == day(60)[:10], row
+    assert row_for(data_dir, unreported)["reports"] == 2, row_for(data_dir, unreported)
+    assert row_for(data_dir, carried)["reports"] == 4, row_for(data_dir, carried)
+
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [{**approval, "revoked": True, "revoked_at": BASE_DAY} for approval in approvals]},
+    )
+    run_script("merge_community_reports.py", data_dir)
+    ledger = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+
+    # One report isn't a quorum, and its day is the report's, not the review's.
+    assert row_for(data_dir, hurried) is None
+    assert [event["day"] for event in ledger[hurried]["events"]] == [day(5)[:10]], ledger[hurried]
+    assert ledger[hurried]["entry"]["last_seen"] == day(5)[:10], ledger[hurried]
+    # Two reporters on one day aren't three.
+    assert row_for(data_dir, bucketed) is None
+    # The review's placeholder count goes with it: one real report is left.
+    assert row_for(data_dir, unreported) is None
+    assert ledger[unreported]["entry"]["reports"] == 1, ledger[unreported]
+    assert ledger[unreported]["entry"]["description"] == "Community reported", ledger[unreported]
+    # Three reporters on one day, a day after the first report: the community
+    # carries this one on its own, so it stays.
+    row = row_for(data_dir, carried)
+    assert row is not None and row["reports"] == 4 and row["sources"] == ["community"], row
+    assert row["first_seen"] == day(4)[:10] and row["last_seen"] == day(1)[:10], row
+    assert row["description"] == "Community reported" and "evidence" not in row, row
+    assert ledger[carried]["published"] is True, ledger[carried]
+    # Without the review, the gate rechecks the timed row on its bucket and holds it.
+    assert row_for(data_dir, timed) is None
+    assert ledger[timed]["published"] is False, ledger[timed]
+
+    # Later reports go through the ordinary gate. Before, a report on the same
+    # day as the first one counted as a day after the review's date, and an
+    # unbucketed one skipped the three-reporter rule the buckets had set.
+    write_report(data_dir, "hurried_2.json", hurried, None, day(5, 14))
+    write_report(data_dir, "bucketed_3.json", bucketed, None, day(2))
+    run_drain(data_dir)
+    assert row_for(data_dir, hurried) is None
+    assert row_for(data_dir, bucketed) is None
 
 
 def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
@@ -1245,6 +1363,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_maintainer_approval_can_be_revoked(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_revoked_review_hands_reports_back_to_the_gate(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_resend_across_drains_counts_once(Path(tmp) / "data")

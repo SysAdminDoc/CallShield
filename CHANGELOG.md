@@ -7,7 +7,9 @@ All notable changes to CallShield will be documented in this file.
 - A number the maintainer approved can now be taken back. Its entry in
   `spam_numbers_approved.json` gets `"revoked": true` and a date, and the next
   merge strips the review from the row. A row the review alone was holding up
-  is unpublished. A number listed twice stops the merge with an error naming
+  is unpublished. One with community reports goes back to the usual gate with
+  the reports it actually got, so the review's date and count can't help it
+  through. A number listed twice stops the merge with an error naming
   it, since two dates made its evidence flip and every phone re-download the
   database on each merge. So does deleting an approval outright, which used to
   leave the review in the row for two years. Not-spam votes no longer make a
