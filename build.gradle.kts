@@ -151,6 +151,7 @@ val bundledRuntimeAssets =
         "assets/hot_ranges.json",
         "assets/spam_domains.json",
         "assets/spam_model_weights.json",
+        "assets/list_catalog.json",
     )
 
 fun verifyApkDataPrivacy(apkFile: File) {
