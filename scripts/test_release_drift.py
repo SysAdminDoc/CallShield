@@ -35,8 +35,8 @@ class ReleaseDriftTest(unittest.TestCase):
                 snapshot_path=snapshot_path,
             )
         self.assertEqual([], report["issues"], report)
-        self.assertEqual("1.10.0", report["version_name"])
-        self.assertEqual(70, report["version_code"])
+        self.assertEqual("1.11.0", report["version_name"])
+        self.assertEqual(71, report["version_code"])
         self.assertEqual(10, report["sources"]["source_count"])
         self.assertEqual(3, len(report["advisories"]))
 

@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.11.0 (2026-09-30)
+
 - A link written `https://evil.com\@paypal.com` in a text is now checked as
   evil.com, the host a browser actually opens. The text check used to read it
   as paypal.com.

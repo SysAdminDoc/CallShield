@@ -55,18 +55,18 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
-            "1.10.0",
-            "Expecting a call, and a database that keeps blocking",
+            "1.11.0",
+            "Scam callbacks, codes during calls and safer lists",
             isLatest = true,
-            date = "September 28, 2026",
-            summary = "Let unknown callers ring for a while, and a fix that keeps the spam database working between updates.",
+            date = "September 30, 2026",
+            summary = "Holds a call back to a scam text, warns before you read a code to a stranger, and keeps your own lists through a damaged database.",
             changes =
                 listOf(
-                    "Expecting a call lets unknown callers ring for an hour, three hours or until midnight, from Home or a Quick Settings tile",
-                    "Numbers from the spam database no longer stop blocking a few weeks after an update",
-                    "The caller ID popup works with TalkBack, and the Blocked log and Blocklist fit small screens with large text",
-                    "A blocked-call alert offers Not spam for a day, and texts sent under a carrier's scam label are flagged",
-                    "Answer and hang up handles national-format numbers and rejects instead of answering while roaming",
+                    "Calling a number from a text flagged as spam in the last 30 days is held first",
+                    "A one-time code that arrives during a call from someone who isn't a contact brings up a warning",
+                    "Text checks catch \"new number\" reply bait and see through look-alike letters",
+                    "Your blocks, allow list and rules survive a damaged database",
+                    "A trusted number can allow its whole number block, and Home shows a card when a new release is out",
                 ),
         )
         Spacer(Modifier.height(14.dp))
@@ -108,6 +108,20 @@ fun ChangelogScreen() {
         }
         AnimatedVisibility(visible = showHistory) {
             Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.10.0",
+                    "Expecting a call, and a database that keeps blocking",
+                    date = "September 28, 2026",
+                    summary = "Let unknown callers ring for a while, and a fix that keeps the spam database working between updates.",
+                    changes =
+                        listOf(
+                            "Expecting a call lets unknown callers ring for an hour, three hours or until midnight, from Home or a Quick Settings tile",
+                            "Numbers from the spam database no longer stop blocking a few weeks after an update",
+                            "The caller ID popup works with TalkBack, and the Blocked log and Blocklist fit small screens with large text",
+                            "A blocked-call alert offers Not spam for a day, and texts sent under a carrier's scam label are flagged",
+                            "Answer and hang up handles national-format numbers and rejects instead of answering while roaming",
+                        ),
+                )
                 VersionEntry(
                     "1.9.0",
                     "A new look and protection levels",

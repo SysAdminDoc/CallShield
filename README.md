@@ -78,6 +78,17 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware.** It won't block a number you recently called or keep answering, a callback after a local emergency call, or a caller who tries twice in five minutes.
 6. **Community-driven.** One-tap anonymous reports go through a Cloudflare Worker, and the maintainer merges them into the database.
 
+## v1.11.0 Highlights
+
+Better at the calls and texts scams lead to, and your own lists survive a damaged database.
+
+- **Calling back a scam text.** The outgoing call check holds a call to a number that appeared in a text CallShield flagged as spam in the last 30 days, and the notice says which day the text came.
+- **Codes during a call.** A one-time code that arrives while someone who isn't a contact is on the line, or in the 10 minutes after, brings up a warning not to read it out.
+- **Text checks.** "Hi mum, this is my new number" and other reply bait is caught in a dozen languages, and look-alike letters and invisible characters no longer hide spam. In aggressive mode a business's opt-out footer alone doesn't block its text any more.
+- **Your lists are safer.** Your blocks, allow list and rules survive a damaged database, and a phone restored from a cloud backup downloads the whole spam list again.
+- **Trusted number blocks.** A doctor's office that calls from a different line each time can be allowed by its last 2 or 3 digits.
+- **Around the app.** Home shows a card when a new release is out. Clearing the log or blocking an area code happens at once, with Undo. Outside North America, a ten-digit number the phone couldn't place isn't scored by North American rules, and Settings lists recommended blocklists for Colombia, Chile and Turkey.
+
 ## v1.10.0 Highlights
 
 Let unknown callers ring when you're waiting for a call, and a fix that keeps the spam database blocking between updates.
@@ -100,7 +111,7 @@ A new look for every screen, protection levels you can switch in one tap, and a 
 
 Earlier releases are in [CHANGELOG.md](CHANGELOG.md).
 
-## Detection Pipeline (v1.10.0)
+## Detection Pipeline (v1.11.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order through `CheckerPipeline.run`. The first layer with a verdict wins, and each layer is tested on its own. Priorities are stable numbers, and the ladder below is the live order.
 
