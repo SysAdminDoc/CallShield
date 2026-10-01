@@ -1,5 +1,5 @@
 {
-  "about": "Numbers the maintainer checked by hand against public complaint sites, usually after a spam report filed as a GitHub issue. merge_community_reports.py publishes each one with a maintainer_review evidence record. Every entry needs the number, a type, the review date and a link to the report.",
+  "about": "Numbers the maintainer checked by hand against public complaint sites, usually after a spam report filed as a GitHub issue. merge_community_reports.py publishes each one with a maintainer_review evidence record. Every entry needs the number, a type, the review date and a link to the report. One entry per number. To take an approval back, keep its entry and add \"revoked\": true and a revoked_at date.",
   "approved": [
     {
       "number": "+498943780834",

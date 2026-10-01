@@ -942,15 +942,138 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
     assert row is not None and row["reports"] == 2, row
 
     # An approval that can't be checked stops the merge instead of being skipped.
-    for broken in (
-        {"number": "+15555550100", "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"},
-        {"number": fresh, "type": "scam", "reviewed_at": "2999-01-01", "reference": "https://example.org/r"},
-        {"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "http://example.org/r"},
-        {"number": fresh, "type": "", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"},
+    for broken, fault in (
+        ({"number": "+15555550100", "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"}, "plausible"),
+        ({"number": fresh, "type": "scam", "reviewed_at": "2999-01-01", "reference": "https://example.org/r"}, "reviewed_at"),
+        ({"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "http://example.org/r"}, "https reference"),
+        ({"number": fresh, "type": "", "reviewed_at": BASE_DAY, "reference": "https://example.org/r"}, "needs a type"),
     ):
-        write_json(data_dir / "spam_numbers_approved.json", {"approved": [broken]})
+        write_json(data_dir / "spam_numbers_approved.json", {"approved": [*approvals["approved"][:2], broken]})
         result = run_script_result("merge_community_reports.py", data_dir)
         assert result.returncode != 0 and "spam_numbers_approved.json" in result.stderr, (broken, result.stderr)
+        assert fault in result.stderr, (fault, result.stderr)
+
+
+def database_version(data_dir: Path) -> int:
+    return json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))["version"]
+
+
+def assert_maintainer_approval_can_be_revoked(data_dir: Path) -> None:
+    """A revoked approval takes the review back off its row at the next merge,
+    and a row nothing else backs is unpublished. A number listed twice, or an
+    entry deleted instead of revoked, stops the merge."""
+    munich, reported, fresh, settled = "+498943780834", "+18056377456", "+13109462201", "+13129870555"
+
+    def days_ago(days: int) -> str:
+        return (datetime.fromisoformat(BASE_DAY) - timedelta(days=days)).date().isoformat()
+
+    fcc_evidence = {
+        "source_id": "fcc_complaints",
+        "retrieved_at": f"{BASE_DAY}T00:00:00+00:00",
+        "expires_at_epoch_ms": 4_000_000_000_000,
+    }
+    write_json(
+        data_dir / "spam_numbers.json",
+        {
+            "version": 7,
+            "updated": BASE_DAY,
+            "sources": ["community_reports"],
+            "numbers": [
+                {
+                    "number": reported,
+                    "type": "robocall",
+                    "reports": 59,
+                    "first_seen": "2015-07-28",
+                    "last_seen": BASE_DAY,
+                    "description": "FCC: Unwanted Calls",
+                    "sources": ["legacy_import"],
+                    "evidence": [fcc_evidence],
+                },
+                # A community row last reported two months ago.
+                {
+                    "number": settled,
+                    "type": "scam",
+                    "reports": 3,
+                    "first_seen": days_ago(90),
+                    "last_seen": days_ago(60),
+                    "description": "Community reported",
+                    "sources": ["community"],
+                },
+            ],
+            "prefixes": [],
+        },
+    )
+    write_report(data_dir, "munich_1.json", munich, None, f"{BASE_DAY}T11:54:55+00:00", report_type="unknown")
+    run_drain(data_dir)
+    approvals = [
+        {"number": munich, "type": "telemarketer", "reviewed_at": BASE_DAY, "reference": "https://github.com/SysAdminDoc/CallShield/issues/27"},
+        {"number": reported, "type": "robocall", "reviewed_at": BASE_DAY, "reference": "https://github.com/SysAdminDoc/CallShield/issues/24"},
+        {"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/report"},
+        {"number": settled, "type": "scam", "reviewed_at": days_ago(60), "reference": "https://example.org/settled"},
+    ]
+    write_json(data_dir / "spam_numbers_approved.json", {"approved": approvals})
+    run_script("merge_community_reports.py", data_dir)
+    assert database_version(data_dir) == 8
+    assert row_for(data_dir, munich)["sources"] == ["community"]
+
+    # The reviewed row's raw sources say "community", but the review is its own
+    # evidence, so not-spam votes don't make it a correction candidate. Before,
+    # it became one and approving the correction was then skipped.
+    for index, bucket in enumerate(BUCKETS[:4]):
+        write_report(data_dir, f"munich_not_spam_{index}.json", munich, bucket, TIMES[index], report_type="not_spam")
+    run_drain(data_dir)
+    assert not (data_dir / "not_spam_review.json").exists(), (data_dir / "not_spam_review.json").read_text(encoding="utf-8")
+    assert database_version(data_dir) == 8
+
+    revoked = [{**approval, "revoked": True, "revoked_at": BASE_DAY} for approval in approvals]
+    write_json(data_dir / "spam_numbers_approved.json", {"approved": revoked})
+    run_script("merge_community_reports.py", data_dir)
+    assert database_version(data_dir) == 9
+
+    # The review alone published these two.
+    assert row_for(data_dir, munich) is None
+    assert row_for(data_dir, fresh) is None
+    # The imported row goes back to exactly what its own source says.
+    row = row_for(data_dir, reported)
+    assert row["reports"] == 59 and row["description"] == "FCC: Unwanted Calls", row
+    assert row["sources"] == ["legacy_import"], row
+    assert [item["source_id"] for item in row["evidence"]] == ["fcc_complaints"], row
+    # Munich's community report waits in the ledger again, pinned to the row's last day.
+    ledger = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert ledger[munich]["published"] is False, ledger[munich]
+    assert [(event["day"], event["bucket"], event["count"]) for event in ledger[munich]["events"]] == [(BASE_DAY, "", 1)], ledger
+    assert fresh not in ledger, ledger
+    # Reports older than the 30-day pending window don't come back.
+    assert row_for(data_dir, settled) is None
+    assert settled not in ledger, ledger[settled]
+
+    # Nothing changed, so the next merge leaves the version alone.
+    run_script("merge_community_reports.py", data_dir)
+    assert database_version(data_dir) == 9
+
+    # Lifting a revocation approves the number again.
+    write_json(data_dir / "spam_numbers_approved.json", {"approved": [revoked[0], revoked[1], approvals[2], revoked[3]]})
+    run_script("merge_community_reports.py", data_dir)
+    assert database_version(data_dir) == 10
+    assert row_for(data_dir, fresh)["sources"] == ["maintainer_review"]
+
+    earlier = (datetime.fromisoformat(BASE_DAY) - timedelta(days=1)).date().isoformat()
+    for approved, fault in (
+        # Listed twice with two dates, the evidence used to flip on every merge.
+        ([*revoked[:2], approvals[2], {**approvals[2], "reviewed_at": earlier}], "listed more than once"),
+        # Spelled two ways is still one number.
+        ([*revoked[:2], approvals[2], {**approvals[2], "number": "+1 (310) 946-2201"}], "listed more than once"),
+        # Deleting an entry took nothing back, so it has to be revoked instead.
+        ([revoked[0], revoked[1]], "no longer lists"),
+        ([revoked[0], revoked[1], {**approvals[2], "revoked": "yes", "revoked_at": BASE_DAY}], "revoked set to true or false"),
+        ([revoked[0], revoked[1], {**approvals[2], "revoked": True}], "revoked_at"),
+        ([revoked[0], revoked[1], {**approvals[2], "revoked": True, "revoked_at": "2999-01-01"}], "revoked_at"),
+    ):
+        write_json(data_dir / "spam_numbers_approved.json", {"approved": approved})
+        result = run_script_result("merge_community_reports.py", data_dir)
+        assert result.returncode != 0 and fault in result.stderr, (fault, result.stderr)
+        assert fresh in result.stderr, result.stderr
+        assert database_version(data_dir) == 10
 
 
 def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
@@ -1119,6 +1242,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_maintainer_approval_publishes_a_reviewed_number(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_maintainer_approval_can_be_revoked(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_resend_across_drains_counts_once(Path(tmp) / "data")

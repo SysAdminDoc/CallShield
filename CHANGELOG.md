@@ -4,6 +4,14 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A number the maintainer approved can now be taken back. Its entry in
+  `spam_numbers_approved.json` gets `"revoked": true` and a date, and the next
+  merge strips the review from the row. A row the review alone was holding up
+  is unpublished. A number listed twice stops the merge with an error naming
+  it, since two dates made its evidence flip and every phone re-download the
+  database on each merge. So does deleting an approval outright, which used to
+  leave the review in the row for two years. Not-spam votes no longer make a
+  reviewed row a correction candidate.
 - On a phone outside North America, a ten-digit number the phone couldn't
   place is no longer scored by North American rules. An Australian phone
   gave `8881234567` the toll-free score, and the VoIP-range, campaign-range,

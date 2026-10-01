@@ -319,6 +319,117 @@ def load_approved_numbers() -> list[dict]:
     return approved
 
 
+def validated_approvals(approvals: list[dict], today: str) -> tuple[list[dict], set[str]]:
+    """Check every entry, then split the approvals from the revoked numbers.
+
+    Each number gets one entry. Listed twice with different dates, a number's
+    evidence flipped on every merge and moved the database version each time,
+    so every phone downloaded it again. To take an approval back, the entry
+    stays and gains ``"revoked": true`` and a ``revoked_at`` date, which keeps
+    the decision on the record.
+    """
+    active: list[dict] = []
+    revoked: set[str] = set()
+    seen: set[str] = set()
+    for approval in approvals:
+        if not isinstance(approval, dict):
+            raise TypeError(f"{APPROVED_NUMBERS_FILE.name}: every approval must be an object")
+        number = validated_report_number(str(approval.get("number", "")))
+        if not number:
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {approval.get('number')!r} is not a plausible number")
+        if number in seen:
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} is listed more than once. Keep one entry per number")
+        seen.add(number)
+        is_revoked = approval.get("revoked", False)
+        if not isinstance(is_revoked, bool):
+            raise TypeError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs revoked set to true or false")
+        if is_revoked:
+            revoked_at = approval.get("revoked_at")
+            if not isinstance(revoked_at, str) or not _is_valid_day(revoked_at, today):
+                raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a revoked_at date no later than today")
+            revoked.add(number)
+            continue
+        reviewed = approval.get("reviewed_at")
+        reference = approval.get("reference")
+        spam_type = approval.get("type")
+        if not isinstance(reviewed, str) or not _is_valid_day(reviewed, today):
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a reviewed_at date no later than today")
+        if not isinstance(reference, str) or not reference.startswith("https://"):
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs an https reference to the report")
+        if not isinstance(spam_type, str) or not spam_type.replace("_", "").isalpha():
+            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a type such as telemarketer or scam")
+        active.append({"number": number, "type": spam_type, "reviewed_at": reviewed})
+    return active, revoked
+
+
+def has_maintainer_review(entry: dict) -> bool:
+    return MAINTAINER_SOURCE in entry.get("sources", []) or any(
+        isinstance(item, dict) and item.get("source_id") == MAINTAINER_SOURCE for item in entry.get("evidence") or []
+    )
+
+
+def require_listed_reviews(existing: dict[str, dict], listed: set[str]) -> None:
+    """Stop when a reviewed row's entry was deleted instead of revoked.
+
+    Deleting the entry took nothing back. The review stayed in the row as its
+    evidence for two years, and the row stayed published on it.
+    """
+    for number, entry in existing.items():
+        if number not in listed and has_maintainer_review(entry):
+            raise ValueError(
+                f"{APPROVED_NUMBERS_FILE.name} no longer lists {number}, which carries a maintainer review. "
+                "Put the entry back with revoked set to true and a revoked_at date"
+            )
+
+
+def revoke_maintainer_approvals(
+    existing: dict[str, dict],
+    pending: dict[str, dict],
+    revoked: set[str],
+    today: str,
+    pending_cutoff: str,
+) -> tuple[int, int]:
+    """Take the review back off every row whose approval is revoked.
+
+    Its evidence, source and description come off. A row another source still
+    backs stays published without them. A row the review carried is unpublished,
+    and its community reports go back to the pending ledger as one report on the
+    row's last day, which can delay a later promotion but never hurry one. Running
+    this twice changes nothing.
+    """
+    stripped = 0
+    removed = 0
+    for number in sorted(revoked):
+        entry = existing.get(number)
+        if entry is None or not has_maintainer_review(entry):
+            continue
+        evidence = [
+            item for item in entry.get("evidence") or []
+            if not (isinstance(item, dict) and item.get("source_id") == MAINTAINER_SOURCE)
+        ]
+        if evidence:
+            entry["evidence"] = evidence
+        else:
+            entry.pop("evidence", None)
+        entry["sources"] = [source for source in entry.get("sources", []) if source != MAINTAINER_SOURCE]
+        entry["description"] = "; ".join(
+            part for part in entry.get("description", "").split("; ") if part != MAINTAINER_DESCRIPTION
+        )
+        support = canonical_source_ids(entry)
+        if support - {"community_reports"}:
+            stripped += 1
+            continue
+        del existing[number]
+        pending.pop(number, None)
+        removed += 1
+        reports = max(0, int(entry.get("reports", 0)))
+        last = entry.get("last_seen")
+        if "community_reports" in support and reports and _is_valid_day(last, today) and last >= pending_cutoff:
+            event = {"key": f"revoked:{number}", "day": last, "bucket": "", "count": reports}
+            pending[number] = {"published": False, "entry": entry, "events": [event]}
+    return stripped, removed
+
+
 def apply_maintainer_approvals(
     existing: dict[str, dict],
     pending: dict[str, dict],
@@ -339,21 +450,7 @@ def apply_maintainer_approvals(
     added = 0
     updated = 0
     for approval in approvals:
-        if not isinstance(approval, dict):
-            raise TypeError(f"{APPROVED_NUMBERS_FILE.name}: every approval must be an object")
-        number = validated_report_number(str(approval.get("number", "")))
-        reviewed = approval.get("reviewed_at")
-        reference = approval.get("reference")
-        spam_type = approval.get("type")
-        if not number:
-            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {approval.get('number')!r} is not a plausible number")
-        if not isinstance(reviewed, str) or not _is_valid_day(reviewed, today):
-            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a reviewed_at date no later than today")
-        if not isinstance(reference, str) or not reference.startswith("https://"):
-            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs an https reference to the report")
-        if not isinstance(spam_type, str) or not spam_type.replace("_", "").isalpha():
-            raise ValueError(f"{APPROVED_NUMBERS_FILE.name}: {number} needs a type such as telemarketer or scam")
-
+        number, reviewed, spam_type = approval["number"], approval["reviewed_at"], approval["type"]
         evidence = source_evidence(
             manifest,
             MAINTAINER_SOURCE,
@@ -553,6 +650,18 @@ def main(argv: list[str] | None = None):
     burst_duplicates = find_burst_duplicates(burst_candidates)
 
     existing = {n["number"]: n for n in db["numbers"]}
+
+    # Approvals are checked before anything changes. A revoked one comes off
+    # before the quorum recheck, which would otherwise read the review's date
+    # as a community report day.
+    approvals, revoked_numbers = validated_approvals(load_approved_numbers(), today)
+    require_listed_reviews(existing, {approval["number"] for approval in approvals} | revoked_numbers)
+    revoked_stripped, revoked_removed = revoke_maintainer_approvals(
+        existing, pending, revoked_numbers, today, pending_cutoff
+    )
+    if revoked_stripped or revoked_removed:
+        print(f"Revoked approvals: {revoked_removed} rows unpublished, {revoked_stripped} kept on other sources")
+
     demoted = 0
     for number, entry in list(existing.items()):
         if canonical_source_ids(entry) != {"community_reports"}:
@@ -708,7 +817,6 @@ def main(argv: list[str] | None = None):
             quarantine(report_file, rejected_dir)
             rejected += 1
 
-    approvals = load_approved_numbers()
     approved_added, approved_updated = (0, 0)
     if approvals:
         approved_added, approved_updated = apply_maintainer_approvals(
@@ -724,7 +832,7 @@ def main(argv: list[str] | None = None):
     review_candidates = []
     for number, reporters in sorted(not_spam_votes.items()):
         entry = existing.get(number)
-        if entry is None or set(entry.get("sources", [])) != {COMMUNITY_SOURCE}:
+        if entry is None or canonical_source_ids(entry) != {"community_reports"}:
             continue
         report_count = max(0, int(entry.get("reports", 0)))
         if len(reporters) > report_count:
@@ -784,6 +892,8 @@ def main(argv: list[str] | None = None):
         or demoted > 0
         or approved_added > 0
         or approved_updated > 0
+        or revoked_stripped > 0
+        or revoked_removed > 0
     )
     if changed:
         db["version"] += 1

@@ -18,7 +18,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_domains_approved.json`: Optional maintainer approval input for domain
   candidates. Add reviewed names to its `approved` array. An invalid shape
   stops the extractor.
-- `spam_numbers_approved.json`: Numbers the maintainer checked by hand, usually a spam report filed as a GitHub issue for a number no imported source covers. Each entry gives the number, a `type`, the `reviewed_at` date, an https `reference` to the report and a note on what the review found. The merge publishes each one with a `maintainer_review` evidence record, and an entry it can't check stops the merge
+- `spam_numbers_approved.json`: Numbers the maintainer checked by hand, usually a spam report filed as a GitHub issue for a number no imported source covers. Each entry gives the number, a `type`, the `reviewed_at` date, an https `reference` to the report and a note on what the review found. The merge publishes each one with a `maintainer_review` evidence record, and an entry it can't check stops the merge. So does a number listed twice. To take an approval back, keep the entry and add `"revoked": true` with a `revoked_at` date. Deleting the entry stops the merge, because it would leave the review in the row
 - `spam_domains_review.json`: Generated domain candidates awaiting approval
 - `not_spam_review.json`: Generated community false-positive review candidates
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
@@ -238,6 +238,12 @@ When the maintainer has checked such a number against public complaint sites,
 it goes in `spam_numbers_approved.json` with a link to the report. The merge
 then publishes it, keeping the pending community reports in its count, and the
 review is the row's own evidence, so later reports can't demote it.
+
+A revoked approval comes off at the next merge. The row keeps whatever its
+other sources say and loses the review's evidence and description. A row the
+review alone was holding up is unpublished, including one that only community
+reports back. Those reports go back to the pending ledger, counted as one day's
+reports on the row's last day, so the usual gate decides whether it returns.
 
 Every evidence record carries `expires_at_epoch_ms`, and phones stop matching
 a downloaded number or range once its last record expires, so a row
