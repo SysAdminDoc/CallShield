@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A link written `https://evil.com\@paypal.com` in a text is now checked as
+  evil.com, the host a browser actually opens. The text check used to read it
+  as paypal.com.
 - Two more North American rules stopped reading other countries' numbers as
   North American. A campaign burst (five callers from one area code and
   exchange in an hour) now counts only North American numbers, so five

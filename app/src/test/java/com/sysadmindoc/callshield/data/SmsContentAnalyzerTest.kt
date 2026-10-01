@@ -763,6 +763,17 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `a backslash ends a link's host the way a browser reads it`() {
+        SmsContentAnalyzer.updateSpamDomains(listOf("evil.com"))
+        try {
+            assertTrue(SmsContentAnalyzer.isKnownSpamDomainUrl("https://evil.com\\@paypal.com/login"))
+            assertTrue(SmsContentAnalyzer.isKnownSpamDomainUrl("https://evil.com\\login"))
+        } finally {
+            SmsContentAnalyzer.updateSpamDomains(emptyList())
+        }
+    }
+
+    @Test
     fun `answer and opt-out wording still adds weight to a lure`() {
         val lure = "Final notice: your vehicle warranty is about to lapse."
         val alone = SmsContentAnalyzer.analyze(lure)

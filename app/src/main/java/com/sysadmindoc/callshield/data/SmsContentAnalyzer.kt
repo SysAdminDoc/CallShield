@@ -234,10 +234,13 @@ class SmsContentAnalyzer
                     .lowercase()
                     .trim()
                     .trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
+            // A browser reads a backslash in a web link as a slash, so the host
+            // of evil.com\@paypal.com is evil.com.
             val authority =
                 lower
                     .substringAfter("://", lower)
                     .substringBefore('/')
+                    .substringBefore('\\')
                     .substringBefore('?')
                     .substringBefore('#')
             return authority
