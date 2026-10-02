@@ -1,0 +1,14 @@
+{
+  "number": "+12028643127",
+  "type": "sms_spam",
+  "reported_at": "2026-10-02T18:12:42.743Z",
+  "source": "community_app",
+  "reporter_bucket": "b797021a21f85b77",
+  "reporter_device": "e104fef76008d66f",
+  "sms_domains": [
+    "i.dems.ag"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
