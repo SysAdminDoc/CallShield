@@ -1,0 +1,14 @@
+{
+  "number": "+17706280987",
+  "type": "sms_spam",
+  "reported_at": "2026-10-07T23:53:22.502Z",
+  "source": "community_app",
+  "reporter_bucket": "6cf4493bea28b523",
+  "reporter_device": "117141d38b19b3a1",
+  "sms_domains": [
+    "actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
