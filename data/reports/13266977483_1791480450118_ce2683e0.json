@@ -1,0 +1,14 @@
+{
+  "number": "+13266977483",
+  "type": "sms_spam",
+  "reported_at": "2026-10-08T17:27:30.118Z",
+  "source": "community_app",
+  "reporter_bucket": "1056017dc1cc08ae",
+  "reporter_device": "dd0b7a10a42760d8",
+  "sms_domains": [
+    "xqa.im"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
