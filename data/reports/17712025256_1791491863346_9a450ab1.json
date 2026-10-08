@@ -1,0 +1,14 @@
+{
+  "number": "+17712025256",
+  "type": "sms_spam",
+  "reported_at": "2026-10-08T20:37:43.346Z",
+  "source": "community_app",
+  "reporter_bucket": "77a7f8efbb0cd777",
+  "reporter_device": "d0355fad1e807fb2",
+  "sms_domains": [
+    "flipthesenate2026.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
