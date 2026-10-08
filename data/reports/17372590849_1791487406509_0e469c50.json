@@ -1,0 +1,14 @@
+{
+  "number": "+17372590849",
+  "type": "sms_spam",
+  "reported_at": "2026-10-08T19:23:26.509Z",
+  "source": "community_app",
+  "reporter_bucket": "2a10b6b0478c27a9",
+  "reporter_device": "c8994aa12b3bd957",
+  "sms_domains": [
+    "jamestalarico.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
