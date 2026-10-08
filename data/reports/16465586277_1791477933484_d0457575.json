@@ -1,0 +1,14 @@
+{
+  "number": "+16465586277",
+  "type": "sms_spam",
+  "reported_at": "2026-10-08T16:45:33.484Z",
+  "source": "community_app",
+  "reporter_bucket": "2a10b6b0478c27a9",
+  "reporter_device": "c8994aa12b3bd957",
+  "sms_domains": [
+    "usaforunfpa.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
