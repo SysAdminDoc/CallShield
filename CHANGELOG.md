@@ -86,8 +86,10 @@ All notable changes to CallShield will be documented in this file.
 - The caller ID popup and the blocked log now say "International call from
   Jamaica" (or wherever) when a caller's number is from another country than
   your SIM's. Within North America the area code tells the US, Canada and the
-  Caribbean apart, so a one-ring call from 876 no longer looks local. It's a
-  label only and doesn't change what gets blocked.
+  Caribbean apart, so a one-ring call from 876 no longer looks local. A
+  toll-free number doesn't say where it is, so it isn't labeled. Russia and
+  Kazakhstan share +7 and are told apart. It's a label only and doesn't change
+  what gets blocked.
 - Outside North America, a number in a flagged text written the way people
   write one at home (020 7946 0018 in the UK, 01 23 45 67 89 in France) is
   now picked up when the text asks you to call or ring it, so a call to it

@@ -31,6 +31,14 @@ class CallerCountryTest {
     }
 
     @Test
+    fun `a toll-free or unlisted North American code isn't guessed`() {
+        assertNull("a Canadian bank's toll-free line", CallerCountry.abroad("+18005550123", "CA"))
+        assertNull(CallerCountry.abroad("+18885550123", "JM"))
+        assertNull("600 is Canada's, but the table doesn't say", CallerCountry.abroad("+16005550123", "CA"))
+        assertNull(CallerCountry.abroad("+18005550123", "US"))
+    }
+
+    @Test
     fun `the US and its territories are one home`() {
         assertNull(CallerCountry.abroad("+17875550123", "US"))
         assertNull(CallerCountry.abroad("+12125550123", "PR"))
@@ -49,6 +57,15 @@ class CallerCountryTest {
     fun `a shared calling code is named for its main country`() {
         assertEquals("RU", CallerCountry.abroad("+74951234567", "US"))
         assertEquals("GB", CallerCountry.abroad("+447797123456", "US"))
+    }
+
+    @Test
+    fun `Russia and Kazakhstan are told apart`() {
+        assertEquals("KZ", CallerCountry.abroad("+77012345678", "US"))
+        assertEquals("RU", CallerCountry.abroad("+79161234567", "KZ"))
+        assertEquals("KZ", CallerCountry.abroad("+77172123456", "RU"))
+        assertNull(CallerCountry.abroad("+77012345678", "KZ"))
+        assertNull(CallerCountry.abroad("+74951234567", "RU"))
     }
 
     @Test

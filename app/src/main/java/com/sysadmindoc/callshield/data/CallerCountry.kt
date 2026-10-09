@@ -16,8 +16,10 @@ internal object CallerCountry {
      * null: a number without a "+", one too short or long to be a phone line,
      * an unknown home region, or a call from home. North America shares +1,
      * so there the area code says which country it is, and the US counts its
-     * territories as home. Elsewhere a calling code shared by several regions
-     * (+44 for the UK, Jersey, Guernsey and the Isle of Man) is one home.
+     * territories as home. A toll-free or unlisted area code says nothing, so
+     * it isn't labeled. Russia and Kazakhstan share +7, and a 7 after it is
+     * Kazakhstan. Elsewhere a calling code shared by several regions (+44 for
+     * the UK, Jersey, Guernsey and the Isle of Man) is one home.
      */
     fun abroad(
         number: String,
@@ -31,8 +33,12 @@ internal object CallerCountry {
         val code = RegionCallingCodes.callingCodeOf(digits) ?: return null
         if (code == NANP_CODE) {
             if (digits.length != NANP_DIGITS) return null
-            val caller = nanpCountry(digits.substring(1, 4), number)
+            val caller = nanpCountry(digits.substring(1, 4), number) ?: return null
             return caller.takeIf { homeCode != NANP_CODE || it != nanpGroup(home) }
+        }
+        if (code == RU_KZ_CODE) {
+            val caller = if (digits.getOrNull(1) == '7') "KZ" else "RU"
+            return caller.takeIf { it != home }
         }
         if (code == homeCode) return null
         return RegionCallingCodes.mainRegionFor(code)
@@ -50,17 +56,26 @@ internal object CallerCountry {
             .getDisplayCountry(locale)
             .ifBlank { iso }
 
+    /** Null for a toll-free code or one the table doesn't list: Canada and the US share both. */
     private fun nanpCountry(
         areaCode: String,
         number: String,
-    ): String =
-        CARIBBEAN_AREA_CODES[areaCode]
-            ?: if (AreaCodeLookup.getRegionCode(number) in CANADIAN_PROVINCES) "CA" else US
+    ): String? {
+        CARIBBEAN_AREA_CODES[areaCode]?.let { return it }
+        val region = AreaCodeLookup.getRegionCode(number)
+        return when (region) {
+            null, TOLL_FREE -> null
+            in CANADIAN_PROVINCES -> "CA"
+            else -> US
+        }
+    }
 
     /** The US and its territories dial each other as home. */
     private fun nanpGroup(home: String): String = if (home in US_TERRITORIES) US else home
 
     private const val NANP_CODE = "1"
+    private const val RU_KZ_CODE = "7"
+    private const val TOLL_FREE = "TF"
     private const val NANP_DIGITS = 11
     private const val US = "US"
     private val E164_DIGITS = 8..15
