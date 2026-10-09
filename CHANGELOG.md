@@ -41,6 +41,21 @@ All notable changes to CallShield will be documented in this file.
   CallShield and why, such as to free up memory. It's read on the phone and
   never sent anywhere. Android 10 doesn't keep this record, so the card
   doesn't show there.
+- Background jobs whose schedule changed in an update now pick up the new
+  schedule the next time the app starts, instead of keeping the old one
+  until a reinstall. The trending list sync stops after three failed tries
+  and waits for its next run, and saving the blocked-call log gives up
+  after twelve tries until the next blocked call or restart.
+- Tapping Not spam on a blocked call tells the community only when the
+  shared database did the blocking, including under a category rule. A
+  block from a list you subscribed to, or from your own block list, stays
+  on your phone.
+- On a dual-SIM phone, the carrier's "Unverified" scam label is now read
+  for the SIM that got the text, not the default one, and a SIM that was
+  still locked at startup counts as soon as it's unlocked.
+- Meeting mode now starts only while a picked app shows an ongoing call.
+  A "Connected" or sync notice from Teams, Zoom, Slack or Discord could
+  keep the phone in meeting mode for hours before.
 
 ## v1.11.0 (2026-09-30)
 
