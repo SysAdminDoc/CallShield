@@ -1,0 +1,14 @@
+{
+  "number": "+17712175896",
+  "type": "sms_spam",
+  "reported_at": "2026-10-09T18:32:57.936Z",
+  "source": "community_app",
+  "reporter_bucket": "0927900bac3ffb5e",
+  "reporter_device": "70e8a9a92d9f506d",
+  "sms_domains": [
+    "thehousemajoritypac.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
