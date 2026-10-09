@@ -395,13 +395,16 @@ interface SpamDao {
     )
     fun observeLogNumberCounts(limit: Int): Flow<List<LogAggregate>>
 
+    /**
+     * Counts per area code prefix, each keyed by one of its numbers. A +1
+     * number and a bare ten-digit one stay apart ("+1415" and "415"), since
+     * only the phone's home region says whether a bare number is North
+     * American; ui.countsByAreaCode reads and merges them.
+     */
     @Query(
-        "SELECT CASE " +
-            "WHEN length(number) = 12 AND substr(number, 1, 2) = '+1' THEN substr(number, 3, 3) " +
-            "WHEN length(number) = 10 THEN substr(number, 1, 3) END AS `key`, " +
-            "COUNT(*) AS `count` FROM call_log " +
+        "SELECT MIN(number) AS `key`, COUNT(*) AS `count` FROM call_log " +
             "WHERE (length(number) = 12 AND substr(number, 1, 2) = '+1') OR length(number) = 10 " +
-            "GROUP BY `key` ORDER BY `count` DESC, `key` ASC LIMIT :limit",
+            "GROUP BY substr(number, 1, length(number) - 7) ORDER BY `count` DESC, `key` ASC LIMIT :limit",
     )
     fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>>
 

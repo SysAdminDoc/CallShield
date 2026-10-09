@@ -41,6 +41,7 @@ import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.areaCodeBlock
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -82,7 +83,8 @@ fun NumberDetailScreen(
     val dateFormat = remember(context) { localizedDateTimeFormat(context, withYear = true) }
     val homeRegion = rememberHomeRegion()
     val location = remember(number, homeRegion) { AreaCodeLookup.lookup(number, homeRegion) }
-    val areaCode = remember(number, homeRegion) { AreaCodeLookup.getAreaCode(number, homeRegion) }
+    val blockableAreaCode = remember(number, homeRegion) { areaCodeBlock(number, homeRegion) }
+    val areaCode = blockableAreaCode?.areaCode
     val copiedMessage = stringResource(R.string.detail_copied)
     val numberBlockedMessage = stringResource(R.string.detail_number_blocked)
     val numberUnblockedMessage = stringResource(R.string.detail_number_unblocked)
@@ -307,9 +309,9 @@ fun NumberDetailScreen(
                             outlined = true,
                         )
                     }
-                    if (areaCode != null) {
+                    if (blockableAreaCode != null) {
                         PremiumActionButton(
-                            label = stringResource(R.string.detail_block_area_code, areaCode),
+                            label = stringResource(R.string.detail_block_area_code, blockableAreaCode.areaCode),
                             icon = Icons.Default.FilterAlt,
                             color = CatYellow,
                             onClick = {
@@ -318,7 +320,7 @@ fun NumberDetailScreen(
                                         viewModel,
                                         snackbarHostState,
                                         context.resources,
-                                        areaCode,
+                                        blockableAreaCode,
                                         blockAreaCodeDescription.orEmpty(),
                                     )
                                 }

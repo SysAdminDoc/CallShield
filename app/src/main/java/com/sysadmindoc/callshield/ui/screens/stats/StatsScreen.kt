@@ -37,6 +37,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.countsByAreaCode
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.theme.*
@@ -98,7 +99,9 @@ fun StatsScreen(viewModel: MainViewModel) {
         remember(topNumberAggregates) { topNumberAggregates.map { it.key to it.count } }
 
     val areaCodeCounts: List<Pair<String, Int>> =
-        remember(areaCodeAggregates) { areaCodeAggregates.map { it.key to it.count } }
+        remember(areaCodeAggregates, homeRegion) {
+            countsByAreaCode(areaCodeAggregates, homeRegion).map { (block, count) -> block.areaCode to count }
+        }
 
     val dayBucket = rememberDayBucket()
     val todayStart = remember(dayBucket) { currentDayStart() }

@@ -967,13 +967,13 @@ class MainViewModel
 
         fun undoClearLog(calls: List<BlockedCall>) = launchUndo("clearing the log") { repo.restoreCallLog(calls) }
 
-        /** Block every +1 number in an area code and return what the rule replaced, for an Undo. */
+        /** Block every number in an area code by its [wildcard] (see areaCodeBlock) and return what the rule replaced, for an Undo. */
         suspend fun blockAreaCodeUndoable(
-            areaCode: String,
+            wildcard: String,
             description: String,
         ): Result<BlocklistRepository.WildcardUndo?> =
             try {
-                Result.success(repo.addWildcardRuleUndoable("+1$areaCode*", isRegex = false, description = description))
+                Result.success(repo.addWildcardRuleUndoable(wildcard, isRegex = false, description = description))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

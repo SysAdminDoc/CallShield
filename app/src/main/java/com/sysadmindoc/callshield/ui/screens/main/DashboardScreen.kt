@@ -127,8 +127,10 @@ import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
+import com.sysadmindoc.callshield.ui.countsByAreaCode
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -1137,10 +1139,10 @@ fun DashboardScreen(
             }
         }
 
+        val homeRegion = rememberHomeRegion()
         val topAreaCodes =
-            remember(areaCodeAggregates) {
-                areaCodeAggregates
-                    .map { it.key to it.count }
+            remember(areaCodeAggregates, homeRegion) {
+                countsByAreaCode(areaCodeAggregates, homeRegion)
                     .filter { it.second >= 5 }
                     .take(3)
             }
@@ -1160,10 +1162,11 @@ fun DashboardScreen(
                         )
                     }
                     Spacer(Modifier.height(10.dp))
-                    topAreaCodes.forEachIndexed { index, (ac, count) ->
+                    topAreaCodes.forEachIndexed { index, (block, count) ->
                         if (index > 0) {
                             GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
                         }
+                        val ac = block.areaCode
                         val loc = AreaCodeLookup.lookup("+1$ac", homeRegionIso = null) ?: ac
                         val areaRuleDescription = stringResource(R.string.dashboard_block_area_description, ac, loc)
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1178,7 +1181,7 @@ fun DashboardScreen(
                                 color = CatYellow,
                                 onClick = {
                                     profileScope.launch {
-                                        blockAreaCodeWithUndo(viewModel, areaSnackbar, areaResources, ac, areaRuleDescription)
+                                        blockAreaCodeWithUndo(viewModel, areaSnackbar, areaResources, block, areaRuleDescription)
                                     }
                                 },
                             )

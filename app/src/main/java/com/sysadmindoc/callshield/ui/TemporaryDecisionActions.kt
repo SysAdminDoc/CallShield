@@ -85,10 +85,11 @@ suspend fun blockAreaCodeWithUndo(
     viewModel: MainViewModel,
     snackbar: SnackbarHostState,
     resources: Resources,
-    areaCode: String,
+    block: AreaCodeBlock,
     description: String,
 ) {
-    val undo = viewModel.blockAreaCodeUndoable(areaCode, description).getOrNull()
+    val areaCode = block.areaCode
+    val undo = viewModel.blockAreaCodeUndoable(block.wildcard, description).getOrNull()
     when {
         undo == null -> {
             snackbar.currentSnackbarData?.dismiss()
