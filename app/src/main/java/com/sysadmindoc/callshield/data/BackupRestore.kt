@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -48,7 +49,10 @@ import java.util.UUID
  * - **v9**: includes privacy-safe checker cutoff/error diagnostics in logs.
  *   Since 1.11.0 a whitelist entry may also carry `rangeDigits`, the number
  *   block it covers; an older reader ignores the field and keeps the exact
- *   number, so the version stays 9.
+ *   number, so the version stays 9. The settings block may also carry
+ *   `externalBlocklists`, the subscribed lists without this phone's fetch
+ *   state; an older reader ignores it, and a backup without it leaves the
+ *   phone's lists alone.
  *   The reader accepts v1-v9; the writer emits v9.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
@@ -211,6 +215,22 @@ object BackupRestore {
         val appUpdateChecksEnabled: Boolean? = null,
         /** "" when the backed-up phone had no mirror. */
         val feedMirrorUrl: String? = null,
+        /** The subscribed lists, or null in a backup from before they were saved. */
+        val externalBlocklists: List<BackupExternalBlocklist>? = null,
+    )
+
+    /**
+     * A subscribed list as the user set it up. The last fetch, its counts and
+     * errors belong to the phone that fetched it, so a restored list starts as
+     * a new one and downloads on the next refresh.
+     */
+    data class BackupExternalBlocklist(
+        val url: String,
+        val label: String,
+        val enabled: Boolean = true,
+        /** How a catalog list writes its country's numbers, so a restored one reads them the same way. */
+        val numberPlan: ListNumberPlan? = null,
+        val catalogId: String = "",
     )
 
     @Suppress("LongParameterList")
@@ -633,7 +653,16 @@ object BackupRestore {
             } else {
                 null
             }
-        val result = restorePayload(context, payload, mode, dao, repo, selectedSections)
+        // A restore adds the backup's lists to the phone's own and never drops
+        // one. Settings write the lists they carry as the whole set, so an
+        // Undo or a rollback, which write a snapshot back, take the added ones
+        // away again.
+        val incoming =
+            payload.settings?.let { settings ->
+                val current = repo.readPrefsSnapshot().toBackupSettings().externalBlocklists
+                payload.copy(settings = settings.addingExternalBlocklistsTo(current))
+            } ?: payload
+        val result = restorePayload(context, incoming, mode, dao, repo, selectedSections)
         return if (result.success && before != null) {
             result.copy(undo = RestoreUndo(before, selectedSections))
         } else {
@@ -754,7 +783,11 @@ object BackupRestore {
             // while PREPARED, or reapplies the desired settings after the Room
             // transaction atomically advances the marker to ROOM_COMMITTED.
             val desiredSettings = payload.settings?.sanitized()
-            val settingsBeforeRestore = desiredSettings?.let { repo.readPrefsSnapshot().toBackupSettings() }
+            val prefsBeforeRestore = desiredSettings?.let { repo.readPrefsSnapshot() }
+            val settingsBeforeRestore = prefsBeforeRestore?.toBackupSettings()
+            // A list the settings drop (an Undo taking back what a restore
+            // added) takes its numbers with it, or nothing would refresh them.
+            val droppedListSources = prefsBeforeRestore?.droppedExternalBlocklistSources(desiredSettings).orEmpty()
             if (desiredSettings != null && settingsBeforeRestore != null) {
                 RestoreSentinel.markDirty(context)
                 dao.upsertRestoreJournal(
@@ -781,6 +814,7 @@ object BackupRestore {
                     if (mode == RestoreMode.REPLACE) {
                         clearSelectedBackupSections(dao, selectedSections)
                     }
+                    droppedListSources.forEach { dao.deleteBySource(it) }
 
                     for (n in payload.blockedNumbers) {
                         val applied =

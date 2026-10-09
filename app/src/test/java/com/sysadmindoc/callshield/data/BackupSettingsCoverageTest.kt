@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,8 +31,6 @@ class BackupSettingsCoverageTest {
             "KEY_DB_VERSION" to "sync state of this phone's copy of the database",
             "KEY_DISMISSED_RULE_CONFLICTS" to "notices this phone already showed",
             "KEY_EVIDENCE_EXPIRY_RULE_APPLIED" to "a one-time fix to this phone's copy of the database",
-            "KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS" to
-                "subscriptions carry this phone's fetch state, and a restored URL would download a list nobody re-reviewed",
             "KEY_FEED_TRUST_FAILED_AT" to "sync state of this phone's feeds",
             "KEY_FEED_TRUST_FAILED_VERSION" to "sync state of this phone's feeds",
             "KEY_FEED_TRUST_NOTICE_VERSION" to "a notice this phone already showed",
@@ -96,6 +95,7 @@ class BackupSettingsCoverageTest {
             appTheme = "light",
             appUpdateChecksEnabled = true,
             feedMirrorUrl = "https://mirror.example/callshield/",
+            externalBlocklists = listOf(BackupRestore.BackupExternalBlocklist("https://lists.example/spam.txt", "Example")),
         ).writeTo(preferences)
         return preferences.asMap().keys
     }
@@ -173,6 +173,16 @@ class BackupSettingsCoverageTest {
                 appTheme = "light",
                 appUpdateChecksEnabled = true,
                 feedMirrorUrl = "https://mirror.example/callshield/",
+                externalBlocklists =
+                    listOf(
+                        BackupRestore.BackupExternalBlocklist(
+                            url = "https://lists.example/co.json",
+                            label = "Colombia",
+                            enabled = false,
+                            numberPlan = ListNumberPlan("CO", "57", "0", listOf(10)),
+                            catalogId = "example-co",
+                        ),
+                    ),
             )
         val written = mutablePreferencesOf().also { custom.sanitized().writeTo(it) }
         val restored = mutablePreferencesOf().also { written.toBackupSettings().sanitized().writeTo(it) }

@@ -69,6 +69,20 @@ internal object ListCatalog {
         return ParsedListCatalog(revision, entries)
     }
 
+    /** Whether [id] is one a catalog list could have. */
+    fun isUsableId(id: String): Boolean = idPattern.matches(id)
+
+    /** [plan] when a catalog could have declared it, else null: a backup can carry anything. */
+    fun usablePlanOrNull(plan: ListNumberPlan): ListNumberPlan? =
+        plan
+            .takeIf {
+                countryPattern.matches(it.country) &&
+                    callingCodePattern.matches(it.callingCode) &&
+                    trunkPrefixPattern.matches(it.trunkPrefix) &&
+                    it.nationalLengths.isNotEmpty() &&
+                    it.nationalLengths.all { length -> length in MIN_NATIONAL_LENGTH..MAX_NATIONAL_LENGTH }
+            }?.copy(nationalLengths = plan.nationalLengths.distinct())
+
     private fun entryOrNull(json: ListCatalogEntryJson): ListCatalogEntry? {
         val id = json.id.orEmpty()
         val name = json.name.orEmpty().trim()

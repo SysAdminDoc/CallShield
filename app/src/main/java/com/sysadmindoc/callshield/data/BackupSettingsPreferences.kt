@@ -2,15 +2,42 @@ package com.sysadmindoc.callshield.data
 
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.data.BackupRestore.BackupExternalBlocklist
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.data.repository.sanitizeAppTheme
 import com.sysadmindoc.callshield.service.AnswerHangUpController
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 // Settings half of a backup: reading the DataStore snapshot into a
 // BackupSettings, bounding what a (possibly hostile) backup carries, and
 // writing it back. Pure functions over Preferences, kept out of BackupRestore
 // so each file stays readable.
+
+/** At most this many lists come in from one backup. */
+private const val MAX_RESTORED_EXTERNAL_BLOCKLISTS = 50
+private const val MAX_EXTERNAL_BLOCKLIST_LABEL_LENGTH = 100
+
+// The same JSON SettingsRepository keeps the subscriptions in.
+private val externalBlocklistsAdapter =
+    Moshi
+        .Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
+        .adapter<List<ExternalBlocklistSubscription>>(
+            Types.newParameterizedType(List::class.java, ExternalBlocklistSubscription::class.java),
+        )
+
+internal fun Preferences.externalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
+    this[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS]
+        ?.takeIf { it.isNotBlank() }
+        ?.let { raw -> runCatching { externalBlocklistsAdapter.fromJson(raw) }.getOrNull() }
+        .orEmpty()
+        .filter { it.id.isNotBlank() && it.url.isNotBlank() }
 
 internal fun clampHangUpDelaySeconds(value: Int?): Int =
     value?.coerceIn(
@@ -98,7 +125,53 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
         appTheme = sanitizeAppTheme(this[SpamRepository.KEY_APP_THEME]),
         appUpdateChecksEnabled = this[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false,
         feedMirrorUrl = this[SpamRepository.KEY_FEED_MIRROR_URL].orEmpty(),
+        externalBlocklists =
+            externalBlocklistSubscriptions().map {
+                BackupExternalBlocklist(it.url, it.label, it.enabled, it.numberPlan, it.catalogId)
+            },
     )
+
+/**
+ * The lists a backup may name: HTTPS addresses, normalized as when they were
+ * added and each once, a label of sane length, and a number plan or catalog
+ * id only when the catalog could have declared it.
+ */
+private fun sanitizeExternalBlocklists(lists: List<BackupExternalBlocklist>): List<BackupExternalBlocklist> {
+    val urls = mutableSetOf<String>()
+    return lists
+        .mapNotNull { list ->
+            val url = runCatching { ExternalBlocklistParser.validateHttpUrl(list.url) }.getOrNull() ?: return@mapNotNull null
+            list.copy(
+                url = url,
+                label =
+                    list.label
+                        .trim()
+                        .take(MAX_EXTERNAL_BLOCKLIST_LABEL_LENGTH)
+                        .ifBlank { url.toHttpUrlOrNull()?.host.orEmpty() },
+                numberPlan = list.numberPlan?.let(ListCatalog::usablePlanOrNull),
+                catalogId = list.catalogId.takeIf(ListCatalog::isUsableId).orEmpty(),
+            )
+        }.filter { urls.add(it.url) }
+}
+
+/**
+ * These settings with the phone's [current] lists kept as they are and the
+ * backup's new ones added after them. A restore never drops a list, which
+ * would leave its numbers with nothing to refresh or remove them.
+ */
+internal fun BackupSettings.addingExternalBlocklistsTo(current: List<BackupExternalBlocklist>?): BackupSettings {
+    val incoming = sanitizeExternalBlocklists(externalBlocklists ?: return this)
+    val kept = current.orEmpty()
+    val keptUrls = kept.map { it.url }.toSet()
+    val added = incoming.filter { it.url !in keptUrls }.take(MAX_RESTORED_EXTERNAL_BLOCKLISTS)
+    return copy(externalBlocklists = kept + added)
+}
+
+/** The sources of this phone's lists that [desired] leaves out, so their numbers can go too. */
+internal fun Preferences.droppedExternalBlocklistSources(desired: BackupSettings?): List<String> {
+    val keptUrls = desired?.externalBlocklists?.map { it.url }?.toSet() ?: return emptyList()
+    return externalBlocklistSubscriptions().filter { it.url !in keptUrls }.map { it.source }
+}
 
 internal fun BackupSettings.sanitized(): BackupSettings =
     copy(
@@ -143,6 +216,7 @@ internal fun BackupSettings.sanitized(): BackupSettings =
         // A theme or mirror this version can't use is dropped, leaving the current one.
         appTheme = appTheme?.takeIf { sanitizeAppTheme(it) == it },
         feedMirrorUrl = feedMirrorUrl?.let { if (it.isEmpty()) it else FeedMirror.normalize(it) },
+        externalBlocklists = externalBlocklists?.let(::sanitizeExternalBlocklists),
     )
 
 @Suppress("LongMethod")
@@ -247,5 +321,37 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
     } else {
         preferences[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] =
             notificationScreeningPackages.toSet()
+    }
+    externalBlocklists?.let { lists -> writeExternalBlocklists(preferences, lists) }
+}
+
+/**
+ * Makes [lists] the phone's whole set of subscribed lists. A list it already
+ * has stays exactly as it is, fetch state and switch included: turning a list
+ * on downloads it and turning it off deletes its numbers, which only the
+ * repository does. A new one starts unfetched, so the next refresh downloads
+ * it. A list left out is dropped (see droppedExternalBlocklistSources).
+ */
+private fun writeExternalBlocklists(
+    preferences: MutablePreferences,
+    lists: List<BackupExternalBlocklist>,
+) {
+    val current = preferences.externalBlocklistSubscriptions().associateBy { it.url }
+    val next =
+        lists.map { list ->
+            current[list.url] ?: ExternalBlocklistSubscription(
+                id = ExternalBlocklistParser.idForUrl(list.url),
+                label = list.label,
+                url = list.url,
+                enabled = list.enabled,
+                numberPlan = list.numberPlan,
+                catalogId = list.catalogId,
+            )
+        }
+    if (next.isEmpty()) {
+        preferences.remove(SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS)
+    } else {
+        preferences[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS] =
+            externalBlocklistsAdapter.toJson(next.sortedBy { it.label.lowercase() })
     }
 }

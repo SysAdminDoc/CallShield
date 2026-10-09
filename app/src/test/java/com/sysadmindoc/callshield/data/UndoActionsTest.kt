@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.app.Application
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -198,6 +199,40 @@ class UndoActionsTest {
         }
 
     @Test
+    fun `a replace restore adds the backup's lists and its undo takes them away`() =
+        runBlocking {
+            val id = ExternalBlocklistParser.idForUrl(MY_LIST)
+            fixture.settingsStore.edit {
+                it[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS] =
+                    """[{"id":"$id","label":"Mine","url":"$MY_LIST","enabled":true,"lastSyncedAt":1}]"""
+            }
+            val incoming =
+                BackupRestore.RestorePayload(
+                    settings =
+                        BackupRestore.BackupSettings(
+                            externalBlocklists = listOf(BackupRestore.BackupExternalBlocklist(THEIR_LIST, "Theirs")),
+                        ),
+                )
+
+            val result = BackupRestore.restoreWithUndo(context, incoming, BackupRestore.RestoreMode.REPLACE, dao, repo, SECTIONS)
+            assertTrue(result.message, result.success)
+            assertEquals(setOf(MY_LIST, THEIR_LIST), listUrls())
+
+            val undone = BackupRestore.undoRestore(context, requireNotNull(result.undo), dao, repo)
+
+            assertTrue(undone.message, undone.success)
+            assertEquals(setOf(MY_LIST), listUrls())
+            assertEquals(1L, fixture.settingsStore.data.first().externalBlocklistSubscriptions().single().lastSyncedAt)
+        }
+
+    private suspend fun listUrls(): Set<String> =
+        fixture.settingsStore.data
+            .first()
+            .externalBlocklistSubscriptions()
+            .map { it.url }
+            .toSet()
+
+    @Test
     fun `a merge restore keeps no undo`() =
         runBlocking {
             val incoming =
@@ -213,6 +248,8 @@ class UndoActionsTest {
 
     private companion object {
         const val NUMBER = "+15552345678"
+        const val MY_LIST = "https://lists.example/mine.txt"
+        const val THEIR_LIST = "https://lists.example/theirs.txt"
         val SECTIONS =
             setOf(
                 BackupRestore.BackupSection.BLOCKED_NUMBERS,
