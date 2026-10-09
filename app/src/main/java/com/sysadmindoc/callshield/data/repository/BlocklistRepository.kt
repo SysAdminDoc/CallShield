@@ -450,7 +450,24 @@ class BlocklistRepository(
             )
         if (inserted == -1L) return
         CallShieldWidget.refreshAll(context)
-        NotificationHelper.notifyBlocked(context, number, matchReason, isCall, smsBody)
+        NotificationHelper.notifyBlocked(context, number, matchReason, isCall, smsBody, databaseRowSource(number, matchReason))
+    }
+
+    /**
+     * The source of the row behind a database block, found the way the
+     * database check finds it, so the alert's Not spam can tell the shared
+     * database from the user's list subscriptions, whose rows match as
+     * database too. Null for any other block.
+     */
+    private suspend fun databaseRowSource(
+        number: String,
+        matchReason: String,
+    ): String? {
+        if (NotificationHelper.notSpamReasonCode(matchReason) != BlockReasonCode.DATABASE) return null
+        val now = System.currentTimeMillis()
+        return equivalentForms(normalizeNumber(number))
+            .firstNotNullOfOrNull { form -> dao.findByNumber(form)?.activeDecision(now)?.takeUnless { it.isUserBlocked } }
+            ?.source
     }
 
     private val textLogLock = Mutex()
@@ -649,6 +666,7 @@ class BlocklistRepository(
                         reason = pendingLog.matchReason,
                         isCall = pendingLog.isCall,
                         smsBody = pendingLog.smsBody,
+                        rowSource = databaseRowSource(pendingLog.number, pendingLog.matchReason),
                     )
                 }
                 consumed++

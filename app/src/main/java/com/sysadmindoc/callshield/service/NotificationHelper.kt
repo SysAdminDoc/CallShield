@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.OutgoingCallGuard
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamHeuristics
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ACTION_OPEN_BLOCKED_LOG
@@ -71,6 +72,9 @@ object NotificationHelper {
     const val EXTRA_NOTIF_ID = "extra_notif_id"
     const val EXTRA_IS_CALL = "extra_is_call"
     const val EXTRA_REASON_CODE = "extra_reason_code"
+
+    /** The source of the row a database match found, such as "github" or a list subscription's. */
+    const val EXTRA_ROW_SOURCE = "extra_row_source"
 
     /** How long "Not spam" on a blocked-call alert lets the number ring. */
     const val NOT_SPAM_ALLOW_MS = 24 * 60 * 60 * 1000L
@@ -473,6 +477,7 @@ object NotificationHelper {
         reason: String,
         isCall: Boolean,
         smsBody: String? = null,
+        rowSource: String? = null,
     ) {
         // A meeting-mode silence says nothing against the caller, so no "blocked"
         // alert with Block and Report. Android's own missed-call notice covers it.
@@ -528,7 +533,8 @@ object NotificationHelper {
                     action = if (isCall) ACTION_NOT_SPAM else ACTION_BLOCK
                     putExtra(EXTRA_NUMBER, number)
                     putExtra(EXTRA_NOTIF_ID, nid)
-                    putExtra(EXTRA_REASON_CODE, BlockReasonCode.fromMatchSource(reason).wireValue)
+                    putExtra(EXTRA_REASON_CODE, notSpamReasonCode(reason).wireValue)
+                    rowSource?.let { putExtra(EXTRA_ROW_SOURCE, it) }
                     putReportExtras(isCall, smsIndicators)
                 },
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -582,14 +588,32 @@ object NotificationHelper {
     }
 
     /**
+     * The detection a Not spam answers. A category policy only changes how a
+     * detection is handled, so a blocked call's alert carries the detection
+     * underneath it.
+     */
+    fun notSpamReasonCode(reason: String): BlockReasonCode =
+        BlockReasonCode.fromMatchSource(CategoryCallPolicy.parseMatchSource(reason)?.originalMatchSource ?: reason)
+
+    /**
      * Whether "Not spam" on a block also tells the community database. Only a
      * verdict that came from the shared data can be wrong there; a not-spam vote
-     * against the user's own rule or an on-device signal would be noise.
+     * against the user's own rule, a list they subscribed to or an on-device
+     * signal would be noise. Rows from list subscriptions match as database
+     * too, so a database match counts only when [rowSource], the source of the
+     * row it found, is the shared database's.
      */
-    fun notSpamReachesCommunity(reasonCode: BlockReasonCode): Boolean =
-        reasonCode == BlockReasonCode.DATABASE ||
-            reasonCode == BlockReasonCode.DB_PREFIX_EXPANSION ||
-            reasonCode == BlockReasonCode.HOT_LIST
+    fun notSpamReachesCommunity(
+        reasonCode: BlockReasonCode,
+        rowSource: String?,
+    ): Boolean =
+        when (reasonCode) {
+            BlockReasonCode.DATABASE -> rowSource != null && isSharedDatabaseRow(rowSource)
+            BlockReasonCode.DB_PREFIX_EXPANSION, BlockReasonCode.HOT_LIST -> true
+            else -> false
+        }
+
+    private fun isSharedDatabaseRow(source: String): Boolean = source != "user" && !source.startsWith(ExternalBlocklistSubscription.SOURCE_PREFIX)
 
     /**
      * Whether Not spam can make this caller ring. The 24-hour allow runs at

@@ -5,9 +5,14 @@ import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -68,12 +73,70 @@ class BlockedAlertActionsTest {
 
     @Test
     fun `Not spam reaches the community database only for a shared-data block`() {
-        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE))
-        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HOT_LIST))
-        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HEURISTIC))
-        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.USER_BLOCKLIST))
-        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.ML_SCORER))
+        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "github"))
+        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "hot_list"))
+        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HOT_LIST, null))
+        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DB_PREFIX_EXPANSION, null))
+        // A list the user subscribed to matches as database, but the shared data never held it.
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, ExternalBlocklistSubscription.sourceFor("list")))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "user"))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, null))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HEURISTIC, null))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.USER_BLOCKLIST, null))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.ML_SCORER, null))
     }
+
+    @Test
+    fun `a database block's alert carries whose row matched, under a category policy too`() {
+        val subscribed = "+12125550116"
+        val shared = "+12125550117"
+        IsolatedRepositoryFixture(context).use { fixture ->
+            runBlocking {
+                fixture.dao.insertNumbers(
+                    listOf(
+                        SpamNumber(number = subscribed, type = "robocall", source = ExternalBlocklistSubscription.sourceFor("list")),
+                        SpamNumber(number = shared, type = "scam", source = "github"),
+                    ),
+                )
+                fixture.repository.logBlockedCall(subscribed, matchReason = "database")
+                NotificationHelper.resetRateLimitForTest()
+                fixture.repository.logBlockedCall(shared, matchReason = "category_policy:scam:block:database")
+            }
+        }
+
+        val fromSubscription = notSpamIntent(subscribed)
+        assertEquals("database", fromSubscription.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        assertEquals(ExternalBlocklistSubscription.sourceFor("list"), fromSubscription.getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE))
+        assertFalse("the user's own list sends no community correction", reachesCommunity(fromSubscription))
+
+        val fromSharedData = notSpamIntent(shared)
+        assertEquals("database", fromSharedData.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        assertEquals("github", fromSharedData.getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE))
+        assertTrue("the shared data was wrong, whatever policy handled the call", reachesCommunity(fromSharedData))
+    }
+
+    @Test
+    fun `a category policy over an on-device signal still sends nothing`() {
+        NotificationHelper.notifyBlocked(context, "+12125550118", "category_policy:scam:block:heuristic", isCall = true)
+
+        val notSpam = notSpamIntent("+12125550118")
+        assertEquals("heuristic", notSpam.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        assertFalse(reachesCommunity(notSpam))
+    }
+
+    /** The receiver's own reading of a Not spam intent. */
+    private fun reachesCommunity(notSpam: Intent): Boolean =
+        NotificationHelper.notSpamReachesCommunity(
+            BlockReasonCode.fromStored(notSpam.getStringExtra(NotificationHelper.EXTRA_REASON_CODE)),
+            notSpam.getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE),
+        )
+
+    private fun notSpamIntent(number: String): Intent =
+        shadowOf(notificationManager)
+            .allNotifications
+            .flatMap { it.actions?.toList().orEmpty() }
+            .map { shadowOf(it.actionIntent).savedIntent }
+            .single { it.action == NotificationHelper.ACTION_NOT_SPAM && it.getStringExtra(NotificationHelper.EXTRA_NUMBER) == number }
 
     @Test
     fun `Not spam is offered only when a day's allow can make the call ring`() {

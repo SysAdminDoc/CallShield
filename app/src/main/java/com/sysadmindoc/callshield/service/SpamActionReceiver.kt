@@ -144,6 +144,7 @@ class SpamActionReceiver : BroadcastReceiver() {
     ): suspend () -> Unit {
         val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
         val reasonCode = BlockReasonCode.fromStored(intent.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        val rowSource = intent.getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE)
         if (notifId >= 0) {
             notificationManager.cancel(notifId)
         }
@@ -160,7 +161,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                 val message = if (allowed) R.string.notif_not_spam_allowed else R.string.notif_not_spam_refused
                 Toast.makeText(appContext, appContext.getString(message), Toast.LENGTH_SHORT).show()
             }
-            if (allowed && NotificationHelper.notSpamReachesCommunity(reasonCode)) {
+            if (allowed && NotificationHelper.notSpamReachesCommunity(reasonCode, rowSource)) {
                 CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
             }
         }
