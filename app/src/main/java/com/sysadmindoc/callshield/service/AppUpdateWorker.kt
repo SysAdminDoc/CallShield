@@ -61,14 +61,14 @@ class AppUpdateWorker
             }
 
         companion object {
-            private const val PERIODIC_WORK_NAME = "callshield_app_update_check"
+            internal const val PERIODIC_WORK_NAME = "callshield_app_update_check"
             private const val IMMEDIATE_WORK_NAME = "callshield_app_update_check_now"
             private const val CHECK_INTERVAL_DAYS = 7L
 
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     PERIODIC_WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     periodicRequest(),
                 )
             }

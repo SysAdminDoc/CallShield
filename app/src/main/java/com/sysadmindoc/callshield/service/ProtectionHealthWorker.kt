@@ -115,7 +115,7 @@ class ProtectionHealthWorker
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     PERIODIC_WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     periodicRequest(),
                 )
             }

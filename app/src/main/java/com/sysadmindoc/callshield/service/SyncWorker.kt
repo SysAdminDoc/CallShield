@@ -59,10 +59,14 @@ class SyncWorker
         companion object {
             internal const val WORK_NAME = BackgroundWorkNames.SYNC
 
+            // UPDATE rather than KEEP, here and in every other periodic worker:
+            // KEEP left an existing install on the interval and constraints it
+            // was first scheduled with. UPDATE swaps the spec in place, keeps
+            // the enqueue time and never interrupts a run in progress.
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     periodicRequest(),
                 )
             }

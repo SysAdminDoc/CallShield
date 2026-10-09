@@ -63,19 +63,27 @@ class HotListSyncWorker
                 if (outcome.refreshedAnyFeed && outcome.unavailableFeeds.isEmpty()) {
                     Result.success()
                 } else {
-                    Result.retry()
+                    retryOrWaitForNextRun()
                 }
             } catch (_: Exception) {
-                Result.retry()
+                retryOrWaitForNextRun()
             }
+
+        // Linear backoff with no cap grew past the 30 minute period, so a feed
+        // that stayed down slowed every refresh to one every few hours. A failed
+        // result on periodic work just waits for the next period.
+        private fun retryOrWaitForNextRun(): Result = if (runAttemptCount + 1 >= MAX_ATTEMPTS) Result.failure() else Result.retry()
 
         companion object {
             internal const val WORK_NAME = BackgroundWorkNames.HOT_LIST
 
+            /** The first run and two backed-off retries, all inside one 30 minute period. */
+            internal const val MAX_ATTEMPTS = 3
+
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     periodicRequest(),
                 )
             }

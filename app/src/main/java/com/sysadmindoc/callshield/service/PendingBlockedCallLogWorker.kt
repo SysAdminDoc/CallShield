@@ -30,14 +30,22 @@ class PendingBlockedCallLogWorker
                 if (repo.getPendingBlockedCallLogCount() == 0) {
                     Result.success()
                 } else {
-                    Result.retry()
+                    retryOrGiveUp()
                 }
             } catch (_: Exception) {
-                Result.retry()
+                retryOrGiveUp()
             }
+
+        // A row that keeps failing used to keep this worker waking the phone
+        // every five hours for good. The queued rows stay put, and the next
+        // blocked call, app start or reboot schedules a fresh run for them.
+        private fun retryOrGiveUp(): Result = if (runAttemptCount + 1 >= MAX_ATTEMPTS) Result.failure() else Result.retry()
 
         companion object {
             private const val WORK_NAME = "callshield_pending_blocked_call_logs"
+
+            /** About 18 hours of exponential backoff, the same cap the community outbox uses. */
+            internal const val MAX_ATTEMPTS = 12
 
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniqueWork(
