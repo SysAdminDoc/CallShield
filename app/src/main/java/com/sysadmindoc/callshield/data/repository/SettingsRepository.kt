@@ -779,7 +779,12 @@ class SettingsRepository(
         }
         preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = update.unavailableFeeds
         preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE] = update.unreachableFeeds
-        preferences[SpamRepository.KEY_HOT_DATA_CLEARED] = update.clearedFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_CLEARED] =
+            HotDataHealthUpdate.mergeClearedFeeds(
+                previous = preferences[SpamRepository.KEY_HOT_DATA_CLEARED].orEmpty(),
+                resolvedFeeds = update.resolvedFeeds,
+                fresh = update.clearedFeeds,
+            )
         preferences[SpamRepository.KEY_HOT_DATA_REFUSED] = update.refusedFeeds
         val generatedAt =
             HotDataHealthUpdate.mergeFeedStamps(

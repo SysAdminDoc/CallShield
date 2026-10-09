@@ -164,6 +164,20 @@ class HotDataSyncReplayTest {
     }
 
     @Test
+    fun `a cleared feed stays cleared through an offline refresh, so starts don't keep asking`() {
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-21T11:00:00+00:00")
+        refresh()
+        feeds.watchOffline = true
+        refresh()
+
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertFalse(wantsRefresh)
+        val health = runBlocking { fixture.repository.readHotDataHealth() }
+        assertTrue(health.clearedFeeds.toString(), HotDataSync.COMMUNITY_WATCH_FEED in health.clearedFeeds)
+    }
+
+    @Test
     fun `a read without a stamp can't reset the replay check`() {
         feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")), generatedAt = "2026-09-21T10:00:00+00:00")
         refresh()

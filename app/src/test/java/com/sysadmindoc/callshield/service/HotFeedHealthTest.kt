@@ -72,7 +72,7 @@ class HotFeedHealthTest {
     ) = HotDataHealth(
         unavailableFeeds = update.unavailableFeeds,
         unreachableFeeds = update.unreachableFeeds,
-        clearedFeeds = update.clearedFeeds,
+        clearedFeeds = HotDataHealthUpdate.mergeClearedFeeds(previous.clearedFeeds, update.resolvedFeeds, update.clearedFeeds),
         refusedFeeds = update.refusedFeeds,
         feedGeneratedAt = HotDataHealthUpdate.mergeFeedStamps(previous.feedGeneratedAt, update.feedGeneratedAt),
         feedDigests = HotDataHealthUpdate.mergeFeedMetadata(previous.feedDigests, update.resolvedFeeds, update.feedDigests),

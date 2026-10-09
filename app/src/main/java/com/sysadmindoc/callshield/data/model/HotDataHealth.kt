@@ -15,7 +15,7 @@ data class HotDataHealth(
      * evidence is [unavailableFeeds].
      */
     val unreachableFeeds: Set<String>? = null,
-    /** Feeds the publisher emptied on purpose (`cleared: true`) on the last refresh. */
+    /** Feeds the publisher emptied on purpose (`cleared: true`) the last time each was read. */
     val clearedFeeds: Set<String> = emptySet(),
     /**
      * Feeds that were reachable on the last refresh but refused: the download
@@ -70,5 +70,17 @@ data class HotDataHealthUpdate(
             previous: Map<String, String>,
             fresh: Map<String, String>,
         ): Map<String, String> = previous + fresh
+
+        /**
+         * Feeds marked cleared after a refresh. A feed that was read takes its
+         * mark from that read; one that wasn't keeps the mark it had, so a
+         * refresh that couldn't reach a cleared feed doesn't make its empty
+         * store look like missing data at the next start.
+         */
+        fun mergeClearedFeeds(
+            previous: Set<String>,
+            resolvedFeeds: Set<String>,
+            fresh: Set<String>,
+        ): Set<String> = (previous - resolvedFeeds) + fresh
     }
 }
