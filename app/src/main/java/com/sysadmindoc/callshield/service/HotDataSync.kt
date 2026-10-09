@@ -116,59 +116,82 @@ internal object HotDataSync {
             value(observation)?.takeIf { it.isNotBlank() }?.let { observation.feed to it }
         }.toMap()
 
+    /**
+     * Fills the stores a fresh process starts without. Returns true when one
+     * that a network copy filled before is empty now and wants a refresh
+     * soon, rather than at the next periodic run.
+     */
     suspend fun primeBundled(
         context: Context,
         source: HotFeedDataSource = GitHubDataSource(),
         repo: SpamRepository = SpamRepository.getInstance(context.applicationContext),
         dao: SpamDao = AppDatabase.getInstance(context.applicationContext).spamDao(),
         dependencies: CheckerDependencies = CheckerDependencies(),
-    ) = withContext(Dispatchers.IO) {
-        val appContext = context.applicationContext
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val appContext = context.applicationContext
+            val health = repo.readHotDataHealth()
+            var wantsRefresh = false
 
-        // Gate every store on emptiness, not just the hot list below. WorkManager
-        // can run an overdue HotListSyncWorker in-process right after startup, so
-        // an ungated write here can land after its fresh data and replace it with
-        // the build-time snapshot until the next 30-minute cycle.
-        if (!dependencies.spamHeuristics.hasHotRanges()) {
-            val bundledRanges = loadBundledHotRanges(appContext, source)
-            val ranges = sanitizeHotRanges(bundledRanges.data)
-            if (bundledRanges.resolved && shouldApplyFeed(ranges, bundledRanges.explicitlyCleared)) {
-                dependencies.spamHeuristics.updateHotRanges(ranges)
+            // Hot ranges, spam domains and the watch list live only in memory,
+            // so every process starts with them empty. Once a network copy was
+            // read, the build-time copy must not stand in for it: whatever the
+            // publisher cleared since the build would block or label again.
+            // Those stores wait for a refresh instead, asked for right away.
+            fun bootstrap(
+                feed: String,
+                hasData: Boolean,
+                apply: () -> Unit,
+            ) {
+                if (hasData) return
+                if (health.feedGeneratedAt[feed] == null) {
+                    apply()
+                } else if (feed !in health.clearedFeeds) {
+                    wantsRefresh = true
+                }
             }
-        }
 
-        if (!dependencies.smsContentAnalyzer.hasSpamDomains()) {
-            val bundledDomains = loadBundledSpamDomains(appContext, source)
-            val domains = sanitizeSpamDomains(bundledDomains.data)
-            if (bundledDomains.resolved && shouldApplyFeed(domains, bundledDomains.explicitlyCleared)) {
-                dependencies.smsContentAnalyzer.updateSpamDomains(domains)
+            // Gate every store on emptiness, not just the hot list below. WorkManager
+            // can run an overdue HotListSyncWorker in-process right after startup, so
+            // an ungated write here can land after its fresh data and replace it with
+            // the build-time snapshot until the next 30-minute cycle.
+            bootstrap(HOT_RANGES_FEED, dependencies.spamHeuristics.hasHotRanges()) {
+                val bundledRanges = loadBundledHotRanges(appContext, source)
+                val ranges = sanitizeHotRanges(bundledRanges.data)
+                if (bundledRanges.resolved && shouldApplyFeed(ranges, bundledRanges.explicitlyCleared)) {
+                    dependencies.spamHeuristics.updateHotRanges(ranges)
+                }
             }
-        }
 
-        // The watch list lives only in memory, so after a restart it is empty
-        // whether or not a network copy was read. Once one was, a number a
-        // not-spam report cleared must not come back from the build-time copy:
-        // the list waits for the next refresh instead.
-        if (!dependencies.spamHeuristics.hasCommunityWatch() && !hasReadCommunityWatch(repo)) {
-            val bundledWatch = loadBundledCommunityWatch(appContext, source)
-            val watchNumbers = sanitizeCommunityWatch(bundledWatch.data)
-            if (bundledWatch.resolved && shouldApplyFeed(watchNumbers, bundledWatch.explicitlyCleared)) {
-                dependencies.spamHeuristics.updateCommunityWatch(watchNumbers)
+            bootstrap(SPAM_DOMAINS_FEED, dependencies.smsContentAnalyzer.hasSpamDomains()) {
+                val bundledDomains = loadBundledSpamDomains(appContext, source)
+                val domains = sanitizeSpamDomains(bundledDomains.data)
+                if (bundledDomains.resolved && shouldApplyFeed(domains, bundledDomains.explicitlyCleared)) {
+                    dependencies.smsContentAnalyzer.updateSpamDomains(domains)
+                }
             }
-        }
 
-        // No rows can also mean the last hot list was all numbers already in
-        // the database, which get no rows of their own. Only a device that has
-        // never applied a hot list gets the build-time snapshot, and that
-        // snapshot never counts as trending.
-        if (dao.getCountBySource(HOT_LIST_SOURCE) == 0 && !repo.hasAppliedHotList()) {
-            val bundledHotList = loadBundledHotList(appContext, source)
-            val hotNumbers = sanitizeHotNumbers(bundledHotList.data, repo::normalizeNumber)
-            if (bundledHotList.resolved && shouldApplyFeed(hotNumbers, bundledHotList.explicitlyCleared)) {
-                repo.replaceHotList(hotNumbers, recordTrending = false)
+            bootstrap(COMMUNITY_WATCH_FEED, dependencies.spamHeuristics.hasCommunityWatch()) {
+                val bundledWatch = loadBundledCommunityWatch(appContext, source)
+                val watchNumbers = sanitizeCommunityWatch(bundledWatch.data)
+                if (bundledWatch.resolved && shouldApplyFeed(watchNumbers, bundledWatch.explicitlyCleared)) {
+                    dependencies.spamHeuristics.updateCommunityWatch(watchNumbers)
+                }
             }
+
+            // No rows can also mean the last hot list was all numbers already in
+            // the database, which get no rows of their own. Only a device that has
+            // never applied a hot list gets the build-time snapshot, and that
+            // snapshot never counts as trending.
+            if (dao.getCountBySource(HOT_LIST_SOURCE) == 0 && !repo.hasAppliedHotList()) {
+                val bundledHotList = loadBundledHotList(appContext, source)
+                val hotNumbers = sanitizeHotNumbers(bundledHotList.data, repo::normalizeNumber)
+                if (bundledHotList.resolved && shouldApplyFeed(hotNumbers, bundledHotList.explicitlyCleared)) {
+                    repo.replaceHotList(hotNumbers, recordTrending = false)
+                }
+            }
+            wantsRefresh
         }
-    }
 
     suspend fun refresh(
         context: Context,
@@ -214,7 +237,8 @@ internal object HotDataSync {
                 )
             }
 
-            val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
+            // A failed fetch falls back to the build-time copy only where no network copy was ever read.
+            val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges() || lastRead[HOT_RANGES_FEED] != null)
             val ranges = sanitizeHotRanges(hotRanges.data)
             val hotRangesReplay = isReplay(hotRanges.generatedAt, lastRead[HOT_RANGES_FEED])
             val hotRangesApplied = !hotRangesReplay && shouldApplyFeed(ranges, hotRanges.explicitlyCleared)
@@ -222,7 +246,8 @@ internal object HotDataSync {
                 dependencies.spamHeuristics.updateHotRanges(ranges)
             }
 
-            val spamDomains = loadSpamDomains(appContext, source, dependencies.smsContentAnalyzer.hasSpamDomains())
+            val spamDomains =
+                loadSpamDomains(appContext, source, dependencies.smsContentAnalyzer.hasSpamDomains() || lastRead[SPAM_DOMAINS_FEED] != null)
             val domains = sanitizeSpamDomains(spamDomains.data)
             val spamDomainsReplay = isReplay(spamDomains.generatedAt, lastRead[SPAM_DOMAINS_FEED])
             val spamDomainsApplied = !spamDomainsReplay && shouldApplyFeed(domains, spamDomains.explicitlyCleared)
@@ -361,9 +386,6 @@ internal object HotDataSync {
         }
         return loadBundledSpamDomains(context, source).copy(failure = remote.exceptionOrNull())
     }
-
-    private suspend fun hasReadCommunityWatch(repo: SpamRepository): Boolean =
-        repo.readHotDataHealth().feedGeneratedAt[COMMUNITY_WATCH_FEED] != null
 
     private suspend fun loadCommunityWatch(
         context: Context,

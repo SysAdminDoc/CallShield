@@ -153,10 +153,12 @@ class CallShieldApp :
 
             appScope.launch {
                 try {
-                    HotDataSync.primeBundled(
-                        context = this@CallShieldApp,
-                        dependencies = checkerDependencies,
-                    )
+                    val wantsRefresh =
+                        HotDataSync.primeBundled(
+                            context = this@CallShieldApp,
+                            dependencies = checkerDependencies,
+                        )
+                    if (wantsRefresh) HotListSyncWorker.syncNow(this@CallShieldApp)
                 } catch (e: Exception) {
                     Log.w("CallShieldApp", "Failed to prime bundled hot data", e)
                 }

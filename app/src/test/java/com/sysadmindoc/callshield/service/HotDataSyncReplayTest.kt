@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,6 +34,7 @@ class HotDataSyncReplayTest {
     @After
     fun tearDown() {
         SpamHeuristics.updateCommunityWatch(emptyList())
+        SpamHeuristics.updateHotRanges(emptyList())
         fixture.close()
     }
 
@@ -127,6 +129,41 @@ class HotDataSyncReplayTest {
     }
 
     @Test
+    fun `a restart waits for fresh hot ranges instead of the build-time copy`() {
+        refresh()
+        assertTrue(SpamHeuristics.hasHotRanges())
+        feeds.bundledRanges = listOf("303555")
+
+        // A new process starts with nothing in memory.
+        SpamHeuristics.updateHotRanges(emptyList())
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertTrue("the app should ask for a refresh now", wantsRefresh)
+        assertFalse(SpamHeuristics.hasHotRanges())
+    }
+
+    @Test
+    fun `a phone that never read hot ranges starts from the build-time copy`() {
+        feeds.bundledRanges = listOf("303555")
+
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertFalse(wantsRefresh)
+        assertTrue(SpamHeuristics.hasHotRanges())
+    }
+
+    @Test
+    fun `a feed the publisher cleared doesn't ask for a refresh at every start`() {
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-21T11:00:00+00:00")
+        refresh()
+
+        // Ranges and domains were read with data and are still in memory.
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertFalse(wantsRefresh)
+    }
+
+    @Test
     fun `a read without a stamp can't reset the replay check`() {
         feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")), generatedAt = "2026-09-21T10:00:00+00:00")
         refresh()
@@ -177,6 +214,8 @@ class HotDataSyncReplayTest {
         var hotList = HotFeedSnapshot(emptyList<HotNumber>())
         var communityWatch = HotFeedSnapshot(emptyList<CommunityWatchNumber>())
 
+        var bundledRanges: List<String> = emptyList()
+
         /** What the build-time asset parses to; the network copy when null. */
         var bundledWatch: HotFeedSnapshot<List<CommunityWatchNumber>>? = null
         var watchOffline = false
@@ -220,7 +259,7 @@ class HotDataSyncReplayTest {
 
         override fun parseHotListJson(body: String): List<HotNumber> = emptyList()
 
-        override fun parseHotRangesJson(body: String): List<String> = emptyList()
+        override fun parseHotRangesJson(body: String): List<String> = bundledRanges
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
 
