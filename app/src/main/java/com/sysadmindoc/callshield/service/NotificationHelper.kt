@@ -600,20 +600,20 @@ object NotificationHelper {
      * verdict that came from the shared data can be wrong there; a not-spam vote
      * against the user's own rule, a list they subscribed to or an on-device
      * signal would be noise. Rows from list subscriptions match as database
-     * too, so a database match counts only when [rowSource], the source of the
-     * row it found, is the shared database's.
+     * and prefix expansion too, so those count only when [rowSource], the
+     * source of the row they found, is the shared database's.
      */
     fun notSpamReachesCommunity(
         reasonCode: BlockReasonCode,
         rowSource: String?,
     ): Boolean =
         when (reasonCode) {
-            BlockReasonCode.DATABASE -> rowSource != null && isSharedDatabaseRow(rowSource)
-            BlockReasonCode.DB_PREFIX_EXPANSION, BlockReasonCode.HOT_LIST -> true
+            BlockReasonCode.DATABASE, BlockReasonCode.DB_PREFIX_EXPANSION -> rowSource != null && isSharedDatabaseRow(rowSource)
+            BlockReasonCode.HOT_LIST -> true
             else -> false
         }
 
-    private fun isSharedDatabaseRow(source: String): Boolean = source != "user" && !source.startsWith(ExternalBlocklistSubscription.SOURCE_PREFIX)
+    internal fun isSharedDatabaseRow(source: String): Boolean = source != "user" && !source.startsWith(ExternalBlocklistSubscription.SOURCE_PREFIX)
 
     /**
      * Whether Not spam can make this caller ring. The 24-hour allow runs at

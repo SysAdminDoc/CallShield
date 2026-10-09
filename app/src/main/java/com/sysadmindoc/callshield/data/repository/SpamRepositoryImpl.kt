@@ -108,8 +108,7 @@ class SpamRepositoryImpl(
     internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision(wallClock())
 
     internal suspend fun hasDbPrefixMatch(normalized: String): Boolean {
-        if (normalized.length < 9) return false
-        val prefix = normalized.dropLast(2)
+        val prefix = dbExpansionPrefix(normalized) ?: return false
         return dao.countByPrefix(prefix, System.currentTimeMillis()) > 0
     }
 
@@ -381,5 +380,8 @@ class SpamRepositoryImpl(
          */
         private val USER_TRUSTED_ALLOW_SOURCES =
             setOf("manual_whitelist", "emergency_contact", "contact_whitelist", "temporary_allow")
+
+        /** The stored-number prefix a prefix-expansion match looks under, or null for a number too short to have one. */
+        internal fun dbExpansionPrefix(normalized: String): String? = normalized.takeIf { it.length >= 9 }?.dropLast(2)
     }
 }

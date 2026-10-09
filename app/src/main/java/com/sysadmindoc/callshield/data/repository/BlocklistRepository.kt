@@ -454,20 +454,29 @@ class BlocklistRepository(
     }
 
     /**
-     * The source of the row behind a database block, found the way the
-     * database check finds it, so the alert's Not spam can tell the shared
-     * database from the user's list subscriptions, whose rows match as
-     * database too. Null for any other block.
+     * The source of the row behind a database or prefix-expansion block,
+     * found the way that check finds it, so the alert's Not spam can tell the
+     * shared database from the user's list subscriptions, whose rows match
+     * the same way. A prefix match that found shared rows reports one of them.
+     * Null for any other block.
      */
     private suspend fun databaseRowSource(
         number: String,
         matchReason: String,
     ): String? {
-        if (NotificationHelper.notSpamReasonCode(matchReason) != BlockReasonCode.DATABASE) return null
         val now = System.currentTimeMillis()
-        return equivalentForms(normalizeNumber(number))
-            .firstNotNullOfOrNull { form -> dao.findByNumber(form)?.activeDecision(now)?.takeUnless { it.isUserBlocked } }
-            ?.source
+        val forms = equivalentForms(normalizeNumber(number))
+        return when (NotificationHelper.notSpamReasonCode(matchReason)) {
+            BlockReasonCode.DATABASE ->
+                forms
+                    .firstNotNullOfOrNull { form -> dao.findByNumber(form)?.activeDecision(now)?.takeUnless { it.isUserBlocked } }
+                    ?.source
+            BlockReasonCode.DB_PREFIX_EXPANSION -> {
+                val sources = forms.mapNotNull { SpamRepositoryImpl.dbExpansionPrefix(it) }.flatMap { dao.sourcesByPrefix(it, now) }
+                sources.firstOrNull { NotificationHelper.isSharedDatabaseRow(it) } ?: sources.firstOrNull()
+            }
+            else -> null
+        }
     }
 
     private val textLogLock = Mutex()

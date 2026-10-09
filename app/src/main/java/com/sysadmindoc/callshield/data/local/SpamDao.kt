@@ -88,6 +88,17 @@ interface SpamDao {
         now: Long,
     ): Int
 
+    /** Where the rows a prefix-expansion match found came from, by the same filter as [countByPrefix]. */
+    @Query(
+        "SELECT DISTINCT source FROM spam_numbers " +
+            "WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 " +
+            "AND (evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now)",
+    )
+    suspend fun sourcesByPrefix(
+        prefix: String,
+        now: Long,
+    ): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNumber(number: SpamNumber)
 

@@ -76,11 +76,14 @@ class BlockedAlertActionsTest {
         assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "github"))
         assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "hot_list"))
         assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HOT_LIST, null))
-        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DB_PREFIX_EXPANSION, null))
+        assertTrue(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DB_PREFIX_EXPANSION, "github"))
         // A list the user subscribed to matches as database, but the shared data never held it.
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, ExternalBlocklistSubscription.sourceFor("list")))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, "user"))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DATABASE, null))
+        // A prefix match counts the same way: only a sibling from the shared data makes it the community's call.
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DB_PREFIX_EXPANSION, ExternalBlocklistSubscription.sourceFor("list")))
+        assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.DB_PREFIX_EXPANSION, null))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.HEURISTIC, null))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.USER_BLOCKLIST, null))
         assertFalse(NotificationHelper.notSpamReachesCommunity(BlockReasonCode.ML_SCORER, null))
@@ -113,6 +116,36 @@ class BlockedAlertActionsTest {
         assertEquals("database", fromSharedData.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
         assertEquals("github", fromSharedData.getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE))
         assertTrue("the shared data was wrong, whatever policy handled the call", reachesCommunity(fromSharedData))
+    }
+
+    @Test
+    fun `a prefix-expansion block reaches the community only when shared rows made the match`() {
+        val subscribedOnly = "+13035550129"
+        val sharedOnly = "+14155550129"
+        val both = "+16175550139"
+        IsolatedRepositoryFixture(context).use { fixture ->
+            runBlocking {
+                fixture.dao.insertNumbers(
+                    listOf(
+                        SpamNumber(number = "+13035550120", type = "robocall", source = ExternalBlocklistSubscription.sourceFor("list")),
+                        SpamNumber(number = "+14155550120", type = "scam", source = "github"),
+                        SpamNumber(number = "+16175550130", type = "robocall", source = ExternalBlocklistSubscription.sourceFor("list")),
+                        SpamNumber(number = "+16175550131", type = "scam", source = "github"),
+                    ),
+                )
+                for (number in listOf(subscribedOnly, sharedOnly, both)) {
+                    NotificationHelper.resetRateLimitForTest()
+                    fixture.repository.logBlockedCall(number, matchReason = "db_prefix_expansion")
+                }
+            }
+        }
+
+        val fromSubscription = notSpamIntent(subscribedOnly)
+        assertEquals("db_prefix_expansion", fromSubscription.getStringExtra(NotificationHelper.EXTRA_REASON_CODE))
+        assertFalse("siblings from the user's own list send no community correction", reachesCommunity(fromSubscription))
+        assertTrue(reachesCommunity(notSpamIntent(sharedOnly)))
+        assertEquals("github", notSpamIntent(both).getStringExtra(NotificationHelper.EXTRA_ROW_SOURCE))
+        assertTrue("a shared sibling made the match too", reachesCommunity(notSpamIntent(both)))
     }
 
     @Test
