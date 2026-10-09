@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.widget.RemoteViews
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Calendar
+import java.util.Locale
 
 /**
  * Home screen widget.
@@ -66,6 +68,7 @@ class CallShieldWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.widget_root, intent)
 
         try {
+            val text = inDefaultLocale(appContext)
             val dao = AppDatabase.getInstance(appContext).spamDao()
             val repo = SpamRepository.getInstance(appContext)
 
@@ -95,14 +98,14 @@ class CallShieldWidget : AppWidgetProvider() {
             // Trend arrow: compare today vs yesterday
             val trendText =
                 when {
-                    todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
-                    todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
-                    else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
+                    todayCount > yesterdayCount -> text.getString(R.string.widget_today_trend_up, localizedTodayCount)
+                    todayCount < yesterdayCount -> text.getString(R.string.widget_today_trend_down, localizedTodayCount)
+                    else -> text.getString(R.string.widget_today_trend_same, localizedTodayCount)
                 }
 
             // Last blocked time
             val lastTimestamp = dao.getLastBlockedTimestamp()
-            val lastBlockedText = formatLastBlocked(appContext, lastTimestamp, now)
+            val lastBlockedText = formatLastBlocked(text, lastTimestamp, now)
 
             // Protection status
             val callsEnabled = repo.blockCallsEnabled.first()
@@ -113,7 +116,7 @@ class CallShieldWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_trend, trendText)
             views.setTextViewText(
                 R.id.widget_total,
-                appContext.getString(R.string.widget_total_blocked, localizedTotalCount),
+                text.getString(R.string.widget_total_blocked, localizedTotalCount),
             )
             views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
 
@@ -128,7 +131,7 @@ class CallShieldWidget : AppWidgetProvider() {
                 }
             views.setTextViewText(
                 R.id.widget_status,
-                appContext.getString(
+                text.getString(
                     if (isActive) R.string.widget_protection_active else R.string.widget_protection_off,
                 ),
             )
@@ -172,5 +175,18 @@ class CallShieldWidget : AppWidgetProvider() {
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
             context.sendBroadcast(intent)
         }
+    }
+
+    /**
+     * [context] with its resources in [Locale.getDefault], the locale
+     * DateUtils and NumberFormat use. Before Android 13 an in-app language
+     * moves the default but not the application's resources, so the widget
+     * could say "Last: 5分钟前".
+     */
+    private fun inDefaultLocale(context: Context): Context {
+        val locale = Locale.getDefault()
+        val config = context.resources.configuration
+        if (config.locales[0] == locale) return context
+        return context.createConfigurationContext(Configuration(config).apply { setLocale(locale) })
     }
 }
