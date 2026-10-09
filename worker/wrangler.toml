@@ -31,10 +31,9 @@ namespace_id = "5001"
 limit = 5
 period = 60
 
-# A carrier gives each phone a /64 out of a shared /48, so the /48 gets a
-# larger budget of its own, and the whole Worker gets one budget per minute so
-# a flood spread across networks can't become a flood of GitHub commits. The
-# code falls back to KV counters when these bindings are missing.
+# A carrier gives each phone a /64 out of a shared /48, so the /48 (an IPv4
+# /24) gets a larger budget of its own. The code falls back to KV counters
+# when the limiter bindings are missing.
 [[ratelimits]]
 name = "REPORT_GROUP_LIMITER"
 namespace_id = "5002"
@@ -43,10 +42,16 @@ namespace_id = "5002"
 limit = 20
 period = 60
 
-[[ratelimits]]
-name = "REPORT_GLOBAL_LIMITER"
-namespace_id = "5003"
+# The whole Worker gets one budget per minute so a flood spread across
+# networks can't become a flood of GitHub commits. A rate-limiting binding
+# counts separately in each Cloudflare location, so this budget is one
+# Durable Object (the instance named "all") that every location asks. It
+# keeps its count in memory and stores nothing; SQLite-backed so it runs on
+# the Workers Free plan.
+[[durable_objects.bindings]]
+name = "REPORT_GLOBAL_COUNTER"
+class_name = "ReportGlobalCounter"
 
-[ratelimits.simple]
-limit = 30
-period = 60
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReportGlobalCounter"]

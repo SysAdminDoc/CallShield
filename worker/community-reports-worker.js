@@ -174,9 +174,10 @@ export function sanitizeSmsReportFields(body) {
 // expiration TTL equal to the window so stale keys self-clean.
 const RATE_LIMIT_WINDOW_S = 60;
 const RATE_LIMIT_MAX_REQUESTS = 5;
-// A carrier hands each phone its own /64 out of a shared /48, so the /48 gets
-// a larger budget than one client, and the whole Worker gets one per minute so
-// a flood spread over many networks can't turn into a flood of GitHub commits.
+// A carrier hands each phone its own /64 out of a shared /48, so the /48 (an
+// IPv4 /24) gets a larger budget than one client, and the whole Worker gets one
+// per minute so a flood spread over many networks can't turn into a flood of
+// GitHub commits.
 const GROUP_RATE_LIMIT_MAX_REQUESTS = 20;
 const GLOBAL_RATE_LIMIT_MAX_REQUESTS = 30;
 
@@ -347,16 +348,36 @@ export async function readBoundedText(request, limit = MAX_BODY_BYTES) {
 }
 
 /**
- * Check the per-client, per-/48 and Worker-wide rate limits, in that order.
- * Returns { allowed: boolean, remaining: number, retryAfter: number } for the
- * first budget that refuses, or for the client budget when all allow.
+ * The network a client's group budget keys on: an IPv6 /48 (a carrier hands
+ * each phone a /64 out of a shared /48) or an IPv4 /24, so a handful of
+ * addresses in one block can't each spend a full client budget.
+ */
+export function limiterGroupKey(ip) {
+  const key = clientKey(ip, REPORTER_PREFIX_BITS);
+  const octets = key.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/);
+  return octets ? `${octets[1]}.${octets[2]}.${octets[3]}.0/24` : key;
+}
+
+/**
+ * Check the Worker-wide, per-client and per-group rate limits. Returns
+ * { allowed: boolean, remaining: number, retryAfter: number } for the first
+ * budget that refuses, or for the client budget when all allow.
+ *
+ * The Worker-wide budget is the REPORT_GLOBAL_COUNTER Durable Object when it
+ * is bound. A rate-limiting binding counts separately in every Cloudflare
+ * location, so it can't hold one budget for the whole Worker; the single
+ * object can. Its budget is checked before the client is charged, so a report
+ * the Worker can't take doesn't spend the client's budget, and it is charged
+ * only after the client and group budgets allow, so one client hammering its
+ * own limit can't drain everyone else's.
  *
  * When the REPORT_LIMITER rate-limiting binding is bound it is authoritative:
  * the platform evaluates its counter atomically per key, so a burst of
  * concurrent requests cannot slip past the cap the way it can between the KV
  * counter's read and write (KV is eventually consistent and non-atomic).
  * The KV counter remains as a best-effort fallback for a deployment that has
- * not provisioned the limiter binding yet.
+ * not provisioned the limiter binding yet. Without the Durable Object the
+ * Worker-wide budget falls back the same way and is charged last.
  *
  * Missing bindings fail closed unless a local test explicitly sets
  * ALLOW_UNLIMITED_REPORTS=true. Production must never set that flag.
@@ -366,23 +387,88 @@ export async function checkRateLimit(ip, env) {
     return { allowed: false, remaining: 0, retryAfter: 0, identityError: true };
   }
   const client = clientKey(ip, LIMITER_PREFIX_BITS);
+  const group = limiterGroupKey(ip);
   const budgets = [
     { limiter: env?.REPORT_LIMITER, key: client, kvKey: `rl:${client}`, max: RATE_LIMIT_MAX_REQUESTS },
-    {
-      limiter: env?.REPORT_GROUP_LIMITER,
-      key: clientKey(ip, REPORTER_PREFIX_BITS),
-      kvKey: `rlg:${clientKey(ip, REPORTER_PREFIX_BITS)}`,
-      max: GROUP_RATE_LIMIT_MAX_REQUESTS,
-    },
-    { limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS },
+    { limiter: env?.REPORT_GROUP_LIMITER, key: group, kvKey: `rlg:${group}`, max: GROUP_RATE_LIMIT_MAX_REQUESTS },
   ];
+  const counter = env?.REPORT_GLOBAL_COUNTER;
+  if (counter) {
+    const open = await askGlobalCounter(counter, "peek");
+    if (!open.allowed) return open;
+  } else {
+    budgets.push({ limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS });
+  }
   let first;
   for (const budget of budgets) {
     const outcome = await consumeBudget(budget, env);
     if (!outcome.allowed) return outcome;
     first ??= outcome;
   }
+  if (counter) {
+    const taken = await askGlobalCounter(counter, "take");
+    if (!taken.allowed) return taken;
+  }
   return first;
+}
+
+/** Peek at or take from the Worker-wide budget held by the one counter object. */
+async function askGlobalCounter(namespace, action) {
+  let answer;
+  try {
+    const stub = namespace.get(namespace.idFromName(GLOBAL_COUNTER_NAME));
+    const response = await stub.fetch(`https://global-counter/${action}`, { method: "POST" });
+    answer = await response.json();
+  } catch (error) {
+    console.error("Unable to reach the Worker-wide report counter", error);
+    return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
+  }
+  if (answer?.allowed === true) {
+    return { allowed: true, remaining: answer.remaining, retryAfter: 0 };
+  }
+  if (answer?.allowed === false && Number.isFinite(answer.retryAfter)) {
+    return { allowed: false, remaining: 0, retryAfter: Math.max(1, Math.ceil(answer.retryAfter)) };
+  }
+  console.error("Malformed answer from the Worker-wide report counter");
+  return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
+}
+
+const GLOBAL_COUNTER_NAME = "all";
+
+/**
+ * The Worker-wide report budget, one instance (named "all") for every
+ * Cloudflare location. Each request runs to completion without awaiting, so
+ * the check and the increment can't interleave. The count lives in memory:
+ * the object stays loaded while reports arrive, and one evicted after a quiet
+ * spell starts a fresh window, which an idle minute would have given anyway.
+ */
+export class ReportGlobalCounter {
+  constructor(_state, _env, now = () => Date.now()) {
+    this.now = now;
+    this.windowStart = 0;
+    this.count = 0;
+  }
+
+  async fetch(request) {
+    const action = new URL(request.url).pathname.slice(1);
+    if (action !== "peek" && action !== "take") {
+      return new Response("Not found", { status: 404 });
+    }
+    const now = this.now();
+    if (now - this.windowStart >= RATE_LIMIT_WINDOW_S * 1000) {
+      this.windowStart = now;
+      this.count = 0;
+    }
+    const allowed = this.count < GLOBAL_RATE_LIMIT_MAX_REQUESTS;
+    if (allowed && action === "take") this.count += 1;
+    const retryAfter = allowed
+      ? 0
+      : Math.max(1, Math.ceil((this.windowStart + RATE_LIMIT_WINDOW_S * 1000 - now) / 1000));
+    return new Response(
+      JSON.stringify({ allowed, remaining: GLOBAL_RATE_LIMIT_MAX_REQUESTS - this.count, retryAfter }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  }
 }
 
 /** Take one request from a budget: the atomic limiter binding when bound, else a KV counter. */
