@@ -109,6 +109,11 @@ All notable changes to CallShield will be documented in this file.
   sent, is still waiting to send, or didn't go out. Reported a number as
   spam by mistake? Tap Send not spam on that row and the correction goes out
   the same way. The list is kept on the phone only.
+- Recommended lists has Lista Hũ, Paraguay's community list, with the
+  reports made since January 2025. Its numbers are stored as +595 numbers
+  whatever country your phone is in, and ones from other countries that
+  people reported there are left out rather than misread. Lists that name
+  their columns in Spanish ("numero", "tipo", "comentarios") are read too.
 
 ## v1.11.0 (2026-09-30)
 

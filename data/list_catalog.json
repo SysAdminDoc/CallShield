@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 1,
+  "revision": 2,
   "lists": [
     {
       "id": "opencallshield-co",
@@ -48,6 +48,23 @@
       "license": "GPL-3.0",
       "license_url": "https://github.com/symbuzzer/Turkish-Spam-Numbers/blob/main/LICENSE",
       "format": "txt",
+      "enabled_by_default": false
+    },
+    {
+      "id": "listahu-py",
+      "name": "Lista Hũ",
+      "country": "PY",
+      "calling_code": "595",
+      "trunk_prefix": "0",
+      "national_lengths": [
+        8,
+        9
+      ],
+      "url": "https://listahu.org/api/v1/lista/?added_from=2025-01-01",
+      "homepage": "https://listahu.org",
+      "license": "CC BY-NC-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      "format": "json",
       "enabled_by_default": false
     }
   ]

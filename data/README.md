@@ -312,6 +312,11 @@ a list, append its entry, raise `revision`, run `python scripts/feed_signing.py
 sign` and commit the file with its `.sig`. A list must fit the subscription
 limits (1 MB, 20,000 rows) and must never become a database source.
 
+Lista Hũ's full export is 4.6 MB, so its entry asks the site's API for the
+reports since a fixed date (`added_from=2025-01-01`, about 575 KB in October
+2026, growing about 25 KB a month). Move the date forward a year, raise
+`revision` and sign again before the response nears 1 MB, around 2028.
+
 `spam_numbers.txt` is signed the same way for anyone who takes the list
 without the app. It's written with the shards, holds every number whose
 sources allow redistribution (range prefixes stay out, since Saracroche's are

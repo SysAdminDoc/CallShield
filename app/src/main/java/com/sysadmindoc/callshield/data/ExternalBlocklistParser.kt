@@ -55,9 +55,10 @@ internal object ExternalBlocklistParser {
     const val MAX_SUBSCRIPTION_BYTES = 1L * 1024L * 1024L
     const val MAX_SUBSCRIPTION_ROWS = 20_000
 
-    private val numberFields = setOf("number", "phone", "phone_number", "phoneNumber", "msisdn")
-    private val typeFields = setOf("type", "category", "label")
-    private val descriptionFields = setOf("description", "comment", "name", "reason")
+    // Spanish names too: Lista Hũ (Paraguay) exports "numero", "tipo" and "desc" or "Comentarios".
+    private val numberFields = setOf("number", "phone", "phone_number", "phoneNumber", "msisdn", "numero")
+    private val typeFields = setOf("type", "category", "label", "tipo")
+    private val descriptionFields = setOf("description", "comment", "name", "reason", "desc", "descripcion", "comentario", "comentarios")
     private val arrayFields = setOf("numbers", "blocklist", "entries", "data")
 
     private const val EXPIRES_HEADER_LINES = 50

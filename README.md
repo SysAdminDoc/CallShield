@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C362-f38ba8?style=flat-square" alt="51,362 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1939-94e2d5?style=flat-square" alt="1939 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1940-94e2d5?style=flat-square" alt="1940 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -290,7 +290,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - Selective backup/restore for rules, non-secret settings, and opt-in logs, plus CSV log export and auto-cleanup (7/14/30/90 days)
 - Database sync every 6 hours, a trending-feed check every 30 minutes, and a daily digest notification
 - External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row. Each row shows the list's name, the host it comes from, how many numbers it holds and when it last updated, and TalkBack reads it as one item. A row's switch turns its list off or on. Tapping the list's name does nothing. Removing a list takes its numbers out straight away, and Undo puts both back without downloading the list again
-- The same card opens with Recommended lists for places the bundled database barely covers: OpenCallShield (Colombia, MIT), SpamChile (Chile, GPL-2.0) and Turkish Spam Numbers (Turkey, GPL-3.0). Each row shows the country and a link to the license next to Add, and nothing is downloaded until you tap it. Adding one fetches it straight from its own repository. None of them is folded into CallShield's database. Each list declares its country's number plan, so a number written the local way (`3131918305`, `03395051735` or `00573390714583` in the Colombian list) is stored as +57 whatever country your phone is in. That holds for the same link typed in by hand, too. The catalog ships in the app and a signed copy is refreshed on every sync, so a list can be added between releases
+- The same card opens with Recommended lists for places the bundled database barely covers: OpenCallShield (Colombia, MIT), SpamChile (Chile, GPL-2.0), Turkish Spam Numbers (Turkey, GPL-3.0) and Lista Hũ (Paraguay, CC BY-NC-SA 4.0, reports since January 2025, since the whole list is past the size limit). Each row shows the country and a link to the license next to Add, and nothing is downloaded until you tap it. Adding one fetches it straight from its own repository. None of them is folded into CallShield's database. Each list declares its country's number plan, so a number written the local way (`3131918305`, `03395051735` or `00573390714583` in the Colombian list) is stored as +57 whatever country your phone is in. That holds for the same link typed in by hand, too. The catalog ships in the app and a signed copy is refreshed on every sync, so a list can be added between releases
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. For ten minutes after GitHub couldn't be reached at all, the mirror goes first. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't alter the data, though it can hold back updates. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
 - Two Quick Settings tiles (protection on or off, and Expecting a call), app shortcuts and a home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
@@ -532,12 +532,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1939 tests
+./gradlew testDebugUnitTest   # 1940 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1939 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1940 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -574,7 +574,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1939 JVM unit tests (JUnit) |
+| Tests | 1940 JVM unit tests (JUnit) |
 | Strings | 1779 string resources and 48 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

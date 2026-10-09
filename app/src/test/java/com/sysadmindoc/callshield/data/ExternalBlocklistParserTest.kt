@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,6 +74,39 @@ class ExternalBlocklistParserTest {
         assertEquals(listOf("+12125550101", "+15085550102"), parsed.numbers.map { it.number })
         assertEquals("fraud", parsed.numbers.first().type)
         assertEquals("IRS spoof", parsed.numbers.first().description)
+    }
+
+    @Test
+    fun parseReadsListaHuSpanishFieldNames() {
+        val paraguay = ListNumberPlan("PY", "595", "0", listOf(8, 9))
+        val json =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://listahu.org/api/v1/lista/?added_from=2025-01-01",
+                rawLabel = "Lista Hũ",
+                body =
+                    """
+                    [
+                      {"id": 22601, "numero": "595992856745", "tipo": "Estafa", "screenshot": "https://listahu.org/media/x.jpg",
+                       "desc": "Se hace pasar por un banco", "check": false, "added": "2026-10-09T11:17:41-03:00", "votsi": 0, "votno": 0},
+                      {"id": 22600, "numero": "0981234567", "tipo": "SPAM", "desc": ""}
+                    ]
+                    """.trimIndent(),
+                normalizeNumber = { paraguay.toInternational(it) ?: it },
+            )
+        val csv =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://listahu.org/descargar/csv/",
+                rawLabel = "Lista Hũ",
+                body = "\"#\",\"Numero\",\"Tipo\",\"Comentarios\",\"Captura\",\"Fecha_Denuncia\"\n" +
+                    "1,\"595985843100\",\"SPAM\",\"Llamadas grabadas\",\"https://listahu.org/media/d2.jpg\",\"2015-02-16 09:37\"\n",
+                normalizeNumber = { paraguay.toInternational(it) ?: it },
+            )
+
+        assertEquals(listOf("+595992856745", "+595981234567"), json.numbers.map { it.number })
+        assertEquals("Estafa", json.numbers.first().type)
+        assertEquals("Se hace pasar por un banco", json.numbers.first().description)
+        assertEquals(listOf("+595985843100"), csv.numbers.map { it.number })
+        assertEquals("Llamadas grabadas", csv.numbers.single().description)
     }
 
     @Test
