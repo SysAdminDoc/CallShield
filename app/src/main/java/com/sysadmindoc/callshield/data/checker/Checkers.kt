@@ -462,10 +462,12 @@ internal class DatabaseChecker(
         return if (entry != null) {
             // A live call from a published line the carrier didn't verify: say
             // whose number was faked, not the complaint fields the spoofing left
-            // behind. A lookup, a text or a verified call keeps the stored text,
-            // since "didn't verify" wouldn't be true of it.
+            // behind. A lookup, a text, a verified call or one whose status
+            // Android didn't give keeps the stored text, since "didn't verify"
+            // wouldn't be known true of it.
+            val status = ctx.verificationStatus
             val unverifiedLiveCall =
-                ctx.realtimeCall && ctx.smsBody == null && ctx.verificationStatus != StirShakenTrustChecker.VERIFICATION_STATUS_PASSED
+                ctx.realtimeCall && ctx.smsBody == null && status != null && status != StirShakenTrustChecker.VERIFICATION_STATUS_PASSED
             val organization = ctx.lookupForms.firstNotNullOfOrNull { OfficialLines.organization(it) }?.takeIf { unverifiedLiveCall }
             val description =
                 organization?.let { ctx.appContext.getString(R.string.block_reason_official_line_unverified, it) }

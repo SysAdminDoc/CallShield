@@ -213,6 +213,9 @@ class StirShakenDatabaseEvidencePipelineTest {
 
         assertTrue(result.isSpam)
         assertEquals("Fake refund calls", result.description)
+        // A live call Android gave no verification status for wasn't shown unverified either.
+        val noStatus = runBlocking { fixture.repository.isSpam("+18002752273", callerIdentity = CallerIdentity(verificationStatus = null)) }
+        assertEquals("Fake refund calls", noStatus.description)
     }
 
     @Test
