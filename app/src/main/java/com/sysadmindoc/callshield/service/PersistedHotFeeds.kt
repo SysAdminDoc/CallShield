@@ -31,7 +31,11 @@ internal class PersistedHotFeeds(
         }
     }
 
-    /** Written beside the target and moved over it, so a crash never leaves half a file. */
+    /**
+     * Written beside the target and moved over it, so a crash never leaves
+     * half a file. The temp name is unique, so two refreshes writing the same
+     * feed at once (the periodic one and a requested one) don't share it.
+     */
     fun write(
         feed: String,
         entries: List<String>,
@@ -39,7 +43,7 @@ internal class PersistedHotFeeds(
         try {
             directory.mkdirs()
             val target = file(feed)
-            val temp = File(target.path + ".tmp")
+            val temp = File.createTempFile(feed, ".tmp", directory)
             FileOutputStream(temp).use { out ->
                 out.write(entries.joinToString(separator = "\n", postfix = "\n").toByteArray(Charsets.UTF_8))
                 out.fd.sync()

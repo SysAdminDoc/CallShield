@@ -143,18 +143,19 @@ internal object HotDataSync {
             // file that didn't survive) waits for a refresh, asked for right away.
             fun bootstrap(
                 feed: String,
-                hasData: Boolean,
+                hasData: () -> Boolean,
                 applyKept: (List<String>) -> Unit,
                 applyBundled: () -> Unit,
             ) {
-                if (hasData) return
+                if (hasData()) return
                 if (health.feedGeneratedAt[feed] == null) {
                     applyBundled()
                     return
                 }
                 val lines = kept.read(feed)
                 when {
-                    lines != null -> applyKept(lines)
+                    // A refresh that landed while the file was read wins over it.
+                    lines != null -> if (!hasData()) applyKept(lines)
                     feed !in health.clearedFeeds -> wantsRefresh = true
                 }
             }
@@ -165,7 +166,7 @@ internal object HotDataSync {
             // the build-time snapshot until the next 30-minute cycle.
             bootstrap(
                 HOT_RANGES_FEED,
-                dependencies.spamHeuristics.hasHotRanges(),
+                { dependencies.spamHeuristics.hasHotRanges() },
                 applyKept = { dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(it)) },
             ) {
                 val bundledRanges = loadBundledHotRanges(appContext, source)
@@ -177,7 +178,7 @@ internal object HotDataSync {
 
             bootstrap(
                 SPAM_DOMAINS_FEED,
-                dependencies.smsContentAnalyzer.hasSpamDomains(),
+                { dependencies.smsContentAnalyzer.hasSpamDomains() },
                 applyKept = { dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(it)) },
             ) {
                 val bundledDomains = loadBundledSpamDomains(appContext, source)
@@ -189,7 +190,7 @@ internal object HotDataSync {
 
             bootstrap(
                 COMMUNITY_WATCH_FEED,
-                dependencies.spamHeuristics.hasCommunityWatch(),
+                { dependencies.spamHeuristics.hasCommunityWatch() },
                 applyKept = { dependencies.spamHeuristics.updateCommunityWatch(sanitizeCommunityWatch(decodeCommunityWatch(it))) },
             ) {
                 val bundledWatch = loadBundledCommunityWatch(appContext, source)
