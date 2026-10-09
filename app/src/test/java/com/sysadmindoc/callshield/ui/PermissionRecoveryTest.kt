@@ -46,13 +46,34 @@ class PermissionRecoveryTest {
     }
 
     @Test
+    fun `a prompt closed without an answer the first time leaves the user where they were`() {
+        val denied = setOf(Manifest.permission.READ_CALL_LOG)
+
+        assertFalse(opensAppInfoAfterRequest(denied, promptShown = true, refusedBefore = emptySet()) { false })
+    }
+
+    @Test
+    fun `a second refusal on a prompt that was shown opens App info`() {
+        val denied = setOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_SMS)
+
+        assertTrue(opensAppInfoAfterRequest(denied, promptShown = true, refusedBefore = setOf(Manifest.permission.READ_SMS)) { false })
+    }
+
+    @Test
+    fun `a request that came straight back refused opens App info whatever came before`() {
+        val denied = setOf(Manifest.permission.READ_CALL_LOG)
+
+        assertTrue(opensAppInfoAfterRequest(denied, promptShown = false, refusedBefore = emptySet()) { false })
+    }
+
+    @Test
     fun `a role request that came straight back refused opens Default apps`() {
         assertTrue(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = 120))
     }
 
     @Test
     fun `a role refused on a prompt that was shown stays put`() {
-        assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = ROLE_PROMPT_MIN_MILLIS))
+        assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = PROMPT_MIN_MILLIS))
         assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = 4_000))
     }
 

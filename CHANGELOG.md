@@ -34,7 +34,9 @@ All notable changes to CallShield will be documented in this file.
   taps first when you'd said no on an earlier visit, and now opens App info
   on the first one. The buttons that ask for the caller ID and spam role,
   and the call redirecting role, do the same with Default apps once
-  Android stops showing their prompt.
+  Android stops showing their prompt. Closing a permission prompt without
+  answering, the first time, no longer counts as the refusal that sends you
+  to App info.
 - The "Block area code" suggestion on Home, number details and the Stats
   map is only offered for North American numbers now. For numbers from
   other countries it used to suggest a +1 rule that would block the wrong

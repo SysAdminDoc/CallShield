@@ -1,7 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
 import android.Manifest
-import android.app.Activity
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
@@ -93,7 +92,6 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
-import com.sysadmindoc.callshield.ui.opensAppInfoAfterRequest
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -172,12 +170,13 @@ fun OnboardingScreen(
     // screen, so even the first tap after two refusals in an earlier run opens
     // App info, and the button keeps pointing there.
     val runtimePermissionRequest =
-        rememberPermissionRequest(R.string.permission_core_in_app_info, appInfoFor = CallShieldPermissions.corePermissions) {
+        rememberPermissionRequest(
+            R.string.permission_core_in_app_info,
+            appInfoFor = CallShieldPermissions.corePermissions,
+            onOpensAppInfo = { runtimePermissionsBlocked = true },
+        ) {
             refreshReadiness()
-            val activity = context as? Activity
-            runtimePermissionsBlocked =
-                activity != null &&
-                opensAppInfoAfterRequest(CallShieldPermissions.missingCorePermissions(context), activity::shouldShowRequestPermissionRationale)
+            runtimePermissionsBlocked = false
         }
     val notificationPermissionRequest =
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) {

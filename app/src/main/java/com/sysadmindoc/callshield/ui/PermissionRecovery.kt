@@ -14,6 +14,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -24,11 +25,23 @@ import com.sysadmindoc.callshield.util.startActivitySafely
  * Android won't show its dialog for any of it again. After two refusals the
  * request returns at once with nothing on screen, so only App info can turn
  * the permission on. A refusal that can still be asked again is left alone.
+ * So is a prompt that was shown ([promptShown]) and closed without an answer
+ * the first time: Android reads that like a second refusal, with no rationale
+ * left, but it isn't one unless the permission was refused before
+ * ([refusedBefore], the ones Android still had a rationale for when asked).
  */
 internal fun opensAppInfoAfterRequest(
     stillDenied: Collection<String>,
+    promptShown: Boolean = false,
+    refusedBefore: Collection<String> = emptyList(),
     showsRationale: (String) -> Boolean,
-): Boolean = stillDenied.isNotEmpty() && stillDenied.none(showsRationale)
+): Boolean {
+    if (stillDenied.isEmpty() || stillDenied.any(showsRationale)) return false
+    return !promptShown || stillDenied.any { it in refusedBefore }
+}
+
+/** The least time a shown prompt takes to come back; under this, none was shown. */
+internal const val PROMPT_MIN_MILLIS = 1_000L
 
 /**
  * The refusals in [grants] that decide whether App info opens: every one, or
@@ -43,29 +56,39 @@ internal fun refusalsThatCount(
 /**
  * Returns a function that asks for the permissions it's given and calls
  * [onResult] with Android's answer. When the answer leaves no dialog for next
- * time, it shows [appInfoHint] and opens App info, where the permission lives.
- * Only refusals of [appInfoFor] count when it's given.
+ * time, it calls [onOpensAppInfo], shows [appInfoHint] and opens App info,
+ * where the permission lives. Only refusals of [appInfoFor] count when it's
+ * given.
  */
 @Composable
 fun rememberPermissionRequest(
     @StringRes appInfoHint: Int,
     appInfoFor: Collection<String>? = null,
+    onOpensAppInfo: () -> Unit = {},
     onResult: (Map<String, Boolean>) -> Unit = {},
 ): (List<String>) -> Unit {
     val context = LocalContext.current
+    var launchedAt by remember { mutableLongStateOf(0L) }
+    var refusedBefore by remember { mutableStateOf<Set<String>>(emptySet()) }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onResult(grants)
             val activity = context.findActivity() ?: return@rememberLauncherForActivityResult
             val stillDenied = refusalsThatCount(grants, appInfoFor)
-            if (opensAppInfoAfterRequest(stillDenied, activity::shouldShowRequestPermissionRationale)) {
+            val promptShown = SystemClock.elapsedRealtime() - launchedAt >= PROMPT_MIN_MILLIS
+            if (opensAppInfoAfterRequest(stillDenied, promptShown, refusedBefore, activity::shouldShowRequestPermissionRationale)) {
+                onOpensAppInfo()
                 Toast.makeText(context, appInfoHint, Toast.LENGTH_LONG).show()
                 context.startActivitySafely(
                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
                 )
             }
         }
-    return { permissions -> launcher.launch(permissions.toTypedArray()) }
+    return { permissions ->
+        launchedAt = SystemClock.elapsedRealtime()
+        refusedBefore = context.findActivity()?.let { activity -> permissions.filter(activity::shouldShowRequestPermissionRationale).toSet() }.orEmpty()
+        launcher.launch(permissions.toTypedArray())
+    }
 }
 
 /**
@@ -78,10 +101,7 @@ fun rememberPermissionRequest(
 internal fun opensDefaultAppsAfterRoleRequest(
     roleHeld: Boolean,
     elapsedMillis: Long,
-): Boolean = !roleHeld && elapsedMillis in 0 until ROLE_PROMPT_MIN_MILLIS
-
-/** The least time a shown role prompt takes to come back; under this, none was shown. */
-internal const val ROLE_PROMPT_MIN_MILLIS = 1_000L
+): Boolean = !roleHeld && elapsedMillis in 0 until PROMPT_MIN_MILLIS
 
 /** What a role request came back with. */
 data class RoleRequestResult(
