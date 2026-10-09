@@ -80,5 +80,54 @@ class CheckTest(unittest.TestCase):
         self.assertIn("no route to host", detail)
 
 
+class SampleTest(unittest.TestCase):
+    def test_only_the_categories_the_app_acts_on_count_as_flagged(self):
+        self.assertEqual("flagged", probe_live_sources.classify(200, SPAM_ANSWER))
+        self.assertEqual(
+            "uncategorized",
+            probe_live_sources.classify(200, '{"is_spam":true,"status_description":"unknown"}'),
+        )
+        self.assertEqual("clean", probe_live_sources.classify(200, CLEAN_ANSWER))
+        self.assertEqual("error", probe_live_sources.classify(429, ""))
+        self.assertEqual("error", probe_live_sources.classify(200, PARKED_PAGE))
+
+    def test_a_flag_adds_only_when_the_local_database_lacks_the_number(self):
+        answers = [
+            probe_live_sources.Answer("+18333041447", "flagged"),
+            probe_live_sources.Answer("+15550100000", "flagged"),
+            probe_live_sources.Answer("+18002752273", "uncategorized"),
+            probe_live_sources.Answer("+15550100001", "clean"),
+            probe_live_sources.Answer("+15550100002", "error"),
+        ]
+        summary = probe_live_sources.summarize("pending", answers, {"+18333041447"})
+        self.assertEqual(5, summary["asked"])
+        self.assertEqual(4, summary["answered"])
+        self.assertEqual(2, summary["flagged"])
+        self.assertEqual(1, summary["adds"])
+        self.assertEqual(["+15550100000"], summary["add_examples"])
+        self.assertEqual(1, summary["uncategorized"])
+        self.assertEqual(1, summary["errors"])
+
+    def test_numbers_are_asked_as_digits_and_a_dropped_connection_is_an_error(self):
+        asked = []
+
+        def fetcher(url):
+            asked.append(url)
+            if url.endswith("15550100002"):
+                raise OSError("reset")
+            return 200, SPAM_ANSWER
+
+        answers = probe_live_sources.ask_all(["+18333041447", "+15550100002"], fetcher, 0)
+        self.assertEqual(SKIPCALLS.url_prefix + "18333041447", asked[0])
+        self.assertEqual(["flagged", "error"], [a.verdict for a in answers])
+
+    def test_business_lines_are_distinct_e164_numbers(self):
+        lines = probe_live_sources.BUSINESS_LINES
+        self.assertEqual(50, len(lines))
+        self.assertEqual(len(lines), len(set(lines)))
+        for line in lines:
+            self.assertRegex(line, r"^\+1\d{10}$")
+
+
 if __name__ == "__main__":
     unittest.main()
