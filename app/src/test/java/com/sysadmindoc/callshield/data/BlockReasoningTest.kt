@@ -207,6 +207,8 @@ class BlockReasoningTest {
         assertTrue(text.contains("not a verdict"))
         // The trusted allow also yields to a database entry with recent reports.
         assertTrue(text.contains("spam database entry with recent reports"))
+        // Except on a published support line, where only trending counts.
+        assertTrue(text.contains("published support number"))
         assertTrue(!text.contains("safe"))
         assertTrue(!text.contains("trusted"))
     }

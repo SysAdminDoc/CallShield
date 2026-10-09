@@ -18,7 +18,8 @@ object StirShakenSemantics {
     private const val PRECEDENCE =
         "Contacts-only mode, your blocklist, wildcard and range rules, numbers you blocked in Android, " +
             "the downloaded prefix list and telemarketing ranges you block stay ahead of this signal, " +
-            "and so does a spam database entry with recent reports."
+            "and so does a spam database entry with recent reports. For a company's published support number, " +
+            "only one trending in the community right now does, since older reports about it are usually spoofed calls."
 
     const val VERIFICATION_STATUS_NOT_VERIFIED = 0
     const val VERIFICATION_STATUS_PASSED = 1

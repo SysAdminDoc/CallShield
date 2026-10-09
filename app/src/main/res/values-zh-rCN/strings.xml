@@ -1423,7 +1423,7 @@
     <string name="stir_passed_headline">运营商来电显示验证已通过。</string>
     <string name="stir_passed_android_scope">Android 只提供 PASS/FAIL 状态，不提供完整的 A/B/C 级 PASSporT 认证详情。</string>
     <string name="stir_not_a_verdict">这只是来电显示验证，并不判定来电是否受欢迎或合法。</string>
-    <string name="stir_precedence">仅联系人模式、你的拦截列表、通配符和号段规则、你在 Android 中拦截的号码、下载的前缀列表和你拦截的电话营销号段都优先于此信号，垃圾号码库中有近期举报的条目也是如此。</string>
+    <string name="stir_precedence">仅联系人模式、你的拦截列表、通配符和号段规则、你在 Android 中拦截的号码、下载的前缀列表和你拦截的电话营销号段都优先于此信号，垃圾号码库中有近期举报的条目也是如此。对于公司公开的客服号码，只有当前在社区中热门的条目才会优先，因为这类号码的旧举报通常来自冒充来电。</string>
     <string name="stir_failed_headline">运营商来电显示验证失败。</string>
     <string name="stir_failed_detail">运营商无法验证此来电的来电显示。</string>
     <string name="stir_failed_spoofed">这通常意味着显示的号码可能是伪造的。</string>

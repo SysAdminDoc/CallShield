@@ -198,7 +198,9 @@ internal class ContactsOnlyChecker(
  * The allow sits above the downloaded database to protect the real owners
  * of numbers that were spoofed in old complaint data, so it only overrides
  * a database row whose evidence is stale (see [hasCurrentEvidence]). A row
- * with current evidence falls through to [DatabaseChecker] and blocks.
+ * with current evidence falls through to [DatabaseChecker] and blocks. On an
+ * organization's published line ([OfficialLines]) only community trending
+ * counts as current, since complaints about it are spoofing of the real owner.
  *
  * Gated on the user setting and the runtime ability to read a
  * verification status (non-null); skipped for historical scans and SMS.

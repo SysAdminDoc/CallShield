@@ -1932,7 +1932,7 @@
     <string name="stir_passed_headline">Carrier caller ID authentication passed.</string>
     <string name="stir_passed_android_scope">Android exposes PASS/FAIL status, not the full A/B/C PASSporT attestation details.</string>
     <string name="stir_not_a_verdict">This is caller ID authentication, not a verdict that the call is wanted or lawful.</string>
-    <string name="stir_precedence">Contacts-only mode, your blocklist, wildcard and range rules, numbers you blocked in Android, the downloaded prefix list and telemarketing ranges you block stay ahead of this signal, and so does a spam database entry with recent reports.</string>
+    <string name="stir_precedence">Contacts-only mode, your blocklist, wildcard and range rules, numbers you blocked in Android, the downloaded prefix list and telemarketing ranges you block stay ahead of this signal, and so does a spam database entry with recent reports. For a company\'s published support number, only one trending in the community right now does, since older reports about it are usually spoofed calls.</string>
     <string name="stir_failed_headline">Carrier caller ID authentication failed.</string>
     <string name="stir_failed_detail">The carrier could not authenticate this call\'s caller ID.</string>
     <string name="stir_failed_spoofed">This usually means the displayed number may have been spoofed.</string>
