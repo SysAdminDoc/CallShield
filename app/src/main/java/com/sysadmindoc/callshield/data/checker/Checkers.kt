@@ -458,9 +458,13 @@ internal class DatabaseChecker(
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val entry = ctx.lookupForms.firstNotNullOfOrNull { form -> repo.findByNumberInternal(form)?.takeUnless { it.isUserBlocked } }
         return if (entry != null) {
-            // A published line the carrier didn't verify: say whose number was
-            // faked, not the complaint fields the spoofing left behind.
-            val organization = ctx.lookupForms.firstNotNullOfOrNull { OfficialLines.organization(it) }
+            // A live call from a published line the carrier didn't verify: say
+            // whose number was faked, not the complaint fields the spoofing left
+            // behind. A lookup, a text or a verified call keeps the stored text,
+            // since "didn't verify" wouldn't be true of it.
+            val unverifiedLiveCall =
+                ctx.realtimeCall && ctx.smsBody == null && ctx.verificationStatus != StirShakenTrustChecker.VERIFICATION_STATUS_PASSED
+            val organization = ctx.lookupForms.firstNotNullOfOrNull { OfficialLines.organization(it) }?.takeIf { unverifiedLiveCall }
             val description =
                 organization?.let { ctx.appContext.getString(R.string.block_reason_official_line_unverified, it) }
                     // The stored text, so a block saved from Lookup keeps it; screens format it.

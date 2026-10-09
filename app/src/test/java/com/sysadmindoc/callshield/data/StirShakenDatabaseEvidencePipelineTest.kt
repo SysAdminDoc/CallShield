@@ -202,6 +202,20 @@ class StirShakenDatabaseEvidencePipelineTest {
     }
 
     @Test
+    fun `a lookup of a published line keeps the stored text, since no call went unverified`() {
+        runBlocking {
+            fixture.dao.insertNumber(
+                SpamNumber(number = "+18002752273", type = "scam", description = "Fake refund calls", lastSeen = today.minusDays(30).toString(), source = "github"),
+            )
+        }
+
+        val result = runBlocking { fixture.repository.isSpam("+18002752273", realtimeCall = false) }
+
+        assertTrue(result.isSpam)
+        assertEquals("Fake refund calls", result.description)
+    }
+
+    @Test
     fun `an explicit user block still beats a verified call`() {
         databaseRow("+12125550143", lastSeen = today.minusDays(900), isUserBlocked = true)
 
