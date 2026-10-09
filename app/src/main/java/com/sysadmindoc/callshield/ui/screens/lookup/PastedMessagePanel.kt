@@ -63,7 +63,9 @@ import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.SurfaceVariant
 import com.sysadmindoc.callshield.ui.urlThreatLabels
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -117,53 +119,56 @@ internal fun PastedMessagePanel(viewModel: MainViewModel) {
     val clipboardHasText = remember(context) { clipboardHasText(context) }
     var message by rememberSaveable { mutableStateOf("") }
     var verdict by remember { mutableStateOf<PastedMessageVerdict?>(null) }
-    var checking by remember { mutableStateOf(false) }
+    var checkJob by remember { mutableStateOf<Job?>(null) }
+    val checking = checkJob != null
+
+    // An edit drops the verdict and any check still running for the old text.
+    fun edit(text: String) {
+        checkJob?.cancel()
+        checkJob = null
+        verdict = null
+        message = text.take(MAX_PASTED_MESSAGE_CHARS)
+    }
 
     fun check() {
         val body = message.trim()
         if (body.isEmpty() || checking) return
         focusManager.clearFocus(force = true)
         keyboard?.hide()
-        checking = true
-        scope.launch {
-            try {
-                val links =
-                    try {
-                        withContext(Dispatchers.IO) {
-                            UrlSafetyChecker.checkSmsBody(body, stripQuery = stripQuery, allowRemoteLookup = remoteLookup)
+        checkJob =
+            scope.launch {
+                try {
+                    val links =
+                        try {
+                            withContext(Dispatchers.IO) {
+                                UrlSafetyChecker.checkSmsBody(body, stripQuery = stripQuery, allowRemoteLookup = remoteLookup)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // A feed that can't be reached leaves the content verdict standing.
+                            emptyList()
                         }
-                    } catch (_: Exception) {
-                        // A feed that can't be reached leaves the content verdict standing.
-                        emptyList()
-                    }
-                verdict = withContext(Dispatchers.Default) { PastedMessageVerdict.of(body, aggressive, links) }
-            } finally {
-                checking = false
+                    verdict = withContext(Dispatchers.Default) { PastedMessageVerdict.of(body, aggressive, links) }
+                } finally {
+                    if (checkJob == coroutineContext[Job]) checkJob = null
+                }
             }
-        }
     }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TextField(
             value = message,
-            onValueChange = {
-                message = it.take(MAX_PASTED_MESSAGE_CHARS)
-                verdict = null
-            },
+            onValueChange = ::edit,
             placeholder = { Text(stringResource(R.string.lookup_message_hint)) },
             trailingIcon = {
                 if (message.isNotBlank()) {
-                    IconButton(
-                        onClick = {
-                            message = ""
-                            verdict = null
-                        },
-                    ) {
+                    IconButton(onClick = { edit("") }) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
                     }
                 } else if (clipboardHasText) {
                     TextButton(
-                        onClick = { clipboardText(context)?.let { message = it.take(MAX_PASTED_MESSAGE_CHARS) } },
+                        onClick = { clipboardText(context)?.let(::edit) },
                         contentPadding = PaddingValues(horizontal = 8.dp),
                     ) {
                         Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(17.dp))
