@@ -837,8 +837,8 @@ def assert_community_watch_uses_90_day_device_evidence(data_dir: Path) -> None:
         data_dir / "spam_numbers.json",
         {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
     )
-    watch_number, old_number, spread_number, cleared_number = (
-        "+12122340401", "+12122340402", "+12122340403", "+12122340404"
+    watch_number, old_number, spread_number, cleared_number, one_group_number = (
+        "+12122340401", "+12122340402", "+12122340403", "+12122340404", "+12122340407"
     )
     day = lambda age, hour=10, minute=0: (
         datetime.now(timezone.utc) - timedelta(days=age)
@@ -867,6 +867,11 @@ def assert_community_watch_uses_90_day_device_evidence(data_dir: Path) -> None:
 
     for index, bucket in enumerate(BUCKETS[:2], start=1):
         write_report(data_dir, f"clear-watch-{index}.json", cleared_number, bucket, day(4), device=BUCKETS[index + 1])
+
+    # Two devices in one /48 on the same day may be one household, so they are
+    # one reporter's word, not two users'.
+    write_report(data_dir, "one-group-1.json", one_group_number, group_a, day(3, 9), device="0000000000000105")
+    write_report(data_dir, "one-group-2.json", one_group_number, group_a, day(3, 10), device="0000000000000106")
 
     # A legacy promotion ledger can prove reporter buckets, but never device
     # identities. Migration keeps that evidence as one device per bucket.
@@ -905,6 +910,7 @@ def assert_community_watch_uses_90_day_device_evidence(data_dir: Path) -> None:
     assert rows.get(old_number) == 2, f"90-day evidence older than promotion retention was lost: {rows}"
     assert rows.get(cleared_number) == 2, f"two same-day reporter groups should be watched: {rows}"
     assert rows.get(legacy_number) == 2, f"legacy promotion evidence was not migrated: {rows}"
+    assert one_group_number not in rows, f"two devices in one group are not two users: {rows}"
     assert spread_number not in rows, f"reporters across UTC days were incorrectly combined: {rows}"
     assert all(set(row) == {"number", "reporter_count"} for row in feed["numbers"]), feed
 

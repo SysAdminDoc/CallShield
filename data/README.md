@@ -9,7 +9,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `hot_numbers.json`: Recent community velocity feed for exact-number protection
 - `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
 - `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
-- `community_watch.json`: Pending community numbers that at least two reporters flagged on the same UTC day in the last 90 days, with no not-spam report since. Phones only label these ("Reported by 2 CallShield users, not confirmed"); the list never blocks on its own
+- `community_watch.json`: Pending community numbers that at least two reporters, from two different reporter groups (a /48 or an IPv4 address), flagged on the same UTC day in the last 90 days, with no not-spam report since. Two devices in one group may be one household, so they count as one group's word with at most two devices, and never make the list alone. Phones only label these ("Reported by 2 CallShield users, not confirmed"); the list never blocks on its own
 - `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
 - `list_catalog.json`: The recommended lists Settings offers to add, each with its link, license and country number plan. Phones download a list from its own host only when someone adds it
 - `spam_model_holdout.json`: Hashed numbers of the rows the shipped model's training held out, which `evaluate_model.py` scores

@@ -211,10 +211,21 @@ def add_watch_event(state: dict, day: str, identity: tuple[str, str]) -> None:
 
 
 def community_watch_reporter_count(state: dict) -> int:
+    """Same-day devices on the busiest day, capped per group, and only on a day
+    that heard from two groups: the label says "2 CallShield users", and two
+    phones behind one home network (a guest subnet gives one /48 two /64s) are
+    as likely one person. A second group is the second opinion."""
     by_day: dict[str, set[tuple[str, str]]] = {}
     for event in state.get("watch_events", []):
         by_day.setdefault(event["day"], set()).add((event["bucket"], event["device"]))
-    return max((capped_reporter_count(identities) for identities in by_day.values()), default=0)
+    return max(
+        (
+            capped_reporter_count(identities)
+            for identities in by_day.values()
+            if len({group for group, _ in identities}) >= 2
+        ),
+        default=0,
+    )
 
 
 def write_community_watch_feed(
