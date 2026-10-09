@@ -643,32 +643,36 @@ object BackupRestore {
         dao: SpamDao,
         repo: SpamRepository,
         selectedSections: Set<BackupSection>,
-    ): RestoreResult {
-        val before =
-            if (mode == RestoreMode.REPLACE) {
-                // Uncapped: the snapshot never leaves the device, and a trimmed
-                // log would lose rows on Undo.
-                buildBackup(dao, repo, selectedSections, rowCap = Int.MAX_VALUE)
-                    .toUndoPayload(selectedSections)
+    ): RestoreResult =
+        // A list refresh or removal reads the subscribed lists and writes them
+        // back whole, so one running between this read and the restore's write
+        // would drop the lists the restore adds. The lock keeps them apart.
+        repo.holdingSyncLock {
+            val before =
+                if (mode == RestoreMode.REPLACE) {
+                    // Uncapped: the snapshot never leaves the device, and a trimmed
+                    // log would lose rows on Undo.
+                    buildBackup(dao, repo, selectedSections, rowCap = Int.MAX_VALUE)
+                        .toUndoPayload(selectedSections)
+                } else {
+                    null
+                }
+            // A restore adds the backup's lists to the phone's own and never drops
+            // one. Settings write the lists they carry as the whole set, so an
+            // Undo or a rollback, which write a snapshot back, take the added ones
+            // away again.
+            val incoming =
+                payload.settings?.let { settings ->
+                    val current = repo.readPrefsSnapshot().toBackupSettings().externalBlocklists
+                    payload.copy(settings = settings.addingExternalBlocklistsTo(current))
+                } ?: payload
+            val result = restorePayload(context, incoming, mode, dao, repo, selectedSections)
+            if (result.success && before != null) {
+                result.copy(undo = RestoreUndo(before, selectedSections))
             } else {
-                null
+                result
             }
-        // A restore adds the backup's lists to the phone's own and never drops
-        // one. Settings write the lists they carry as the whole set, so an
-        // Undo or a rollback, which write a snapshot back, take the added ones
-        // away again.
-        val incoming =
-            payload.settings?.let { settings ->
-                val current = repo.readPrefsSnapshot().toBackupSettings().externalBlocklists
-                payload.copy(settings = settings.addingExternalBlocklistsTo(current))
-            } ?: payload
-        val result = restorePayload(context, incoming, mode, dao, repo, selectedSections)
-        return if (result.success && before != null) {
-            result.copy(undo = RestoreUndo(before, selectedSections))
-        } else {
-            result
         }
-    }
 
     /** Put back what a Replace overwrote. */
     suspend fun undoRestore(
@@ -684,7 +688,7 @@ object BackupRestore {
         undo: RestoreUndo,
         dao: SpamDao,
         repo: SpamRepository,
-    ): RestoreResult = restorePayload(context, undo.payload, RestoreMode.REPLACE, dao, repo, undo.sections)
+    ): RestoreResult = repo.holdingSyncLock { restorePayload(context, undo.payload, RestoreMode.REPLACE, dao, repo, undo.sections) }
 
     /** Reconcile a restore interrupted between its DataStore and Room commits. */
     suspend fun reconcilePendingRestore(context: Context): Boolean =

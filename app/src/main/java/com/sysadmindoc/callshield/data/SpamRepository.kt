@@ -807,6 +807,9 @@ class SpamRepository(
 
     suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> = syncRepository.refreshDueExternalBlocklists(now)
 
+    /** Runs [block] with no sync or list refresh, removal or toggle in between; see [SyncRepository.holdingSyncLock]. */
+    internal suspend fun <T> holdingSyncLock(block: suspend () -> T): T = syncRepository.holdingSyncLock(block)
+
     /** False when this number and vote type was already reported in the last day. */
     suspend fun claimCommunityReport(
         number: String,

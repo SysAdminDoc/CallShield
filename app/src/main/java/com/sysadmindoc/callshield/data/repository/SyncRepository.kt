@@ -64,6 +64,14 @@ class SyncRepository(
 ) {
     private val syncMutex = Mutex()
 
+    /**
+     * Runs [block] holding the lock that syncs and list refreshes, removals
+     * and toggles take, for a writer outside this class that reads and writes
+     * the subscribed lists too (a backup restore). [block] must not call a
+     * function here that takes the lock: it isn't reentrant.
+     */
+    suspend fun <T> holdingSyncLock(block: suspend () -> T): T = syncMutex.withLock { block() }
+
     /** What the last list removal took out, held so the user can undo it. Guarded by [syncMutex]. */
     private var lastRemovedExternalBlocklist: RemovedExternalBlocklist? = null
 
