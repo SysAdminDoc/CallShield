@@ -39,6 +39,8 @@
 -keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotRangesPayload { *; }
 -keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotRangeEntry { *; }
 -keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$SpamDomainsPayload { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$CommunityWatchPayload { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$CommunityWatchEntry { *; }
 # app_release.json and the opt-in latest-release check. AppReleaseJson's names
 # are on constructor parameters (@param:Json), which the field rule above
 # doesn't match, and its adapter is built when GitHubDataSource loads.
