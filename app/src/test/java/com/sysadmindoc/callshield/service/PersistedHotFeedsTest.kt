@@ -5,9 +5,18 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.io.File
 import java.nio.file.Files
 
-/** The kept copy of a feed comes back as it went in, and a missing or odd one counts as none. */
+/**
+ * The kept copy of a feed comes back as it went in, and a missing or odd one
+ * counts as none. Robolectric, since a failed write logs through android.util.Log.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class PersistedHotFeedsTest {
     private val directory = Files.createTempDirectory("hot-feeds-test").toFile()
     private val kept = PersistedHotFeeds(directory)
@@ -43,6 +52,16 @@ class PersistedHotFeedsTest {
 
         assertEquals(entries, HotDataSync.decodeCommunityWatch(lines))
         assertEquals(entries, HotDataSync.decodeCommunityWatch(lines + "+15550100" + "+15550101\tmany"))
+    }
+
+    @Test
+    fun `a write that fails leaves no half-written file behind`() {
+        // A folder where the copy goes can't be replaced by a file.
+        File(directory, "${HotDataSync.HOT_RANGES_FEED}.txt/blocker").mkdirs()
+
+        kept.write(HotDataSync.HOT_RANGES_FEED, listOf("212555"))
+
+        assertEquals(emptyList<String>(), directory.list().orEmpty().filter { it.endsWith(".tmp") })
     }
 
     @Test

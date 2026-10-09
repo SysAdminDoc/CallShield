@@ -40,16 +40,19 @@ internal class PersistedHotFeeds(
         feed: String,
         entries: List<String>,
     ) {
+        var temp: File? = null
         try {
             directory.mkdirs()
             val target = file(feed)
-            val temp = File.createTempFile(feed, ".tmp", directory)
+            temp = File.createTempFile(feed, ".tmp", directory)
             FileOutputStream(temp).use { out ->
                 out.write(entries.joinToString(separator = "\n", postfix = "\n").toByteArray(Charsets.UTF_8))
                 out.fd.sync()
             }
             Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         } catch (e: Exception) {
+            // A half-written copy would pile up in the folder, one per failed refresh.
+            temp?.delete()
             // The next refresh writes again; until then a restart asks for one.
             Log.w(TAG, "Couldn't keep a copy of $feed", e)
         }
