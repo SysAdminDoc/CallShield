@@ -9,6 +9,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `hot_numbers.json`: Recent community velocity feed for exact-number protection
 - `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
 - `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
+- `community_watch.json`: Pending community numbers that at least two reporters flagged on the same UTC day in the last 90 days, with no not-spam report since. Phones only label these ("Reported by 2 CallShield users, not confirmed"); the list never blocks on its own
 - `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
 - `list_catalog.json`: The recommended lists Settings offers to add, each with its link, license and country number plan. Phones download a list from its own host only when someone adds it
 - `spam_model_holdout.json`: Hashed numbers of the rows the shipped model's training held out, which `evaluate_model.py` scores
@@ -93,7 +94,7 @@ delete. That distinction is the whole reason the field exists.
 |---|---|---|
 | `spam_numbers.json` + shards | When the maintainer runs a merge | Every 6 hours |
 | `spam_numbers.txt` | With the shards | Every 6 hours |
-| `hot_numbers.json`, `hot_ranges.json`, `spam_domains.json` | Same run as the merge | Every 30 minutes |
+| `hot_numbers.json`, `hot_ranges.json`, `spam_domains.json`, `community_watch.json` | Same run as the merge | Every 30 minutes |
 | `spam_model_weights.json` | On retrain, irregular | With the database |
 | `source-manifest.json` | On a feed change | With the database |
 
@@ -279,9 +280,9 @@ fails the validation run if it's pushed as it is. Commit the regenerated
 
 ### Feed signatures
 
-Eight files carry a detached signature beside them: `spam_numbers.json`,
+Nine files carry a detached signature beside them: `spam_numbers.json`,
 `spam_numbers.manifest.json`, `hot_numbers.json`, `hot_ranges.json`,
-`spam_domains.json`, `spam_model_weights.json`, `app_release.json` and `list_catalog.json`. Each `<file>.sig` holds a
+`spam_domains.json`, `community_watch.json`, `spam_model_weights.json`, `app_release.json` and `list_catalog.json`. Each `<file>.sig` holds a
 base64 DER ECDSA P-256 (SHA-256) signature over the file's exact bytes, line
 endings included. Shards aren't signed one by one: the signed manifest carries
 each shard's SHA-256, and the app checks every shard against it.

@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "version": 52,
-  "updated": "2026-09-30",
+  "version": 53,
+  "updated": "2026-10-09",
   "legacy_path": "data/spam_numbers.json",
   "shard_directory": "data/spam_number_shards",
   "shard_count": 256,
@@ -257,9 +257,9 @@
     {
       "id": "1f",
       "path": "data/spam_number_shards/1f.json",
-      "sha256": "a3a52a04e88152ec0d50c025e35712913ed4dd6b32bdf993e55e903d2b08d8aa",
-      "bytes": 192557,
-      "numbers": 193,
+      "sha256": "a936fddcb7a085bed103ec4cf0310e2e157c89cc0aa99e2b948cd604613bfd9c",
+      "bytes": 191762,
+      "numbers": 192,
       "prefixes": 3
     },
     {
@@ -417,8 +417,8 @@
     {
       "id": "33",
       "path": "data/spam_number_shards/33.json",
-      "sha256": "85b0d2a5f72f38b94772e692faf6946fa3250ca4dd9a761ab5118b46c1a79622",
-      "bytes": 192379,
+      "sha256": "0eacc163024882998edcbaf00a46dd81477f7e7363659e8b986626670344039c",
+      "bytes": 192400,
       "numbers": 197,
       "prefixes": 1
     },
@@ -1297,8 +1297,8 @@
     {
       "id": "a1",
       "path": "data/spam_number_shards/a1.json",
-      "sha256": "6eb362406174985550c6929fc151250b30a20388fa02c5efa86d4770776bd6fd",
-      "bytes": 175595,
+      "sha256": "e2736b71c0743e56915ad8a3b524db14ca7212edf30e36e4a3aea57632d5e6c5",
+      "bytes": 175616,
       "numbers": 174,
       "prefixes": 3
     },
@@ -1521,8 +1521,8 @@
     {
       "id": "bd",
       "path": "data/spam_number_shards/bd.json",
-      "sha256": "99d51252ddee5b98f3d1f1132694dad2c9911be4bad3f7981ef52419cc6a8ce4",
-      "bytes": 187793,
+      "sha256": "215dde9a597b8a94fb065bc768e6be5a489883eaf1d39aeca0696a2c2d97422a",
+      "bytes": 187814,
       "numbers": 184,
       "prefixes": 2
     },
@@ -1969,8 +1969,8 @@
     {
       "id": "f5",
       "path": "data/spam_number_shards/f5.json",
-      "sha256": "3c1bd133099c89999370c639d275ab8c55b135d9b19b424f6d3f8faf6b94f50e",
-      "bytes": 202058,
+      "sha256": "6ae2b4f6285324cdecec701f59982f038864d1b96a2cc99823431928789782c4",
+      "bytes": 202079,
       "numbers": 196,
       "prefixes": 1
     },
