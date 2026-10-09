@@ -118,8 +118,8 @@ internal object HotDataSync {
 
     /**
      * Fills the stores a fresh process starts without. Returns true when one
-     * that a network copy filled before is empty now and wants a refresh
-     * soon, rather than at the next periodic run.
+     * that a network copy filled before is empty now, with no kept copy to
+     * start from, and wants a refresh soon rather than at the next periodic run.
      */
     suspend fun primeBundled(
         context: Context,
@@ -127,6 +127,7 @@ internal object HotDataSync {
         repo: SpamRepository = SpamRepository.getInstance(context.applicationContext),
         dao: SpamDao = AppDatabase.getInstance(context.applicationContext).spamDao(),
         dependencies: CheckerDependencies = CheckerDependencies(),
+        kept: PersistedHotFeeds = PersistedHotFeeds(context),
     ): Boolean =
         withContext(Dispatchers.IO) {
             val appContext = context.applicationContext
@@ -137,17 +138,24 @@ internal object HotDataSync {
             // so every process starts with them empty. Once a network copy was
             // read, the build-time copy must not stand in for it: whatever the
             // publisher cleared since the build would block or label again.
-            // Those stores wait for a refresh instead, asked for right away.
+            // Those stores start from the copy kept at the last refresh, and
+            // a phone with none (updated from a build that kept no copy, or a
+            // file that didn't survive) waits for a refresh, asked for right away.
             fun bootstrap(
                 feed: String,
                 hasData: Boolean,
-                apply: () -> Unit,
+                applyKept: (List<String>) -> Unit,
+                applyBundled: () -> Unit,
             ) {
                 if (hasData) return
                 if (health.feedGeneratedAt[feed] == null) {
-                    apply()
-                } else if (feed !in health.clearedFeeds) {
-                    wantsRefresh = true
+                    applyBundled()
+                    return
+                }
+                val lines = kept.read(feed)
+                when {
+                    lines != null -> applyKept(lines)
+                    feed !in health.clearedFeeds -> wantsRefresh = true
                 }
             }
 
@@ -155,7 +163,11 @@ internal object HotDataSync {
             // can run an overdue HotListSyncWorker in-process right after startup, so
             // an ungated write here can land after its fresh data and replace it with
             // the build-time snapshot until the next 30-minute cycle.
-            bootstrap(HOT_RANGES_FEED, dependencies.spamHeuristics.hasHotRanges()) {
+            bootstrap(
+                HOT_RANGES_FEED,
+                dependencies.spamHeuristics.hasHotRanges(),
+                applyKept = { dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(it)) },
+            ) {
                 val bundledRanges = loadBundledHotRanges(appContext, source)
                 val ranges = sanitizeHotRanges(bundledRanges.data)
                 if (bundledRanges.resolved && shouldApplyFeed(ranges, bundledRanges.explicitlyCleared)) {
@@ -163,7 +175,11 @@ internal object HotDataSync {
                 }
             }
 
-            bootstrap(SPAM_DOMAINS_FEED, dependencies.smsContentAnalyzer.hasSpamDomains()) {
+            bootstrap(
+                SPAM_DOMAINS_FEED,
+                dependencies.smsContentAnalyzer.hasSpamDomains(),
+                applyKept = { dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(it)) },
+            ) {
                 val bundledDomains = loadBundledSpamDomains(appContext, source)
                 val domains = sanitizeSpamDomains(bundledDomains.data)
                 if (bundledDomains.resolved && shouldApplyFeed(domains, bundledDomains.explicitlyCleared)) {
@@ -171,7 +187,11 @@ internal object HotDataSync {
                 }
             }
 
-            bootstrap(COMMUNITY_WATCH_FEED, dependencies.spamHeuristics.hasCommunityWatch()) {
+            bootstrap(
+                COMMUNITY_WATCH_FEED,
+                dependencies.spamHeuristics.hasCommunityWatch(),
+                applyKept = { dependencies.spamHeuristics.updateCommunityWatch(sanitizeCommunityWatch(decodeCommunityWatch(it))) },
+            ) {
                 val bundledWatch = loadBundledCommunityWatch(appContext, source)
                 val watchNumbers = sanitizeCommunityWatch(bundledWatch.data)
                 if (bundledWatch.resolved && shouldApplyFeed(watchNumbers, bundledWatch.explicitlyCleared)) {
@@ -213,6 +233,7 @@ internal object HotDataSync {
         repo: SpamRepository,
         dao: SpamDao,
         dependencies: CheckerDependencies = CheckerDependencies(),
+        kept: PersistedHotFeeds = PersistedHotFeeds(context),
     ): RefreshOutcome =
         withContext(Dispatchers.IO) {
             val appContext = context.applicationContext
@@ -244,6 +265,8 @@ internal object HotDataSync {
             val hotRangesApplied = !hotRangesReplay && shouldApplyFeed(ranges, hotRanges.explicitlyCleared)
             if (hotRanges.resolved && hotRangesApplied) {
                 dependencies.spamHeuristics.updateHotRanges(ranges)
+                // Only a network copy is kept for the next start; the bundled fallback carries a failure.
+                if (hotRanges.failure == null) kept.write(HOT_RANGES_FEED, ranges)
             }
 
             val spamDomains =
@@ -253,6 +276,7 @@ internal object HotDataSync {
             val spamDomainsApplied = !spamDomainsReplay && shouldApplyFeed(domains, spamDomains.explicitlyCleared)
             if (spamDomains.resolved && spamDomainsApplied) {
                 dependencies.smsContentAnalyzer.updateSpamDomains(domains)
+                if (spamDomains.failure == null) kept.write(SPAM_DOMAINS_FEED, domains)
             }
 
             val communityWatch =
@@ -267,6 +291,7 @@ internal object HotDataSync {
                 !communityWatchReplay && shouldApplyFeed(watchNumbers, communityWatch.explicitlyCleared)
             if (communityWatch.resolved && communityWatchApplied) {
                 dependencies.spamHeuristics.updateCommunityWatch(watchNumbers)
+                if (communityWatch.failure == null) kept.write(COMMUNITY_WATCH_FEED, encodeCommunityWatch(watchNumbers))
             }
 
             val update =
@@ -588,6 +613,15 @@ internal object HotDataSync {
             .filter { it.number.matches(communityWatchNumberPattern) && it.reporterCount >= 2 }
             .distinctBy { it.number }
             .toList()
+
+    /** One kept line per watch entry: the number, a tab, the reporter count. */
+    internal fun encodeCommunityWatch(numbers: List<CommunityWatchNumber>): List<String> = numbers.map { "${it.number}\t${it.reporterCount}" }
+
+    internal fun decodeCommunityWatch(lines: List<String>): List<CommunityWatchNumber> =
+        lines.mapNotNull { line ->
+            val count = line.substringAfter('\t', "").trim().toIntOrNull() ?: return@mapNotNull null
+            CommunityWatchNumber(line.substringBefore('\t'), count)
+        }
 
     private fun canonicalNumberKey(number: String): String = number.trim()
 

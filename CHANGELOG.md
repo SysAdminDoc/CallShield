@@ -67,10 +67,13 @@ All notable changes to CallShield will be documented in this file.
   keep the phone in meeting mode for hours before.
 - After CallShield repairs a damaged database, the trending numbers come
   back as soon as there's a connection instead of up to 30 minutes later.
-- After a restart, CallShield no longer falls back to the trending number
-  ranges and scam web addresses it was built with. Those could be months
-  old and hold ones the community had since cleared. It fetches the current
-  lists right away instead.
+- After a restart, CallShield starts from the trending number ranges, scam
+  web addresses and community watch list it last downloaded, so the
+  "Reported by 2 CallShield users" label is there before the first refresh,
+  with no connection too. It used to fall back to the copies it was built
+  with, which could be months old and hold ones the community had since
+  cleared. A phone updating from an older version fetches the current lists
+  right away instead.
 - A first text that asks you to message a WhatsApp link counts as reply
   bait even when the link ends the sentence, as in "https://wa.me!" or
   "(https://wa.me)".

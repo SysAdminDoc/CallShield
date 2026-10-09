@@ -35,6 +35,7 @@ class HotDataSyncReplayTest {
     fun tearDown() {
         SpamHeuristics.updateCommunityWatch(emptyList())
         SpamHeuristics.updateHotRanges(emptyList())
+        PersistedHotFeeds(context).clear()
         fixture.close()
     }
 
@@ -129,7 +130,7 @@ class HotDataSyncReplayTest {
     }
 
     @Test
-    fun `a restart waits for fresh hot ranges instead of the build-time copy`() {
+    fun `a restart starts from the hot ranges kept at the last refresh, not the build-time copy`() {
         refresh()
         assertTrue(SpamHeuristics.hasHotRanges())
         feeds.bundledRanges = listOf("303555")
@@ -138,8 +139,45 @@ class HotDataSyncReplayTest {
         SpamHeuristics.updateHotRanges(emptyList())
         val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
 
+        assertFalse("the kept copy is as good as the last refresh", wantsRefresh)
+        assertTrue(SpamHeuristics.isHotCampaignRange("+12125550100"))
+        assertFalse(SpamHeuristics.isHotCampaignRange("+13035550100"))
+    }
+
+    @Test
+    fun `a phone updated from a build that kept no copy asks for a refresh instead of the build-time copy`() {
+        refresh()
+        PersistedHotFeeds(context).clear()
+        feeds.bundledRanges = listOf("303555")
+
+        SpamHeuristics.updateHotRanges(emptyList())
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
         assertTrue("the app should ask for a refresh now", wantsRefresh)
         assertFalse(SpamHeuristics.hasHotRanges())
+    }
+
+    @Test
+    fun `a restart with no connection keeps the watch list's labels, and a newer clear still removes them`() {
+        val entry = CommunityWatchNumber("+33412345678", 2)
+        feeds.communityWatch = HotFeedSnapshot(listOf(entry), generatedAt = "2026-09-21T10:00:00+00:00")
+        refresh()
+
+        SpamHeuristics.updateCommunityWatch(emptyList())
+        feeds.watchOffline = true
+        val wantsRefresh = runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+        refresh()
+
+        assertFalse(wantsRefresh)
+        assertEquals(2, SpamHeuristics.communityWatchReporterCount(context, entry.number))
+
+        feeds.watchOffline = false
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-21T11:00:00+00:00")
+        refresh()
+        SpamHeuristics.updateCommunityWatch(emptyList())
+        runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertEquals(0, SpamHeuristics.communityWatchReporterCount(context, entry.number))
     }
 
     @Test
