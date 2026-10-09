@@ -9,8 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -97,6 +95,7 @@ import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.opensAppInfoAfterRequest
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
+import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -184,8 +183,10 @@ fun OnboardingScreen(
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
             refreshReadiness()
         }
-    val screeningLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+    // Opens Default apps with a hint once Android has stopped showing the role
+    // prompt, since the request then comes back at once with nothing on screen.
+    val screeningRequest =
+        rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) }) {
             refreshReadiness()
         }
 
@@ -235,7 +236,7 @@ fun OnboardingScreen(
                 reportLaunchFailure()
             } else {
                 try {
-                    screeningLauncher.launch(intent)
+                    screeningRequest(intent)
                 } catch (_: Exception) {
                     reportLaunchFailure()
                 }

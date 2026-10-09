@@ -10,8 +10,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
@@ -38,6 +36,7 @@ import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
+import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.screens.main.requiredSetupProgress
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -184,16 +183,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
             notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
         }
-    val screeningLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+    // Both open Default apps with a hint once Android has stopped showing the
+    // role prompt, since the request then comes back at once with nothing on screen.
+    val screeningRequest =
+        rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) }) {
+            screenerGranted = it.held
         }
-    val redirectionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            redirectionRoleHeld = CallShieldPermissions.hasCallRedirectionRole(roleManager)
-            if (redirectionRoleHeld) {
+    val redirectionRequest =
+        rememberRoleRequest(R.string.role_call_redirection_in_default_apps, roleHeld = { CallShieldPermissions.hasCallRedirectionRole(roleManager) }) {
+            redirectionRoleHeld = it.held
+            if (it.held) {
                 viewModel.setOutgoingCallHold(true)
-            } else {
+            } else if (!it.opensDefaultApps) {
                 Toast.makeText(context, callHoldNotGranted, Toast.LENGTH_SHORT).show()
             }
         }
@@ -241,7 +242,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     fun requestScreening() {
         try {
             if (roleManager != null) {
-                screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                screeningRequest(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
             } else {
                 context.startActivitySafely(
                     Intent(
@@ -339,7 +340,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 redirectionRoleHeld = redirectionRoleHeld,
                 redirectionRoleAvailable = redirectionRoleAvailable,
                 onRequestRedirectionRole = {
-                    roleManager?.let { redirectionLauncher.launch(it.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION)) }
+                    roleManager?.let { redirectionRequest(it.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION)) }
                 },
             )
             NotificationSettings(

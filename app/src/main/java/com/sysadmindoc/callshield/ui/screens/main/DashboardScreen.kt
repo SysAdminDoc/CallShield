@@ -8,8 +8,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -132,6 +130,7 @@ import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
+import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -329,10 +328,13 @@ fun DashboardScreen(
     // Settings, which lands on Basic, and Basic has no overlay control at all.
     // Review permissions still opens Settings, where each missing item has a
     // Grant or Enable button.
-    val screeningRoleLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { permissionRefreshTick++ }
-    // These open App info with a hint once Android has stopped showing its
-    // dialog, since the request then comes back at once with nothing on screen.
+    // These open App info, or Default apps for the role, with a hint once
+    // Android has stopped showing its dialog, since the request then comes
+    // back at once with nothing on screen.
+    val screeningRoleRequest =
+        rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) }) {
+            permissionRefreshTick++
+        }
     val notificationPermissionRequest =
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) { permissionRefreshTick++ }
     val callLogPermissionRequest =
@@ -342,7 +344,7 @@ fun DashboardScreen(
     val enableCallScreening: () -> Unit = {
         val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
         try {
-            if (intent != null) screeningRoleLauncher.launch(intent) else openPermissions()
+            if (intent != null) screeningRoleRequest(intent) else openPermissions()
         } catch (_: Exception) {
             openPermissions()
         }

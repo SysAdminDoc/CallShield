@@ -44,4 +44,20 @@ class PermissionRecoveryTest {
         assertEquals(emptySet<String>(), refusalsThatCount(grants, appInfoFor = listOf(Manifest.permission.READ_CALL_LOG)))
         assertEquals(setOf(Manifest.permission.READ_PHONE_STATE), refusalsThatCount(grants, appInfoFor = null))
     }
+
+    @Test
+    fun `a role request that came straight back refused opens Default apps`() {
+        assertTrue(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = 120))
+    }
+
+    @Test
+    fun `a role refused on a prompt that was shown stays put`() {
+        assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = ROLE_PROMPT_MIN_MILLIS))
+        assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = false, elapsedMillis = 4_000))
+    }
+
+    @Test
+    fun `a role handed over never opens Default apps, however fast`() {
+        assertFalse(opensDefaultAppsAfterRoleRequest(roleHeld = true, elapsedMillis = 50))
+    }
 }

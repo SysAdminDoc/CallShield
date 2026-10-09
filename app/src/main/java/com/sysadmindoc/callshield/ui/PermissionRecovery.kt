@@ -5,12 +5,17 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.sysadmindoc.callshield.util.startActivitySafely
 
@@ -61,6 +66,57 @@ fun rememberPermissionRequest(
             }
         }
     return { permissions -> launcher.launch(permissions.toTypedArray()) }
+}
+
+/**
+ * True when a role request came straight back with the role still refused.
+ * Once someone picks "Don't ask again" on the role prompt, Android finishes
+ * the request at once with nothing on screen, so only Default apps can hand
+ * the role over. A refusal that took long enough to show the prompt was a
+ * choice, and is left alone.
+ */
+internal fun opensDefaultAppsAfterRoleRequest(
+    roleHeld: Boolean,
+    elapsedMillis: Long,
+): Boolean = !roleHeld && elapsedMillis in 0 until ROLE_PROMPT_MIN_MILLIS
+
+/** The least time a shown role prompt takes to come back; under this, none was shown. */
+internal const val ROLE_PROMPT_MIN_MILLIS = 1_000L
+
+/** What a role request came back with. */
+data class RoleRequestResult(
+    val held: Boolean,
+    /** Android showed no prompt, so the hint was shown and Default apps opened. */
+    val opensDefaultApps: Boolean,
+)
+
+/**
+ * Returns a function that starts the role request intent it's given and calls
+ * [onResult] with the answer. When the request comes straight back refused,
+ * it shows [defaultAppsHint] and opens Default apps, where the role lives.
+ */
+@Composable
+fun rememberRoleRequest(
+    @StringRes defaultAppsHint: Int,
+    roleHeld: () -> Boolean,
+    onResult: (RoleRequestResult) -> Unit = {},
+): (Intent) -> Unit {
+    val context = LocalContext.current
+    var launchedAt by remember { mutableLongStateOf(0L) }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val held = roleHeld()
+            val opensDefaultApps = opensDefaultAppsAfterRoleRequest(held, SystemClock.elapsedRealtime() - launchedAt)
+            onResult(RoleRequestResult(held, opensDefaultApps))
+            if (opensDefaultApps) {
+                Toast.makeText(context, defaultAppsHint, Toast.LENGTH_LONG).show()
+                context.startActivitySafely(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            }
+        }
+    return { intent ->
+        launchedAt = SystemClock.elapsedRealtime()
+        launcher.launch(intent)
+    }
 }
 
 private tailrec fun Context.findActivity(): Activity? =

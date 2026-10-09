@@ -651,6 +651,8 @@
     <string name="permission_sms_in_app_info">Android won\'t ask again. Turn on SMS in App info, under Permissions.</string>
     <string name="permission_phone_in_app_info">Android won\'t ask again. Turn on Phone and Call logs in App info, under Permissions.</string>
     <string name="permission_notifications_in_app_info">Android won\'t ask again. Turn on Notifications in App info.</string>
+    <string name="role_call_screening_in_default_apps">Android won\'t ask again. Pick CallShield as the caller ID and spam app under Default apps.</string>
+    <string name="role_call_redirection_in_default_apps">Android won\'t ask again. Pick CallShield as the call redirecting app under Default apps.</string>
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>

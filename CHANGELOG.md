@@ -31,7 +31,9 @@ All notable changes to CallShield will be documented in this file.
   answer and hang up, and setup now open App info and tell you which switch
   to turn on. Before, tapping them did nothing. Setup also needed two dead
   taps first when you'd said no on an earlier visit, and now opens App info
-  on the first one.
+  on the first one. The buttons that ask for the caller ID and spam role,
+  and the call redirecting role, do the same with Default apps once
+  Android stops showing their prompt.
 - The "Block area code" suggestion on Home, number details and the Stats
   map is only offered for North American numbers now. For numbers from
   other countries it used to suggest a +1 rule that would block the wrong
