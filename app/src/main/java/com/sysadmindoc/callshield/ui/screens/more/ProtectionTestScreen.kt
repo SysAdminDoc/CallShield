@@ -50,6 +50,7 @@ import com.sysadmindoc.callshield.service.WorkerDiagnostics
 import com.sysadmindoc.callshield.ui.reasonCodeLabelRes
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.HotFeedFreshness
+import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -57,6 +58,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
+import java.util.Date
 import java.util.concurrent.TimeUnit
 
 private enum class TestPriority { Required, Recommended, Informational }
@@ -183,6 +185,10 @@ fun ProtectionTestScreen() {
         remember(failures) {
             failures.mapNotNull { it.recoveryHint }.distinct().take(3)
         }
+    // Read once a visit, off the main thread; null before Android 11.
+    val processExits by produceState<List<ProcessExit>?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { readProcessExits(context) }
+    }
 
     fun runAllTests() {
         testing = true
@@ -432,6 +438,46 @@ fun ProtectionTestScreen() {
                     enter = slideInVertically { 20 } + fadeIn(),
                 ) {
                     TestResultCard(result = result)
+                }
+            }
+        }
+
+        processExits?.let { ProcessExitCard(it) }
+    }
+}
+
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+@Composable
+private fun ProcessExitCard(exits: List<ProcessExit>) {
+    val context = LocalContext.current
+    val dateFormat = remember(context) { localizedDateTimeFormat(context, withYear = true) }
+    PremiumCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(stringResource(R.string.protection_test_exits_title), CatBlue)
+            Text(
+                stringResource(R.string.protection_test_exits_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+            if (exits.isEmpty()) {
+                Text(
+                    stringResource(R.string.protection_test_exits_none),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatText,
+                )
+            }
+            exits.forEach { exit ->
+                Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+                    Text(
+                        stringResource(processExitReasonLabelRes(exit.reason)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CatText,
+                    )
+                    Text(
+                        dateFormat.format(Date(exit.timestamp)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatSubtext,
+                    )
                 }
             }
         }
