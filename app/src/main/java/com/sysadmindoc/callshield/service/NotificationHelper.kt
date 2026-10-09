@@ -952,7 +952,7 @@ object NotificationHelper {
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
         val watchReporters = SpamHeuristics.communityWatchReporterCount(context, number)
-        if (watchReporters >= 2) {
+        if (watchReporters >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS) {
             val label =
                 context.resources.getQuantityString(R.plurals.community_watch_label, watchReporters, watchReporters)
             builder

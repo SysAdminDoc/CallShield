@@ -270,9 +270,12 @@ class CallShieldScreeningService : CallScreeningService() {
                         } else {
                             val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
                             val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
-                            // Unknown non-contact caller — area-code-only caller ID overlay
+                            // Unknown non-contact caller — area-code-only caller ID overlay.
+                            // A number other users reported gets it even with no area code
+                            // to name, since the popup is where its label shows.
                             val location =
                                 AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
+                                    ?: "".takeIf { heuristics().communityWatchReporterCount(appContext, number) >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS }
                             if (location != null) {
                                 try {
                                     incomingOverlayLauncher(appContext, number, 0, location)

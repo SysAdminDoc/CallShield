@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.UnknownCallWindow
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
@@ -215,6 +216,28 @@ class CallShieldScreeningServiceRobolectricTest {
         assertFalse(response.silenceCall)
         awaitScopeIdle()
         assertTrue(outgoingWarnings.isEmpty())
+        assertTrue(incomingOverlays.isEmpty())
+    }
+
+    @Test
+    fun `a number other users reported gets the popup even with no area code to name`() {
+        val watched = "+33412345678"
+        SpamHeuristics.updateCommunityWatch(listOf(CommunityWatchNumber(watched, 2)))
+        try {
+            service.onScreenCall(callDetails(watched))
+
+            assertFalse(awaitResponse().disallowCall)
+            assertEquals(listOf(Triple(watched, 0, "")), incomingOverlays)
+        } finally {
+            SpamHeuristics.updateCommunityWatch(emptyList())
+        }
+    }
+
+    @Test
+    fun `a number from outside North America nobody reported gets no popup`() {
+        service.onScreenCall(callDetails("+33412345679"))
+
+        assertFalse(awaitResponse().disallowCall)
         assertTrue(incomingOverlays.isEmpty())
     }
 

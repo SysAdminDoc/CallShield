@@ -415,7 +415,7 @@ class CallerIdOverlayService : Service() {
                 // otherwise clear caller shows it.
                 val watchReporters =
                     if (outgoingRiskWarning) 0 else SpamHeuristics.communityWatchReporterCount(context, number)
-                if (watchReporters >= 2) {
+                if (watchReporters >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS) {
                     addView(
                         TextView(context).apply {
                             text =
