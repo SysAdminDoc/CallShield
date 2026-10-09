@@ -22,13 +22,16 @@ All notable changes to CallShield will be documented in this file.
   in all) now ring when your carrier verified the caller. Complaints about
   those numbers come from people the fakes fooled, so they no longer block
   the real line. A call your carrier didn't verify is still blocked, and the
-  reason now says whose number was faked. The caller ID popup names the
-  organization and reminds you not to share codes or passwords on a call you
-  didn't expect.
+  reason now says whose number was faked. Looking one of these numbers up,
+  or a text from one, keeps the saved reason, since no call went unverified.
+  The caller ID popup names the organization and reminds you not to share
+  codes or passwords on a call you didn't expect.
 - When Android stops showing a permission prompt after you've said no twice,
   the Grant buttons in Settings, Home's notification and scan buttons,
   answer and hang up, and setup now open App info and tell you which switch
-  to turn on. Before, tapping them did nothing.
+  to turn on. Before, tapping them did nothing. Setup also needed two dead
+  taps first when you'd said no on an earlier visit, and now opens App info
+  on the first one.
 - The "Block area code" suggestion on Home, number details and the Stats
   map is only offered for North American numbers now. For numbers from
   other countries it used to suggest a +1 rule that would block the wrong
@@ -36,7 +39,8 @@ All notable changes to CallShield will be documented in this file.
 - Backups now carry the blocklists you subscribed to: each list's address,
   name and on/off switch. Restoring on a new phone adds any you don't have
   and downloads them on the next refresh. Lists already on the phone are
-  left alone, and Undo removes the ones the restore added.
+  left alone, including one added back when plain http:// addresses were
+  still allowed, and Undo removes only the ones the restore added.
 - Protection Test has a new card showing the last five times Android closed
   CallShield and why, such as to free up memory. It's read on the phone and
   never sent anywhere. Android 10 doesn't keep this record, so the card
@@ -49,7 +53,8 @@ All notable changes to CallShield will be documented in this file.
 - Tapping Not spam on a blocked call tells the community only when the
   shared database did the blocking, including under a category rule. A
   block from a list you subscribed to, or from your own block list, stays
-  on your phone.
+  on your phone. The same goes for Database prefix expansion: it tells the
+  community only when a number from the shared database made the match.
 - On a dual-SIM phone, the carrier's "Unverified" scam label is now read
   for the SIM that got the text, not the default one, and a SIM that was
   still locked at startup counts as soon as it's unlocked. Scanning the
@@ -62,6 +67,13 @@ All notable changes to CallShield will be documented in this file.
   keep the phone in meeting mode for hours before.
 - After CallShield repairs a damaged database, the trending numbers come
   back as soon as there's a connection instead of up to 30 minutes later.
+- After a restart, CallShield no longer falls back to the trending number
+  ranges and scam web addresses it was built with. Those could be months
+  old and hold ones the community had since cleared. It fetches the current
+  lists right away instead.
+- A first text that asks you to message a WhatsApp link counts as reply
+  bait even when the link ends the sentence, as in "https://wa.me!" or
+  "(https://wa.me)".
 
 ## v1.11.0 (2026-09-30)
 
