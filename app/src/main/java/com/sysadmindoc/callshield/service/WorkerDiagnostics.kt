@@ -104,6 +104,7 @@ internal object WorkerDiagnostics {
 internal object BackgroundWorkNames {
     const val SYNC = "callshield_sync"
     const val HOT_LIST = "callshield_hot_list_sync"
+    const val HOT_LIST_NOW = "callshield_hot_list_sync_now"
     const val DIGEST = "callshield_digest"
     const val PROTECTION_HEALTH = "callshield_protection_health"
     const val EXTERNAL_BLOCKLISTS = "callshield_external_blocklists"

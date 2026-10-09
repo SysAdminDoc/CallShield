@@ -11,16 +11,20 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -146,6 +150,37 @@ class WorkerScheduleTest {
         }
         assertUpdatedInPlace(AppUpdateWorker.PERIODIC_WORK_NAME, AppUpdateWorker::class.java, AppUpdateWorker.periodicRequest()) {
             AppUpdateWorker.schedule(it)
+        }
+    }
+
+    @Test
+    fun `an immediate hot list sync waits only for a network and doesn't stack`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, Configuration.Builder().setExecutor(SynchronousExecutor()).build())
+        val workManager = WorkManager.getInstance(context)
+
+        HotListSyncWorker.syncNow(context)
+        HotListSyncWorker.syncNow(context)
+
+        val queued = workManager.getWorkInfosForUniqueWork(BackgroundWorkNames.HOT_LIST_NOW).get()
+        assertEquals(1, queued.size)
+        assertEquals(WorkInfo.State.ENQUEUED, queued.single().state)
+        val spec = HotListSyncWorker.syncNowRequest().workSpec
+        assertEquals(HotListSyncWorker::class.java.name, spec.workerClassName)
+        assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
+        assertEquals(0L, spec.initialDelay)
+    }
+
+    @Test
+    fun `a rebuilt database gets its trending list refreshed right away`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, Configuration.Builder().setExecutor(SynchronousExecutor()).build())
+        val workManager = WorkManager.getInstance(context)
+
+        CorruptionRescue.afterRebuild(context)
+
+        runBlocking {
+            withTimeout(5_000L) {
+                while (workManager.getWorkInfosForUniqueWork(BackgroundWorkNames.HOT_LIST_NOW).get().isEmpty()) delay(10L)
+            }
         }
     }
 

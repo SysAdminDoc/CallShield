@@ -6,7 +6,10 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -87,6 +90,25 @@ class HotListSyncWorker
                     periodicRequest(),
                 )
             }
+
+            /**
+             * One refresh as soon as there's a network, for when the trending
+             * rows are known to be gone, such as after a damaged database was
+             * rebuilt. The periodic run could be up to 30 minutes away.
+             */
+            fun syncNow(context: Context) {
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    BackgroundWorkNames.HOT_LIST_NOW,
+                    ExistingWorkPolicy.KEEP,
+                    syncNowRequest(),
+                )
+            }
+
+            internal fun syncNowRequest(): OneTimeWorkRequest =
+                OneTimeWorkRequestBuilder<HotListSyncWorker>()
+                    .setConstraints(networkConstraints())
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+                    .build()
 
             internal fun periodicRequest(): PeriodicWorkRequest =
                 PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES)

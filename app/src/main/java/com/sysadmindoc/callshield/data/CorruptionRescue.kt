@@ -73,7 +73,10 @@ internal object CorruptionRescue {
                 Log.w(TAG, "Couldn't put the saved rows back yet; the next start will", e)
             }
             SyncWorker.syncNow(appContext)
+            // The rebuilt database has no trending rows, and the device has
+            // applied a hot list before, so the bundled copy won't stand in.
             HotListSyncWorker.schedule(appContext)
+            HotListSyncWorker.syncNow(appContext)
         }
     }
 
