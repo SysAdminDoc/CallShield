@@ -416,7 +416,20 @@
 
     <!-- Lookup Screen -->
     <string name="lookup_page_title">Look up a number</string>
-    <string name="lookup_page_intro">Check a phone number before you call or text.</string>
+    <string name="lookup_page_intro">Check a phone number before you call or text, or paste a message to see if it\'s a scam.</string>
+    <string name="lookup_mode_number">Number</string>
+    <string name="lookup_mode_message">Message</string>
+    <string name="lookup_message_hint">Paste a text message to check it</string>
+    <string name="lookup_message_privacy">Checked on this phone. The message never leaves it.</string>
+    <string name="lookup_message_privacy_remote">Checked on this phone. Only the domains of its links go to the URL threat feeds you turned on.</string>
+    <string name="lookup_check_message">Check message</string>
+    <string name="lookup_message_spam_title">Looks like a scam text</string>
+    <string name="lookup_message_clean_title">No warning signs found</string>
+    <string name="lookup_message_score">Content score %1$d. Texts are flagged at %2$d.</string>
+    <!-- %1$s is a kind of threat from url_threat_*, such as "phishing"; %2$s is the link. -->
+    <string name="lookup_message_dangerous_link">Known %1$s link: %2$s</string>
+    <string name="lookup_message_clean_body">None of CallShield\'s rules matched. A new scam can still get past them, so don\'t tap a link you weren\'t expecting.</string>
+    <string name="lookup_message_below_bar">These signs aren\'t enough to flag a text on their own.</string>
     <string name="lookup_phone_number">Phone number</string>
     <string name="lookup_paste_clipboard">Paste</string>
     <string name="lookup_supporting_location">%1$s · %2$s</string>

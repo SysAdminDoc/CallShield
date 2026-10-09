@@ -100,6 +100,10 @@ All notable changes to CallShield will be documented in this file.
   in range rules, list previews, the hot data test, the bundled snapshot
   notice and campaign reasons follow your language's plural rules too, so
   there's no more "1 numbers".
+- Lookup has a Message mode. Paste a text you're unsure about and it gets the
+  same content rules and link checks as an incoming text, with the reasons
+  listed. It all runs on the phone. A link's domain goes to a URL threat feed
+  only if you've turned those on.
 
 ## v1.11.0 (2026-09-30)
 

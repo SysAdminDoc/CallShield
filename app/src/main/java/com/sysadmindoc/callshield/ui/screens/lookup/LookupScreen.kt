@@ -137,6 +137,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var numberInput by rememberSaveable { mutableStateOf("") }
+    var mode by rememberSaveable { mutableStateOf(LookupMode.NUMBER) }
     // Only *check for* a text clip here — reading clipboard content fires the
     // system "app pasted from clipboard" toast on Android 12+, and doing that
     // as a side effect of merely opening the tab reads as surveillance for a
@@ -230,106 +231,113 @@ fun LookupScreen(viewModel: MainViewModel) {
                     color = CatSubtext,
                 )
             }
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TextField(
-                    value = numberInput,
-                    onValueChange = {
-                        numberInput = sanitizeLookupInput(it)
-                        errorMessage = null
-                    },
-                    placeholder = { Text(stringResource(R.string.lookup_phone_number)) },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Phone,
-                            contentDescription = stringResource(R.string.cd_phone_input),
-                            tint = CatSubtext,
-                        )
-                    },
-                    trailingIcon = {
-                        if (numberInput.isNotBlank()) {
-                            IconButton(onClick = { clearLookup() }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.cd_close),
-                                    tint = CatOverlay,
-                                )
-                            }
-                        } else if (clipboardHasText) {
-                            androidx.compose.material3.TextButton(
-                                onClick = {
-                                    clipboardPhoneNumber(context)?.let {
-                                        numberInput = it
-                                        errorMessage = null
-                                    }
-                                },
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Icon(
-                                    Icons.Default.ContentPaste,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(17.dp),
-                                )
-                                Spacer(Modifier.width(5.dp))
-                                Text(stringResource(R.string.lookup_paste_clipboard))
-                            }
-                        }
-                    },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Search,
-                        ),
-                    keyboardActions = KeyboardActions(onSearch = { runLookup() }),
-                    singleLine = true,
-                    supportingText = {
-                        if (normalizedNumber.isNotBlank()) {
-                            Text(
-                                if (previewLocation != null) {
-                                    stringResource(
-                                        R.string.lookup_supporting_location,
-                                        PhoneFormatter.formatIsolated(normalizedNumber),
-                                        previewLocation,
-                                    )
-                                } else {
-                                    stringResource(
-                                        R.string.lookup_supporting_number,
-                                        PhoneFormatter.formatIsolated(normalizedNumber),
-                                    )
-                                },
-                                color = CatOverlay,
+            LookupModeRow(mode) { mode = it }
+            if (mode == LookupMode.NUMBER) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextField(
+                        value = numberInput,
+                        onValueChange = {
+                            numberInput = sanitizeLookupInput(it)
+                            errorMessage = null
+                        },
+                        placeholder = { Text(stringResource(R.string.lookup_phone_number)) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Phone,
+                                contentDescription = stringResource(R.string.cd_phone_input),
+                                tint = CatSubtext,
                             )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = SurfaceVariant,
-                            unfocusedContainerColor = SurfaceVariant,
-                            focusedTextColor = CatText,
-                            unfocusedTextColor = CatText,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                            cursorColor = CatGreen,
-                        ),
-                )
+                        },
+                        trailingIcon = {
+                            if (numberInput.isNotBlank()) {
+                                IconButton(onClick = { clearLookup() }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.cd_close),
+                                        tint = CatOverlay,
+                                    )
+                                }
+                            } else if (clipboardHasText) {
+                                androidx.compose.material3.TextButton(
+                                    onClick = {
+                                        clipboardPhoneNumber(context)?.let {
+                                            numberInput = it
+                                            errorMessage = null
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentPaste,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(17.dp),
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(stringResource(R.string.lookup_paste_clipboard))
+                                }
+                            }
+                        },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Search,
+                            ),
+                        keyboardActions = KeyboardActions(onSearch = { runLookup() }),
+                        singleLine = true,
+                        supportingText = {
+                            if (normalizedNumber.isNotBlank()) {
+                                Text(
+                                    if (previewLocation != null) {
+                                        stringResource(
+                                            R.string.lookup_supporting_location,
+                                            PhoneFormatter.formatIsolated(normalizedNumber),
+                                            previewLocation,
+                                        )
+                                    } else {
+                                        stringResource(
+                                            R.string.lookup_supporting_number,
+                                            PhoneFormatter.formatIsolated(normalizedNumber),
+                                        )
+                                    },
+                                    color = CatOverlay,
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor = SurfaceVariant,
+                                unfocusedContainerColor = SurfaceVariant,
+                                focusedTextColor = CatText,
+                                unfocusedTextColor = CatText,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                cursorColor = CatGreen,
+                            ),
+                    )
 
-                PremiumActionButton(
-                    label = stringResource(R.string.lookup_check_number),
-                    icon = Icons.Default.Search,
-                    color = CatGreen,
-                    onClick = { runLookup() },
-                    enabled = canLookup && !checking,
-                    loading = checking,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    PremiumActionButton(
+                        label = stringResource(R.string.lookup_check_number),
+                        icon = Icons.Default.Search,
+                        color = CatGreen,
+                        onClick = { runLookup() },
+                        enabled = canLookup && !checking,
+                        loading = checking,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             when {
+                mode == LookupMode.MESSAGE -> {
+                    PastedMessagePanel(viewModel)
+                }
+
                 checking -> {
                     LookupProgressCard(normalizedNumber, previewLocation)
                 }
@@ -1008,7 +1016,7 @@ private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.
 }
 
 /** Toast-free presence check: ClipDescription can be inspected without reading clip data. */
-private fun clipboardHasText(context: android.content.Context): Boolean =
+internal fun clipboardHasText(context: android.content.Context): Boolean =
     try {
         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         clipboard.hasPrimaryClip() &&
