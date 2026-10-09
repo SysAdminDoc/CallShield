@@ -63,9 +63,8 @@
     <string name="dashboard_enable_notification_access">Allow access</string>
     <string name="dashboard_optional_extras">Optional extras</string>
     <string name="dashboard_synced_just_now">Synced just now</string>
-    <string name="dashboard_synced_minutes_ago">Synced %dm ago</string>
-    <string name="dashboard_synced_hours_ago">Synced %dh ago</string>
-    <string name="dashboard_synced_days_ago">Synced %dd ago</string>
+    <!-- %1$s is how long ago from Android, such as "5 minutes ago", "Yesterday" or a date. -->
+    <string name="dashboard_synced_ago">Last sync: %1$s</string>
     <string name="dashboard_database_bundled_ready">Protection snapshot ready</string>
     <string name="dashboard_not_synced">Not synced yet</string>
     <string name="dashboard_stat_today">Today</string>
@@ -77,9 +76,6 @@
     <string name="dashboard_no_recent_blocked_calls">No recent blocked calls</string>
     <string name="dashboard_no_recent_blocked_calls_body">Calls stopped by CallShield will appear here.</string>
     <string name="dashboard_time_just_now">Just now</string>
-    <string name="dashboard_time_minutes_ago">%dm ago</string>
-    <string name="dashboard_time_hours_ago">%dh ago</string>
-    <string name="dashboard_time_days_ago">%dd ago</string>
     <string name="dashboard_quick_controls">Quick controls</string>
     <string name="dashboard_block_calls">Block calls</string>
     <string name="dashboard_block_sms">Analyze spam SMS</string>
@@ -259,13 +255,19 @@
     <string name="hash_wildcard_dialog_help">Non-digit characters match themselves; # matches any single digit. The caller number must be exactly the same length as the pattern.</string>
     <string name="hash_wildcard_dialog_empty_error">Enter a pattern containing at least one #.</string>
     <string name="hash_wildcard_dialog_too_broad">Pattern would block more than 100,000,000 numbers. Narrow it down before saving.</string>
-    <string name="hash_wildcard_dialog_coverage_label">Covers %1$s numbers</string>
+    <plurals name="hash_wildcard_dialog_coverage_label">
+        <item quantity="one">Covers %1$s number</item>
+        <item quantity="other">Covers %1$s numbers</item>
+    </plurals>
     <string name="hash_wildcard_dialog_overlap_equal">Duplicate of an existing rule.</string>
     <string name="hash_wildcard_dialog_overlap_covered">Already covered by existing rule %1$s.</string>
     <string name="hash_wildcard_dialog_overlap_covers">This would also replace existing rule %1$s.</string>
     <string name="hash_wildcard_dialog_add">Add range</string>
     <string name="hash_wildcard_dialog_cancel">Cancel</string>
-    <string name="hash_wildcard_item_covers">Covers %1$s numbers</string>
+    <plurals name="hash_wildcard_item_covers">
+        <item quantity="one">Covers %1$s number</item>
+        <item quantity="other">Covers %1$s numbers</item>
+    </plurals>
     <!-- A3: Push-alert bridge settings -->
     <string name="settings_push_alert">Push-alert bridge</string>
     <string name="settings_push_alert_desc">Let messaging, delivery, and rideshare notifications vouch for unknown callers. Requires notification access.</string>
@@ -836,8 +838,14 @@
         <item quantity="other">Put %1$s back with %2$d numbers</item>
     </plurals>
     <string name="external_blocklist_undo_unavailable">That list can\'t be put back now. Add it again to restore it.</string>
-    <string name="external_blocklist_previewed">Previewed %1$s: %2$d numbers, +%3$d / -%4$d, %5$d already owned by stronger sources</string>
-    <string name="external_blocklist_applied">Applied %1$s: %2$d numbers, +%3$d / -%4$d</string>
+    <plurals name="external_blocklist_previewed">
+        <item quantity="one">Previewed %1$s: %2$d number, +%3$d / -%4$d, %5$d already owned by stronger sources</item>
+        <item quantity="other">Previewed %1$s: %2$d numbers, +%3$d / -%4$d, %5$d already owned by stronger sources</item>
+    </plurals>
+    <plurals name="external_blocklist_applied">
+        <item quantity="one">Applied %1$s: %2$d number, +%3$d / -%4$d</item>
+        <item quantity="other">Applied %1$s: %2$d numbers, +%3$d / -%4$d</item>
+    </plurals>
     <string name="external_blocklist_failed_generic">Blocklist operation failed. Check the URL and your connection, then try again.</string>
     <string name="external_blocklist_refresh_failed">The last refresh failed, so the previous copy is still in use.</string>
     <string name="external_blocklist_refresh_http">The list\'s server answered HTTP %1$d on the last refresh, so the previous copy is still in use.</string>
@@ -1119,9 +1127,15 @@
     <string name="protection_test_ml_fp_fail">False positive. The threshold may be too low.</string>
     <string name="protection_test_hot_pass">Hot campaign ranges loaded</string>
     <string name="protection_test_hot_fail">Empty until the next sync, which runs every 30 minutes</string>
-    <string name="protection_test_hot_unavailable_age">Hot data unavailable; last good update was %1$d hours ago</string>
+    <plurals name="protection_test_hot_unavailable_age">
+        <item quantity="one">Hot data unavailable. The last good update was %1$d hour ago</item>
+        <item quantity="other">Hot data unavailable. The last good update was %1$d hours ago</item>
+    </plurals>
     <string name="protection_test_hot_unavailable_never">Hot data unavailable; no successful update yet</string>
-    <string name="protection_test_hot_stalled">Reachable, but the trending feed has not been regenerated in %1$d days</string>
+    <plurals name="protection_test_hot_stalled">
+        <item quantity="one">Reachable, but the trending feed hasn\'t been regenerated in %1$d day</item>
+        <item quantity="other">Reachable, but the trending feed hasn\'t been regenerated in %1$d days</item>
+    </plurals>
     <string name="protection_test_hot_refused">Reachable, but the last download failed its signature or freshness check, so the previous copy is still in use</string>
     <string name="protection_test_hot_cleared">Reachable. The publisher reports nothing trending right now</string>
     <string name="protection_test_overlay_pass">Can display caller ID overlay</string>
@@ -1393,7 +1407,16 @@
     <string name="sync_success_counts">Sync complete. Numbers: %1$d, prefixes: %2$d</string>
     <string name="sync_unknown_error">Something went wrong while updating.</string>
     <string name="sync_remote_unavailable_existing">%s Your existing spam database is still active.</string>
-    <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$d numbers and %2$d prefixes while GitHub was unavailable.</string>
+    <!-- %1$s is sync_bundled_snapshot_numbers, %2$s is sync_bundled_snapshot_prefixes. -->
+    <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$s and %2$s while GitHub was unavailable.</string>
+    <plurals name="sync_bundled_snapshot_numbers">
+        <item quantity="one">%1$d number</item>
+        <item quantity="other">%1$d numbers</item>
+    </plurals>
+    <plurals name="sync_bundled_snapshot_prefixes">
+        <item quantity="one">%1$d prefix</item>
+        <item quantity="other">%1$d prefixes</item>
+    </plurals>
     <string name="sync_failed">Sync failed. %s</string>
     <string name="sync_failed_no_fallback">Sync failed. %s The built-in copy couldn\'t be loaded either.</string>
     <string name="sync_failure_offline">Couldn\'t reach the update server. Check your connection.</string>
@@ -1733,9 +1756,8 @@
     <string name="widget_today_trend_same">%s today →</string>
     <string name="widget_total_blocked">%s total blocked</string>
     <string name="widget_last_just_now">Last: just now</string>
-    <string name="widget_last_minutes_ago">Last: %dm ago</string>
-    <string name="widget_last_hours_ago">Last: %dh ago</string>
-    <string name="widget_last_days_ago">Last: %dd ago</string>
+    <!-- %1$s is how long ago from Android, short form, such as "5 min. ago". -->
+    <string name="widget_last_ago">Last: %1$s</string>
     <string name="widget_last_never">Last: never</string>
     <string name="tile_protection_on">Protection on</string>
     <string name="tile_protection_off">Protection off</string>
@@ -1824,7 +1846,16 @@
         <item quantity="other">Called %1$d times in 7 days, blocked automatically</item>
     </plurals>
     <string name="block_reason_campaign">Active campaign: %1$s</string>
-    <string name="block_reason_campaign_neighbors">%1$d neighbor numbers in %2$d calls</string>
+    <!-- %1$s is block_reason_campaign_neighbor_numbers, %2$s is block_reason_campaign_calls. -->
+    <string name="block_reason_campaign_neighbors">%1$s in %2$s</string>
+    <plurals name="block_reason_campaign_neighbor_numbers">
+        <item quantity="one">%1$d neighbor number</item>
+        <item quantity="other">%1$d neighbor numbers</item>
+    </plurals>
+    <plurals name="block_reason_campaign_calls">
+        <item quantity="one">%1$d call</item>
+        <item quantity="other">%1$d calls</item>
+    </plurals>
     <plurals name="block_reason_campaign_repeats">
         <item quantity="one">%1$d repeated number suggests callback reuse</item>
         <item quantity="other">%1$d repeated numbers suggest callback reuse</item>

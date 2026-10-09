@@ -1051,7 +1051,7 @@ private fun hotDataStalledDetail(
             .coerceAtLeast(0L)
             .div(TimeUnit.DAYS.toMillis(1))
             .coerceAtLeast(1L)
-    return context.getString(R.string.protection_test_hot_stalled, ageDays)
+    return context.resources.getQuantityString(R.plurals.protection_test_hot_stalled, ageDays.toInt(), ageDays)
 }
 
 private fun hotDataHealthDetail(
@@ -1064,7 +1064,7 @@ private fun hotDataHealthDetail(
                 .coerceAtLeast(0L)
                 .div(TimeUnit.HOURS.toMillis(1))
                 .coerceAtLeast(1L)
-        context.getString(R.string.protection_test_hot_unavailable_age, ageHours)
+        context.resources.getQuantityString(R.plurals.protection_test_hot_unavailable_age, ageHours.toInt(), ageHours)
     } else {
         context.getString(R.string.protection_test_hot_unavailable_never)
     }

@@ -38,6 +38,7 @@ import com.sysadmindoc.callshield.ui.screens.main.rememberNowTick
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.relativeTimeSpan
 import java.text.NumberFormat
 
 @Composable
@@ -111,7 +112,7 @@ fun MoreHub(
             blockSmsEnabled -> stringResource(R.string.more_snapshot_texts)
             else -> stringResource(R.string.more_snapshot_paused)
         }
-    // Re-emits every minute so "Synced Xm ago" advances while the screen is open,
+    // Re-emits every minute so "Last sync: 5 minutes ago" advances while the screen is open,
     // matching the Dashboard's rolling clock instead of freezing at composition.
     val now = rememberNowTick()
     val syncLabel =
@@ -121,24 +122,8 @@ fun MoreHub(
             }
 
             else -> {
-                val ago = now - lastSync
-                when {
-                    ago < 60_000 -> {
-                        stringResource(R.string.dashboard_synced_just_now)
-                    }
-
-                    ago < 3_600_000 -> {
-                        stringResource(R.string.dashboard_synced_minutes_ago, (ago / 60_000).toInt())
-                    }
-
-                    ago < 86_400_000 -> {
-                        stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
-                    }
-
-                    else -> {
-                        stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
-                    }
-                }
+                relativeTimeSpan(lastSync, now)?.let { stringResource(R.string.dashboard_synced_ago, it) }
+                    ?: stringResource(R.string.dashboard_synced_just_now)
             }
         }
 

@@ -153,6 +153,7 @@ import com.sysadmindoc.callshield.ui.theme.ShapeSm
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import com.sysadmindoc.callshield.util.relativeTimeSpan
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1369,20 +1370,9 @@ internal fun DashboardHeroCard(
                 stringResource(R.string.dashboard_not_synced)
             }
 
-            now - lastSync < 60_000L -> {
-                stringResource(R.string.dashboard_synced_just_now)
-            }
-
-            now - lastSync < 3_600_000L -> {
-                stringResource(R.string.dashboard_synced_minutes_ago, ((now - lastSync) / 60_000L).toInt())
-            }
-
-            now - lastSync < 86_400_000L -> {
-                stringResource(R.string.dashboard_synced_hours_ago, ((now - lastSync) / 3_600_000L).toInt())
-            }
-
             else -> {
-                stringResource(R.string.dashboard_synced_days_ago, ((now - lastSync) / 86_400_000L).toInt())
+                relativeTimeSpan(lastSync, now)?.let { stringResource(R.string.dashboard_synced_ago, it) }
+                    ?: stringResource(R.string.dashboard_synced_just_now)
             }
         }
     Column(
@@ -2004,15 +1994,8 @@ internal fun rememberNowTick(): Long {
 }
 
 @Composable
-internal fun relativeTimeText(timestamp: Long): String {
-    val ago = rememberNowTick() - timestamp
-    return when {
-        ago < 60_000 -> stringResource(R.string.dashboard_time_just_now)
-        ago < 3_600_000 -> stringResource(R.string.dashboard_time_minutes_ago, (ago / 60_000).toInt())
-        ago < 86_400_000 -> stringResource(R.string.dashboard_time_hours_ago, (ago / 3_600_000).toInt())
-        else -> stringResource(R.string.dashboard_time_days_ago, (ago / 86_400_000).toInt())
-    }
-}
+internal fun relativeTimeText(timestamp: Long): String =
+    relativeTimeSpan(timestamp, rememberNowTick()) ?: stringResource(R.string.dashboard_time_just_now)
 
 @Composable
 private fun syncFreshnessColor(

@@ -12,11 +12,11 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.ui.MainActivity
+import com.sysadmindoc.callshield.util.relativeTimeSpan
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 /**
  * Home screen widget.
@@ -154,17 +154,9 @@ class CallShieldWidget : AppWidgetProvider() {
         if (timestamp == null || timestamp == 0L) {
             return context.getString(R.string.widget_last_never)
         }
-        val diffMs = now - timestamp
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMs)
-        val hours = TimeUnit.MILLISECONDS.toHours(diffMs)
-        val days = TimeUnit.MILLISECONDS.toDays(diffMs)
-
-        return when {
-            minutes < 1 -> context.getString(R.string.widget_last_just_now)
-            minutes < 60 -> context.getString(R.string.widget_last_minutes_ago, minutes.toInt())
-            hours < 24 -> context.getString(R.string.widget_last_hours_ago, hours.toInt())
-            else -> context.getString(R.string.widget_last_days_ago, days.toInt())
-        }
+        return relativeTimeSpan(timestamp, now, abbreviate = true)
+            ?.let { context.getString(R.string.widget_last_ago, it) }
+            ?: context.getString(R.string.widget_last_just_now)
     }
 
     companion object {

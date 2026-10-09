@@ -186,8 +186,8 @@ class SyncRepository(
                             message =
                                 context.getString(
                                     R.string.sync_bundled_snapshot_loaded,
-                                    numberCount,
-                                    prefixCount,
+                                    context.resources.getQuantityString(R.plurals.sync_bundled_snapshot_numbers, numberCount, numberCount),
+                                    context.resources.getQuantityString(R.plurals.sync_bundled_snapshot_prefixes, prefixCount, prefixCount),
                                 ),
                             warning = true,
                         )
@@ -1075,8 +1075,9 @@ class SyncRepository(
     }
 
     private fun externalPreviewMessage(preview: ExternalBlocklistPreview): String =
-        context.getString(
-            R.string.external_blocklist_previewed,
+        context.resources.getQuantityString(
+            R.plurals.external_blocklist_previewed,
+            preview.numberCount,
             preview.label,
             preview.numberCount,
             preview.added,
@@ -1085,8 +1086,9 @@ class SyncRepository(
         )
 
     private fun externalAppliedMessage(preview: ExternalBlocklistPreview): String =
-        context.getString(
-            R.string.external_blocklist_applied,
+        context.resources.getQuantityString(
+            R.plurals.external_blocklist_applied,
+            preview.numberCount,
             preview.label,
             preview.numberCount,
             preview.added,

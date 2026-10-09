@@ -93,6 +93,13 @@ All notable changes to CallShield will be documented in this file.
   now picked up when the text asks you to call or ring it, so a call to it
   is held like one to a number written with its country code. Dates,
   prices, order and account numbers, and codes stay out.
+- Times read the way your phone's language says them. The dashboard, More
+  and the widget showed "Synced 5m ago" and "Last: 3h ago", which
+  TalkBack read as letters and no language but English shortened that way.
+  They now say "Last sync: 5 minutes ago", "Yesterday" or the date. Counts
+  in range rules, list previews, the hot data test, the bundled snapshot
+  notice and campaign reasons follow your language's plural rules too, so
+  there's no more "1 numbers".
 
 ## v1.11.0 (2026-09-30)
 

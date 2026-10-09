@@ -1971,6 +1971,9 @@ private fun formatCoverage(count: Long): String =
         .getIntegerInstance()
         .format(count)
 
+/** [count] as a plural quantity, which Android takes as an Int. */
+private fun pluralQuantity(count: Long): Int = count.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+
 @Composable
 fun HashWildcardRuleItem(
     rule: HashWildcardRule,
@@ -2006,7 +2009,7 @@ fun HashWildcardRuleItem(
                     )
                 }
                 StatusPill(
-                    text = stringResource(R.string.hash_wildcard_item_covers, formatCoverage(coverage)),
+                    text = pluralStringResource(R.plurals.hash_wildcard_item_covers, pluralQuantity(coverage), formatCoverage(coverage)),
                     color = CatPeach,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
@@ -2173,8 +2176,9 @@ fun AddHashWildcardDialog(
                 if (hashCount > 0 && !tooBroad) {
                     StatusPill(
                         text =
-                            stringResource(
-                                R.string.hash_wildcard_dialog_coverage_label,
+                            pluralStringResource(
+                                R.plurals.hash_wildcard_dialog_coverage_label,
+                                pluralQuantity(coverage),
                                 formatCoverage(coverage),
                             ),
                         color = CatPeach,

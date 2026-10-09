@@ -1127,8 +1127,16 @@ internal class CampaignBurstChecker(
                 add(
                     resources.getString(
                         R.string.block_reason_campaign_neighbors,
-                        evidence.distinctNumberCount,
-                        evidence.observationCount,
+                        resources.getQuantityString(
+                            R.plurals.block_reason_campaign_neighbor_numbers,
+                            evidence.distinctNumberCount,
+                            evidence.distinctNumberCount,
+                        ),
+                        resources.getQuantityString(
+                            R.plurals.block_reason_campaign_calls,
+                            evidence.observationCount,
+                            evidence.observationCount,
+                        ),
                     ),
                 )
                 if (evidence.repeatedNumberCount > 0) {

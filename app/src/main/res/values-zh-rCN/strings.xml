@@ -43,9 +43,7 @@
     <string name="dashboard_enable_notification_access">允许访问</string>
     <string name="dashboard_optional_extras">可选增强</string>
     <string name="dashboard_synced_just_now">刚刚同步</string>
-    <string name="dashboard_synced_minutes_ago">%d 分钟前同步</string>
-    <string name="dashboard_synced_hours_ago">%d 小时前同步</string>
-    <string name="dashboard_synced_days_ago">%d 天前同步</string>
+    <string name="dashboard_synced_ago">上次同步：%1$s</string>
     <string name="dashboard_stat_today">今日</string>
     <string name="dashboard_stat_total">总计</string>
     <string name="dashboard_trend_more">较上周变化：+%s</string>
@@ -55,9 +53,6 @@
     <string name="dashboard_no_recent_blocked_calls">最近没有拦截的来电</string>
     <string name="dashboard_no_recent_blocked_calls_body">CallShield 拦截的来电会显示在这里。</string>
     <string name="dashboard_time_just_now">刚刚</string>
-    <string name="dashboard_time_minutes_ago">%d 分钟前</string>
-    <string name="dashboard_time_hours_ago">%d 小时前</string>
-    <string name="dashboard_time_days_ago">%d 天前</string>
     <string name="dashboard_quick_controls">快捷控制</string>
     <string name="dashboard_block_calls">拦截通话</string>
     <string name="dashboard_block_sms">拦截短信</string>
@@ -192,13 +187,17 @@
     <string name="hash_wildcard_dialog_help">非数字字符精确匹配自身；# 匹配任意单个数字。主叫号码长度必须与模式完全相同。</string>
     <string name="hash_wildcard_dialog_empty_error">请输入至少包含一个 # 的模式。</string>
     <string name="hash_wildcard_dialog_too_broad">模式将拦截超过 1 亿个号码。保存前请缩小范围。</string>
-    <string name="hash_wildcard_dialog_coverage_label">覆盖 %1$s 个号码</string>
+    <plurals name="hash_wildcard_dialog_coverage_label">
+        <item quantity="other">覆盖 %1$s 个号码</item>
+    </plurals>
     <string name="hash_wildcard_dialog_overlap_equal">与已有规则重复。</string>
     <string name="hash_wildcard_dialog_overlap_covered">已被已有规则 %1$s 覆盖。</string>
     <string name="hash_wildcard_dialog_overlap_covers">这也将替换已有规则 %1$s。</string>
     <string name="hash_wildcard_dialog_add">添加号段</string>
     <string name="hash_wildcard_dialog_cancel">取消</string>
-    <string name="hash_wildcard_item_covers">覆盖 %1$s 个号码</string>
+    <plurals name="hash_wildcard_item_covers">
+        <item quantity="other">覆盖 %1$s 个号码</item>
+    </plurals>
     <string name="settings_push_alert">推送提醒桥接</string>
     <string name="settings_push_alert_desc">让短信、快递、网约车等通知为未知来电者背书。需要通知访问权限。</string>
     <string name="settings_push_alert_sources">配置可信来源</string>
@@ -860,7 +859,9 @@
     <string name="protection_test_ml_fp_fail">误判 — 阈值可能过低</string>
     <string name="protection_test_hot_pass">热点营销号段已加载</string>
     <string name="protection_test_hot_fail">为空 — 将在下次 30 分钟同步时填充</string>
-    <string name="protection_test_hot_stalled">可以连接，但热点数据源已有 %1$d 天没有重新生成</string>
+    <plurals name="protection_test_hot_stalled">
+        <item quantity="other">可以连接，但热点数据源已有 %1$d 天没有重新生成</item>
+    </plurals>
     <string name="protection_test_hot_refused">可以连接，但上次下载未通过签名或时效检查，因此仍在使用之前的数据</string>
     <string name="protection_test_hot_cleared">可以连接。发布方表示目前没有热点条目</string>
     <string name="protection_test_overlay_pass">可显示来电识别悬浮窗</string>
@@ -1011,7 +1012,13 @@
     <string name="sync_success_counts">已同步 %1$d 个号码，%2$d 个前缀</string>
     <string name="sync_unknown_error">更新时出错。</string>
     <string name="sync_remote_unavailable_existing">%s你现有的垃圾号码库仍在使用。</string>
-    <string name="sync_bundled_snapshot_loaded">在 GitHub 不可用时加载了含 %1$d 个号码与 %2$d 个前缀的内置防护快照。</string>
+    <string name="sync_bundled_snapshot_loaded">在 GitHub 不可用时加载了含 %1$s与 %2$s的内置防护快照。</string>
+    <plurals name="sync_bundled_snapshot_numbers">
+        <item quantity="other">%1$d 个号码</item>
+    </plurals>
+    <plurals name="sync_bundled_snapshot_prefixes">
+        <item quantity="other">%1$d 个前缀</item>
+    </plurals>
     <string name="sync_failed">同步失败。%s</string>
     <string name="sync_failed_no_fallback">同步失败。%s内置副本也无法加载。</string>
     <string name="sync_failure_offline">无法连接更新服务器。请检查网络连接。</string>
@@ -1202,9 +1209,7 @@
     <string name="widget_today_trend_same">今日 %s →</string>
     <string name="widget_total_blocked">总计已拦截 %s</string>
     <string name="widget_last_just_now">最近：刚刚</string>
-    <string name="widget_last_minutes_ago">最近：%d 分钟前</string>
-    <string name="widget_last_hours_ago">最近：%d 小时前</string>
-    <string name="widget_last_days_ago">最近：%d 天前</string>
+    <string name="widget_last_ago">最近：%1$s</string>
     <string name="widget_last_never">最近：从未</string>
     <string name="tile_protection_on">防护已开启</string>
     <string name="tile_protection_off">防护已关闭</string>
@@ -1314,7 +1319,13 @@
         <item quantity="other">%d 位 CallShield 用户举报过，尚未确认</item>
     </plurals>
     <string name="block_reason_campaign">活跃营销活动：%1$s</string>
-    <string name="block_reason_campaign_neighbors">%2$d 次来电中有 %1$d 个相邻号码</string>
+    <string name="block_reason_campaign_neighbors">%2$s中有 %1$s</string>
+    <plurals name="block_reason_campaign_neighbor_numbers">
+        <item quantity="other">%1$d 个相邻号码</item>
+    </plurals>
+    <plurals name="block_reason_campaign_calls">
+        <item quantity="other">%1$d 次来电</item>
+    </plurals>
     <plurals name="block_reason_campaign_repeats">
         <item quantity="other">%1$d 个重复号码表明存在回拨复用</item>
     </plurals>
