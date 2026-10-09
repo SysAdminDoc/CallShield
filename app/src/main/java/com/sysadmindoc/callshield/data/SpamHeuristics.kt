@@ -39,7 +39,7 @@ class SpamHeuristics
                 numbers
                     .asSequence()
                     .map { it.copy(number = it.number.trim()) }
-                    .filter { it.number.matches(COMMUNITY_WATCH_NUMBER_PATTERN) && it.reporterCount >= 2 }
+                    .filter { it.number.matches(COMMUNITY_WATCH_NUMBER_PATTERN) && it.reporterCount >= COMMUNITY_WATCH_MIN_REPORTERS }
                     .associate { it.number to it.reporterCount }
         }
 
