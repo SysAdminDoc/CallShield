@@ -21,6 +21,7 @@ local database.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import random
 import re
@@ -186,10 +187,12 @@ def classify(status: int, body: str) -> str:
     return "flagged" if category in SKIPCALLS_FLAGGED_CATEGORIES else "uncategorized"
 
 
-def summarize(name: str, answers: list[Answer], local_numbers: set[str]) -> dict:
-    """One group's counts. `adds` is a flag for a number the local database doesn't hold."""
+def summarize(name: str, answers: list[Answer], local_numbers: set[str], local_prefixes: Iterable[str] = ()) -> dict:
+    """One group's counts. `adds` is a flag for a number the local database
+    doesn't block, neither as a row nor under one of its prefix rules."""
+    prefixes = tuple(local_prefixes)
     flagged = [a for a in answers if a.verdict == "flagged"]
-    adds = [a for a in flagged if a.number not in local_numbers]
+    adds = [a for a in flagged if a.number not in local_numbers and not a.number.startswith(prefixes)]
     answered = [a for a in answers if a.verdict != "error"]
     return {
         "group": name,
@@ -203,15 +206,23 @@ def summarize(name: str, answers: list[Answer], local_numbers: set[str]) -> dict
     }
 
 
-def database_numbers() -> set[str]:
+def load_database() -> tuple[set[str], list[str]]:
+    """The published numbers and prefix rules."""
     database = json.loads((DATA / "spam_numbers.json").read_text(encoding="utf-8"))
-    return {row["number"] for row in database["numbers"]}
+    return {row["number"] for row in database["numbers"]}, [row["prefix"] for row in database.get("prefixes", [])]
 
 
-def pending_numbers(published: set[str]) -> list[str]:
-    pending = json.loads((DATA / "community_pending.json").read_text(encoding="utf-8"))
+def pending_numbers(records: dict[str, dict], published: set[str]) -> list[str]:
+    """Numbers users reported as spam that aren't published yet. The ledger
+    also holds rows only a Not spam report created, and rows someone has
+    since called not spam; neither is a spam report waiting for corroboration."""
     return sorted(
-        number for number, record in pending["numbers"].items() if not record.get("published") and number not in published
+        number
+        for number, record in records.items()
+        if not record.get("published")
+        and number not in published
+        and (record.get("events") or record.get("watch_events"))
+        and not record.get("not_spam_days")
     )
 
 
@@ -223,22 +234,24 @@ def ask_all(numbers: Iterable[str], fetcher: Fetch, delay_seconds: float) -> lis
         digits = re.sub(r"\D", "", number)
         try:
             status, body = fetcher(SOURCES[0].url_prefix + digits)
-        except OSError:
+        except (OSError, http.client.HTTPException):
+            # A cut-off body or a garbled status line costs one answer, not the run.
             status, body = 0, ""
         answers.append(Answer(number, classify(status, body)))
     return answers
 
 
 def sample(fetcher: Fetch, seed: int, per_group: int, delay_seconds: float) -> list[dict]:
-    published = database_numbers()
-    pending = pending_numbers(published)
+    published, prefixes = load_database()
+    ledger = json.loads((DATA / "community_pending.json").read_text(encoding="utf-8"))
+    pending = pending_numbers(ledger["numbers"], published)
     rng = random.Random(seed)
     groups = {
         "database": rng.sample(sorted(published), min(per_group, len(published))),
         "pending": rng.sample(pending, min(per_group, len(pending))),
         "business": list(BUSINESS_LINES),
     }
-    return [summarize(name, ask_all(numbers, fetcher, delay_seconds), published) for name, numbers in groups.items()]
+    return [summarize(name, ask_all(numbers, fetcher, delay_seconds), published, prefixes) for name, numbers in groups.items()]
 
 
 def percent(count: int, total: int) -> str:

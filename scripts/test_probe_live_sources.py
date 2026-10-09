@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline tests for probe_live_sources.py. The live probe itself needs the network."""
 
+import http.client
 import re
 import unittest
 
@@ -98,11 +99,12 @@ class SampleTest(unittest.TestCase):
             probe_live_sources.Answer("+18002752273", "uncategorized"),
             probe_live_sources.Answer("+15550100001", "clean"),
             probe_live_sources.Answer("+15550100002", "error"),
+            probe_live_sources.Answer("+18095550100", "flagged"),
         ]
-        summary = probe_live_sources.summarize("pending", answers, {"+18333041447"})
-        self.assertEqual(5, summary["asked"])
-        self.assertEqual(4, summary["answered"])
-        self.assertEqual(2, summary["flagged"])
+        summary = probe_live_sources.summarize("pending", answers, {"+18333041447"}, ["+1809"])
+        self.assertEqual(6, summary["asked"])
+        self.assertEqual(5, summary["answered"])
+        self.assertEqual(3, summary["flagged"])
         self.assertEqual(1, summary["adds"])
         self.assertEqual(["+15550100000"], summary["add_examples"])
         self.assertEqual(1, summary["uncategorized"])
@@ -120,6 +122,29 @@ class SampleTest(unittest.TestCase):
         answers = probe_live_sources.ask_all(["+18333041447", "+15550100002"], fetcher, 0)
         self.assertEqual(SKIPCALLS.url_prefix + "18333041447", asked[0])
         self.assertEqual(["flagged", "error"], [a.verdict for a in answers])
+
+    def test_a_cut_off_response_is_one_error_and_the_run_goes_on(self):
+        def fetcher(url):
+            if url.endswith("15550100002"):
+                raise http.client.IncompleteRead(b"{")
+            return 200, SPAM_ANSWER
+
+        answers = probe_live_sources.ask_all(["+15550100002", "+18333041447"], fetcher, 0)
+        self.assertEqual(["error", "flagged"], [a.verdict for a in answers])
+
+    def test_pending_numbers_are_unpublished_spam_reports_nobody_called_not_spam(self):
+        records = {
+            "+15550100001": {"published": False, "events": [{"day": "2026-10-01"}]},
+            "+15550100002": {"published": False, "events": [], "watch_events": [{"day": "2026-10-01"}]},
+            "+15550100003": {"published": False, "events": [], "watch_events": [], "not_spam_days": ["2026-10-02"]},
+            "+15550100004": {"published": False, "events": [{"day": "2026-10-01"}], "not_spam_days": ["2026-10-02"]},
+            "+15550100005": {"published": True, "events": [{"day": "2026-10-01"}]},
+            "+15550100006": {"published": False, "events": [{"day": "2026-10-01"}]},
+        }
+        self.assertEqual(
+            ["+15550100001", "+15550100002"],
+            probe_live_sources.pending_numbers(records, published={"+15550100006"}),
+        )
 
     def test_business_lines_are_distinct_e164_numbers(self):
         lines = probe_live_sources.BUSINESS_LINES
