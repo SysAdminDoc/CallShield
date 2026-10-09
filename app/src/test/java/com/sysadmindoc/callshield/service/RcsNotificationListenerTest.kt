@@ -4,12 +4,16 @@ import android.Manifest
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Person
 import android.content.Context
+import android.content.Intent
 import android.os.Process
 import android.service.notification.StatusBarNotification
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
+import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -77,6 +81,42 @@ class RcsNotificationListenerTest {
         }
     }
 
+    @Test
+    fun `a meeting app's background Connected notification doesn't start meeting mode, its call does`() {
+        MeetingModeRegistry.clear()
+
+        listener.onNotificationPosted(teamsNotification(id = 1) { setContentTitle("Microsoft Teams").setContentText("Connected") })
+        assertEquals(emptySet<String>(), MeetingModeRegistry.activePackages())
+
+        val colleague = Person.Builder().setName("Dana Whitfield").build()
+        val hangUp = PendingIntent.getBroadcast(context, 0, Intent("hang_up"), PendingIntent.FLAG_IMMUTABLE)
+        listener.onNotificationPosted(teamsNotification(id = 2) { setStyle(Notification.CallStyle.forOngoingCall(colleague, hangUp)) })
+        assertEquals(setOf(TEAMS), MeetingModeRegistry.activePackages())
+    }
+
+    /** An ongoing notification from Teams, the way a foreground service posts one. */
+    @Suppress("DEPRECATION")
+    private fun teamsNotification(
+        id: Int,
+        configure: Notification.Builder.() -> Unit,
+    ) = StatusBarNotification(
+        TEAMS,
+        TEAMS,
+        id,
+        null,
+        Process.myUid(),
+        0,
+        0,
+        Notification
+            .Builder(context, "calls")
+            .setSmallIcon(android.R.drawable.sym_def_app_icon)
+            .setOngoing(true)
+            .apply(configure)
+            .build(),
+        Process.myUserHandle(),
+        System.currentTimeMillis(),
+    )
+
     /** The listener reads nothing until the user's chosen apps have loaded, so it's posted until [done]. */
     private fun postUntil(
         chat: StatusBarNotification,
@@ -116,5 +156,6 @@ class RcsNotificationListenerTest {
 
     private companion object {
         const val GOOGLE_MESSAGES = "com.google.android.apps.messaging"
+        const val TEAMS = "com.microsoft.teams"
     }
 }

@@ -3,14 +3,16 @@ package com.sysadmindoc.callshield.data
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Which meeting and calling apps hold an ongoing notification right now.
+ * Which meeting and calling apps show a call in progress right now.
  *
- * A video meeting or VoIP call keeps an ongoing (foreground-service or
- * call-style) notification up for exactly as long as it lasts, and the
- * notification listener already sees it. That makes it a meeting signal that
- * needs no calendar access and no usage-stats permission. Ordinary message
- * notifications from the same apps are not ongoing, so an unread Slack message
- * doesn't count.
+ * A video meeting or VoIP call keeps an ongoing call notification up for
+ * exactly as long as it lasts, and the notification listener already sees it.
+ * That makes it a meeting signal that needs no calendar access and no
+ * usage-stats permission. Being ongoing isn't enough: these apps also keep
+ * ongoing notifications up for a background connection, a sync or an upload,
+ * sometimes for hours. So a notification counts only when it is ongoing and
+ * marked as a call, by the call category or the call style template. Ordinary
+ * message notifications are neither, so an unread Slack message doesn't count.
  *
  * Fed by [com.sysadmindoc.callshield.service.RcsNotificationListener]; read by
  * [com.sysadmindoc.callshield.data.checker.MeetingModeChecker] on the screening
@@ -38,15 +40,10 @@ object MeetingModeRegistry {
         )
 
     /**
-     * Messengers that also keep non-call ongoing notifications up for hours
-     * (Signal's background connection without Google push, Telegram's
-     * keep-alive, WhatsApp backups and live location, Messenger chat heads).
-     * For these only a call notification means a call: the call category, or
-     * for Telegram, whose in-call notification has no category, the fixed IDs
-     * its VoIPService posts calls under (201 ongoing, 202 incoming).
+     * Telegram's in-call notification has neither the call category nor the
+     * call style, so its calls are known by the fixed IDs its VoIPService
+     * posts them under (201 ongoing, 202 incoming).
      */
-    private val CALL_CATEGORY_ONLY =
-        setOf("com.whatsapp", "org.thoughtcrime.securesms", TELEGRAM, "com.facebook.orca")
     private val TELEGRAM_CALL_NOTIFICATION_IDS = setOf(201, 202)
 
     /** Notification key to package, for the notifications that currently mean a meeting. */
@@ -56,7 +53,8 @@ object MeetingModeRegistry {
 
     /**
      * A notification was posted or updated. It marks a meeting when it is
-     * ongoing and, for the messengers above, a call. An update that stops
+     * ongoing and a call. [template] is the notification's
+     * [android.app.Notification.EXTRA_TEMPLATE]. An update that stops
      * qualifying ends that meeting.
      */
     fun onPosted(
@@ -65,9 +63,10 @@ object MeetingModeRegistry {
         isOngoing: Boolean,
         category: String? = null,
         notificationId: Int? = null,
+        template: String? = null,
     ) {
         if (packageName !in MEETING_APPS) return
-        val meansMeeting = isOngoing && (packageName !in CALL_CATEGORY_ONLY || isCall(packageName, category, notificationId))
+        val meansMeeting = isOngoing && isCall(packageName, category, notificationId, template)
         if (meansMeeting) ongoing[key] = packageName else ongoing.remove(key)
     }
 
@@ -75,7 +74,11 @@ object MeetingModeRegistry {
         packageName: String,
         category: String?,
         notificationId: Int?,
-    ): Boolean = category == CALL_CATEGORY || (packageName == TELEGRAM && notificationId in TELEGRAM_CALL_NOTIFICATION_IDS)
+        template: String?,
+    ): Boolean =
+        category == CALL_CATEGORY ||
+            template == CALL_STYLE_TEMPLATE ||
+            (packageName == TELEGRAM && notificationId in TELEGRAM_CALL_NOTIFICATION_IDS)
 
     fun onRemoved(key: String) {
         ongoing.remove(key)
@@ -84,7 +87,7 @@ object MeetingModeRegistry {
     /** Rebuilds the state from the listener's active notifications after it (re)connects. */
     fun replaceAll(active: List<ActiveNotification>) {
         ongoing.clear()
-        active.forEach { onPosted(it.key, it.packageName, it.isOngoing, it.category, it.notificationId) }
+        active.forEach { onPosted(it.key, it.packageName, it.isOngoing, it.category, it.notificationId, it.template) }
     }
 
     fun clear() {
@@ -100,9 +103,13 @@ object MeetingModeRegistry {
         val isOngoing: Boolean,
         val category: String? = null,
         val notificationId: Int? = null,
+        val template: String? = null,
     )
 
     /** [android.app.Notification.CATEGORY_CALL], kept as a literal so this object stays JVM-testable. */
     private const val CALL_CATEGORY = "call"
+
+    /** The template name of [android.app.Notification.CallStyle], a literal because the class is missing below Android 12. */
+    internal const val CALL_STYLE_TEMPLATE = "android.app.Notification\$CallStyle"
     private const val TELEGRAM = "org.telegram.messenger"
 }

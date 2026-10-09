@@ -8,7 +8,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 
 /**
  * Meeting mode: silences a call from outside the user's contacts while one of
- * the meeting apps they picked holds an ongoing notification (see
+ * the meeting apps they picked shows an ongoing call notification (see
  * [MeetingModeRegistry]). It rides on the notification access CallShield
  * already has, so there's no calendar permission.
  *
