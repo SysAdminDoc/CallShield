@@ -620,6 +620,26 @@ class SmsContentAnalyzer
             private const val MAX_CALLBACK_NUMBERS = 5
             private val INTERNATIONAL_DIGITS = 8..15
 
+            /**
+             * A number written the way people write one at home: 7 to 12 digits
+             * with the usual gaps. Whether it's a line is for the home region's
+             * validator to say. Not after a "#", a currency sign or a decimal
+             * point, and not before a decimal part or a currency sign either.
+             */
+            private val nationalNumber =
+                Regex(
+                    "(?<![0-9A-Za-z_/+#:.,\u2116\u20AC\$\u00A3\u00A5\u20B9])\\(?\\d(?:[ \\t.()-]{0,2}\\d){6,11}\\)?" +
+                        "(?![0-9]|[.,]\\d|[ \\t]?[%\u20AC\$\u00A3\u00A5\u20B9])",
+                )
+            private val dateShape = Regex("\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}[./-]\\d{1,2}[./-]\\d{1,2}")
+
+            /** The words a reference or a code follows, so an order number isn't read as a line to call. */
+            private val referenceWord =
+                Regex(
+                    "(?i)(?:#|\u2116|\\b(?:order|ref|reference|code|pin|id|invoice|tracking|ticket|case|account|acct|confirmation|otp|parcel|pedido|commande|bestell\\w*)\\b|\\b(?:no|nr)\\.)[^0-9]{0,5}$",
+                )
+            private const val REFERENCE_CONTEXT_CHARS = 20
+
             fun updateSpamDomains(domains: Collection<String>) {
                 shared.updateSpamDomains(domains)
             }
@@ -636,25 +656,43 @@ class SmsContentAnalyzer
              * digits is also how a Chinese mobile number looks. Bare national
              * numbers from other plans are left alone.
              */
+            /**
+             * The numbers [body] asks the reader to call. [nationalToE164] reads a
+             * number written the way people write one where the phone lives, as
+             * E.164 when it's a valid line there; it's only used outside North
+             * America, where a bare number can't be read without it.
+             */
             fun extractCallbackNumbers(
                 body: String,
                 nanpHome: Boolean,
+                nationalToE164: ((String) -> String?)? = null,
             ): List<String> {
                 val text = plainNumberText(body.take(MAX_CALLBACK_SCAN_CHARS))
                 val found = LinkedHashSet<String>()
-                val international = mutableListOf<IntRange>()
+                val taken = mutableListOf<IntRange>()
+                fun IntRange.overlapsTaken() = taken.any { it.first <= last && first <= it.last }
                 internationalNumber.findAll(text).forEach { match ->
                     val digits = match.value.filter { it in '0'..'9' }
                     if (!digits.startsWith("1") && digits.length in INTERNATIONAL_DIGITS) {
                         found += "+$digits"
-                        international += match.range
+                        taken += match.range
                     }
                 }
                 nanpNumber.findAll(text).forEach { match ->
                     val groups = match.groupValues
                     // "+49 301 234 5678" holds a NANP-shaped run that isn't one.
-                    val insideInternational = international.any { it.first <= match.range.last && match.range.first <= it.last }
-                    if (!insideInternational && (nanpHome || groups[1].startsWith("+"))) found += "+1" + groups.drop(2).joinToString("")
+                    if (!match.range.overlapsTaken() && (nanpHome || groups[1].startsWith("+"))) {
+                        found += "+1" + groups.drop(2).joinToString("")
+                        taken += match.range
+                    }
+                }
+                if (nationalToE164 != null && !nanpHome) {
+                    nationalNumber.findAll(text).forEach { match ->
+                        if (match.range.overlapsTaken() || dateShape.matches(match.value)) return@forEach
+                        val before = text.substring(maxOf(0, match.range.first - REFERENCE_CONTEXT_CHARS), match.range.first)
+                        if (referenceWord.containsMatchIn(before)) return@forEach
+                        nationalToE164(match.value)?.takeIf { it.startsWith("+") }?.let { found += it }
+                    }
                 }
                 return found.take(MAX_CALLBACK_NUMBERS)
             }

@@ -548,8 +548,9 @@ class BlocklistRepository(
         timestamp: Long,
     ) {
         if (smsBody.isNullOrBlank()) return
-        val homeRegion = PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso
-        val numbers = SmsContentAnalyzer.extractCallbackNumbers(smsBody, PhoneIdentityCanonicalizer.readsBareDigitsAsNanp(homeRegion))
+        val canonicalizer = PhoneIdentityCanonicalizer.cachedFromContext(context)
+        val nanpHome = PhoneIdentityCanonicalizer.readsBareDigitsAsNanp(canonicalizer.homeRegionIso)
+        val numbers = SmsContentAnalyzer.extractCallbackNumbers(smsBody, nanpHome, canonicalizer::nationalToE164)
         if (numbers.isEmpty()) return
         dao.upsertFlaggedTextNumbers(numbers.map { FlaggedTextNumber(number = it, sender = sender, seenAt = timestamp) })
         dao.deleteFlaggedTextNumbersBefore(timestamp - FLAGGED_TEXT_NUMBER_TTL_MS)

@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -8,6 +9,12 @@ class CallbackNumberExtractionTest {
         body: String,
         nanpHome: Boolean = true,
     ) = SmsContentAnalyzer.extractCallbackNumbers(body, nanpHome)
+
+    /** What a phone whose home region is [plan]'s country reads a bare number as. */
+    private fun extractAt(
+        body: String,
+        plan: ListNumberPlan,
+    ) = SmsContentAnalyzer.extractCallbackNumbers(body, nanpHome = false) { plan.toInternational(it) }
 
     @Test
     fun `a North American number is found however it's written`() {
@@ -39,6 +46,35 @@ class CallbackNumberExtractionTest {
         assertEquals("a Chinese mobile number", emptyList<String>(), extract("\u8BF7\u81F4\u753513812345678", nanpHome = false))
         assertEquals(listOf("+18003451234"), extract("Call +1 800 345 1234", nanpHome = false))
         assertEquals(listOf("+573131918305"), extract("Llame al +57 313 191 8305 hoy", nanpHome = false))
+    }
+
+    @Test
+    fun `outside North America a bare number is read the way the phone's region reads it`() {
+        assertEquals(listOf("+442079460018"), extractAt("Ring 020 7946 0018 to stop the charge", GB))
+        assertEquals(listOf("+442079460018"), extractAt("Ring (020) 7946-0018 to stop the charge", GB))
+        assertEquals(listOf("+33123456789"), extractAt("Rappelez le 01 23 45 67 89 avant ce soir", FR))
+        assertEquals(listOf("+34912345678"), extractAt("Llame al 912 345 678 hoy", ES))
+    }
+
+    @Test
+    fun `a bare national number isn't read twice beside its international form`() {
+        assertEquals(listOf("+442079460018"), extractAt("Ring +44 20 7946 0018 or 020 7946 0018", GB))
+    }
+
+    @Test
+    fun `dates, amounts and order numbers aren't national numbers`() {
+        listOf(
+            "Lieferung am 12.05.2026 um 10:30" to DE,
+            "Delivery on 12/05/2026" to GB,
+            "Total 2 079 460 018,50 EUR" to GB,
+            "Paid \u00A32079460018 today" to GB,
+            "Order 2079460018 has shipped" to GB,
+            "Ref: 2079460018" to GB,
+            "Your code is 2079460018" to GB,
+            "#2079460018" to GB,
+            "Tracking no. 2079460018" to GB,
+            "Call 555-1234 today" to GB,
+        ).forEach { (text, plan) -> assertEquals(text, emptyList<String>(), extractAt(text, plan)) }
     }
 
     @Test
@@ -85,5 +121,12 @@ class CallbackNumberExtractionTest {
             "Call 800-145-1234 today",
             "",
         ).forEach { assertEquals(it, emptyList<String>(), extract(it)) }
+    }
+
+    private companion object {
+        val GB = ListNumberPlan("GB", "44", "0", listOf(10))
+        val FR = ListNumberPlan("FR", "33", "0", listOf(9))
+        val ES = ListNumberPlan("ES", "34", "", listOf(9))
+        val DE = ListNumberPlan("DE", "49", "0", listOf(8, 9, 10, 11))
     }
 }

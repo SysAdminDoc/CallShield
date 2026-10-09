@@ -34,6 +34,12 @@ class PhoneIdentityCanonicalizer internal constructor(
             ?: normalized
     }
 
+    /** [raw], written the way people write a number at home, as E.164 when it's a valid line in the home region, else null. */
+    fun nationalToE164(raw: String): String? {
+        val region = homeRegionIso ?: return null
+        return runCatching { formatToE164(raw, region) }.getOrNull()?.let(::normalizePhoneNumber)?.takeIf { it.startsWith("+") }
+    }
+
     /**
      * Every spelling under which this phone may have stored the line behind
      * [canonical], [canonical] first. For a NANP number on a NANP home region
