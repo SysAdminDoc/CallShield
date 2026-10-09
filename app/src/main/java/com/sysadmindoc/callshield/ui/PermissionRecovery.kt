@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -68,8 +68,10 @@ fun rememberPermissionRequest(
     onResult: (Map<String, Boolean>) -> Unit = {},
 ): (List<String>) -> Unit {
     val context = LocalContext.current
-    var launchedAt by remember { mutableLongStateOf(0L) }
-    var refusedBefore by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // Saved, since the prompt can outlive the activity (a rotation or a
+    // reclaimed process), and the answer is read against them.
+    var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
+    var refusedBefore by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onResult(grants)
@@ -86,7 +88,7 @@ fun rememberPermissionRequest(
         }
     return { permissions ->
         launchedAt = SystemClock.elapsedRealtime()
-        refusedBefore = context.findActivity()?.let { activity -> permissions.filter(activity::shouldShowRequestPermissionRationale).toSet() }.orEmpty()
+        refusedBefore = context.findActivity()?.let { activity -> permissions.filter(activity::shouldShowRequestPermissionRationale) }.orEmpty()
         launcher.launch(permissions.toTypedArray())
     }
 }
@@ -122,7 +124,7 @@ fun rememberRoleRequest(
     onResult: (RoleRequestResult) -> Unit = {},
 ): (Intent) -> Unit {
     val context = LocalContext.current
-    var launchedAt by remember { mutableLongStateOf(0L) }
+    var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val held = roleHeld()
