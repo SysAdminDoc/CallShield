@@ -157,7 +157,9 @@ private fun sanitizeExternalBlocklists(lists: List<BackupExternalBlocklist>): Li
 /**
  * These settings with the phone's [current] lists kept as they are and the
  * backup's new ones added after them. A restore never drops a list, which
- * would leave its numbers with nothing to refresh or remove them.
+ * would leave its numbers with nothing to refresh or remove them. This is
+ * where a backup's lists are checked; the phone's own are never re-checked,
+ * since one added before addresses had to be HTTPS would fail and be dropped.
  */
 internal fun BackupSettings.addingExternalBlocklistsTo(current: List<BackupExternalBlocklist>?): BackupSettings {
     val incoming = sanitizeExternalBlocklists(externalBlocklists ?: return this)
@@ -216,7 +218,9 @@ internal fun BackupSettings.sanitized(): BackupSettings =
         // A theme or mirror this version can't use is dropped, leaving the current one.
         appTheme = appTheme?.takeIf { sanitizeAppTheme(it) == it },
         feedMirrorUrl = feedMirrorUrl?.let { if (it.isEmpty()) it else FeedMirror.normalize(it) },
-        externalBlocklists = externalBlocklists?.let(::sanitizeExternalBlocklists),
+        // Lists are checked where a backup's enter (addingExternalBlocklistsTo).
+        // Here they are the phone's own as often as a backup's: a rollback or
+        // an Undo writes the phone's snapshot back through this.
     )
 
 @Suppress("LongMethod")

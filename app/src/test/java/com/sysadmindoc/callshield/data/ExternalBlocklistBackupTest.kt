@@ -139,6 +139,25 @@ class ExternalBlocklistBackupTest {
     }
 
     @Test
+    fun `a list added before addresses had to be HTTPS survives a restore and its undo`() {
+        val legacy = fetched(LEGACY_LIST, "Old list")
+        val phone = phoneWith(legacy)
+        val snapshot = phone.toBackupSettings()
+        val desired =
+            BackupSettings(externalBlocklists = listOf(BackupExternalBlocklist(US_LIST, "Robocalls")))
+                .sanitized()
+                .addingExternalBlocklistsTo(snapshot.externalBlocklists)
+                .sanitized()
+
+        assertEquals("its numbers would be deleted", emptyList<String>(), phone.droppedExternalBlocklistSources(desired))
+        desired.writeTo(phone)
+        assertEquals(setOf(LEGACY_LIST, US_LIST), phone.externalBlocklistSubscriptions().map { it.url }.toSet())
+
+        snapshot.sanitized().writeTo(phone)
+        assertEquals(listOf(legacy), phone.externalBlocklistSubscriptions())
+    }
+
+    @Test
     fun `a backup's lists are checked like a typed address`() {
         val sanitized =
             BackupSettings(
@@ -155,12 +174,14 @@ class ExternalBlocklistBackupTest {
                         BackupExternalBlocklist("$US_LIST#again", "Same list"),
                     ),
             ).sanitized()
+                .addingExternalBlocklistsTo(emptyList())
 
         assertEquals(listOf(BackupExternalBlocklist(US_LIST, "lists.example")), sanitized.externalBlocklists)
     }
 
     private companion object {
         const val MY_LIST = "https://lists.example/mine.txt"
+        const val LEGACY_LIST = "http://lists.example/old.txt"
         const val US_LIST = "https://lists.example/us.txt"
         const val CO_LIST = "https://lists.example/co.json"
     }
