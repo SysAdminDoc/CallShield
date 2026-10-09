@@ -74,6 +74,9 @@ class SmsReplyBaitTest {
         // A browser reads the backslash as a slash and opens wa.me.
         assertTrue(baited("Hi mum, new number, message me here https://wa.me\\@pay.example.invalid"))
         assertTrue(baited("Hi mum, new number, message me here https://WA.ME#chat"))
+        // The sentence's punctuation isn't part of the host.
+        assertTrue(baited("Hi mum, new number, message me here https://wa.me!"))
+        assertTrue(baited("Hi mum, new number, message me here (https://wa.me)"))
         // These open pay.example.invalid, so they're links to somewhere else.
         assertFalse(baited("Hi mum, new number, message me here https://pay.example.invalid\\@wa.me"))
         assertFalse(baited("Hi mum, new number, message me here https://wa.me@pay.example.invalid/chat"))

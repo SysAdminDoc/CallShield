@@ -146,7 +146,8 @@ internal object SmsReplyBait {
                 .substringBefore('#')
                 .substringAfterLast('@')
                 .substringBefore(':')
-                .trimEnd('.')
+                // The sentence's punctuation, as the domain reader drops it.
+                .trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
                 .removePrefix("www.")
         return host in chatLinkHosts
     }
