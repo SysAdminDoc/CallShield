@@ -129,6 +129,7 @@ import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
+import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -328,8 +329,14 @@ fun DashboardScreen(
     // Grant or Enable button.
     val screeningRoleLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { permissionRefreshTick++ }
-    val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permissionRefreshTick++ }
+    // These open App info with a hint once Android has stopped showing its
+    // dialog, since the request then comes back at once with nothing on screen.
+    val notificationPermissionRequest =
+        rememberPermissionRequest(R.string.permission_notifications_in_app_info) { permissionRefreshTick++ }
+    val callLogPermissionRequest =
+        rememberPermissionRequest(R.string.permission_call_log_in_app_info) { permissionRefreshTick++ }
+    val smsPermissionRequest =
+        rememberPermissionRequest(R.string.permission_sms_in_app_info) { permissionRefreshTick++ }
     val enableCallScreening: () -> Unit = {
         val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
         try {
@@ -352,7 +359,7 @@ fun DashboardScreen(
     }
     val enableNotifications: () -> Unit = {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            notificationPermissionRequest(listOf(Manifest.permission.POST_NOTIFICATIONS))
         } else {
             context.startActivitySafely(
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
@@ -869,11 +876,13 @@ fun DashboardScreen(
                             stringResource(R.string.dashboard_action_calls_permissions_subtitle)
                         },
                     accentColor = CatBlue,
+                    // Asks for the one permission the scan needs, right here.
+                    // Settings only lists it while call blocking is on.
                     actionLabel =
                         if (callLogReady) {
                             stringResource(R.string.dashboard_action_run)
                         } else {
-                            stringResource(R.string.dashboard_action_review)
+                            stringResource(R.string.settings_access_grant)
                         },
                     loading = scanningCalls,
                     enabled = !scanningCalls,
@@ -882,7 +891,7 @@ fun DashboardScreen(
                         hapticTick(context)
                         viewModel.scanCallLog()
                     } else {
-                        openPermissions()
+                        callLogPermissionRequest(listOf(Manifest.permission.READ_CALL_LOG))
                     }
                 }
                 GradientDivider()
@@ -900,7 +909,7 @@ fun DashboardScreen(
                         if (smsInboxReady) {
                             stringResource(R.string.dashboard_action_run)
                         } else {
-                            stringResource(R.string.dashboard_action_review)
+                            stringResource(R.string.settings_access_grant)
                         },
                     loading = scanningSms,
                     enabled = !scanningSms,
@@ -909,7 +918,7 @@ fun DashboardScreen(
                         hapticTick(context)
                         viewModel.scanSmsInbox()
                     } else {
-                        openPermissions()
+                        smsPermissionRequest(listOf(Manifest.permission.READ_SMS))
                     }
                 }
             }

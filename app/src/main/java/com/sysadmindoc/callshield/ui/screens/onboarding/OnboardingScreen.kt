@@ -95,6 +95,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -179,8 +180,8 @@ fun OnboardingScreen(
                 activity != null &&
                 missing.none(activity::shouldShowRequestPermissionRationale)
         }
-    val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+    val notificationPermissionRequest =
+        rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
             refreshReadiness()
         }
     val screeningLauncher =
@@ -243,7 +244,7 @@ fun OnboardingScreen(
         },
         onRequestNotifications = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                notificationPermissionRequest(listOf(Manifest.permission.POST_NOTIFICATIONS))
             } else {
                 context.startActivitySafely(
                     Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {

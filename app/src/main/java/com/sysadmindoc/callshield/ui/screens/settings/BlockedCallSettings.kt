@@ -3,8 +3,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallSplit
@@ -22,6 +20,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.*
 
 /**
@@ -45,8 +44,8 @@ internal fun BlockedCallSettings(viewModel: MainViewModel) {
                 Manifest.permission.READ_CALL_LOG,
             )
         }
-    val answerHangUpPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+    val answerHangUpPermissionRequest =
+        rememberPermissionRequest(R.string.permission_phone_in_app_info) { grants ->
             val allGranted =
                 answerHangUpPermissions.all { permission ->
                     grants[permission] == true || CallShieldPermissions.isPermissionGranted(context, permission)
@@ -92,7 +91,7 @@ internal fun BlockedCallSettings(viewModel: MainViewModel) {
             if (missingPermissions.isEmpty()) {
                 viewModel.setAnswerHangUpEnabled(true)
             } else {
-                answerHangUpPermissionLauncher.launch(missingPermissions.toTypedArray())
+                answerHangUpPermissionRequest(missingPermissions)
             }
         }
         if (answerHangUpEnabled) {

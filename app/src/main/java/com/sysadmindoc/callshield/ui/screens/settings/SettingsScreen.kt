@@ -37,6 +37,7 @@ import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
+import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.screens.main.requiredSetupProgress
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -168,8 +169,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val setupProgress = requiredSetupProgress(corePermissionsGranted, screenerReadyForCurrentMode)
     val setupReadyCount = setupProgress.done
     val setupTotal = setupProgress.total
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    // Both open App info with a hint once Android has stopped showing its
+    // dialog, since the request then returns at once with nothing on screen.
+    val corePermissionRequest =
+        rememberPermissionRequest(R.string.permission_core_in_app_info) {
             missingCorePermissions =
                 CallShieldPermissions.missingEnabledProtectionPermissions(
                     context = context,
@@ -177,8 +180,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     smsEnabled = blockSms,
                 )
         }
-    val notificationLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+    val notificationPermissionRequest =
+        rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
             notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
         }
     val screeningLauncher =
@@ -225,7 +228,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
     fun requestNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            notificationPermissionRequest(listOf(Manifest.permission.POST_NOTIFICATIONS))
         } else {
             context.startActivitySafely(
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
@@ -317,7 +320,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 overlayGranted = overlayGranted,
                 notificationsGranted = notificationsGranted,
                 onRunSetupAgain = viewModel::restartOnboarding,
-                onGrantCore = { permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray()) },
+                // Only what the enabled protection still lacks: a refused
+                // permission it doesn't need mustn't send the user to App info.
+                onGrantCore = { corePermissionRequest(missingCorePermissions) },
                 onEnableScreening = ::requestScreening,
                 onEnableNotifications = ::requestNotifications,
             )

@@ -3,8 +3,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.*
 
 /** Who always gets through, and checks on calls you place. */
@@ -47,8 +46,9 @@ internal fun SafetySettings(
     val cnapBlockPatterns by viewModel.cnapBlockPatterns.collectAsStateWithLifecycle()
     var showContactGroups by rememberSaveable { mutableStateOf(false) }
     var showRegionCnapRules by rememberSaveable { mutableStateOf(false) }
-    val contactsPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    val contactsPermissionRequest =
+        rememberPermissionRequest(R.string.contacts_only_allow_in_app_info) { grants ->
+            val granted = grants[Manifest.permission.READ_CONTACTS] == true
             onContactsPermissionResult(granted)
             viewModel.refreshContactGroups()
             if (granted) showContactGroups = true
@@ -88,7 +88,7 @@ internal fun SafetySettings(
                         viewModel.refreshContactGroups()
                         showContactGroups = true
                     } else {
-                        contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                        contactsPermissionRequest(listOf(Manifest.permission.READ_CONTACTS))
                     }
                 },
             )

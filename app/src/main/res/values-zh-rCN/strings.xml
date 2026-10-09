@@ -463,6 +463,11 @@
     <string name="contacts_only_paused">“仅限联系人”已暂停，因为 CallShield 无法读取你的联系人。在你允许访问联系人之前，任何人来电都会响铃。</string>
     <string name="contacts_only_allow">允许访问联系人</string>
     <string name="contacts_only_allow_in_app_info">请在应用信息的“权限”中开启“通讯录”。</string>
+    <string name="permission_core_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“通话记录”、“通讯录”和“短信”。</string>
+    <string name="permission_call_log_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“通话记录”。</string>
+    <string name="permission_sms_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“短信”。</string>
+    <string name="permission_phone_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“电话”和“通话记录”。</string>
+    <string name="permission_notifications_in_app_info">Android 不会再询问。请在应用信息中开启“通知”。</string>
     <string name="settings_outgoing_risk_warning">拨出高风险电话前提醒</string>
     <string name="settings_outgoing_risk_warning_desc">对垃圾号码库中精确匹配的号码显示本地警告</string>
     <string name="settings_outgoing_risk_warning_overlay_required">允许悬浮窗权限以查看拨出提醒。</string>

@@ -646,6 +646,11 @@
     <string name="contacts_only_paused">Contacts only is paused because CallShield can\'t read your contacts. Until you allow Contacts, calls from anyone can ring.</string>
     <string name="contacts_only_allow">Allow Contacts</string>
     <string name="contacts_only_allow_in_app_info">Turn on Contacts in App info, under Permissions.</string>
+    <string name="permission_core_in_app_info">Android won\'t ask again. Turn on Call logs, Contacts and SMS in App info, under Permissions.</string>
+    <string name="permission_call_log_in_app_info">Android won\'t ask again. Turn on Call logs in App info, under Permissions.</string>
+    <string name="permission_sms_in_app_info">Android won\'t ask again. Turn on SMS in App info, under Permissions.</string>
+    <string name="permission_phone_in_app_info">Android won\'t ask again. Turn on Phone and Call logs in App info, under Permissions.</string>
+    <string name="permission_notifications_in_app_info">Android won\'t ask again. Turn on Notifications in App info.</string>
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
