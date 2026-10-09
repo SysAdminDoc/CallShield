@@ -25,6 +25,22 @@ All notable changes to CallShield will be documented in this file.
   reason now says whose number was faked. The caller ID popup names the
   organization and reminds you not to share codes or passwords on a call you
   didn't expect.
+- When Android stops showing a permission prompt after you've said no twice,
+  the Grant buttons in Settings, Home's notification and scan buttons,
+  answer and hang up, and setup now open App info and tell you which switch
+  to turn on. Before, tapping them did nothing.
+- The "Block area code" suggestion on Home, number details and the Stats
+  map is only offered for North American numbers now. For numbers from
+  other countries it used to suggest a +1 rule that would block the wrong
+  callers.
+- Backups now carry the blocklists you subscribed to: each list's address,
+  name and on/off switch. Restoring on a new phone adds any you don't have
+  and downloads them on the next refresh. Lists already on the phone are
+  left alone, and Undo removes the ones the restore added.
+- Protection Test has a new card showing the last five times Android closed
+  CallShield and why, such as to free up memory. It's read on the phone and
+  never sent anywhere. Android 10 doesn't keep this record, so the card
+  doesn't show there.
 
 ## v1.11.0 (2026-09-30)
 
