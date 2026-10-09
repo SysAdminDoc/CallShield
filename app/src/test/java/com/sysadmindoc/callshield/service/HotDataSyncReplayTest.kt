@@ -101,6 +101,32 @@ class HotDataSyncReplayTest {
     }
 
     @Test
+    fun `a cleared watch number doesn't come back from the build-time copy after a restart`() {
+        val entry = CommunityWatchNumber("+33412345678", 2)
+        feeds.bundledWatch = HotFeedSnapshot(listOf(entry))
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-21T11:00:00+00:00")
+        refresh()
+
+        // A restart empties the list in memory, and then the fetch fails.
+        SpamHeuristics.updateCommunityWatch(emptyList())
+        runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+        feeds.watchOffline = true
+        refresh()
+
+        assertEquals(0, SpamHeuristics.communityWatchReporterCount(context, entry.number))
+    }
+
+    @Test
+    fun `a phone that never read the watch list starts from the build-time copy`() {
+        val entry = CommunityWatchNumber("+33412345678", 2)
+        feeds.bundledWatch = HotFeedSnapshot(listOf(entry))
+
+        runBlocking { HotDataSync.primeBundled(context, feeds, fixture.repository, fixture.dao) }
+
+        assertEquals(2, SpamHeuristics.communityWatchReporterCount(context, entry.number))
+    }
+
+    @Test
     fun `a read without a stamp can't reset the replay check`() {
         feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")), generatedAt = "2026-09-21T10:00:00+00:00")
         refresh()
@@ -150,6 +176,10 @@ class HotDataSyncReplayTest {
     private class ScriptedHotFeeds : HotFeedDataSource {
         var hotList = HotFeedSnapshot(emptyList<HotNumber>())
         var communityWatch = HotFeedSnapshot(emptyList<CommunityWatchNumber>())
+
+        /** What the build-time asset parses to; the network copy when null. */
+        var bundledWatch: HotFeedSnapshot<List<CommunityWatchNumber>>? = null
+        var watchOffline = false
         private val quiet = HotFeedSnapshot(listOf("212555"), generatedAt = "2026-09-21T10:00:00+00:00")
 
         override suspend fun fetchHotList(
@@ -185,7 +215,8 @@ class HotDataSyncReplayTest {
         override suspend fun fetchCommunityWatchSnapshot(
             owner: String,
             repo: String,
-        ) = Result.success(communityWatch)
+        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> =
+            if (watchOffline) Result.failure(java.io.IOException("offline")) else Result.success(communityWatch)
 
         override fun parseHotListJson(body: String): List<HotNumber> = emptyList()
 
@@ -193,6 +224,6 @@ class HotDataSyncReplayTest {
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
 
-        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = communityWatch
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = bundledWatch ?: communityWatch
     }
 }

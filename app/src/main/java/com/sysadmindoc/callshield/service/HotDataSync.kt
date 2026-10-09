@@ -145,7 +145,11 @@ internal object HotDataSync {
             }
         }
 
-        if (!dependencies.spamHeuristics.hasCommunityWatch()) {
+        // The watch list lives only in memory, so after a restart it is empty
+        // whether or not a network copy was read. Once one was, a number a
+        // not-spam report cleared must not come back from the build-time copy:
+        // the list waits for the next refresh instead.
+        if (!dependencies.spamHeuristics.hasCommunityWatch() && !hasReadCommunityWatch(repo)) {
             val bundledWatch = loadBundledCommunityWatch(appContext, source)
             val watchNumbers = sanitizeCommunityWatch(bundledWatch.data)
             if (bundledWatch.resolved && shouldApplyFeed(watchNumbers, bundledWatch.explicitlyCleared)) {
@@ -226,7 +230,12 @@ internal object HotDataSync {
                 dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
 
-            val communityWatch = loadCommunityWatch(appContext, source, dependencies.spamHeuristics.hasCommunityWatch())
+            val communityWatch =
+                loadCommunityWatch(
+                    appContext,
+                    source,
+                    dependencies.spamHeuristics.hasCommunityWatch() || lastRead[COMMUNITY_WATCH_FEED] != null,
+                )
             val watchNumbers = sanitizeCommunityWatch(communityWatch.data)
             val communityWatchReplay = isReplay(communityWatch.generatedAt, lastRead[COMMUNITY_WATCH_FEED])
             val communityWatchApplied =
@@ -352,6 +361,9 @@ internal object HotDataSync {
         }
         return loadBundledSpamDomains(context, source).copy(failure = remote.exceptionOrNull())
     }
+
+    private suspend fun hasReadCommunityWatch(repo: SpamRepository): Boolean =
+        repo.readHotDataHealth().feedGeneratedAt[COMMUNITY_WATCH_FEED] != null
 
     private suspend fun loadCommunityWatch(
         context: Context,
