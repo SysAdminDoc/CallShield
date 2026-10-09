@@ -277,6 +277,7 @@ class SpamRepositoryImpl(
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
         fromSmsInbox: Boolean = true,
+        subscriptionId: Int? = null,
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
         val senderProvenance = senderProvenanceResolver.resolve(number, senderRegionIso)
@@ -336,6 +337,7 @@ class SpamRepositoryImpl(
                 smsFirstContact = smsFirstContact,
                 senderProvenance = senderProvenance,
                 homeRegionIso = senderRegionIso,
+                subscriptionId = subscriptionId,
             )
         val pipelineRun = CheckerPipeline.runWithDiagnostics(smsExtensions, ctx)
         val verdict = pipelineRun.result

@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.data.checker
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
@@ -1205,11 +1207,17 @@ internal class SmsContextTrustChecker : IChecker {
  * Singapore to "Likely-SCAM", Ireland to "Likely Scam" (since 2025-07-03) and
  * Australia to "Unverified" (since 2026-07-01). A text whose sender is exactly
  * one of those labels is flagged. "Unverified" could be an ordinary sender name
- * elsewhere, so it counts only on an Australian SIM. A sender the user trusts
- * still gets through.
+ * elsewhere, so it counts only when the SIM that received the text is
+ * Australian. A sender the user trusts still gets through.
+ *
+ * The receiving SIM is read on every "Unverified" text, never cached: on a
+ * dual-SIM phone it isn't the home region's SIM, and a SIM that was still
+ * locked at boot reads empty until it's unlocked. An empty reading falls back
+ * to [homeRegionIso].
  */
 internal class CarrierScamLabelChecker(
     private val homeRegionIso: String?,
+    private val receivingSimCountry: (Context, Int?) -> String? = ::receivingSimCountryIso,
 ) : IChecker {
     override val priority = CheckerPriority.SMS_CARRIER_LABEL
     override val name = "carrier_label"
@@ -1217,7 +1225,10 @@ internal class CarrierScamLabelChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.trustedAllowSource == null
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val label = carrierScamLabel(ctx.number, homeRegionIso) ?: return null
+        val label =
+            carrierScamLabel(ctx.number) {
+                receivingSimCountry(ctx.appContext, ctx.subscriptionId)?.takeIf { it.isNotBlank() } ?: homeRegionIso
+            } ?: return null
         return BlockResult.block(
             matchSource = "carrier_label",
             type = "sms_spam",
@@ -1233,14 +1244,37 @@ internal class CarrierScamLabelChecker(
         fun carrierScamLabel(
             sender: String,
             homeRegionIso: String?,
+        ): String? = carrierScamLabel(sender) { homeRegionIso }
+
+        /** As above, with the region read only for a label that depends on it. */
+        private inline fun carrierScamLabel(
+            sender: String,
+            regionIso: () -> String?,
         ): String? =
             when (sender.trim().uppercase(java.util.Locale.ROOT)) {
                 "LIKELY-SCAM" -> "Likely-SCAM"
                 "LIKELY SCAM" -> "Likely Scam"
-                "UNVERIFIED" -> "Unverified".takeIf { homeRegionIso.equals("AU", ignoreCase = true) }
+                "UNVERIFIED" -> "Unverified".takeIf { regionIso().equals("AU", ignoreCase = true) }
                 else -> null
             }
     }
+}
+
+/**
+ * The country of the SIM on [subscriptionId], or of the default SIM when the
+ * id is missing or invalid. Empty while that SIM is locked or absent.
+ */
+internal fun receivingSimCountryIso(
+    context: Context,
+    subscriptionId: Int?,
+): String? {
+    val telephony = context.getSystemService(TelephonyManager::class.java) ?: return null
+    val receiving =
+        subscriptionId
+            ?.takeIf { SubscriptionManager.isValidSubscriptionId(it) }
+            ?.let { runCatching { telephony.createForSubscriptionId(it) }.getOrNull() }
+            ?: telephony
+    return runCatching { receiving.simCountryIso }.getOrNull()
 }
 
 internal class SmsBurstChecker(

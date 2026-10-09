@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.checker
 
+import android.content.Context
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
@@ -16,4 +17,6 @@ data class CheckerDependencies(
     val smsContextChecker: SmsContextChecker = SmsContextChecker.shared,
     val campaignDetector: CampaignDetector = CampaignDetector.shared,
     val hashWildcardMatcher: HashWildcardMatcher = HashWildcardMatcher.shared,
+    /** The country of the SIM a text arrived on, by subscription id. */
+    val receivingSimCountry: (Context, Int?) -> String? = ::receivingSimCountryIso,
 )

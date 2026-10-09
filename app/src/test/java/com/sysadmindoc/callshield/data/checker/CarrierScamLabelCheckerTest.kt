@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.checker
 
 import android.app.Application
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.checker.CarrierScamLabelChecker.Companion.carrierScamLabel
@@ -67,4 +68,52 @@ class CarrierScamLabelCheckerTest {
 
             assertFalse(result.reasonCode == BlockReasonCode.CARRIER_LABEL)
         }
+
+    @Test
+    fun `on a dual-SIM phone Unverified counts only when the Australian SIM in slot 2 received it`() =
+        runBlocking {
+            // Slot 1 is the American SIM the phone's home region comes from.
+            val simCountries: Map<Int?, String> = mapOf(1 to "us", 2 to "au")
+            IsolatedRepositoryFixture(
+                ApplicationProvider.getApplicationContext(),
+                checkerDependencies = CheckerDependencies(receivingSimCountry = { _, subscriptionId -> simCountries[subscriptionId] }),
+            ).use { dualSim ->
+                val onAustralianSim = dualSim.repository.isSpamSms("Unverified", APPOINTMENT, subscriptionId = 2)
+                val onAmericanSim = dualSim.repository.isSpamSms("Unverified", APPOINTMENT, subscriptionId = 1)
+
+                assertEquals(BlockReasonCode.CARRIER_LABEL, onAustralianSim.reasonCode)
+                assertFalse(onAmericanSim.reasonCode == BlockReasonCode.CARRIER_LABEL)
+            }
+        }
+
+    @Test
+    fun `a SIM that was locked at boot counts as soon as it's unlocked`() =
+        runBlocking {
+            // While the SIM was locked the phone took its region from the locale.
+            var simCountry = ""
+            var reads = 0
+            val checker =
+                CarrierScamLabelChecker(homeRegionIso = "US") { _, _ ->
+                    reads++
+                    simCountry
+                }
+            val text =
+                CheckContext(
+                    appContext = ApplicationProvider.getApplicationContext(),
+                    number = "UNVERIFIED",
+                    smsBody = APPOINTMENT,
+                    realtimeCall = true,
+                    prefs = emptyPreferences(),
+                    subscriptionId = 2,
+                )
+
+            assertNull("a locked SIM reads empty and the region falls back", checker.check(text))
+            simCountry = "au"
+            assertEquals("carrier_label", checker.check(text)?.matchSource)
+            assertEquals("the empty reading was not kept", 2, reads)
+        }
+
+    private companion object {
+        const val APPOINTMENT = "Your appointment is on Tuesday at 3 PM"
+    }
 }

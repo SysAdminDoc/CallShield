@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
+import android.telephony.SubscriptionManager
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
@@ -24,6 +25,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -126,6 +128,16 @@ class SmsReceiverRobolectricTest {
 
         val warning = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_code_during_call_title))
         assertEquals(NotificationHelper.CHANNEL_CODE_DURING_CALL, warning.channelId)
+    }
+
+    @Test
+    fun `a received text names the SIM it arrived on`() {
+        fun received(extras: Intent.() -> Unit) = SmsReceiver.receivingSubscriptionId(Intent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION).apply(extras))
+
+        assertEquals(2, received { putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, 2) })
+        assertEquals(3, received { putExtra("subscription", 3) })
+        assertNull(received { putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, SubscriptionManager.INVALID_SUBSCRIPTION_ID) })
+        assertNull(received {})
     }
 
     private fun awaitPhishingNotification(): Notification = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title))

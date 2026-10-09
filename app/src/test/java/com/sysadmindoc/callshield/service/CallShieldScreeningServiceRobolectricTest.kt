@@ -282,6 +282,7 @@ class CallShieldScreeningServiceRobolectricTest {
                         body: String,
                         realtimeCall: Boolean,
                         prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        subscriptionId: Int?,
                     ): SpamCheckResult = SpamCheckResult(isSpam = false)
                 },
             )
@@ -313,6 +314,7 @@ class CallShieldScreeningServiceRobolectricTest {
                         body: String,
                         realtimeCall: Boolean,
                         prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        subscriptionId: Int?,
                     ): SpamCheckResult = SpamCheckResult(isSpam = false)
                 },
             )
@@ -346,6 +348,7 @@ class CallShieldScreeningServiceRobolectricTest {
                         body: String,
                         realtimeCall: Boolean,
                         prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        subscriptionId: Int?,
                     ): SpamCheckResult = SpamCheckResult(isSpam = false)
                 },
             )

@@ -13,11 +13,13 @@ interface SpamCheckRepository {
         callerIdentity: CallerIdentity?,
     ): SpamCheckResult
 
+    /** [subscriptionId] is the SIM subscription a live text arrived on, when the broadcast named one. */
     suspend fun checkSpamSms(
         number: String,
         body: String,
         realtimeCall: Boolean,
         prefsSnapshot: Preferences?,
+        subscriptionId: Int? = null,
     ): SpamCheckResult
 
     /**

@@ -148,6 +148,8 @@ data class CheckContext(
     val alternateForms: List<String> = emptyList(),
     /** The phone's home region, which decides how a bare number reads ([NumberingPlan.from]). */
     val homeRegionIso: String? = null,
+    /** The SIM subscription a live text arrived on, when the broadcast named one. Null for calls and rescans. */
+    val subscriptionId: Int? = null,
 ) {
     /** Shared plan classification for NANP-only checkers in this evaluation. */
     val numberingPlan: NumberingPlan = NumberingPlan.from(number, homeRegionIso)
@@ -530,7 +532,7 @@ object SpamCheckers {
         homeRegionIso: String? = null,
     ): List<IChecker> =
         buildList {
-            add(CarrierScamLabelChecker(homeRegionIso))
+            add(CarrierScamLabelChecker(homeRegionIso, dependencies.receivingSimCountry))
             add(SmsContextTrustChecker())
             add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))

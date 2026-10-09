@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
+import android.telephony.SubscriptionManager
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
@@ -44,6 +45,15 @@ class SmsReceiver : BroadcastReceiver() {
             ruleId: Long?,
             pipelineDiagnostic: String?,
         ): Boolean = repo.logFlaggedText(sender, body, matchReason, confidence, ruleId, pipelineDiagnostic)
+
+        /** The extra older telephony stacks put the subscription under, beside [SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX]. */
+        private const val LEGACY_SUBSCRIPTION_EXTRA = "subscription"
+
+        /** The SIM subscription an SMS_RECEIVED broadcast arrived on, or null when it doesn't name a valid one. */
+        internal fun receivingSubscriptionId(intent: Intent): Int? =
+            sequenceOf(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, LEGACY_SUBSCRIPTION_EXTRA)
+                .map { intent.getIntExtra(it, SubscriptionManager.INVALID_SUBSCRIPTION_ID) }
+                .firstOrNull { SubscriptionManager.isValidSubscriptionId(it) }
 
         /** Hard cap on reassembled multipart body length (16 KB). */
         internal const val MAX_REASSEMBLED_BODY = 16_384
@@ -126,7 +136,7 @@ class SmsReceiver : BroadcastReceiver() {
                 // Block-SMS toggle. Local phishing-URL checks below run
                 // regardless; remote link checks require their own opt-in.
                 if (blockSmsEnabled) {
-                    val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
+                    val result = checkSpamSms(sender, body, prefsSnapshot = prefs, subscriptionId = receivingSubscriptionId(intent))
                     if (result.isSpam) {
                         logFlaggedSms(
                             repo = repo,

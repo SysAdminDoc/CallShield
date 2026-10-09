@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
@@ -23,6 +24,7 @@ internal class IsolatedRepositoryFixture(
     externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
     remote: SpamDataSource = GitHubDataSource(),
     wallClock: () -> Long = System::currentTimeMillis,
+    checkerDependencies: CheckerDependencies = CheckerDependencies(),
 ) : AutoCloseable {
     private val storeJob = SupervisorJob()
     private val storeScope = CoroutineScope(storeJob + Dispatchers.IO)
@@ -46,6 +48,7 @@ internal class IsolatedRepositoryFixture(
             externalBlocklistDataSource = externalBlocklistDataSource,
             remote = remote,
             wallClock = wallClock,
+            checkerDependencies = checkerDependencies,
         )
 
     private fun preferenceStore(name: String) =

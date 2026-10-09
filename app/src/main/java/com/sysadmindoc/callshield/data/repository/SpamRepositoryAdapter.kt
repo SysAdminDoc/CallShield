@@ -41,12 +41,14 @@ class SpamRepositoryAdapter(
         body: String,
         realtimeCall: Boolean,
         prefsSnapshot: Preferences?,
+        subscriptionId: Int?,
     ): SpamCheckResult =
         repository.isSpamSms(
             number = number,
             body = body,
             realtimeCall = realtimeCall,
             prefsSnapshot = prefsSnapshot,
+            subscriptionId = subscriptionId,
         )
 
     override suspend fun checkSpamMessageOutsideInbox(

@@ -745,13 +745,17 @@ class SpamRepository(
 
     // ── SMS-specific check ─────────────────────────────────────────────
 
-    /** @param realtimeCall see [isSpam] — pass `false` from historical scanners. */
+    /**
+     * @param realtimeCall see [isSpam] — pass `false` from historical scanners.
+     * @param subscriptionId the SIM subscription a live text arrived on, when known.
+     */
     suspend fun isSpamSms(
         number: String,
         body: String,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
         fromSmsInbox: Boolean = true,
+        subscriptionId: Int? = null,
     ): SpamCheckResult =
         spamRepositoryImpl.isSpamSms(
             number = number,
@@ -759,6 +763,7 @@ class SpamRepository(
             realtimeCall = realtimeCall,
             prefsSnapshot = prefsSnapshot,
             fromSmsInbox = fromSmsInbox,
+            subscriptionId = subscriptionId,
         )
 
     // ── Pipeline trace (diagnostic) ─────────────────────────────────────
