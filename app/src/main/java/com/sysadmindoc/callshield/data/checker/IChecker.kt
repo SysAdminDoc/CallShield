@@ -529,10 +529,9 @@ object SpamCheckers {
         repo: SpamRepositoryImpl,
         appContext: Context,
         dependencies: CheckerDependencies = CheckerDependencies(),
-        homeRegionIso: String? = null,
     ): List<IChecker> =
         buildList {
-            add(CarrierScamLabelChecker(homeRegionIso, dependencies.receivingSimCountry))
+            add(CarrierScamLabelChecker(dependencies.receivingSimCountry))
             add(SmsContextTrustChecker())
             add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))

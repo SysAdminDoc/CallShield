@@ -93,7 +93,7 @@ class CarrierScamLabelCheckerTest {
             var simCountry = ""
             var reads = 0
             val checker =
-                CarrierScamLabelChecker(homeRegionIso = "US") { _, _ ->
+                CarrierScamLabelChecker { _, _ ->
                     reads++
                     simCountry
                 }
@@ -105,6 +105,7 @@ class CarrierScamLabelCheckerTest {
                     realtimeCall = true,
                     prefs = emptyPreferences(),
                     subscriptionId = 2,
+                    homeRegionIso = "US",
                 )
 
             assertNull("a locked SIM reads empty and the region falls back", checker.check(text))

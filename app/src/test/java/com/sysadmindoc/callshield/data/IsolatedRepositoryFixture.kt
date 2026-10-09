@@ -26,6 +26,12 @@ internal class IsolatedRepositoryFixture(
     wallClock: () -> Long = System::currentTimeMillis,
     checkerDependencies: CheckerDependencies = CheckerDependencies(),
 ) : AutoCloseable {
+    init {
+        // The repository reads the region through a process-wide cache, so a
+        // fixture starts from what this test's telephony shadows say.
+        PhoneIdentityCanonicalizer.resetCacheForTests()
+    }
+
     private val storeJob = SupervisorJob()
     private val storeScope = CoroutineScope(storeJob + Dispatchers.IO)
     private val storeDirectory = Files.createTempDirectory("callshield-test-datastore-").toFile()

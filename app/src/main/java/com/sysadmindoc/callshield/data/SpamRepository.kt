@@ -89,12 +89,18 @@ class SpamRepository(
     checkerDependencies: CheckerDependencies = CheckerDependencies(),
     settingsDataStore: DataStore<Preferences>? = null,
     privateSettingsDataStore: DataStore<Preferences>? = null,
-    private val phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer =
-        PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
+    /** A fixed canonicalizer, for tests; null follows the phone's current region. */
+    phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer? = null,
     externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
     wallClock: () -> Long = System::currentTimeMillis,
 ) {
     private val appContext: Context = context.applicationContext
+
+    // Read through the short-lived region cache, not once per process: a SIM
+    // still locked at boot reports no country, and the network's or the
+    // locale's region would otherwise stand in until the app restarted.
+    private val canonicalizer: () -> PhoneIdentityCanonicalizer =
+        phoneIdentityCanonicalizer?.let { fixed -> { fixed } } ?: { PhoneIdentityCanonicalizer.cachedFromContext(appContext) }
     private val db: AppDatabase = database
     private val dao: SpamDao = database.spamDao()
     private val settingsRepository =
@@ -109,10 +115,10 @@ class SpamRepository(
             dao = dao,
             settingsRepository = settingsRepository,
             checkerDependencies = checkerDependencies,
-            normalizePhone = phoneIdentityCanonicalizer::canonicalizePhone,
-            normalizeSenderIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
-            senderRegionIso = phoneIdentityCanonicalizer.homeRegionIso,
-            equivalentForms = phoneIdentityCanonicalizer::equivalentForms,
+            normalizePhone = { canonicalizer().canonicalizePhone(it) },
+            normalizeSenderIdentity = { canonicalizer().canonicalizeIdentity(it) },
+            senderRegionIso = { canonicalizer().homeRegionIso },
+            equivalentForms = { canonicalizer().equivalentForms(it) },
             wallClock = wallClock,
         )
     private val syncRepository =
@@ -121,7 +127,7 @@ class SpamRepository(
             dao = dao,
             remote = remote,
             settingsRepository = settingsRepository,
-            normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
+            normalizeNumber = { canonicalizer().canonicalizePhone(it) },
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
             externalBlocklistDataSource = externalBlocklistDataSource,
             clock = wallClock,
@@ -131,9 +137,9 @@ class SpamRepository(
             context = appContext,
             dao = dao,
             settingsRepository = settingsRepository,
-            normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
-            normalizeLogIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
-            equivalentForms = phoneIdentityCanonicalizer::equivalentForms,
+            normalizeNumber = { canonicalizer().canonicalizePhone(it) },
+            normalizeLogIdentity = { canonicalizer().canonicalizeIdentity(it) },
+            equivalentForms = { canonicalizer().equivalentForms(it) },
             invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
             invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
             invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
@@ -695,7 +701,7 @@ class SpamRepository(
     internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
 
     /** Forms of a normalized number to match stored rows against, as the screening pipeline does. */
-    internal fun lookupForms(normalized: String): List<String> = phoneIdentityCanonicalizer.equivalentForms(normalized)
+    internal fun lookupForms(normalized: String): List<String> = canonicalizer().equivalentForms(normalized)
 
     /** When [normalized] last appeared in a text CallShield flagged, within the last 30 days, or null. */
     internal suspend fun lastFlaggedTextSighting(
@@ -1219,9 +1225,9 @@ class SpamRepository(
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = blocklistRepository.searchLog(query)
 
-    fun normalizeNumber(number: String): String = phoneIdentityCanonicalizer.canonicalizePhone(number)
+    fun normalizeNumber(number: String): String = canonicalizer().canonicalizePhone(number)
 
-    fun normalizeSenderIdentity(sender: String): String = phoneIdentityCanonicalizer.canonicalizeIdentity(sender)
+    fun normalizeSenderIdentity(sender: String): String = canonicalizer().canonicalizeIdentity(sender)
 }
 
 /**

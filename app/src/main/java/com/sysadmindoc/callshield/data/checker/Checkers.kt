@@ -1216,7 +1216,6 @@ internal class SmsContextTrustChecker : IChecker {
  * to [homeRegionIso].
  */
 internal class CarrierScamLabelChecker(
-    private val homeRegionIso: String?,
     private val receivingSimCountry: (Context, Int?) -> String? = ::receivingSimCountryIso,
 ) : IChecker {
     override val priority = CheckerPriority.SMS_CARRIER_LABEL
@@ -1227,7 +1226,7 @@ internal class CarrierScamLabelChecker(
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val label =
             carrierScamLabel(ctx.number) {
-                receivingSimCountry(ctx.appContext, ctx.subscriptionId)?.takeIf { it.isNotBlank() } ?: homeRegionIso
+                receivingSimCountry(ctx.appContext, ctx.subscriptionId)?.takeIf { it.isNotBlank() } ?: ctx.homeRegionIso
             } ?: return null
         return BlockResult.block(
             matchSource = "carrier_label",

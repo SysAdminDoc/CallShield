@@ -40,7 +40,8 @@ class SpamRepositoryImpl(
     private val normalizePhone: (String) -> String,
     private val normalizeSenderIdentity: (String) -> String,
     private val senderProvenanceResolver: SenderProvenanceResolver = SenderProvenanceResolver(),
-    private val senderRegionIso: String? = null,
+    /** The phone's home region now; it can change while the process runs. */
+    private val senderRegionIso: () -> String? = { null },
     /** Every stored spelling of a canonical number, canonical first. */
     private val equivalentForms: (String) -> List<String> = { listOf(it) },
     private val wallClock: () -> Long = System::currentTimeMillis,
@@ -229,7 +230,7 @@ class SpamRepositoryImpl(
         SpamCheckers.buildCallChain(this, context, checkerDependencies)
     }
     private val smsExtensions: List<IChecker> by lazy {
-        SpamCheckers.buildSmsExtensions(this, context, checkerDependencies, senderRegionIso)
+        SpamCheckers.buildSmsExtensions(this, context, checkerDependencies)
     }
 
     suspend fun isSpam(
@@ -258,7 +259,7 @@ class SpamRepositoryImpl(
                 smsContextTrusted = smsContextTrusted,
                 senderProvenance = senderProvenance,
                 alternateForms = equivalentForms(normalized).drop(1),
-                homeRegionIso = senderRegionIso,
+                homeRegionIso = senderRegionIso(),
             )
 
         val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
@@ -280,7 +281,7 @@ class SpamRepositoryImpl(
         subscriptionId: Int? = null,
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
-        val senderProvenance = senderProvenanceResolver.resolve(number, senderRegionIso)
+        val senderProvenance = senderProvenanceResolver.resolve(number, senderRegionIso())
         val canonicalPhone = normalizePhone(number)
         val smsContextTrusted =
             canonicalPhone.isNotBlank() &&
@@ -336,7 +337,7 @@ class SpamRepositoryImpl(
                 smsContextTrusted = smsContextTrusted,
                 smsFirstContact = smsFirstContact,
                 senderProvenance = senderProvenance,
-                homeRegionIso = senderRegionIso,
+                homeRegionIso = senderRegionIso(),
                 subscriptionId = subscriptionId,
             )
         val pipelineRun = CheckerPipeline.runWithDiagnostics(smsExtensions, ctx)
@@ -367,7 +368,7 @@ class SpamRepositoryImpl(
                 realtimeCall = false,
                 prefs = prefs,
                 alternateForms = equivalentForms(normalized).drop(1),
-                homeRegionIso = senderRegionIso,
+                homeRegionIso = senderRegionIso(),
             )
         return CheckerPipeline.traceAll(callChain, ctx)
     }
