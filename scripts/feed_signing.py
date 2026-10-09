@@ -49,6 +49,7 @@ SIGNED_FEEDS = (
     "hot_numbers.json",
     "hot_ranges.json",
     "spam_domains.json",
+    "community_watch.json",
     "spam_model_weights.json",
     "app_release.json",
     "list_catalog.json",

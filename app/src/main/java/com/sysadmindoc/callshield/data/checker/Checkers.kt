@@ -984,7 +984,7 @@ internal class HeuristicChecker(
             )
 
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
-        val threshold = if (aggressive) 30 else 60
+        val threshold = if (aggressive) AGGRESSIVE_BLOCK_THRESHOLD else BLOCK_THRESHOLD
 
         if (hResult.score >= threshold) {
             return BlockResult.block(
@@ -1047,6 +1047,9 @@ internal class HeuristicChecker(
         }
 
     internal companion object {
+        const val BLOCK_THRESHOLD = 60
+        const val AGGRESSIVE_BLOCK_THRESHOLD = 30
+
         fun smsBodyForAnalysis(ctx: CheckContext): String? =
             ctx.smsBody.takeIf {
                 (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) && !ctx.smsContextTrusted

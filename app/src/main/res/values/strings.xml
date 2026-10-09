@@ -515,6 +515,7 @@
     <string name="overlay_reason_invalid_format">Unusual number format</string>
     <string name="overlay_reason_voip_range">High-risk VoIP range</string>
     <string name="overlay_reason_hot_campaign">Active spam campaign</string>
+    <string name="overlay_reason_community_watch">Reported by other CallShield users</string>
     <string name="overlay_reason_toll_free">Toll-free caller</string>
     <string name="overlay_reason_neighbor_spoof">Possible neighbor spoofing</string>
     <string name="overlay_reason_rapid_fire">Repeated call pattern</string>
@@ -1728,6 +1729,10 @@
     <plurals name="overlay_reports_count">
         <item quantity="one">%1$s report</item>
         <item quantity="other">%1$s reports</item>
+    </plurals>
+    <plurals name="community_watch_label">
+        <item quantity="one">Reported by %d CallShield user, not confirmed</item>
+        <item quantity="other">Reported by %d CallShield users, not confirmed</item>
     </plurals>
     <plurals name="notif_summary_text_recent">
         <item quantity="one">Caught %d spam item recently</item>

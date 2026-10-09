@@ -3,7 +3,9 @@ package com.sysadmindoc.callshield.service
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.model.HotNumber
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
 import kotlinx.coroutines.runBlocking
@@ -29,7 +31,10 @@ class HotDataSyncReplayTest {
     private val feeds = ScriptedHotFeeds()
 
     @After
-    fun tearDown() = fixture.close()
+    fun tearDown() {
+        SpamHeuristics.updateCommunityWatch(emptyList())
+        fixture.close()
+    }
 
     @Test
     fun `an older signed copy replayed after a newer one can't wipe the trending rows`() {
@@ -63,6 +68,36 @@ class HotDataSyncReplayTest {
         refresh()
 
         assertEquals(emptySet<String>(), hotRows())
+    }
+
+    @Test
+    fun `community watch entries apply and a replayed clear cannot remove them`() {
+        val entry = CommunityWatchNumber("+33412345678", 2)
+        feeds.communityWatch = HotFeedSnapshot(listOf(entry), generatedAt = "2026-09-21T10:00:00+00:00")
+        refresh()
+        assertEquals(2, SpamHeuristics.communityWatchReporterCount(context, entry.number))
+        val score = SpamHeuristics.shared.analyze(context, entry.number, enableNeighborSpoof = false).score
+        assertEquals(15, score)
+        assertTrue("watch score $score must stay below aggressive threshold 30", score < 30)
+
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-05T12:00:00+00:00")
+        refresh()
+
+        assertEquals(2, SpamHeuristics.communityWatchReporterCount(context, entry.number))
+        val health = runBlocking { fixture.repository.readHotDataHealth() }
+        assertTrue(HotDataSync.COMMUNITY_WATCH_FEED in health.refusedFeeds)
+        assertEquals("2026-09-21T10:00:00+00:00", health.feedGeneratedAt[HotDataSync.COMMUNITY_WATCH_FEED])
+    }
+
+    @Test
+    fun `a newer community watch clear removes the advisory entries`() {
+        val entry = CommunityWatchNumber("+33412345678", 2)
+        feeds.communityWatch = HotFeedSnapshot(listOf(entry), generatedAt = "2026-09-21T10:00:00+00:00")
+        refresh()
+        feeds.communityWatch = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-21T11:00:00+00:00")
+        refresh()
+
+        assertEquals(0, SpamHeuristics.communityWatchReporterCount(context, entry.number))
     }
 
     @Test
@@ -114,6 +149,7 @@ class HotDataSyncReplayTest {
 
     private class ScriptedHotFeeds : HotFeedDataSource {
         var hotList = HotFeedSnapshot(emptyList<HotNumber>())
+        var communityWatch = HotFeedSnapshot(emptyList<CommunityWatchNumber>())
         private val quiet = HotFeedSnapshot(listOf("212555"), generatedAt = "2026-09-21T10:00:00+00:00")
 
         override suspend fun fetchHotList(
@@ -146,10 +182,17 @@ class HotDataSyncReplayTest {
             repo: String,
         ) = Result.success(HotFeedSnapshot(listOf("bad.example"), generatedAt = "2026-09-21T10:00:00+00:00"))
 
+        override suspend fun fetchCommunityWatchSnapshot(
+            owner: String,
+            repo: String,
+        ) = Result.success(communityWatch)
+
         override fun parseHotListJson(body: String): List<HotNumber> = emptyList()
 
         override fun parseHotRangesJson(body: String): List<String> = emptyList()
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
+
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = communityWatch
     }
 }

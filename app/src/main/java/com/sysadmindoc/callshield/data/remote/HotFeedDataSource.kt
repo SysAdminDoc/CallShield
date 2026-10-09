@@ -20,7 +20,17 @@ data class HotFeedSnapshot<T>(
     val inputDigest: String? = null,
 )
 
+data class CommunityWatchNumber(
+    val number: String,
+    val reporterCount: Int,
+)
+
 interface HotFeedDataSource {
+    suspend fun fetchCommunityWatchSnapshot(
+        owner: String = GitHubDataSource.DEFAULT_REPO_OWNER,
+        repo: String = GitHubDataSource.DEFAULT_REPO_NAME,
+    ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>>
+
     suspend fun fetchHotList(
         owner: String = GitHubDataSource.DEFAULT_REPO_OWNER,
         repo: String = GitHubDataSource.DEFAULT_REPO_NAME,
@@ -56,6 +66,8 @@ interface HotFeedDataSource {
     fun parseHotRangesJson(body: String): List<String>
 
     fun parseSpamDomainsJson(body: String): List<String>
+
+    fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>>
 
     fun parseHotListSnapshotJson(body: String): HotFeedSnapshot<List<HotNumber>> = HotFeedSnapshot(parseHotListJson(body))
 

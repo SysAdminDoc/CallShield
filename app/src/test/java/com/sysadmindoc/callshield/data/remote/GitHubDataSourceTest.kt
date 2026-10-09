@@ -9,6 +9,46 @@ class GitHubDataSourceTest {
     private val dataSource = GitHubDataSource()
 
     @Test
+    fun `parseCommunityWatchSnapshotJson requires a valid envelope and keeps replay metadata`() {
+        val parsed =
+            dataSource.parseCommunityWatchSnapshotJson(
+                """
+                {
+                  "schema_version": 1,
+                  "generated": "2026-10-09T12:00:00Z",
+                  "input_report_digest": "e3b0c44298fc1c149afbf4c8996fb924",
+                  "count": 1,
+                  "cleared": false,
+                  "numbers": [{"number": " +12125550101 ", "reporter_count": 2}]
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(listOf(CommunityWatchNumber("+12125550101", 2)), parsed.data)
+        assertEquals("2026-10-09T12:00:00Z", parsed.generatedAt)
+        assertEquals("e3b0c44298fc1c149afbf4c8996fb924", parsed.inputDigest)
+        assertTrue(!parsed.explicitlyCleared)
+    }
+
+    @Test
+    fun `parseCommunityWatchSnapshotJson only accepts an explicit empty clear`() {
+        val clear = dataSource.parseCommunityWatchSnapshotJson("""{"schema_version":1,"cleared":true,"numbers":[]}""")
+        assertTrue(clear.explicitlyCleared)
+
+        val unavailableEmpty = dataSource.parseCommunityWatchSnapshotJson("""{"schema_version":1,"numbers":[]}""")
+        assertTrue(!unavailableEmpty.explicitlyCleared)
+    }
+
+    @Test
+    fun `parseCommunityWatchSnapshotJson refuses weak reporters and malformed numbers`() {
+        val weak = """{"schema_version":1,"numbers":[{"number":"+12125550101","reporter_count":1}]}"""
+        val malformed = """{"schema_version":1,"numbers":[{"number":"2125550101","reporter_count":2}]}"""
+
+        assertTrue(runCatching { dataSource.parseCommunityWatchSnapshotJson(weak) }.isFailure)
+        assertTrue(runCatching { dataSource.parseCommunityWatchSnapshotJson(malformed) }.isFailure)
+    }
+
+    @Test
     fun `parseHotListJson supports metadata envelope`() {
         val parsed =
             dataSource.parseHotListJson(

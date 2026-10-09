@@ -831,6 +831,134 @@ def assert_reporters_count_on_one_utc_day(data_dir: Path) -> None:
         raise AssertionError(f"domain reporters should be counted on one UTC day: {reporters}")
 
 
+def assert_community_watch_uses_90_day_device_evidence(data_dir: Path) -> None:
+    """The advisory feed counts same-day devices for 90 days and clears on not-spam."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    watch_number, old_number, spread_number, cleared_number = (
+        "+12122340401", "+12122340402", "+12122340403", "+12122340404"
+    )
+    day = lambda age, hour=10, minute=0: (
+        datetime.now(timezone.utc) - timedelta(days=age)
+    ).replace(hour=hour, minute=minute, second=0, microsecond=0).isoformat()
+
+    group_a, group_b = "0000000000000010", "0000000000000011"
+    for index, (group, device) in enumerate(
+        (
+            (group_a, "0000000000000101"),
+            (group_a, "0000000000000102"),
+            (group_a, "0000000000000103"),
+            (group_b, "0000000000000104"),
+        ),
+        start=1,
+    ):
+        write_report(data_dir, f"watch-{index}.json", watch_number, group, day(2, 8 + index), device=device)
+
+    # This evidence is older than the unchanged 30-day promotion window.
+    for index, bucket in enumerate(BUCKETS[:2], start=1):
+        write_report(data_dir, f"old-watch-{index}.json", old_number, bucket, day(45), device=BUCKETS[index + 1])
+
+    # Daily HMACs rotate, so reports on adjacent UTC days never combine into
+    # two known reporters. These events are also too close to promote a row.
+    write_report(data_dir, "spread-watch-1.json", spread_number, BUCKETS[2], day(20, 23, 40), device=BUCKETS[3])
+    write_report(data_dir, "spread-watch-2.json", spread_number, BUCKETS[4], day(19, 0, 5), device=BUCKETS[5])
+
+    for index, bucket in enumerate(BUCKETS[:2], start=1):
+        write_report(data_dir, f"clear-watch-{index}.json", cleared_number, bucket, day(4), device=BUCKETS[index + 1])
+
+    # A legacy promotion ledger can prove reporter buckets, but never device
+    # identities. Migration keeps that evidence as one device per bucket.
+    legacy_number = "+12122340405"
+    legacy_day = (datetime.now(timezone.utc) - timedelta(days=5)).date().isoformat()
+    write_json(
+        data_dir / "community_pending.json",
+        {
+            "schema_version": 1,
+            "retention_days": 30,
+            "numbers": {
+                legacy_number: {
+                    "published": False,
+                    "entry": {
+                        "number": legacy_number,
+                        "type": "phishing",
+                        "reports": 0,
+                        "first_seen": legacy_day,
+                        "last_seen": legacy_day,
+                        "description": "Community reported",
+                        "sources": ["community"],
+                    },
+                    "events": [
+                        {"key": "legacy-a", "day": legacy_day, "bucket": BUCKETS[0], "count": 1},
+                        {"key": "legacy-b", "day": legacy_day, "bucket": BUCKETS[1], "count": 1},
+                    ],
+                }
+            },
+        },
+    )
+
+    run_drain(data_dir)
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    rows = {row["number"]: row["reporter_count"] for row in feed["numbers"]}
+    assert rows.get(watch_number) == 3, f"three devices in one /48 plus one in another must cap at three: {rows}"
+    assert rows.get(old_number) == 2, f"90-day evidence older than promotion retention was lost: {rows}"
+    assert rows.get(cleared_number) == 2, f"two same-day reporter groups should be watched: {rows}"
+    assert rows.get(legacy_number) == 2, f"legacy promotion evidence was not migrated: {rows}"
+    assert spread_number not in rows, f"reporters across UTC days were incorrectly combined: {rows}"
+    assert all(set(row) == {"number", "reporter_count"} for row in feed["numbers"]), feed
+
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert len(pending[watch_number]["watch_events"]) == 4, pending[watch_number]
+    assert len(pending[watch_number]["events"]) == 2, "device-level evidence changed the 30-day promotion gate"
+    assert pending[old_number]["events"] == [], "90-day evidence extended promotion retention"
+
+    write_report(data_dir, "not-spam.json", cleared_number, None, day(0), report_type="not_spam")
+    run_drain(data_dir)
+    cleared_feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert cleared_number not in {row["number"] for row in cleared_feed["numbers"]}, cleared_feed
+    assert cleared_feed["cleared"] is False, "other active numbers should keep the feed populated"
+
+    empty_dir = data_dir.parent / "expired"
+    expired_number = "+12122340406"
+    expired_day = (datetime.now(timezone.utc) - timedelta(days=91)).date().isoformat()
+    write_json(
+        empty_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    write_json(
+        empty_dir / "community_pending.json",
+        {
+            "schema_version": 1,
+            "retention_days": 30,
+            "watch_retention_days": 90,
+            "numbers": {
+                expired_number: {
+                    "published": False,
+                    "entry": {
+                        "number": expired_number,
+                        "type": "phishing",
+                        "reports": 0,
+                        "first_seen": expired_day,
+                        "last_seen": expired_day,
+                        "description": "Community reported",
+                        "sources": ["community"],
+                    },
+                    "events": [],
+                    "watch_events": [
+                        {"day": expired_day, "bucket": BUCKETS[0], "device": BUCKETS[0]},
+                        {"day": expired_day, "bucket": BUCKETS[1], "device": BUCKETS[1]},
+                    ],
+                    "not_spam_days": [],
+                }
+            },
+        },
+    )
+    run_drain(empty_dir)
+    expired_feed = json.loads((empty_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert expired_feed["numbers"] == [] and expired_feed["cleared"] is True, expired_feed
+
+
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish without being told, and an empty feed has to be
@@ -1381,6 +1509,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_reporters_count_on_one_utc_day(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_community_watch_uses_90_day_device_evidence(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

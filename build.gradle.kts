@@ -150,6 +150,7 @@ val bundledRuntimeAssets =
         "assets/hot_numbers.json",
         "assets/hot_ranges.json",
         "assets/spam_domains.json",
+        "assets/community_watch.json",
         "assets/spam_model_weights.json",
         "assets/list_catalog.json",
     )

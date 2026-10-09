@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 import javax.inject.Inject
@@ -29,6 +30,31 @@ class SpamHeuristics
             object : LinkedHashMap<String, Pair<Long, Boolean>>(16, 0.75f, true) {
                 override fun removeEldestEntry(eldest: Map.Entry<String, Pair<Long, Boolean>>?): Boolean = size > CONTACT_CACHE_MAX
             }
+
+        @Volatile
+        private var communityWatchCounts: Map<String, Int> = emptyMap()
+
+        fun updateCommunityWatch(numbers: Collection<CommunityWatchNumber>) {
+            communityWatchCounts =
+                numbers
+                    .asSequence()
+                    .map { it.copy(number = it.number.trim()) }
+                    .filter { it.number.matches(COMMUNITY_WATCH_NUMBER_PATTERN) && it.reporterCount >= 2 }
+                    .associate { it.number to it.reporterCount }
+        }
+
+        fun hasCommunityWatch(): Boolean = communityWatchCounts.isNotEmpty()
+
+        fun communityWatchReporterCount(
+            context: Context,
+            number: String,
+        ): Int {
+            val counts = communityWatchCounts
+            if (counts.isEmpty()) return 0
+            counts[number.trim()]?.let { return it }
+            val canonical = PhoneIdentityCanonicalizer.cachedFromContext(context).canonicalizePhone(number)
+            return counts[canonical] ?: 0
+        }
 
         fun isInContacts(
             context: Context,
@@ -494,6 +520,11 @@ class SpamHeuristics
                     reasons.add(it.reasonToken)
                 }
 
+            if (communityWatchReporterCount(context, number) >= COMMUNITY_WATCH_MIN_REPORTERS) {
+                score += COMMUNITY_WATCH_SCORE
+                reasons.add("community_watch")
+            }
+
             return HeuristicResult(score.coerceAtMost(100), reasons)
         }
 
@@ -514,6 +545,9 @@ class SpamHeuristics
 
             private const val CONTACT_CACHE_TTL_MS = 60_000L
             private const val CONTACT_CACHE_MAX = 128
+            private const val COMMUNITY_WATCH_MIN_REPORTERS = 2
+            private const val COMMUNITY_WATCH_SCORE = 15
+            private val COMMUNITY_WATCH_NUMBER_PATTERN = Regex("\\+[1-9][0-9]{6,14}")
 
             fun isInContacts(
                 context: Context,
@@ -541,6 +575,17 @@ class SpamHeuristics
             fun updateHotRanges(ranges: Collection<String>) {
                 shared.updateHotRanges(ranges)
             }
+
+            fun updateCommunityWatch(numbers: Collection<CommunityWatchNumber>) {
+                shared.updateCommunityWatch(numbers)
+            }
+
+            fun hasCommunityWatch(): Boolean = shared.hasCommunityWatch()
+
+            fun communityWatchReporterCount(
+                context: Context,
+                number: String,
+            ): Int = shared.communityWatchReporterCount(context, number)
 
             fun hasHotRanges(): Boolean = shared.hasHotRanges()
 

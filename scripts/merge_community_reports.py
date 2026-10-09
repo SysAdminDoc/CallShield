@@ -18,10 +18,11 @@ from pipeline_io import (
     require_matching_derived_feed,
 )
 from report_dedup import (
+    capped_reporter_count,
     find_burst_duplicates,
     find_resent_reports,
     parse_reported_at,
-    reporter_day_key,
+    reporter_identity,
     validated_report_id,
     validated_reporter_bucket,
 )
@@ -40,6 +41,7 @@ NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 MERGED_IDS_FILE = DATA_DIR / "merged_report_ids.json"
 COMMUNITY_PENDING_FILE = DATA_DIR / "community_pending.json"
+COMMUNITY_WATCH_FILE = DATA_DIR / "community_watch.json"
 # Numbers the maintainer checked by hand, usually a spam report filed as a
 # GitHub issue, against public complaint sites. Tracked, so every approval is
 # on the record with the reason for it.
@@ -48,6 +50,9 @@ SOURCE_MANIFEST_FILE = Path(__file__).parent.parent / "data" / "source-manifest.
 MAINTAINER_SOURCE = "maintainer_review"
 MAINTAINER_DESCRIPTION = "Reviewed by the maintainer"
 COMMUNITY_PENDING_DAYS = 30
+COMMUNITY_WATCH_DAYS = 90
+COMMUNITY_WATCH_MIN_REPORTERS = 2
+COMMUNITY_WATCH_MAX_NUMBERS = 5_000
 COMMUNITY_REPORTER_QUORUM = 3
 # Every promotion needs two reports this far apart, with or without buckets.
 COMMUNITY_REPORT_GAP = timedelta(hours=24)
@@ -98,7 +103,7 @@ def _is_valid_day(day: str, today: str) -> bool:
 
 
 def load_community_pending(today: str) -> dict[str, dict]:
-    """Read the promotion evidence, expiring reports older than 30 UTC days."""
+    """Read promotion and advisory evidence with their separate retention windows."""
     if not COMMUNITY_PENDING_FILE.exists():
         return {}
     try:
@@ -106,6 +111,7 @@ def load_community_pending(today: str) -> dict[str, dict]:
         if payload["schema_version"] != 1 or not isinstance(payload["numbers"], dict):
             raise ValueError("unsupported pending ledger")
         cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
+        watch_cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
         pending = {}
         for number, state in payload["numbers"].items():
             if (
@@ -132,11 +138,106 @@ def load_community_pending(today: str) -> dict[str, dict]:
                     raise ValueError(f"invalid pending event for {number}")
                 if event["day"] >= cutoff:
                     events.append(event)
-            if events or state["published"]:
-                pending[number] = {**state, "events": events}
+            raw_watch_events = state.get("watch_events")
+            if raw_watch_events is None:
+                # Older promotion ledgers kept only the /48 bucket. Treat it as
+                # one device while migrating the evidence the old schema can prove.
+                raw_watch_events = [
+                    {"day": event["day"], "bucket": event["bucket"], "device": event["bucket"]}
+                    for event in events
+                    if event["bucket"]
+                ]
+            if not isinstance(raw_watch_events, list):
+                raise ValueError(f"invalid watch events for {number}")
+            watch_events = []
+            for event in raw_watch_events:
+                if (
+                    not isinstance(event, dict)
+                    or not _is_valid_day(event.get("day"), today)
+                    or not isinstance(event.get("bucket"), str)
+                    or not event["bucket"]
+                    or validated_reporter_bucket(event["bucket"]) != event["bucket"]
+                    or not isinstance(event.get("device"), str)
+                    or not event["device"]
+                    or validated_reporter_bucket(event["device"]) != event["device"]
+                ):
+                    raise ValueError(f"invalid watch event for {number}")
+                if event["day"] >= watch_cutoff:
+                    watch_events.append(event)
+            raw_not_spam_days = state.get("not_spam_days", [])
+            if not isinstance(raw_not_spam_days, list):
+                raise ValueError(f"invalid not-spam dates for {number}")
+            not_spam_days = []
+            for day in raw_not_spam_days:
+                if not _is_valid_day(day, today):
+                    raise ValueError(f"invalid not-spam date for {number}")
+                if day >= watch_cutoff:
+                    not_spam_days.append(day)
+            if events or state["published"] or watch_events or not_spam_days:
+                pending[number] = {
+                    **state,
+                    "events": events,
+                    "watch_events": watch_events,
+                    "not_spam_days": sorted(set(not_spam_days)),
+                }
         return pending
     except (OSError, ValueError, KeyError, TypeError) as error:
         raise SystemExit(f"{COMMUNITY_PENDING_FILE.name} can't be read ({error}). Fix or restore it before merging.") from error
+
+
+def empty_community_state(number: str, report_type: str, day: str) -> dict:
+    """Create a pending ledger row for advisory-only evidence."""
+    return {
+        "published": False,
+        "entry": {
+            "number": number,
+            "type": report_type,
+            "reports": 0,
+            "first_seen": day,
+            "last_seen": day,
+            "description": COMMUNITY_DESCRIPTION,
+            "sources": [COMMUNITY_SOURCE],
+        },
+        "events": [],
+        "watch_events": [],
+        "not_spam_days": [],
+    }
+
+
+def add_watch_event(state: dict, day: str, identity: tuple[str, str]) -> None:
+    event = {"day": day, "bucket": identity[0], "device": identity[1]}
+    if event not in state.setdefault("watch_events", []):
+        state["watch_events"].append(event)
+
+
+def community_watch_reporter_count(state: dict) -> int:
+    by_day: dict[str, set[tuple[str, str]]] = {}
+    for event in state.get("watch_events", []):
+        by_day.setdefault(event["day"], set()).add((event["bucket"], event["device"]))
+    return max((capped_reporter_count(identities) for identities in by_day.values()), default=0)
+
+
+def write_community_watch_feed(pending: dict[str, dict], today: str, input_digest: str) -> None:
+    cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
+    rows = []
+    for number, state in pending.items():
+        if state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
+            continue
+        reporters = community_watch_reporter_count(state)
+        if reporters >= COMMUNITY_WATCH_MIN_REPORTERS:
+            rows.append({"number": number, "reporter_count": reporters})
+    rows = sorted(rows, key=lambda row: (-row["reporter_count"], row["number"]))[:COMMUNITY_WATCH_MAX_NUMBERS]
+    atomic_write_json(
+        COMMUNITY_WATCH_FILE,
+        {
+            "schema_version": 1,
+            "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "input_report_digest": input_digest,
+            "count": len(rows),
+            "cleared": not rows,
+            "numbers": rows,
+        },
+    )
 
 
 def legacy_community_state(entry: dict, today: str) -> dict:
@@ -566,8 +667,8 @@ def main(argv: list[str] | None = None):
     if not report_files:
         print("No queued reports; checking community evidence.")
 
+    report_digest = report_queue_digest(REPORTS_DIR)
     if report_files:
-        report_digest = report_queue_digest(REPORTS_DIR)
         for derived_file in (
             DATA_DIR / "hot_numbers.json",
             DATA_DIR / "hot_ranges.json",
@@ -593,6 +694,7 @@ def main(argv: list[str] | None = None):
 
     today = datetime.now(timezone.utc).date().isoformat()
     pending_cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
+    watch_cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
     pending = load_community_pending(today)
     sanitize_dates(db, today)
 
@@ -654,12 +756,12 @@ def main(argv: list[str] | None = None):
             continue
         spam_type = peek.get("type", "unknown")
         reported_at = parse_reported_at(peek.get("reported_at"))
-        reporter_bucket = validated_reporter_bucket(peek.get("reporter_bucket"))
-        day_key = reporter_day_key(reporter_bucket, reported_at)
-        if day_key is None:
+        identity = reporter_identity(peek)
+        if identity is None or reported_at is None:
             burst_candidates.append(((peeked_number, spam_type), reported_at, report_file.name))
         else:
-            identity_key = (peeked_number, spam_type, *day_key)
+            report_day = reported_at.astimezone(timezone.utc).date().isoformat()
+            identity_key = (peeked_number, spam_type, report_day, *identity)
             if identity_key in seen_reporter_days:
                 identity_duplicates.add(report_file.name)
             else:
@@ -759,6 +861,16 @@ def main(argv: list[str] | None = None):
             # Authoritative FCC/FTC entries are immune to anonymous removal,
             # otherwise a stream of not_spam reports could de-list real spammers.
             if spam_type == "not_spam":
+                if reported_at >= watch_cutoff and (
+                    number not in existing or canonical_source_ids(existing[number]) == {"community_reports"}
+                ):
+                    state = pending.get(number)
+                    if state is None:
+                        state = empty_community_state(number, "unknown", reported_at)
+                        pending[number] = state
+                    not_spam_days = state.setdefault("not_spam_days", [])
+                    if reported_at not in not_spam_days:
+                        not_spam_days.append(reported_at)
                 reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
                 if reporter_bucket:
                     not_spam_votes.setdefault(number, set()).add(reporter_bucket)
@@ -770,6 +882,15 @@ def main(argv: list[str] | None = None):
                     # "implausible" total hides a stale Worker.
                     unattributed_votes += 1
             else:
+                identity = reporter_identity(report)
+                if reported_at >= watch_cutoff and identity and (
+                    number not in existing or canonical_source_ids(existing[number]) == {"community_reports"}
+                ):
+                    state = pending.get(number)
+                    if state is None:
+                        state = empty_community_state(number, spam_type, reported_at)
+                        pending[number] = state
+                    add_watch_event(state, reported_at, identity)
                 if reported_at < pending_cutoff and number not in existing:
                     # Too old to count toward promoting a new row. A row that is already
                     # in the database (FCC-backed or published) still takes the report.
@@ -805,6 +926,8 @@ def main(argv: list[str] | None = None):
                                     "sources": [COMMUNITY_SOURCE],
                                 },
                                 "events": [],
+                                "watch_events": [],
+                                "not_spam_days": [],
                             }
                             pending[number] = state
                         if state:
@@ -901,7 +1024,8 @@ def main(argv: list[str] | None = None):
 
     pending = {
         number: state for number, state in pending.items()
-        if (state["published"] and number in existing) or (not state["published"] and state["events"])
+        if (state["published"] and number in existing)
+        or (not state["published"] and (state["events"] or state.get("watch_events") or state.get("not_spam_days")))
     }
 
     if review_candidates and (
@@ -946,8 +1070,14 @@ def main(argv: list[str] | None = None):
 
     atomic_write_json(
         COMMUNITY_PENDING_FILE,
-        {"schema_version": 1, "retention_days": COMMUNITY_PENDING_DAYS, "numbers": dict(sorted(pending.items()))},
+        {
+            "schema_version": 1,
+            "retention_days": COMMUNITY_PENDING_DAYS,
+            "watch_retention_days": COMMUNITY_WATCH_DAYS,
+            "numbers": dict(sorted(pending.items())),
+        },
     )
+    write_community_watch_feed(pending, today, report_digest)
 
     # Before the files go, so a resend arriving later is still recognised.
     remember_merged_report_ids(merged_ids, counted_ids, today)

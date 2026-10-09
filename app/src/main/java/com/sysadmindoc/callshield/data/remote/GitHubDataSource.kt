@@ -145,6 +145,7 @@ class GitHubDataSource internal constructor(
         moshi.adapter<List<String>>(
             Types.newParameterizedType(List::class.java, String::class.java),
         )
+    private val communityWatchEnvelopeAdapter = moshi.adapter(CommunityWatchPayload::class.java)
     private val latestReleaseAdapter = moshi.adapter(GitHubReleasePayload::class.java)
 
     private val defaultBranchLock get() = state.lock
@@ -187,6 +188,7 @@ class GitHubDataSource internal constructor(
         const val HOT_LIST_PATH = "data/hot_numbers.json"
         const val HOT_RANGES_PATH = "data/hot_ranges.json"
         const val SPAM_DOMAINS_PATH = "data/spam_domains.json"
+        const val COMMUNITY_WATCH_PATH = "data/community_watch.json"
         const val MODEL_WEIGHTS_PATH = "data/spam_model_weights.json"
         const val APP_RELEASE_PATH = "data/app_release.json"
         const val LIST_CATALOG_PATH = "data/list_catalog.json"
@@ -197,6 +199,7 @@ class GitHubDataSource internal constructor(
         const val BUNDLED_HOT_LIST_ASSET = "hot_numbers.json"
         const val BUNDLED_HOT_RANGES_ASSET = "hot_ranges.json"
         const val BUNDLED_SPAM_DOMAINS_ASSET = "spam_domains.json"
+        const val BUNDLED_COMMUNITY_WATCH_ASSET = "community_watch.json"
         const val BUNDLED_MODEL_WEIGHTS_ASSET = "spam_model_weights.json"
         const val BUNDLED_LIST_CATALOG_ASSET = "list_catalog.json"
 
@@ -205,6 +208,7 @@ class GitHubDataSource internal constructor(
         internal const val MAX_HOT_LIST_BYTES = 1L * 1024L * 1024L
         internal const val MAX_HOT_RANGES_BYTES = 512L * 1024L
         internal const val MAX_SPAM_DOMAINS_BYTES = 2L * 1024L * 1024L
+        internal const val MAX_COMMUNITY_WATCH_BYTES = 1L * 1024L * 1024L
         internal const val MAX_APP_RELEASE_BYTES = 4L * 1024L
         internal const val MAX_LIST_CATALOG_BYTES = 64L * 1024L
         internal const val MAX_MODEL_WEIGHTS_BYTES = 1L * 1024L * 1024L
@@ -215,6 +219,7 @@ class GitHubDataSource internal constructor(
         internal const val MAX_HOT_LIST_ROWS = 5_000
         internal const val MAX_HOT_RANGE_ROWS = 20_000
         internal const val MAX_SPAM_DOMAIN_ROWS = 50_000
+        internal const val MAX_COMMUNITY_WATCH_ROWS = 5_000
 
         private const val GITHUB_API_BASE = "https://api.github.com/repos"
         private const val USER_AGENT = "CallShield/1.0"
@@ -241,6 +246,7 @@ class GitHubDataSource internal constructor(
                 HOT_LIST_PATH to RawFeedSpec("hot list", MAX_HOT_LIST_BYTES),
                 HOT_RANGES_PATH to RawFeedSpec("hot ranges", MAX_HOT_RANGES_BYTES),
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
+                COMMUNITY_WATCH_PATH to RawFeedSpec("community watch", MAX_COMMUNITY_WATCH_BYTES),
                 MODEL_WEIGHTS_PATH to RawFeedSpec("model weights", MAX_MODEL_WEIGHTS_BYTES),
                 APP_RELEASE_PATH to RawFeedSpec("release notice", MAX_APP_RELEASE_BYTES),
                 LIST_CATALOG_PATH to RawFeedSpec("list catalog", MAX_LIST_CATALOG_BYTES),
@@ -258,6 +264,7 @@ class GitHubDataSource internal constructor(
                 HOT_LIST_PATH,
                 HOT_RANGES_PATH,
                 SPAM_DOMAINS_PATH,
+                COMMUNITY_WATCH_PATH,
                 MODEL_WEIGHTS_PATH,
                 APP_RELEASE_PATH,
                 LIST_CATALOG_PATH,
@@ -265,6 +272,8 @@ class GitHubDataSource internal constructor(
 
         private val VERSION_NAME_REGEX = Regex("\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}")
         private val SHA256_REGEX = Regex("[0-9a-f]{64}")
+        private val COMMUNITY_WATCH_NUMBER_REGEX = Regex("\\+[1-9][0-9]{6,14}")
+        private const val MAX_COMMUNITY_WATCH_REPORTERS = 100_000
         private val releaseNoticeAdapter =
             Moshi
                 .Builder()
@@ -473,6 +482,22 @@ class GitHubDataSource internal constructor(
             // A signed file that isn't this feed is refused, not thrown out of the refresh.
             try {
                 Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
+        }
+
+    override suspend fun fetchCommunityWatchSnapshot(
+        owner: String,
+        repo: String,
+    ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> =
+        withContext(Dispatchers.IO) {
+            val result = fetchRawText(COMMUNITY_WATCH_PATH, owner, repo)
+            if (result.isFailure) {
+                return@withContext Result.failure(result.exceptionOrNull()!!)
+            }
+            try {
+                Result.success(parseCommunityWatchSnapshotJson(result.getOrThrow()))
             } catch (refused: GitHubFeedValidationException) {
                 Result.failure(refused)
             }
@@ -736,6 +761,49 @@ class GitHubDataSource internal constructor(
             explicitlyCleared = explicitlyCleared,
             generatedAt = generatedAt,
             inputDigest = inputDigest,
+        )
+    }
+
+    override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> {
+        val payload =
+            try {
+                communityWatchEnvelopeAdapter.fromJson(body)
+            } catch (e: IOException) {
+                failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, "community watch isn't JSON: ${e.message}")
+            } catch (e: JsonDataException) {
+                failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, "community watch has the wrong shape: ${e.message}")
+            } ?: failFeedValidation(GitHubFeedFailureReason.INVALID_SCHEMA, "community watch is empty")
+        requireFeed(payload.schemaVersion == 1, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "community watch has an unsupported schema_version"
+        }
+        val entries =
+            payload.numbers
+                ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "community watch has no numbers")
+        requireFeed(entries.size <= MAX_COMMUNITY_WATCH_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
+            "community watch row count ${entries.size} exceeds cap $MAX_COMMUNITY_WATCH_ROWS"
+        }
+        val seen = mutableSetOf<String>()
+        val numbers = entries.map { entry ->
+            val number = entry.number.trim()
+            requireFeed(COMMUNITY_WATCH_NUMBER_REGEX.matches(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "community watch contains an unusable phone number"
+            }
+            requireFeed(entry.reporterCount in 2..MAX_COMMUNITY_WATCH_REPORTERS, GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "community watch contains an unusable reporter count"
+            }
+            requireFeed(seen.add(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "community watch contains a duplicate phone number"
+            }
+            CommunityWatchNumber(number, entry.reporterCount)
+        }
+        requireFeed(!payload.cleared || numbers.isEmpty(), GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "community watch cannot be cleared while it contains numbers"
+        }
+        return HotFeedSnapshot(
+            data = numbers,
+            explicitlyCleared = payload.cleared,
+            generatedAt = payload.generated,
+            inputDigest = payload.inputReportDigest,
         )
     }
 
@@ -1237,5 +1305,18 @@ class GitHubDataSource internal constructor(
         val cleared: Boolean = false,
         val generated: String? = null,
         @Json(name = "input_report_digest") val inputReportDigest: String? = null,
+    )
+
+    private data class CommunityWatchPayload(
+        @Json(name = "schema_version") val schemaVersion: Int? = null,
+        val numbers: List<CommunityWatchEntry>? = null,
+        val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
+    )
+
+    private data class CommunityWatchEntry(
+        val number: String = "",
+        @Json(name = "reporter_count") val reporterCount: Int = 0,
     )
 }

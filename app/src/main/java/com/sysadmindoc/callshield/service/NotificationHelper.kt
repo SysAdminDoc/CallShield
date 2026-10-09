@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.OutgoingCallGuard
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ACTION_OPEN_BLOCKED_LOG
@@ -926,6 +927,18 @@ object NotificationHelper {
                 .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
+        val watchReporters = SpamHeuristics.communityWatchReporterCount(context, number)
+        if (watchReporters >= 2) {
+            val label =
+                context.resources.getQuantityString(R.plurals.community_watch_label, watchReporters, watchReporters)
+            builder
+                .setContentText(label)
+                .setStyle(
+                    NotificationCompat.BigTextStyle().bigText(
+                        label + "\n" + context.getString(R.string.feedback_text, formatted),
+                    ),
+                )
+        }
 
         // Distinct notification ID via [feedbackNotificationId] (salt 62) —
         // avoids the previous `number.hashCode() + 10_000` scheme, which

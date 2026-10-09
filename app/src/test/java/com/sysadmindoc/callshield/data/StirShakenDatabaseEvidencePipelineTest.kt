@@ -6,6 +6,7 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.HotDataSync
@@ -260,11 +261,19 @@ class StirShakenDatabaseEvidencePipelineTest {
             repo: String,
         ) = online(HotFeedSnapshot(emptyList<String>(), generatedAt = stamp))
 
+        override suspend fun fetchCommunityWatchSnapshot(
+            owner: String,
+            repo: String,
+        ) = online(HotFeedSnapshot(emptyList<CommunityWatchNumber>(), generatedAt = stamp))
+
         override fun parseHotListJson(body: String): List<HotNumber> = hot(bundled)
 
         override fun parseHotRangesJson(body: String): List<String> = emptyList()
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
+
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> =
+            HotFeedSnapshot(emptyList(), explicitlyCleared = true)
     }
 
     private fun callFrom(

@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
@@ -23,6 +24,7 @@ import java.time.Instant
 
 internal object HotDataSync {
     private const val HOT_LIST_SOURCE = "hot_list"
+    private val communityWatchNumberPattern = Regex("\\+[1-9][0-9]{6,14}")
 
     internal data class RefreshOutcome(
         val refreshedAnyFeed: Boolean,
@@ -143,6 +145,14 @@ internal object HotDataSync {
             }
         }
 
+        if (!dependencies.spamHeuristics.hasCommunityWatch()) {
+            val bundledWatch = loadBundledCommunityWatch(appContext, source)
+            val watchNumbers = sanitizeCommunityWatch(bundledWatch.data)
+            if (bundledWatch.resolved && shouldApplyFeed(watchNumbers, bundledWatch.explicitlyCleared)) {
+                dependencies.spamHeuristics.updateCommunityWatch(watchNumbers)
+            }
+        }
+
         // No rows can also mean the last hot list was all numbers already in
         // the database, which get no rows of their own. Only a device that has
         // never applied a hot list gets the build-time snapshot, and that
@@ -216,12 +226,27 @@ internal object HotDataSync {
                 dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
 
+            val communityWatch = loadCommunityWatch(appContext, source, dependencies.spamHeuristics.hasCommunityWatch())
+            val watchNumbers = sanitizeCommunityWatch(communityWatch.data)
+            val communityWatchReplay = isReplay(communityWatch.generatedAt, lastRead[COMMUNITY_WATCH_FEED])
+            val communityWatchApplied =
+                !communityWatchReplay && shouldApplyFeed(watchNumbers, communityWatch.explicitlyCleared)
+            if (communityWatch.resolved && communityWatchApplied) {
+                dependencies.spamHeuristics.updateCommunityWatch(watchNumbers)
+            }
+
             val update =
                 healthUpdate(
                     listOf(
                         hotList.observe(HOT_LIST_FEED, hotListApplied, hotNumbers.isEmpty(), hotListReplay),
                         hotRanges.observe(HOT_RANGES_FEED, hotRangesApplied, ranges.isEmpty(), hotRangesReplay),
                         spamDomains.observe(SPAM_DOMAINS_FEED, spamDomainsApplied, domains.isEmpty(), spamDomainsReplay),
+                        communityWatch.observe(
+                            COMMUNITY_WATCH_FEED,
+                            communityWatchApplied,
+                            watchNumbers.isEmpty(),
+                            communityWatchReplay,
+                        ),
                     ),
                 )
             val unavailableFeeds = update.unavailableFeeds
@@ -229,7 +254,7 @@ internal object HotDataSync {
                 lastGoodTimestamp = System.currentTimeMillis().takeIf { unavailableFeeds.isEmpty() },
                 update = update,
             )
-            val loads = listOf(hotList, hotRanges, spamDomains)
+            val loads = listOf(hotList, hotRanges, spamDomains, communityWatch)
             when {
                 loads.any { HttpClient.isCertificateTrustFailure(it.failure) } -> repo.recordFeedTrust(failed = true)
 
@@ -238,10 +263,11 @@ internal object HotDataSync {
                 loads.any { it.resolved && it.failure == null } -> repo.recordFeedTrust(failed = source.gitHubTrustFailing)
             }
             RefreshOutcome(
-                refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied,
+                refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied || communityWatchApplied,
                 hasAnyHotProtection =
                     dao.getCountBySource(HOT_LIST_SOURCE) > 0 ||
                         dependencies.spamHeuristics.hasHotRanges() ||
+                        dependencies.spamHeuristics.hasCommunityWatch() ||
                         dependencies.smsContentAnalyzer.hasSpamDomains(),
                 unavailableFeeds = unavailableFeeds,
             )
@@ -327,6 +353,28 @@ internal object HotDataSync {
         return loadBundledSpamDomains(context, source).copy(failure = remote.exceptionOrNull())
     }
 
+    private suspend fun loadCommunityWatch(
+        context: Context,
+        source: HotFeedDataSource,
+        hasExistingData: Boolean,
+    ): FeedLoadResult<List<CommunityWatchNumber>> {
+        val remote = source.fetchCommunityWatchSnapshot()
+        if (remote.isSuccess) {
+            val snapshot = remote.getOrThrow()
+            return FeedLoadResult(
+                snapshot.data,
+                resolved = true,
+                explicitlyCleared = snapshot.explicitlyCleared,
+                generatedAt = snapshot.generatedAt,
+                inputDigest = snapshot.inputDigest,
+            )
+        }
+        if (!shouldUseBundledFallback(false, hasExistingData)) {
+            return FeedLoadResult(emptyList(), resolved = false, failure = remote.exceptionOrNull())
+        }
+        return loadBundledCommunityWatch(context, source).copy(failure = remote.exceptionOrNull())
+    }
+
     private fun loadBundledHotList(
         context: Context,
         source: HotFeedDataSource,
@@ -367,6 +415,22 @@ internal object HotDataSync {
             GitHubDataSource
                 .readBundledAsset(context, GitHubDataSource.BUNDLED_SPAM_DOMAINS_ASSET)
                 .map { source.parseSpamDomainsSnapshotJson(it) }
+        val snapshot = bundled.getOrNull()
+        return FeedLoadResult(
+            data = snapshot?.data.orEmpty(),
+            resolved = bundled.isSuccess,
+            explicitlyCleared = snapshot?.explicitlyCleared == true,
+        )
+    }
+
+    private fun loadBundledCommunityWatch(
+        context: Context,
+        source: HotFeedDataSource,
+    ): FeedLoadResult<List<CommunityWatchNumber>> {
+        val bundled =
+            GitHubDataSource
+                .readBundledAsset(context, GitHubDataSource.BUNDLED_COMMUNITY_WATCH_ASSET)
+                .map { source.parseCommunityWatchSnapshotJson(it) }
         val snapshot = bundled.getOrNull()
         return FeedLoadResult(
             data = snapshot?.data.orEmpty(),
@@ -483,10 +547,19 @@ internal object HotDataSync {
             .distinct()
             .toList()
 
+    internal fun sanitizeCommunityWatch(numbers: Collection<CommunityWatchNumber>): List<CommunityWatchNumber> =
+        numbers
+            .asSequence()
+            .map { it.copy(number = it.number.trim()) }
+            .filter { it.number.matches(communityWatchNumberPattern) && it.reporterCount >= 2 }
+            .distinctBy { it.number }
+            .toList()
+
     private fun canonicalNumberKey(number: String): String = number.trim()
 
     internal const val HOT_LIST_FEED = "hot_list"
     internal const val HOT_RANGES_FEED = "hot_ranges"
     internal const val SPAM_DOMAINS_FEED = "spam_domains"
+    internal const val COMMUNITY_WATCH_FEED = "community_watch"
     private const val HOT_LIST_EVIDENCE_TTL_MS = SpamRepository.HOT_ROW_TTL_MS
 }

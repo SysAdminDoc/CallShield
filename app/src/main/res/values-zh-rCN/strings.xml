@@ -370,6 +370,7 @@
     <string name="overlay_reason_invalid_format">号码格式异常</string>
     <string name="overlay_reason_voip_range">高风险 VoIP 号段</string>
     <string name="overlay_reason_hot_campaign">正在进行的骚扰活动</string>
+    <string name="overlay_reason_community_watch">其他 CallShield 用户举报过</string>
     <string name="overlay_reason_toll_free">免费电话号码来电</string>
     <string name="overlay_reason_neighbor_spoof">可能是邻近伪装</string>
     <string name="overlay_reason_rapid_fire">重复来电模式</string>
@@ -1281,6 +1282,9 @@
     <string name="block_reason_quiet_hours">在勿扰时段内拦截</string>
     <plurals name="block_reason_frequency">
         <item quantity="other">7 天内来电 %1$d 次，已自动拦截</item>
+    </plurals>
+    <plurals name="community_watch_label">
+        <item quantity="other">%d 位 CallShield 用户举报过，尚未确认</item>
     </plurals>
     <string name="block_reason_campaign">活跃营销活动：%1$s</string>
     <string name="block_reason_campaign_neighbors">%2$d 次来电中有 %1$d 个相邻号码</string>

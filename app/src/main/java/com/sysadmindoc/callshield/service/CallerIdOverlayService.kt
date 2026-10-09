@@ -24,6 +24,7 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
@@ -120,6 +121,7 @@ internal fun overlayReasonLabelRes(reason: String): Int? {
         "invalid_format" -> R.string.overlay_reason_invalid_format
         "voip_spam_range", "high_spam_npa" -> R.string.overlay_reason_voip_range
         "hot_campaign_range" -> R.string.overlay_reason_hot_campaign
+        "community_watch" -> R.string.overlay_reason_community_watch
         "toll_free" -> R.string.overlay_reason_toll_free
         "neighbor_spoof" -> R.string.overlay_reason_neighbor_spoof
         "rapid_fire" -> R.string.overlay_reason_rapid_fire
@@ -403,6 +405,25 @@ class CallerIdOverlayService : Service() {
                         TextView(context).apply {
                             text = displayReason
                             setTextColor(palette.subtext)
+                            textSize = OVERLAY_TEXT_SP
+                        },
+                    )
+                }
+                // Pending community reports are a label, never a verdict: the
+                // watch list alone can't block, so this is the only place an
+                // otherwise clear caller shows it.
+                val watchReporters =
+                    if (outgoingRiskWarning) 0 else SpamHeuristics.communityWatchReporterCount(context, number)
+                if (watchReporters >= 2) {
+                    addView(
+                        TextView(context).apply {
+                            text =
+                                context.resources.getQuantityString(
+                                    R.plurals.community_watch_label,
+                                    watchReporters,
+                                    watchReporters,
+                                )
+                            setTextColor(palette.warning)
                             textSize = OVERLAY_TEXT_SP
                         },
                     )

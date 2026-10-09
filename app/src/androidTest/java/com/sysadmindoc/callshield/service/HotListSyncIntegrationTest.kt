@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.TestSettingsStores
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
 import kotlinx.coroutines.runBlocking
@@ -121,7 +122,7 @@ class HotListSyncIntegrationTest {
             val outcome = HotDataSync.refresh(context, failingSource, repo, dao, stores.checkerDependencies)
 
             assertFalse(outcome.refreshedAnyFeed)
-            assertEquals(3, outcome.unavailableFeeds.size)
+            assertEquals(4, outcome.unavailableFeeds.size)
             assertEquals(1, dao.getCountBySource("hot_list"))
             assertEquals("Fresh hot row", dao.findByNumber(repo.normalizeNumber("508-555-0102"))?.description)
             assertTrue(heuristics.isHotCampaignRange("+15085550123"))
@@ -152,7 +153,7 @@ class HotListSyncIntegrationTest {
             val outcome = HotDataSync.refresh(context, FakeHotFeedDataSource(), repo, dao, stores.checkerDependencies)
 
             assertFalse(outcome.refreshedAnyFeed)
-            assertEquals(setOf("hot_list", "hot_ranges", "spam_domains"), outcome.unavailableFeeds)
+            assertEquals(setOf("hot_list", "hot_ranges", "spam_domains", "community_watch"), outcome.unavailableFeeds)
             assertEquals(1, dao.getCountBySource("hot_list"))
             assertTrue(heuristics.isHotCampaignRange("+15085550123"))
             assertTrue(analyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
@@ -203,7 +204,7 @@ class HotListSyncIntegrationTest {
                 )
 
             assertFalse(outcome.refreshedAnyFeed)
-            assertEquals(setOf("hot_list", "hot_ranges", "spam_domains"), outcome.unavailableFeeds)
+            assertEquals(setOf("hot_list", "hot_ranges", "spam_domains", "community_watch"), outcome.unavailableFeeds)
             assertFalse(outcome.hasAnyHotProtection)
         }
 
@@ -211,6 +212,7 @@ class HotListSyncIntegrationTest {
         private val hotList: List<HotNumber> = emptyList(),
         private val hotRanges: List<String> = emptyList(),
         private val spamDomains: List<String> = emptyList(),
+        private val communityWatch: List<CommunityWatchNumber> = emptyList(),
         private val failure: Throwable? = null,
         private val explicitlyCleared: Boolean = false,
     ) : HotFeedDataSource {
@@ -244,10 +246,19 @@ class HotListSyncIntegrationTest {
             repo: String,
         ): Result<HotFeedSnapshot<List<String>>> = failure?.let { Result.failure(it) } ?: Result.success(HotFeedSnapshot(spamDomains, explicitlyCleared))
 
+        override suspend fun fetchCommunityWatchSnapshot(
+            owner: String,
+            repo: String,
+        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> =
+            failure?.let { Result.failure(it) } ?: Result.success(HotFeedSnapshot(communityWatch, explicitlyCleared))
+
         override fun parseHotListJson(body: String): List<HotNumber> = hotList
 
         override fun parseHotRangesJson(body: String): List<String> = hotRanges
 
         override fun parseSpamDomainsJson(body: String): List<String> = spamDomains
+
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> =
+            HotFeedSnapshot(communityWatch, explicitlyCleared)
     }
 }
