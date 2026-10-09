@@ -9,7 +9,8 @@ All notable changes to CallShield will be documented in this file.
   networks report the same number on the same day and nobody marks it as
   not spam, the caller ID popup and the after-call notification read
   "Reported by 2 CallShield users, not confirmed". Two phones on one home
-  network count as one person for this. The label never blocks a call by itself, even in
+  network aren't enough on their own. A report from a second network has to
+  agree. The label never blocks a call by itself, even in
   aggressive mode. The list is a new signed feed that updates with the
   trending numbers, and a not-spam report takes a number off it at the next
   merge.
