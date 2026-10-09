@@ -187,6 +187,25 @@ class StirShakenTrustCheckerTest {
         assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("last tuesday"), today))
     }
 
+    // Apple Support's line is a robocall row with current FCC evidence because
+    // scammers spoof it. A call the carrier verified comes from Apple.
+
+    @Test fun `a verified call from a published line rings through a current complaint row`() {
+        val fccRow = row("2026-09-28", evidence = listOf(evidence("fcc_complaints", lastSeen = "2026-09-28")))
+        val result = decidePure(VERIFICATION_STATUS_PASSED, fccRow, today, officialLine = true)
+        assertNotNull(result)
+        assertFalse(result!!.shouldBlock)
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, fccRow, today, officialLine = false))
+    }
+
+    @Test fun `a published line still blocks when it's unverified or trending`() {
+        val fccRow = row("2026-09-28")
+        assertNull(decidePure(null, fccRow, today, officialLine = true))
+        assertNull(decidePure(2, fccRow, today, officialLine = true))
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, fccRow, today, trending = true, officialLine = true))
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("", source = "hot_list"), today, officialLine = true))
+    }
+
     // ── Priority ordering sanity ─────────────────────────────────────────
 
     @Test fun `trust priority yields to every explicit user rule`() {

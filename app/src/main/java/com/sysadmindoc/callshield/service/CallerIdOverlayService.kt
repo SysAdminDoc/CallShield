@@ -22,6 +22,7 @@ import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.OfficialLines
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamHeuristics
@@ -423,6 +424,17 @@ class CallerIdOverlayService : Service() {
                                     watchReporters,
                                     watchReporters,
                                 )
+                            setTextColor(palette.warning)
+                            textSize = OVERLAY_TEXT_SP
+                        },
+                    )
+                }
+                // A published line rings when the carrier verified it. Name the
+                // owner, and warn, because the caller still controls the call.
+                OfficialLines.organization(number)?.takeUnless { outgoingRiskWarning }?.let { organization ->
+                    addView(
+                        TextView(context).apply {
+                            text = context.getString(R.string.overlay_official_line, organization)
                             setTextColor(palette.warning)
                             textSize = OVERLAY_TEXT_SP
                         },

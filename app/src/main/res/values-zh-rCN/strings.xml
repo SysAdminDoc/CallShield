@@ -371,6 +371,7 @@
     <string name="overlay_reason_voip_range">高风险 VoIP 号段</string>
     <string name="overlay_reason_hot_campaign">正在进行的骚扰活动</string>
     <string name="overlay_reason_community_watch">其他 CallShield 用户举报过</string>
+    <string name="overlay_official_line">这是 %1$s 公开的号码。骗子会冒用它，所以在意料之外的来电中不要提供验证码或密码。</string>
     <string name="overlay_reason_toll_free">免费电话号码来电</string>
     <string name="overlay_reason_neighbor_spoof">可能是邻近伪装</string>
     <string name="overlay_reason_rapid_fire">重复来电模式</string>
@@ -1279,6 +1280,7 @@
     <string name="block_reason_system_block_list">已通过系统拦截名单拦截</string>
     <string name="block_reason_temporary_block">临时拦截</string>
     <string name="block_reason_db_prefix">号码与已知垃圾号码的前缀相同</string>
+    <string name="block_reason_official_line_unverified">骗子经常冒用这个 %1$s 号码，而且运营商没有验证这通来电</string>
     <string name="block_reason_quiet_hours">在勿扰时段内拦截</string>
     <plurals name="block_reason_frequency">
         <item quantity="other">7 天内来电 %1$d 次，已自动拦截</item>

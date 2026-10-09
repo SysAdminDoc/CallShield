@@ -128,6 +128,11 @@ class SampleTest(unittest.TestCase):
         for line in lines:
             self.assertRegex(line, r"^\+1\d{10}$")
 
+    def test_business_lines_are_the_lines_the_app_lets_through_when_verified(self):
+        official = probe_live_sources.EXTERNAL_LOOKUP.parents[1] / "OfficialLines.kt"
+        app_lines = re.findall(r'"(\+1\d{10})" to "', official.read_text(encoding="utf-8"))
+        self.assertEqual(sorted(probe_live_sources.BUSINESS_LINES), sorted(app_lines))
+
 
 if __name__ == "__main__":
     unittest.main()

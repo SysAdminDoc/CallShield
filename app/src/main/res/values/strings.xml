@@ -516,6 +516,7 @@
     <string name="overlay_reason_voip_range">High-risk VoIP range</string>
     <string name="overlay_reason_hot_campaign">Active spam campaign</string>
     <string name="overlay_reason_community_watch">Reported by other CallShield users</string>
+    <string name="overlay_official_line">This is a published %1$s number. Scammers copy it, so don\'t share codes or passwords on a call you didn\'t expect.</string>
     <string name="overlay_reason_toll_free">Toll-free caller</string>
     <string name="overlay_reason_neighbor_spoof">Possible neighbor spoofing</string>
     <string name="overlay_reason_rapid_fire">Repeated call pattern</string>
@@ -1788,6 +1789,7 @@
     <string name="block_reason_system_block_list">Blocked via system block list</string>
     <string name="block_reason_temporary_block">Temporarily blocked</string>
     <string name="block_reason_db_prefix">Number shares prefix with a known spam entry</string>
+    <string name="block_reason_official_line_unverified">Scammers often fake this %1$s number, and your carrier didn\'t verify this call</string>
     <string name="block_reason_quiet_hours">Blocked during quiet hours</string>
     <plurals name="block_reason_frequency">
         <item quantity="one">Called %1$d time in 7 days, blocked automatically</item>

@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.NumberingPlan
+import com.sysadmindoc.callshield.data.OfficialLines
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
@@ -218,7 +219,8 @@ internal class StirShakenTrustChecker(
         val now = wallClock()
         val trending = ctx.lookupForms.any { isTrendingNow(ctx.prefs, it, now) }
         val entry = ctx.lookupForms.firstNotNullOfOrNull { repo.findByNumberInternal(it) }
-        return decidePure(ctx.verificationStatus, entry, trending = trending)
+        val officialLine = ctx.lookupForms.any { OfficialLines.organization(it) != null }
+        return decidePure(ctx.verificationStatus, entry, trending = trending, officialLine = officialLine)
     }
 
     companion object {
@@ -264,18 +266,28 @@ internal class StirShakenTrustChecker(
          * [trending] says the number is on the hot list right now, which a
          * database row can't show itself: the hot sync keeps the database
          * row and stores no hot row of its own for that number.
+         * [officialLine] says the number is an organization's published line
+         * ([OfficialLines]). Complaint data about those is spoofing of the
+         * real owner, so only community trending keeps a row current.
          */
         internal fun decidePure(
             verificationStatus: Int?,
             row: SpamNumber? = null,
             today: LocalDate = LocalDate.now(ZoneOffset.UTC),
             trending: Boolean = false,
+            officialLine: Boolean = false,
         ): BlockResult? =
             when {
                 verificationStatus != VERIFICATION_STATUS_PASSED -> null
-                row != null && (trending || hasCurrentEvidence(row, today)) -> null
+                row != null && (trending || isCurrent(row, today, officialLine)) -> null
                 else -> BlockResult.allow("stir_shaken_trusted")
             }
+
+        private fun isCurrent(
+            row: SpamNumber,
+            today: LocalDate,
+            officialLine: Boolean,
+        ): Boolean = if (officialLine) row.source == HOT_LIST_SOURCE else hasCurrentEvidence(row, today)
 
         /**
          * Whether a row is recent enough to block a caller the carrier
@@ -444,8 +456,14 @@ internal class DatabaseChecker(
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val entry = ctx.lookupForms.firstNotNullOfOrNull { form -> repo.findByNumberInternal(form)?.takeUnless { it.isUserBlocked } }
         return if (entry != null) {
-            // The stored text, so a block saved from Lookup keeps it; screens format it.
-            BlockResult.block("database", entry.type, entry.description)
+            // A published line the carrier didn't verify: say whose number was
+            // faked, not the complaint fields the spoofing left behind.
+            val organization = ctx.lookupForms.firstNotNullOfOrNull { OfficialLines.organization(it) }
+            val description =
+                organization?.let { ctx.appContext.getString(R.string.block_reason_official_line_unverified, it) }
+                    // The stored text, so a block saved from Lookup keeps it; screens format it.
+                    ?: entry.description
+            BlockResult.block("database", entry.type, description)
         } else {
             null
         }

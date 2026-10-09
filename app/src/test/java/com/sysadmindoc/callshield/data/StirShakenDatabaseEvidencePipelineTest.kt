@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
@@ -176,6 +177,28 @@ class StirShakenDatabaseEvidencePipelineTest {
         val result = callFrom("+12125550151", verificationStatus = PASSED)
         assertFalse(result.isSpam)
         assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test
+    fun `a verified call from a published line rings through a row reported this year`() {
+        // Complaints about Apple's support line are people the spoofers fooled.
+        databaseRow("+18002752273", lastSeen = today.minusDays(30))
+
+        val result = callFrom("+18002752273", verificationStatus = PASSED)
+
+        assertFalse(result.isSpam)
+        assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test
+    fun `an unverified call from a published line is blocked and says whose number was faked`() {
+        databaseRow("+18002752273", lastSeen = today.minusDays(30))
+
+        val result = callFrom("+18002752273", verificationStatus = NOT_VERIFIED)
+
+        assertTrue(result.isSpam)
+        assertEquals("database", result.matchSource)
+        assertEquals(context.getString(R.string.block_reason_official_line_unverified, "Apple Support"), result.description)
     }
 
     @Test
