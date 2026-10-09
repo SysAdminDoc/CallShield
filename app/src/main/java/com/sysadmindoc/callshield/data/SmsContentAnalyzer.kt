@@ -621,24 +621,56 @@ class SmsContentAnalyzer
             private val INTERNATIONAL_DIGITS = 8..15
 
             /**
-             * A number written the way people write one at home: 7 to 12 digits
-             * with the usual gaps. Whether it's a line is for the home region's
-             * validator to say. Not after a "#", a currency sign or a decimal
-             * point, and not before a decimal part or a currency sign either.
+             * A number written the way people write one at home: 8 to 15 digits
+             * with the usual gaps, which also covers one dialed with "00" in
+             * front. Whether it's a line is for the home region's validator to
+             * say. Not after a "#", "\u2116", "\u00BA", "\u00B0", a currency sign or a
+             * decimal point, and not before a decimal part, a percent, or a
+             * currency sign or code.
              */
             private val nationalNumber =
                 Regex(
-                    "(?<![0-9A-Za-z_/+#:.,\u2116\u20AC\$\u00A3\u00A5\u20B9])\\(?\\d(?:[ \\t.()-]{0,2}\\d){6,11}\\)?" +
-                        "(?![0-9]|[.,]\\d|[ \\t]?[%\u20AC\$\u00A3\u00A5\u20B9])",
+                    "(?<![0-9A-Za-z_/+#.,\u2116\u00BA\u00B0\u20AC\$\u00A3\u00A5\u20B9])\\(?\\d(?:[ \\t.()-]{0,2}\\d){7,14}\\)?" +
+                        "(?![0-9]|[.,]\\d|[ \\t]?(?:[%\u20AC\$\u00A3\u00A5\u20B9]|(?i:$CURRENCY_CODES)\\b))",
                 )
             private val dateShape = Regex("\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}[./-]\\d{1,2}[./-]\\d{1,2}")
+            private const val CURRENCY_CODES = "eur|usd|gbp|chf|sek|nok|dkk|pln|czk|huf|inr|aud|cad|kr|rs"
+            private val currencyBefore = Regex("(?i)(?:\\b(?:$CURRENCY_CODES)\\.?|[\u20AC\$\u00A3\u00A5\u20B9])[ \\t]*$")
 
-            /** The words a reference or a code follows, so an order number isn't read as a line to call. */
+            /**
+             * What a text asking to be called says before the number, in the
+             * languages the reports come in. A bare national number counts only
+             * after one of these: without the "+" there's nothing else to tell a
+             * line from an account, a price or a parcel.
+             */
+            private val callWord =
+                Regex(
+                    "(?iu)\\b(?:call(?:ing)?|ring|phone|dial|tel|telephone|contact\\w*|ll[a\u00E1]m\\w*|ligu\\w*|ligar|liga|" +
+                        "telef\\w*|tel[e\u00E9]fono|t[e\u00E9]l[e\u00E9]phon\\w*|t[e\u00E9]l|appel\\w*|rappel\\w*|joindre|" +
+                        "anruf\\w*|rufen|ruf|chiam\\w*|contatt\\w*|kontakt\\w*|bel|bellen)\\b",
+                )
+
+            /**
+             * A reference, an account, an amount or a code right before a
+             * number, so it isn't read as a line to call: "order 2079460018", "Tracking
+             * number: 2079460018", "Kundennummer lautet 3012345678". Only
+             * "number" and "is" may sit between, so "call our booking line on"
+             * still asks for a call.
+             */
             private val referenceWord =
                 Regex(
-                    "(?i)(?:#|\u2116|\\b(?:order|ref|reference|code|pin|id|invoice|tracking|ticket|case|account|acct|confirmation|otp|parcel|pedido|commande|bestell\\w*)\\b|\\b(?:no|nr)\\.)[^0-9]{0,5}$",
+                    "(?iu)(?:[#\u2116\u00BA\u00B0]|\\b(?:order|ref|reference|code|pin|id|invoice|tracking|ticket|case|account|acct|" +
+                        "confirmation|otp|parcel|package|shipment|booking|reservation|policy|claim|serial|iban|bic|swift|" +
+                        "amount|total|balance|sum|importe|monto|saldo|betrag|summe|montant|solde|importo|valor|" +
+                        "pedido|factura|referencia|seguimiento|commande|colis|suivi|facture|r[e\u00E9]f[e\u00E9]rence|dossier|" +
+                        "bestell\\w*|rechnung\\w*|kunden-?(?:nummer|nr)|sendung\\w*|konto\\w*|kto|auftrag\\w*|aktenzeichen|vorgang\\w*|" +
+                        "ordine|fattura|pratica|codice|encomenda|fatura|bestelling|factuur|klantnummer)\\b|\\b(?:no\\.|nr\\b\\.?|n[\u00BA\u00B0]))" +
+                        "[ \\t.:#-]*(?:(?:number|nummer|n[u\u00FA]mero|num[e\u00E9]ro|numero|nr|no|n[\u00BA\u00B0]|id|code|is|ist|lautet|est|es|de|del)\\b\\.?[ \\t.:#-]*){0,3}$",
                 )
-            private const val REFERENCE_CONTEXT_CHARS = 20
+
+            /** Five or more digits in a row, give or take the usual gaps: another number, not a time. */
+            private val otherNumber = Regex("\\d(?:[ \\t.,()-]?\\d){4,}")
+            private const val CALLBACK_CONTEXT_CHARS = 48
 
             fun updateSpamDomains(domains: Collection<String>) {
                 shared.updateSpamDomains(domains)
@@ -653,14 +685,11 @@ class SmsContentAnalyzer
              * number written with "+" and its country code counts anywhere. A
              * ten-digit North American number counts on a phone in that plan
              * ([nanpHome]); elsewhere only with +1 in front, since 1 and ten
-             * digits is also how a Chinese mobile number looks. Bare national
-             * numbers from other plans are left alone.
-             */
-            /**
-             * The numbers [body] asks the reader to call. [nationalToE164] reads a
-             * number written the way people write one where the phone lives, as
-             * E.164 when it's a valid line there; it's only used outside North
-             * America, where a bare number can't be read without it.
+             * digits is also how a Chinese mobile number looks. Off North
+             * America, [nationalToE164] reads a number written the way people
+             * write one where the phone lives, as E.164 when it's a valid line
+             * there. Such a bare number counts only right after a word asking
+             * to be called, and never after a reference, an account or a price.
              */
             fun extractCallbackNumbers(
                 body: String,
@@ -689,12 +718,40 @@ class SmsContentAnalyzer
                 if (nationalToE164 != null && !nanpHome) {
                     nationalNumber.findAll(text).forEach { match ->
                         if (match.range.overlapsTaken() || dateShape.matches(match.value)) return@forEach
-                        val before = text.substring(maxOf(0, match.range.first - REFERENCE_CONTEXT_CHARS), match.range.first)
-                        if (referenceWord.containsMatchIn(before)) return@forEach
-                        nationalToE164(match.value)?.takeIf { it.startsWith("+") }?.let { found += it }
+                        if (!asksToCall(text, match.range.first, taken)) return@forEach
+                        nationalToE164(match.value)?.takeIf { it.startsWith("+") }?.let {
+                            found += it
+                            taken += match.range
+                        }
                     }
                 }
                 return found.take(MAX_CALLBACK_NUMBERS)
+            }
+
+            /**
+             * Whether [text] asks to call the bare number at [start]: a call word
+             * close in front, and between the two no reference word, no price
+             * and no other number that isn't one of the [lines] already read.
+             * "Call about order 2079460018" is an order, "Call 020 7946 0018,
+             * amount 30123456" an amount, "about your order, ring 020 7946 0018"
+             * a line.
+             */
+            private fun asksToCall(
+                text: String,
+                start: Int,
+                lines: List<IntRange>,
+            ): Boolean {
+                val window = maxOf(0, start - CALLBACK_CONTEXT_CHARS)
+                val call = callWord.findAll(text.substring(window, start)).lastOrNull() ?: return false
+                val from = window + call.range.last + 1
+                val between = text.substring(from, start)
+                val another =
+                    otherNumber.findAll(between).any { run ->
+                        val first = from + run.range.first
+                        val last = from + run.range.last
+                        !dateShape.matches(run.value) && lines.none { it.first <= last && first <= it.last }
+                    }
+                return !another && !currencyBefore.containsMatchIn(between) && !referenceWord.containsMatchIn(between)
             }
 
             /** Fullwidth digits, typographic dashes and odd spaces as plain ones, without a trunk "(0)". */

@@ -16,6 +16,16 @@ class CallbackNumberExtractionTest {
         plan: ListNumberPlan,
     ) = SmsContentAnalyzer.extractCallbackNumbers(body, nanpHome = false) { plan.toInternational(it) }
 
+    /**
+     * A validator as lax as libphonenumber's for Germany, which takes 5 to 15
+     * digits: only the text around a number can keep it out.
+     */
+    private fun extractLax(body: String) =
+        SmsContentAnalyzer.extractCallbackNumbers(body, nanpHome = false) { raw ->
+            val digits = raw.filter { it in '0'..'9' }
+            if (digits.startsWith("00")) "+" + digits.drop(2) else "+49" + digits.removePrefix("0")
+        }
+
     @Test
     fun `a North American number is found however it's written`() {
         listOf(
@@ -59,6 +69,44 @@ class CallbackNumberExtractionTest {
     @Test
     fun `a bare national number isn't read twice beside its international form`() {
         assertEquals(listOf("+442079460018"), extractAt("Ring +44 20 7946 0018 or 020 7946 0018", GB))
+    }
+
+    @Test
+    fun `a bare national number needs a word asking to be called`() {
+        assertEquals(emptyList<String>(), extractAt("Your new line is 020 7946 0018", GB))
+        assertEquals(listOf("+442079460018"), extractAt("About your order, ring 020 7946 0018", GB))
+        assertEquals(listOf("+442079460018"), extractAt("Tel.:020 7946 0018", GB))
+        assertEquals(listOf("+4930123456789"), extractLax("Rufen Sie uns unter 030 123456789 an"))
+        assertEquals(listOf("+442079460018"), extractAt("Call our booking line on 020 7946 0018", GB))
+        assertEquals(listOf("+442079460018"), extractAt("Call before 17:00 on 020 7946 0018", GB))
+        assertEquals(listOf("+4930123456789"), extractLax("Rufen Sie unseren Kundenservice an: 030 123456789"))
+        assertEquals(listOf("+492079460018"), extractLax("Call 020 7946 0018 about the amount 30123456"))
+    }
+
+    @Test
+    fun `a number dialed with 00 in front is read whole`() {
+        assertEquals(listOf("+442079460018"), extractLax("Rappelez le 0044 20 7946 0018"))
+    }
+
+    @Test
+    fun `references, accounts and prices stay out even when the validator would take them`() {
+        listOf(
+            "Call about order number 2079460018",
+            "Tracking number: 2079460018, call if it's late",
+            "Call us. Reference number 2079460018",
+            "Rufen Sie wegen Rechnung 3012345678 an",
+            "Rufen Sie an, Kundennummer 3012345678",
+            "Rufen Sie an, Ihre Kundennummer lautet 3012345678",
+            "Call us, your order number is 2079460018",
+            "Appelez-nous, N\u00B0 0123456789",
+            "Llame, pedido N\u00BA 912345678",
+            "Call to pay EUR 3.012.345",
+            "Llame: importe EUR 912.345.678",
+            "Call now, total 2 079 460 018 EUR",
+            "Call now, total 2 079 460 018,50",
+            "Ring for the reservation 30 12 34 56 7",
+            "Call before 12.05.2026",
+        ).forEach { assertEquals(it, emptyList<String>(), extractLax(it)) }
     }
 
     @Test

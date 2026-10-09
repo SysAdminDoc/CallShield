@@ -89,8 +89,9 @@ All notable changes to CallShield will be documented in this file.
   label only and doesn't change what gets blocked.
 - Outside North America, a number in a flagged text written the way people
   write one at home (020 7946 0018 in the UK, 01 23 45 67 89 in France) is
-  now picked up, so a call to it is held like one to a number written with
-  its country code. Dates, amounts, order numbers and codes stay out.
+  now picked up when the text asks you to call or ring it, so a call to it
+  is held like one to a number written with its country code. Dates,
+  prices, order and account numbers, and codes stay out.
 
 ## v1.11.0 (2026-09-30)
 
