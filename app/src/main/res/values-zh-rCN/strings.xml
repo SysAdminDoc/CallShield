@@ -382,6 +382,8 @@
     <string name="overlay_reason_voip_range">高风险 VoIP 号段</string>
     <string name="overlay_reason_hot_campaign">正在进行的骚扰活动</string>
     <string name="overlay_reason_community_watch">其他 CallShield 用户举报过</string>
+    <string name="caller_abroad">来自%1$s的国际来电</string>
+    <string name="caller_abroad_text">来自%1$s的国际短信</string>
     <string name="overlay_official_line">这是 %1$s 公开的号码。骗子会冒用它，所以在意料之外的来电中不要提供验证码或密码。</string>
     <string name="overlay_reason_toll_free">免费电话号码来电</string>
     <string name="overlay_reason_neighbor_spoof">可能是邻近伪装</string>

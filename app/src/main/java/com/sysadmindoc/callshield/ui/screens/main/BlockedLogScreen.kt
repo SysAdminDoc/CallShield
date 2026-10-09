@@ -595,7 +595,7 @@ fun BlockedCallItem(
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val homeRegion = rememberHomeRegion()
-    val location = rememberCallerPlace(call.number, homeRegion)
+    val location = rememberCallerPlace(call.number, homeRegion, call.isCall)
     var expanded by rememberSaveable(call.id) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
@@ -817,17 +817,20 @@ fun SmallActionButton(
 internal const val REPEAT_BADGE_TINT = 0.10f
 
 /**
- * Where [number] is from: "International call from Jamaica" when that's
- * another country than the SIM's, else the area code's place, or null.
+ * Where [number] is from: "International call from Jamaica" (or "text"
+ * when it isn't [isCall]) when that's another country than the SIM's, else
+ * the area code's place, or null.
  */
 @Composable
 private fun rememberCallerPlace(
     number: String,
     homeRegion: String?,
+    isCall: Boolean,
 ): String? {
     val abroad = remember(number, homeRegion) { CallerCountry.abroad(number, homeRegion) }
     val location = remember(number, homeRegion) { AreaCodeLookup.lookup(number, homeRegion) }
-    return abroad?.let { stringResource(R.string.caller_abroad, CallerCountry.displayName(it)) } ?: location
+    val label = if (isCall) R.string.caller_abroad else R.string.caller_abroad_text
+    return abroad?.let { stringResource(label, CallerCountry.displayName(it)) } ?: location
 }
 
 @Suppress("LongMethod")
@@ -839,7 +842,7 @@ fun GroupedCallItem(
     onBlock: () -> Unit,
 ) {
     val homeRegion = rememberHomeRegion()
-    val location = rememberCallerPlace(call.number, homeRegion)
+    val location = rememberCallerPlace(call.number, homeRegion, call.isCall)
 
     val accentColor =
         if (count >= 5) {

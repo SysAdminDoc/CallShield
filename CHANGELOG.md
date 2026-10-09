@@ -84,8 +84,8 @@ All notable changes to CallShield will be documented in this file.
   bait even when the link ends the sentence, as in "https://wa.me!" or
   "(https://wa.me)".
 - The caller ID popup and the blocked log now say "International call from
-  Jamaica" (or wherever) when a caller's number is from another country than
-  your SIM's. Within North America the area code tells the US, Canada and the
+  Jamaica" (or wherever, and "text" for a blocked message) when a caller's
+  number is from another country than your SIM's. Within North America the area code tells the US, Canada and the
   Caribbean apart, so a one-ring call from 876 no longer looks local. A
   toll-free number doesn't say where it is, so it isn't labeled. Russia and
   Kazakhstan share +7 and are told apart. It's a label only and doesn't change
