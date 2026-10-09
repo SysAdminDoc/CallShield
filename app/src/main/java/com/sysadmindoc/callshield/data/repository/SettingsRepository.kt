@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CallerNameSupport
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.CommunityReportHistory
 import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
@@ -857,6 +858,31 @@ class SettingsRepository(
             total < SpamRepository.CNAP_OBSERVATION_THRESHOLD -> CallerNameSupport.UNKNOWN
             withName > 0 -> CallerNameSupport.PROVIDED
             else -> CallerNameSupport.NOT_PROVIDED
+        }
+    }
+
+    /** This device's reports from the last 90 days, newest first. No-backup, like the ledger. */
+    internal val communityReports: Flow<List<CommunityReportHistory.Entry>> =
+        privateDataStore.data.map { CommunityReportHistory.list(it[SpamRepository.KEY_COMMUNITY_REPORT_HISTORY].orEmpty(), System.currentTimeMillis()) }
+
+    /** Sets a report's delivery in the list behind My reports ([CommunityReportHistory.record]). */
+    suspend fun recordCommunityReport(
+        id: String,
+        number: String,
+        type: String,
+        delivery: CommunityReportHistory.Delivery,
+        now: Long,
+    ) {
+        privateDataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_COMMUNITY_REPORT_HISTORY] =
+                CommunityReportHistory.record(
+                    preferences[SpamRepository.KEY_COMMUNITY_REPORT_HISTORY].orEmpty(),
+                    id,
+                    number,
+                    type,
+                    delivery,
+                    now,
+                )
         }
     }
 

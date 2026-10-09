@@ -43,6 +43,7 @@ class CommunityReportSubmitterTest {
     private val sent = mutableListOf<CommunityReport>()
     private val queued = mutableListOf<CommunityReport>()
     private val dequeued = mutableListOf<CommunityReport>()
+    private val recorded = mutableListOf<String>()
     private var outcome = ContributeOutcome.REPORTED_SPAM
     private var cancelSend = false
     private var now = 1_790_000_000_000L
@@ -77,6 +78,7 @@ class CommunityReportSubmitterTest {
             dequeue = { report -> dequeued += report },
             clock = { now },
             newId = { "report-${++nextId}" },
+            record = { report, delivery -> recorded += "${report.id}:$delivery" },
         )
 
     private fun Store.submit(
@@ -285,6 +287,26 @@ class CommunityReportSubmitterTest {
         clock = { now },
         newId = { "report-${++nextId}" },
     )
+
+    @Test
+    fun `My reports lists each report as it's made and again once it's settled`() {
+        val store = store()
+
+        runBlocking {
+            submitter(store).submit("+12122340101", "spam", null)
+            outcome = ContributeOutcome.NETWORK_ERROR
+            submitter(store).submit("+12122340102", "spam", null)
+            outcome = ContributeOutcome.INVALID_NUMBER
+            submitter(store).submit("+12122340103", "spam", null)
+            // Already reported today: nothing new is made, so nothing new is listed.
+            submitter(store).submit("+12122340101", "robocall", null)
+        }
+
+        assertEquals(
+            listOf("report-1:QUEUED", "report-1:SENT", "report-2:QUEUED", "report-3:QUEUED", "report-3:NOT_SENT"),
+            recorded,
+        )
+    }
 
     @Test
     fun `a refused report leaves nothing queued and can be made again`() {

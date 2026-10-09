@@ -757,6 +757,17 @@
     <string name="more_snapshot_today">今日</string>
     <string name="more_snapshot_version">版本</string>
     <string name="more_statistics_subtitle">垃圾趋势、主要违规者、区号热力图</string>
+    <string name="more_my_reports">我的举报</string>
+    <string name="more_my_reports_subtitle">本机举报过的号码，以及是否已送达</string>
+    <string name="my_reports_intro">本机最近 90 天内的举报，以及每条是否已送达 CallShield。误把号码举报为垃圾？可以发送“非垃圾”。</string>
+    <string name="my_reports_empty">本机最近 90 天内没有举报。</string>
+    <string name="my_reports_kind_date">%1$s · %2$s</string>
+    <string name="my_reports_kind_not_spam">非垃圾</string>
+    <string name="my_reports_kind_sms_spam">垃圾短信</string>
+    <string name="my_reports_sent">已发送</string>
+    <string name="my_reports_queued">等待发送</string>
+    <string name="my_reports_not_sent">未发送</string>
+    <string name="my_reports_send_not_spam">发送“非垃圾”</string>
     <string name="more_settings_subtitle">检测引擎、勿扰时段、备份、清理</string>
     <string name="more_protection_test_subtitle">验证所有检测层与权限是否工作</string>
     <string name="more_whats_new_subtitle">更新日志与版本历史</string>

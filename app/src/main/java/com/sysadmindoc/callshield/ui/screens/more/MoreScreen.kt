@@ -66,6 +66,10 @@ fun MoreScreen(
             ProtectionTestScreen()
         }
 
+        MY_REPORTS_VIEW -> {
+            MyReportsScreen(viewModel)
+        }
+
         else -> {
             MoreHub(
                 viewModel = viewModel,
@@ -73,6 +77,7 @@ fun MoreScreen(
                 onSettings = { onViewChange(2) },
                 onChangelog = { onViewChange(3) },
                 onTest = { onViewChange(4) },
+                onReports = { onViewChange(MY_REPORTS_VIEW) },
             )
         }
     }
@@ -86,6 +91,7 @@ fun MoreHub(
     onSettings: () -> Unit,
     onChangelog: () -> Unit,
     onTest: () -> Unit,
+    onReports: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
@@ -220,6 +226,15 @@ fun MoreHub(
                 stringResource(R.string.more_statistics_subtitle),
                 CatGreen,
                 onStats,
+                outlined = true,
+            )
+            Spacer(Modifier.height(8.dp))
+            MoreNavCard(
+                Icons.Default.Flag,
+                stringResource(R.string.more_my_reports),
+                stringResource(R.string.more_my_reports_subtitle),
+                CatGreen,
+                onReports,
                 outlined = true,
             )
         }
@@ -597,3 +612,6 @@ private fun launchExternalLink(
             .show()
     }
 }
+
+/** More's view number for My reports; MainActivity titles it. */
+internal const val MY_REPORTS_VIEW = 5

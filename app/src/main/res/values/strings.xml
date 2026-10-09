@@ -966,6 +966,18 @@
     <string name="more_snapshot_today">Today</string>
     <string name="more_snapshot_version">Version</string>
     <string name="more_statistics_subtitle">Trends, sources, and top offenders</string>
+    <string name="more_my_reports">My reports</string>
+    <string name="more_my_reports_subtitle">What this phone reported, and whether it got there</string>
+    <string name="my_reports_intro">Reports this phone made in the last 90 days and whether each one reached CallShield. Reported a number as spam by mistake? Send not spam.</string>
+    <string name="my_reports_empty">No reports from this phone in the last 90 days.</string>
+    <!-- %1$s is the kind of report, such as "Robocall" or "Not spam"; %2$s is the date and time. -->
+    <string name="my_reports_kind_date">%1$s · %2$s</string>
+    <string name="my_reports_kind_not_spam">Not spam</string>
+    <string name="my_reports_kind_sms_spam">Spam text</string>
+    <string name="my_reports_sent">Sent</string>
+    <string name="my_reports_queued">Waiting to send</string>
+    <string name="my_reports_not_sent">Not sent</string>
+    <string name="my_reports_send_not_spam">Send not spam</string>
     <string name="more_settings_subtitle">Protection, schedules, backup, and cleanup</string>
     <string name="more_protection_test_subtitle">Verify permissions and detection</string>
     <string name="more_whats_new_subtitle">Changelog and version history</string>

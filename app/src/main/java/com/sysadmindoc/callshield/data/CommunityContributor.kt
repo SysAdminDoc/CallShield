@@ -133,6 +133,7 @@ object CommunityContributor {
             transport = { report -> transport(report) },
             enqueue = { report -> CommunityReportWorker.enqueue(appContext, report) },
             dequeue = { report -> CommunityReportWorker.dequeue(appContext, report) },
+            record = { report, delivery -> repository.recordCommunityReport(report, delivery) },
         )
     }
 

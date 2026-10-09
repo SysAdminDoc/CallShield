@@ -15,9 +15,11 @@ import androidx.work.await
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReport
+import com.sysadmindoc.callshield.data.CommunityReportHistory.Delivery
 import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
 import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -36,12 +38,14 @@ class CommunityReportWorker internal constructor(
     context: Context,
     params: WorkerParameters,
     private val transport: suspend (CommunityReport) -> ContributeResult,
+    private val record: suspend (CommunityReport, Delivery) -> Unit = { _, _ -> },
     private val release: suspend (number: String, vote: String) -> Unit,
 ) : CoroutineWorker(context, params) {
     constructor(context: Context, params: WorkerParameters) : this(
         context,
         params,
         CommunityContributor::send,
+        { report, delivery -> SpamRepository.getInstance(context.applicationContext).recordCommunityReport(report, delivery) },
         { number, vote -> SpamRepository.getInstance(context.applicationContext).releaseCommunityReport(number, vote) },
     )
 
@@ -51,6 +55,7 @@ class CommunityReportWorker internal constructor(
         val givenUp = !result.success && (!result.outcome.isTransient || runAttemptCount + 1 >= MAX_ATTEMPTS)
         return when {
             result.success -> {
+                note(report, Delivery.SENT)
                 Result.success()
             }
 
@@ -58,12 +63,28 @@ class CommunityReportWorker internal constructor(
                 // Nothing will send it now, so the day's claim mustn't tell the
                 // user it was already reported.
                 release(report.number, CommunityReportLedger.voteOf(report.type))
+                note(report, Delivery.NOT_SENT)
                 Result.failure()
             }
 
             else -> {
                 Result.retry()
             }
+        }
+    }
+
+    /** My reports learns how a queued report ended; a store that can't be written doesn't fail the work. */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun note(
+        report: CommunityReport,
+        delivery: Delivery,
+    ) {
+        try {
+            record(report, delivery)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // The list shows it as waiting; the report itself went where it went.
         }
     }
 

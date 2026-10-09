@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C362-f38ba8?style=flat-square" alt="51,362 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1932-94e2d5?style=flat-square" alt="1932 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1939-94e2d5?style=flat-square" alt="1939 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -294,6 +294,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. For ten minutes after GitHub couldn't be reached at all, the mirror goes first. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't alter the data, though it can hold back updates. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
 - Two Quick Settings tiles (protection on or off, and Expecting a call), app shortcuts and a home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
+- More > My reports lists the community reports this phone made in the last 90 days, with each one's date and whether it was sent, is waiting to send, or didn't go out. A spam report made by mistake can be followed with Send not spam, which goes through the same outbox. The list stays on the phone and isn't backed up
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
 - Home leads with localized blocked-call/text outcomes and collapses completed setup into a review row
 - Home shows a card when a newer release is out, read from a signed file that syncs with the spam database, so no extra host is contacted. Optional weekly GitHub Releases update checks are off by default and only offer release/SHA256 links
@@ -531,12 +532,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1932 tests
+./gradlew testDebugUnitTest   # 1939 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1932 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1939 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -573,8 +574,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1932 JVM unit tests (JUnit) |
-| Strings | 1768 string resources and 48 plural groups (translation-ready) |
+| Tests | 1939 JVM unit tests (JUnit) |
+| Strings | 1779 string resources and 48 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

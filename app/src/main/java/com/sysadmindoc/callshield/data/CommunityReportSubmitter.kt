@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
+import com.sysadmindoc.callshield.data.CommunityReportHistory.Delivery
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -32,6 +33,9 @@ internal data class CommunityReport(
  * back out, and a refusal also releases the claim so the user isn't told it
  * was already sent.
  *
+ * Each report also goes into My reports ([record]) as it's made, and again
+ * once it's delivered or refused.
+ *
  * Once started, a submission runs to the end even if its caller is cancelled,
  * the way a user leaving Lookup mid-send cancels it. Cancelled after the send,
  * a delivered report would keep its queued copy, and the outbox would send it
@@ -47,6 +51,7 @@ internal class CommunityReportSubmitter(
     private val dequeue: suspend (CommunityReport) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    private val record: suspend (CommunityReport, Delivery) -> Unit = { _, _ -> },
 ) {
     suspend fun submit(
         number: String,
@@ -70,6 +75,7 @@ internal class CommunityReportSubmitter(
             return ContributeResult(true, "Already submitted", ContributeOutcome.ALREADY_SUBMITTED)
         }
         val report = CommunityReport(newId(), normalized, type, indicators)
+        note(report, Delivery.QUEUED)
         val queued =
             try {
                 enqueue(report)
@@ -85,24 +91,42 @@ internal class CommunityReportSubmitter(
             } catch (e: CancellationException) {
                 // The send itself was torn down. The queued copy goes out
                 // later with the same id, so the claim stands.
-                if (!queued) release(normalized, vote)
+                if (!queued) {
+                    release(normalized, vote)
+                    note(report, Delivery.NOT_SENT)
+                }
                 throw e
             }
         return when {
             result.success -> {
                 if (queued) dequeue(report)
+                note(report, Delivery.SENT)
                 result
             }
 
             !result.outcome.isTransient || !queued -> {
                 if (queued) dequeue(report)
                 release(normalized, vote)
+                note(report, Delivery.NOT_SENT)
                 result
             }
 
             else -> {
                 ContributeResult(true, "Queued after: ${result.message}", ContributeOutcome.QUEUED, result.retryAfterSeconds)
             }
+        }
+    }
+
+    /** My reports is a convenience: a store that can't be written never costs the report itself. */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun note(
+        report: CommunityReport,
+        delivery: Delivery,
+    ) {
+        try {
+            record(report, delivery)
+        } catch (_: Exception) {
+            // The next change to this report writes it again.
         }
     }
 }

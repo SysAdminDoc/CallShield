@@ -247,6 +247,7 @@ class SpamRepository(
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
         internal val KEY_COMMUNITY_REPORT_LEDGER = stringSetPreferencesKey("community_report_ledger")
+        internal val KEY_COMMUNITY_REPORT_HISTORY = stringSetPreferencesKey("community_report_history")
         internal val KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS =
             stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
@@ -824,6 +825,14 @@ class SpamRepository(
         number: String,
         vote: String,
     ) = settingsRepository.releaseCommunityReport(number, vote)
+
+    /** This device's reports from the last 90 days, newest first ([CommunityReportHistory]). */
+    internal val communityReports: Flow<List<CommunityReportHistory.Entry>> = settingsRepository.communityReports
+
+    internal suspend fun recordCommunityReport(
+        report: CommunityReport,
+        delivery: CommunityReportHistory.Delivery,
+    ) = settingsRepository.recordCommunityReport(report.id, report.number, report.type, delivery, System.currentTimeMillis())
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(

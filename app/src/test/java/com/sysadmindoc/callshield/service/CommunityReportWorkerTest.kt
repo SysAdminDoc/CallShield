@@ -40,6 +40,7 @@ class CommunityReportWorkerTest {
     private val number = "+12122340101"
     private val report = CommunityReport("report-1", number, "spam", null)
     private val released = mutableListOf<String>()
+    private val recorded = mutableListOf<String>()
 
     private fun factory(transport: suspend (CommunityReport) -> ContributeResult) =
         object : WorkerFactory() {
@@ -47,7 +48,12 @@ class CommunityReportWorkerTest {
                 appContext: Context,
                 workerClassName: String,
                 workerParameters: WorkerParameters,
-            ) = CommunityReportWorker(appContext, workerParameters, transport) { number, vote -> released += "$number:$vote" }
+            ) = CommunityReportWorker(
+                appContext,
+                workerParameters,
+                transport,
+                record = { queued, delivery -> recorded += "${queued.id}:$delivery" },
+            ) { number, vote -> released += "$number:$vote" }
         }
 
     @Test
@@ -123,6 +129,22 @@ class CommunityReportWorkerTest {
         )
         // Nothing will send either of them, so neither may still count as reported today.
         assertEquals(listOf("$number:spam", "$number:spam"), released)
+    }
+
+    @Test
+    fun `My reports learns how a queued report ended`() {
+        run(ContributeOutcome.NETWORK_ERROR)
+        assertEquals("a retry is still waiting, as listed", emptyList<String>(), recorded)
+
+        run(ContributeOutcome.INVALID_NUMBER)
+        val worker =
+            TestListenableWorkerBuilder<CommunityReportWorker>(context)
+                .setInputData(CommunityReportWorker.request(report).workSpec.input)
+                .setWorkerFactory(factory { ContributeResult(true, "ok", ContributeOutcome.REPORTED_SPAM) })
+                .build()
+        runBlocking { worker.doWork() }
+
+        assertEquals(listOf("report-1:NOT_SENT", "report-1:SENT"), recorded)
     }
 
     @Test

@@ -1558,6 +1558,20 @@ class MainViewModel
             }
         }
 
+        /** This device's reports from the last 90 days, for My reports. */
+        internal val communityReports =
+            repo.communityReports.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        /**
+         * Sends not spam for a number this device reported as spam by mistake.
+         * It goes through the outbox like any report; nothing is allow-listed.
+         */
+        fun correctReport(number: String) {
+            viewModelScope.launch {
+                _contributeResult.value = CommunityContributor.reportNotSpam(appContext, number).toStatusMessage()
+            }
+        }
+
         /** The text to share for a number the user thinks was flagged wrongly ([FalsePositiveReport]). */
         suspend fun falsePositiveReportText(
             number: String,

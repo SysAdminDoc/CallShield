@@ -104,6 +104,11 @@ All notable changes to CallShield will be documented in this file.
   same content rules and link checks as an incoming text, with the reasons
   listed. It all runs on the phone. A link's domain goes to a URL threat feed
   only if you've turned those on.
+- More has a My reports page listing what this phone reported to the
+  community in the last 90 days, with the date and whether each report was
+  sent, is still waiting to send, or didn't go out. Reported a number as
+  spam by mistake? Tap Send not spam on that row and the correction goes out
+  the same way. The list is kept on the phone only.
 
 ## v1.11.0 (2026-09-30)
 

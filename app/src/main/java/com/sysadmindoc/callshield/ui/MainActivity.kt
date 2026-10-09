@@ -45,6 +45,7 @@ import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen
 import com.sysadmindoc.callshield.ui.screens.main.DashboardScreen
+import com.sysadmindoc.callshield.ui.screens.more.MY_REPORTS_VIEW
 import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
 import com.sysadmindoc.callshield.ui.theme.*
@@ -259,6 +260,7 @@ fun CallShieldApp(
                     2 -> stringResource(R.string.more_settings)
                     3 -> stringResource(R.string.more_whats_new)
                     4 -> stringResource(R.string.more_protection_test)
+                    MY_REPORTS_VIEW -> stringResource(R.string.more_my_reports)
                     else -> stringResource(R.string.nav_more)
                 }
             }
