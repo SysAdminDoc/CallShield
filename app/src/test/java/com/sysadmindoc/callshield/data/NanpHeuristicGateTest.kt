@@ -176,6 +176,26 @@ class NanpHeuristicGateTest {
         assertTrue("US", "neighbor_spoof" in analyze(newYork, "US", emptyList()).reasons)
     }
 
+    @Test
+    fun `a caller that passes only the region gets the plan read in that region`() {
+        // The plan used to default to a North American reading of the bare digits,
+        // whatever region came with them.
+        setOwnNumber("+12025559999")
+        heuristics.updateHotRanges(listOf("202555"))
+        val now = System.currentTimeMillis()
+        val bare = "2025551234"
+        val repeats = List(3) { bare to now - 1000L }
+
+        assertFalse(heuristics.isNeighborSpoof(context, bare, homeRegionIso = "AU"))
+        assertTrue(heuristics.isRapidFire(repeats, bare, homeRegionIso = "AU"))
+        assertTrue(SpamHeuristics.isRapidFire(repeats, bare, homeRegionIso = "AU"))
+        assertEquals(
+            listOf("rapid_fire"),
+            heuristics.analyze(context, bare, homeRegionIso = "AU", recentBlockedNumbers = repeats).reasons,
+        )
+        assertTrue("US", "neighbor_spoof" in heuristics.analyze(context, bare, homeRegionIso = "US").reasons)
+    }
+
     private fun analyze(
         number: String,
         region: String?,

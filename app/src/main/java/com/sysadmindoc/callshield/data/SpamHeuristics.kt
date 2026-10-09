@@ -111,8 +111,8 @@ class SpamHeuristics
         fun isNeighborSpoof(
             context: Context,
             incomingNumber: String,
-            numberingPlan: NumberingPlan = NumberingPlan.from(incomingNumber),
             homeRegionIso: String? = null,
+            numberingPlan: NumberingPlan = NumberingPlan.from(incomingNumber, homeRegionIso),
         ): Boolean {
             if (numberingPlan != NumberingPlan.NANP) return false
             val userNumber = getUserPhoneNumber(context) ?: return false
@@ -413,8 +413,8 @@ class SpamHeuristics
             number: String,
             windowMs: Long = 3600_000,
             threshold: Int = 3,
-            numberingPlan: NumberingPlan = NumberingPlan.from(number),
             homeRegionIso: String? = null,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number, homeRegionIso),
         ): Boolean {
             // Short codes and other unreadable senders never count: repeated 2FA
             // texts would look like rapid fire.
@@ -447,12 +447,12 @@ class SpamHeuristics
         fun analyze(
             context: Context,
             number: String,
-            numberingPlan: NumberingPlan = NumberingPlan.from(number),
+            homeRegionIso: String? = null,
+            numberingPlan: NumberingPlan = NumberingPlan.from(number, homeRegionIso),
             smsBody: String? = null,
             recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
             enableNeighborSpoof: Boolean = true,
             senderProvenance: SenderProvenance? = null,
-            homeRegionIso: String? = null,
         ): HeuristicResult {
             var score = 0
             val reasons = mutableListOf<String>()
@@ -492,7 +492,7 @@ class SpamHeuristics
             }
 
             // Neighbor spoofing (gated by the Settings toggle)
-            if (enableNeighborSpoof && isNeighborSpoof(context, number, numberingPlan, homeRegionIso)) {
+            if (enableNeighborSpoof && isNeighborSpoof(context, number, homeRegionIso, numberingPlan)) {
                 score += 50
                 reasons.add("neighbor_spoof")
             }
@@ -559,11 +559,6 @@ class SpamHeuristics
                 shared.clearContactCache()
             }
 
-            fun isNeighborSpoof(
-                context: Context,
-                incomingNumber: String,
-            ): Boolean = shared.isNeighborSpoof(context, incomingNumber)
-
             fun isTollFree(number: String): Boolean = shared.isTollFree(number)
 
             fun isInternationalPremium(number: String): Boolean = shared.isInternationalPremium(number)
@@ -598,21 +593,7 @@ class SpamHeuristics
                 number: String,
                 windowMs: Long = 3600_000,
                 threshold: Int = 3,
-            ): Boolean = shared.isRapidFire(recentNumbers, number, windowMs, threshold)
-
-            fun analyze(
-                context: Context,
-                number: String,
-                smsBody: String? = null,
-                recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
-                senderProvenance: SenderProvenance? = null,
-            ): HeuristicResult =
-                shared.analyze(
-                    context,
-                    number,
-                    smsBody = smsBody,
-                    recentBlockedNumbers = recentBlockedNumbers,
-                    senderProvenance = senderProvenance,
-                )
+                homeRegionIso: String? = null,
+            ): Boolean = shared.isRapidFire(recentNumbers, number, windowMs, threshold, homeRegionIso)
         }
     }

@@ -135,12 +135,18 @@ internal object SmsReplyBait {
             }.map { it.value.lowercase() }
             .toList()
 
+    /** Reads the host the way a browser does, as SmsContentAnalyzer's extractDomain does. */
     private fun isChatLink(url: String): Boolean {
         val host =
             url
                 .substringAfter("://")
                 .substringBefore('/')
+                .substringBefore('\\')
                 .substringBefore('?')
+                .substringBefore('#')
+                .substringAfterLast('@')
+                .substringBefore(':')
+                .trimEnd('.')
                 .removePrefix("www.")
         return host in chatLinkHosts
     }
