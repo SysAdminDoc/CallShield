@@ -17,6 +17,14 @@ All notable changes to CallShield will be documented in this file.
   location. A report the service can't take no longer uses up your own
   allowance, and addresses in one IPv4 /24 now share a budget the way one
   IPv6 /48 already did.
+- Real calls from the published support lines that scammers like to fake
+  (Apple, the IRS, Social Security, Medicare and the big banks, 50 numbers
+  in all) now ring when your carrier verified the caller. Complaints about
+  those numbers come from people the fakes fooled, so they no longer block
+  the real line. A call your carrier didn't verify is still blocked, and the
+  reason now says whose number was faked. The caller ID popup names the
+  organization and reminds you not to share codes or passwords on a call you
+  didn't expect.
 
 ## v1.11.0 (2026-09-30)
 
