@@ -516,6 +516,7 @@
     <string name="overlay_reason_voip_range">High-risk VoIP range</string>
     <string name="overlay_reason_hot_campaign">Active spam campaign</string>
     <string name="overlay_reason_community_watch">Reported by other CallShield users</string>
+    <string name="caller_abroad">International call from %1$s</string>
     <string name="overlay_official_line">This is a published %1$s number. Scammers copy it, so don\'t share codes or passwords on a call you didn\'t expect.</string>
     <string name="overlay_reason_toll_free">Toll-free caller</string>
     <string name="overlay_reason_neighbor_spoof">Possible neighbor spoofing</string>

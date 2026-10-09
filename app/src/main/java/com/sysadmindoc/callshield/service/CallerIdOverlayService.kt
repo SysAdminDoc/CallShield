@@ -22,9 +22,11 @@ import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CallerCountry
 import com.sysadmindoc.callshield.data.OfficialLines
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
@@ -401,6 +403,20 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(8f), 0, context.overlayDp(2f))
                     },
                 )
+                // Where the caller dialed from, when that's another country.
+                // A label only, like the carrier's "Overseas call".
+                CallerCountry
+                    .abroad(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
+                    ?.takeUnless { outgoingRiskWarning }
+                    ?.let { country ->
+                        addView(
+                            TextView(context).apply {
+                                text = context.getString(R.string.caller_abroad, CallerCountry.displayName(country))
+                                setTextColor(palette.subtext)
+                                textSize = OVERLAY_TEXT_SP
+                            },
+                        )
+                    }
                 if (displayReason.isNotEmpty() && (confidence <= 0 || outgoingRiskWarning)) {
                     addView(
                         TextView(context).apply {

@@ -46,6 +46,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CallerCountry
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -594,7 +595,7 @@ fun BlockedCallItem(
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val homeRegion = rememberHomeRegion()
-    val location = remember(call.number, homeRegion) { AreaCodeLookup.lookup(call.number, homeRegion) }
+    val location = rememberCallerPlace(call.number, homeRegion)
     var expanded by rememberSaveable(call.id) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
@@ -815,6 +816,20 @@ fun SmallActionButton(
 /** The repeat badge's tint. Its count is drawn in the same accent, which at 15% fell to 4.30:1 in Light. */
 internal const val REPEAT_BADGE_TINT = 0.10f
 
+/**
+ * Where [number] is from: "International call from Jamaica" when that's
+ * another country than the SIM's, else the area code's place, or null.
+ */
+@Composable
+private fun rememberCallerPlace(
+    number: String,
+    homeRegion: String?,
+): String? {
+    val abroad = remember(number, homeRegion) { CallerCountry.abroad(number, homeRegion) }
+    val location = remember(number, homeRegion) { AreaCodeLookup.lookup(number, homeRegion) }
+    return abroad?.let { stringResource(R.string.caller_abroad, CallerCountry.displayName(it)) } ?: location
+}
+
 @Suppress("LongMethod")
 @Composable
 fun GroupedCallItem(
@@ -824,7 +839,7 @@ fun GroupedCallItem(
     onBlock: () -> Unit,
 ) {
     val homeRegion = rememberHomeRegion()
-    val location = remember(call.number, homeRegion) { AreaCodeLookup.lookup(call.number, homeRegion) }
+    val location = rememberCallerPlace(call.number, homeRegion)
 
     val accentColor =
         if (count >= 5) {

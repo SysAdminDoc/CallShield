@@ -41,6 +41,37 @@ internal object RegionCallingCodes {
     /** Calling code digits (no `+`) for [regionIso], or null for an unknown region. */
     fun forRegion(regionIso: String?): String? = regionIso?.let { codes[it.uppercase(Locale.ROOT)] }
 
+    private val callingCodes: Set<String> = codes.values.toSet()
+
+    /** The calling code an international number's [digits] start with, or null. Calling codes are prefix-free, so at most one fits. */
+    fun callingCodeOf(digits: String): String? = (1..MAX_CALLING_CODE_LENGTH).map { digits.take(it) }.firstOrNull { it in callingCodes }
+
+    /**
+     * The region a [callingCode] is named for: the only one, or for a code
+     * several regions share, the one libphonenumber treats as its main country.
+     */
+    fun mainRegionFor(callingCode: String): String? =
+        MAIN_REGIONS[callingCode] ?: codes.entries.singleOrNull { it.value == callingCode }?.key
+
+    /** libphonenumber's main country for each calling code that several regions share. */
+    private val MAIN_REGIONS =
+        mapOf(
+            "1" to "US",
+            "7" to "RU",
+            "39" to "IT",
+            "44" to "GB",
+            "47" to "NO",
+            "61" to "AU",
+            "212" to "MA",
+            "262" to "RE",
+            "290" to "SH",
+            "358" to "FI",
+            "590" to "GP",
+            "599" to "CW",
+        )
+
+    private const val MAX_CALLING_CODE_LENGTH = 3
+
     /** How a caller ID without a `+` reads on a phone from a given region. */
     sealed interface BareNumber {
         /** It was dialed with an international prefix; [digits] follow the prefix. */
