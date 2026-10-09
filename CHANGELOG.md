@@ -52,10 +52,16 @@ All notable changes to CallShield will be documented in this file.
   on your phone.
 - On a dual-SIM phone, the carrier's "Unverified" scam label is now read
   for the SIM that got the text, not the default one, and a SIM that was
-  still locked at startup counts as soon as it's unlocked.
+  still locked at startup counts as soon as it's unlocked. Scanning the
+  inbox again reads each text the same way.
+- If the SIM was still locked when the phone started, CallShield used to
+  read numbers by the phone's language region until the app restarted. It
+  now switches to the SIM's country within a minute of the unlock.
 - Meeting mode now starts only while a picked app shows an ongoing call.
   A "Connected" or sync notice from Teams, Zoom, Slack or Discord could
   keep the phone in meeting mode for hours before.
+- After CallShield repairs a damaged database, the trending numbers come
+  back as soon as there's a connection instead of up to 30 minutes later.
 
 ## v1.11.0 (2026-09-30)
 
