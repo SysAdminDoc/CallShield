@@ -26,13 +26,25 @@ internal fun opensAppInfoAfterRequest(
 ): Boolean = stillDenied.isNotEmpty() && stillDenied.none(showsRationale)
 
 /**
+ * The refusals in [grants] that decide whether App info opens: every one, or
+ * only those in [appInfoFor] when a request also asks for an extra the
+ * feature works without.
+ */
+internal fun refusalsThatCount(
+    grants: Map<String, Boolean>,
+    appInfoFor: Collection<String>?,
+): Set<String> = grants.filter { (permission, granted) -> !granted && (appInfoFor == null || permission in appInfoFor) }.keys
+
+/**
  * Returns a function that asks for the permissions it's given and calls
  * [onResult] with Android's answer. When the answer leaves no dialog for next
  * time, it shows [appInfoHint] and opens App info, where the permission lives.
+ * Only refusals of [appInfoFor] count when it's given.
  */
 @Composable
 fun rememberPermissionRequest(
     @StringRes appInfoHint: Int,
+    appInfoFor: Collection<String>? = null,
     onResult: (Map<String, Boolean>) -> Unit = {},
 ): (List<String>) -> Unit {
     val context = LocalContext.current
@@ -40,7 +52,7 @@ fun rememberPermissionRequest(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onResult(grants)
             val activity = context.findActivity() ?: return@rememberLauncherForActivityResult
-            val stillDenied = grants.filterValues { granted -> !granted }.keys
+            val stillDenied = refusalsThatCount(grants, appInfoFor)
             if (opensAppInfoAfterRequest(stillDenied, activity::shouldShowRequestPermissionRationale)) {
                 Toast.makeText(context, appInfoHint, Toast.LENGTH_LONG).show()
                 context.startActivitySafely(

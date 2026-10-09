@@ -95,6 +95,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.opensAppInfoAfterRequest
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -156,7 +157,6 @@ fun OnboardingScreen(
         mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager))
     }
     var runtimePermissionsBlocked by rememberSaveable { mutableStateOf(false) }
-    var runtimePermissionRequestAttempts by rememberSaveable { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -169,16 +169,16 @@ fun OnboardingScreen(
         screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
     }
 
-    val runtimePermissionsLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    // Android answers a request it won't show again at once, with nothing on
+    // screen, so even the first tap after two refusals in an earlier run opens
+    // App info, and the button keeps pointing there.
+    val runtimePermissionRequest =
+        rememberPermissionRequest(R.string.permission_core_in_app_info, appInfoFor = CallShieldPermissions.corePermissions) {
             refreshReadiness()
             val activity = context as? Activity
-            val missing = CallShieldPermissions.missingCorePermissions(context)
             runtimePermissionsBlocked =
-                missing.isNotEmpty() &&
-                runtimePermissionRequestAttempts >= 2 &&
                 activity != null &&
-                missing.none(activity::shouldShowRequestPermissionRationale)
+                opensAppInfoAfterRequest(CallShieldPermissions.missingCorePermissions(context), activity::shouldShowRequestPermissionRationale)
         }
     val notificationPermissionRequest =
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
@@ -226,8 +226,7 @@ fun OnboardingScreen(
                     onFailure = ::reportLaunchFailure,
                 )
             } else {
-                runtimePermissionRequestAttempts++
-                runtimePermissionsLauncher.launch(CallShieldPermissions.onboardingRuntimePermissions.toTypedArray())
+                runtimePermissionRequest(CallShieldPermissions.onboardingRuntimePermissions)
             }
         },
         onRequestScreener = {

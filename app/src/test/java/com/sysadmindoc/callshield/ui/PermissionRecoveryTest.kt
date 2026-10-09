@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.ui
 
 import android.Manifest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,5 +35,13 @@ class PermissionRecoveryTest {
         val denied = setOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_SMS)
 
         assertTrue(opensAppInfoAfterRequest(denied) { false })
+    }
+
+    @Test
+    fun `a refused extra doesn't count when the needed permissions were granted`() {
+        val grants = mapOf(Manifest.permission.READ_CALL_LOG to true, Manifest.permission.READ_PHONE_STATE to false)
+
+        assertEquals(emptySet<String>(), refusalsThatCount(grants, appInfoFor = listOf(Manifest.permission.READ_CALL_LOG)))
+        assertEquals(setOf(Manifest.permission.READ_PHONE_STATE), refusalsThatCount(grants, appInfoFor = null))
     }
 }
