@@ -983,6 +983,34 @@ def row_for(data_dir: Path, number: str) -> dict | None:
     return next((row for row in database["numbers"] if row["number"] == number), None)
 
 
+def assert_a_published_number_leaves_the_watch_list(data_dir: Path) -> None:
+    """A maintainer approval publishes a watched number but keeps its ledger
+    row unpublished. The watch list must still drop it: the database blocks it
+    now, and the not-spam reports that would clear it are ignored once listed."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    number = "+12122340477"
+    reported = (datetime.now(timezone.utc) - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+    for index, bucket in enumerate(BUCKETS[:2], start=1):
+        write_report(
+            data_dir, f"watched-{index}.json", number, bucket, (reported + timedelta(hours=index)).isoformat(), device=BUCKETS[index + 1]
+        )
+    run_drain(data_dir)
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert [row["number"] for row in feed["numbers"]] == [number], feed
+
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [{"number": number, "type": "scam", "reviewed_at": TODAY, "reference": "https://example.org/report"}]},
+    )
+    run_script("merge_community_reports.py", data_dir)
+    assert row_for(data_dir, number) is not None, "the approval must publish the number"
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert feed["numbers"] == [] and feed["cleared"] is True, feed
+
+
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
     """Issue #27: one report of a Munich number waits for corroboration no
     imported source can give. The maintainer's review publishes it, and later
@@ -1512,6 +1540,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_community_watch_uses_90_day_device_evidence(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_a_published_number_leaves_the_watch_list(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

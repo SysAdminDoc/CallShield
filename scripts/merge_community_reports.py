@@ -217,11 +217,15 @@ def community_watch_reporter_count(state: dict) -> int:
     return max((capped_reporter_count(identities) for identities in by_day.values()), default=0)
 
 
-def write_community_watch_feed(pending: dict[str, dict], today: str, input_digest: str) -> None:
+def write_community_watch_feed(
+    pending: dict[str, dict], existing: dict[str, dict], today: str, input_digest: str
+) -> None:
     cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
     rows = []
     for number, state in pending.items():
-        if state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
+        # A maintainer approval publishes a number but keeps its ledger row
+        # unpublished, so the database itself is what says it's listed.
+        if number in existing or state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
             continue
         reporters = community_watch_reporter_count(state)
         if reporters >= COMMUNITY_WATCH_MIN_REPORTERS:
@@ -1077,7 +1081,7 @@ def main(argv: list[str] | None = None):
             "numbers": dict(sorted(pending.items())),
         },
     )
-    write_community_watch_feed(pending, today, report_digest)
+    write_community_watch_feed(pending, existing, today, report_digest)
 
     # Before the files go, so a resend arriving later is still recognised.
     remember_merged_report_ids(merged_ids, counted_ids, today)
