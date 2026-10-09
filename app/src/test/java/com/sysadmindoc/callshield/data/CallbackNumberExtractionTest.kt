@@ -81,6 +81,35 @@ class CallbackNumberExtractionTest {
         assertEquals(listOf("+442079460018"), extractAt("Call before 17:00 on 020 7946 0018", GB))
         assertEquals(listOf("+4930123456789"), extractLax("Rufen Sie unseren Kundenservice an: 030 123456789"))
         assertEquals(listOf("+492079460018"), extractLax("Call 020 7946 0018 about the amount 30123456"))
+        assertEquals(listOf("+442079460018"), extractAt("Call us 9.00-5.30 on 020 7946 0018", GB))
+    }
+
+    @Test
+    fun `helplines and dial words in other languages ask for a call too`() {
+        assertEquals(listOf("+448001234567"), extractAt("Helpline: 0800 123 4567", GB))
+        assertEquals(listOf("+448001234567"), extractAt("Freephone 0800 123 4567 to stop the payment", GB))
+        assertEquals(listOf("+448001234567"), extractAt("Hotline 0800 123 4567", GB))
+        assertEquals(listOf("+33123456789"), extractAt("Composez le 01 23 45 67 89", FR))
+    }
+
+    @Test
+    fun `a seven-digit national number is read where lines are that short`() {
+        assertEquals(listOf("+5072234567"), extractAt("Llame al 223-4567 hoy", PA))
+    }
+
+    @Test
+    fun `a claim, booking or amount word keeps out only a number without the trunk 0`() {
+        assertEquals(listOf("+449061701461"), extractAt("You have won 500 GBP! Call to claim 0906 170 1461", GB))
+        assertEquals(listOf("+442079460018"), extractAt("Ring to claim: 0207 946 0018", GB))
+        assertEquals(listOf("+442079460018"), extractAt("Call to confirm your booking 020 7946 0018", GB))
+        assertEquals("claim as a verb", listOf("+6561234567"), extractAt("Call to claim 61234567", SG))
+        listOf(
+            "Call about your booking 30123456",
+            "Call about the balance of 30123456",
+            "Ring about your policy 3012345",
+            "Call about your parcel number 0123456789",
+            "Call about claim no. 0123456789",
+        ).forEach { assertEquals(it, emptyList<String>(), extractLax(it)) }
     }
 
     @Test
@@ -176,5 +205,7 @@ class CallbackNumberExtractionTest {
         val FR = ListNumberPlan("FR", "33", "0", listOf(9))
         val ES = ListNumberPlan("ES", "34", "", listOf(9))
         val DE = ListNumberPlan("DE", "49", "0", listOf(8, 9, 10, 11))
+        val PA = ListNumberPlan("PA", "507", "", listOf(7, 8))
+        val SG = ListNumberPlan("SG", "65", "", listOf(8))
     }
 }

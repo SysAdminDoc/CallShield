@@ -621,7 +621,7 @@ class SmsContentAnalyzer
             private val INTERNATIONAL_DIGITS = 8..15
 
             /**
-             * A number written the way people write one at home: 8 to 15 digits
+             * A number written the way people write one at home: 7 to 15 digits
              * with the usual gaps, which also covers one dialed with "00" in
              * front. Whether it's a line is for the home region's validator to
              * say. Not after a "#", "\u2116", "\u00BA", "\u00B0", a currency sign or a
@@ -630,7 +630,7 @@ class SmsContentAnalyzer
              */
             private val nationalNumber =
                 Regex(
-                    "(?<![0-9A-Za-z_/+#.,\u2116\u00BA\u00B0\u20AC\$\u00A3\u00A5\u20B9])\\(?\\d(?:[ \\t.()-]{0,2}\\d){7,14}\\)?" +
+                    "(?<![0-9A-Za-z_/+#.,\u2116\u00BA\u00B0\u20AC\$\u00A3\u00A5\u20B9])\\(?\\d(?:[ \\t.()-]{0,2}\\d){6,14}\\)?" +
                         "(?![0-9]|[.,]\\d|[ \\t]?(?:[%\u20AC\$\u00A3\u00A5\u20B9]|(?i:$CURRENCY_CODES)\\b))",
                 )
             private val dateShape = Regex("\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}[./-]\\d{1,2}[./-]\\d{1,2}")
@@ -645,31 +645,59 @@ class SmsContentAnalyzer
              */
             private val callWord =
                 Regex(
-                    "(?iu)\\b(?:call(?:ing)?|ring|phone|dial|tel|telephone|contact\\w*|ll[a\u00E1]m\\w*|ligu\\w*|ligar|liga|" +
-                        "telef\\w*|tel[e\u00E9]fono|t[e\u00E9]l[e\u00E9]phon\\w*|t[e\u00E9]l|appel\\w*|rappel\\w*|joindre|" +
-                        "anruf\\w*|rufen|ruf|chiam\\w*|contatt\\w*|kontakt\\w*|bel|bellen)\\b",
+                    "(?iu)\\b(?:call(?:ing)?|ring|phone|dial|tel|telephone|contact\\w*|helpline|hotline|free(?:phone|fone)|" +
+                        "ll[a\u00E1]m\\w*|ligu\\w*|ligar|liga|marque|marcar|" +
+                        "telef\\w*|tel[e\u00E9]fono|t[e\u00E9]l[e\u00E9]phon\\w*|t[e\u00E9]l|appel\\w*|rappel\\w*|joindre|compos(?:ez|er)|" +
+                        "anruf\\w*|rufen|ruf|w[a\u00E4]hlen|chiam\\w*|contatt\\w*|kontakt\\w*|bel|bellen)\\b",
                 )
 
+            /** Words that only ever come before an identifier: "order", "Kundennummer". */
+            private const val REFERENCE_WORDS =
+                "order|ref|reference|code|pin|id|invoice|tracking|ticket|case|account|acct|confirmation|otp|serial|iban|bic|swift|" +
+                    "pedido|factura|referencia|seguimiento|commande|suivi|facture|r[e\u00E9]f[e\u00E9]rence|dossier|" +
+                    "bestell\\w*|rechnung\\w*|kunden-?(?:nummer|nr)|konto\\w*|kto|auftrag\\w*|aktenzeichen|vorgang\\w*|" +
+                    "ordine|fattura|pratica|codice|encomenda|fatura|bestelling|factuur|klantnummer"
+
             /**
-             * A reference, an account, an amount or a code right before a
-             * number, so it isn't read as a line to call: "order 2079460018", "Tracking
-             * number: 2079460018", "Kundennummer lautet 3012345678". Only
-             * "number" and "is" may sit between, so "call our booking line on"
-             * still asks for a call.
+             * Words that come before a parcel, a booking or an amount, and as
+             * often before a line to call: "your booking 020 7946 0018", "call
+             * to claim 0906 170 1461".
+             */
+            private const val LOOSE_REFERENCE_WORDS =
+                "parcel|package|shipment|booking|reservation|policy|claim|colis|sendung\\w*|" +
+                    "amount|total|balance|sum|importe|monto|saldo|betrag|summe|montant|solde|importo|valor"
+
+            /**
+             * A reference, an account or a code right before a number, so it
+             * isn't read as a line to call: "order 2079460018", "Tracking
+             * number: 2079460018", "Kundennummer lautet 3012345678", "booking
+             * ref 0207946001". Only "number" and "is" may sit between, so
+             * "call our booking line on" still asks for a call.
              */
             private val referenceWord =
                 Regex(
-                    "(?iu)(?:[#\u2116\u00BA\u00B0]|\\b(?:order|ref|reference|code|pin|id|invoice|tracking|ticket|case|account|acct|" +
-                        "confirmation|otp|parcel|package|shipment|booking|reservation|policy|claim|serial|iban|bic|swift|" +
-                        "amount|total|balance|sum|importe|monto|saldo|betrag|summe|montant|solde|importo|valor|" +
-                        "pedido|factura|referencia|seguimiento|commande|colis|suivi|facture|r[e\u00E9]f[e\u00E9]rence|dossier|" +
-                        "bestell\\w*|rechnung\\w*|kunden-?(?:nummer|nr)|sendung\\w*|konto\\w*|kto|auftrag\\w*|aktenzeichen|vorgang\\w*|" +
-                        "ordine|fattura|pratica|codice|encomenda|fatura|bestelling|factuur|klantnummer)\\b|\\b(?:no\\.|nr\\b\\.?|n[\u00BA\u00B0]))" +
+                    "(?iu)(?:[#\u2116\u00BA\u00B0]|\\b(?:$REFERENCE_WORDS)\\b|\\b(?:no\\.|nr\\b\\.?|n[\u00BA\u00B0])|" +
+                        "\\b(?:$LOOSE_REFERENCE_WORDS)\\b[ \\t.:-]*" +
+                        "(?:#|n[\u00BA\u00B0]|\\b(?:number|nummer|n[u\u00FA]mero|num[e\u00E9]ro|numero|nr|no|id|code|ref|reference)\\b))" +
                         "[ \\t.:#-]*(?:(?:number|nummer|n[u\u00FA]mero|num[e\u00E9]ro|numero|nr|no|n[\u00BA\u00B0]|id|code|is|ist|lautet|est|es|de|del)\\b\\.?[ \\t.:#-]*){0,3}$",
+                )
+
+            /**
+             * A parcel, booking or amount word right before a number, not used
+             * as a verb ("to claim"). It keeps out a number without the trunk 0
+             * ("the amount 30123456"), but one dialed with it is a line.
+             */
+            private val looseReferenceWord =
+                Regex(
+                    "(?iu)(?<!\\bto[ \\t])\\b(?:$LOOSE_REFERENCE_WORDS)\\b[ \\t.:#-]*" +
+                        "(?:(?:is|ist|lautet|est|es|de|del|of|von|du)\\b\\.?[ \\t.:#-]*){0,2}$",
                 )
 
             /** Five or more digits in a row, give or take the usual gaps: another number, not a time. */
             private val otherNumber = Regex("\\d(?:[ \\t.,()-]?\\d){4,}")
+
+            /** Opening hours: "9.00-5.30", "8.30". */
+            private val timeShape = Regex("\\d{1,2}[.:]\\d{2}(?:-\\d{1,2}[.:]\\d{2})?")
             private const val CALLBACK_CONTEXT_CHARS = 48
 
             fun updateSpamDomains(domains: Collection<String>) {
@@ -734,7 +762,7 @@ class SmsContentAnalyzer
              * and no other number that isn't one of the [lines] already read.
              * "Call about order 2079460018" is an order, "Call 020 7946 0018,
              * amount 30123456" an amount, "about your order, ring 020 7946 0018"
-             * a line.
+             * and "call to confirm your booking 020 7946 0018" lines.
              */
             private fun asksToCall(
                 text: String,
@@ -749,9 +777,13 @@ class SmsContentAnalyzer
                     otherNumber.findAll(between).any { run ->
                         val first = from + run.range.first
                         val last = from + run.range.last
-                        !dateShape.matches(run.value) && lines.none { it.first <= last && first <= it.last }
+                        !dateShape.matches(run.value) && !timeShape.matches(run.value) && lines.none { it.first <= last && first <= it.last }
                     }
-                return !another && !currencyBefore.containsMatchIn(between) && !referenceWord.containsMatchIn(between)
+                val trunkLed = text.startsWith("0", start) || text.startsWith("(0", start)
+                return !another &&
+                    !currencyBefore.containsMatchIn(between) &&
+                    !referenceWord.containsMatchIn(between) &&
+                    (trunkLed || !looseReferenceWord.containsMatchIn(between))
             }
 
             /** Fullwidth digits, typographic dashes and odd spaces as plain ones, without a trunk "(0)". */

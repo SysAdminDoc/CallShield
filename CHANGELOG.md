@@ -92,9 +92,10 @@ All notable changes to CallShield will be documented in this file.
   what gets blocked.
 - Outside North America, a number in a flagged text written the way people
   write one at home (020 7946 0018 in the UK, 01 23 45 67 89 in France) is
-  now picked up when the text asks you to call or ring it, so a call to it
-  is held like one to a number written with its country code. Dates,
-  prices, order and account numbers, and codes stay out.
+  now picked up when the text asks you to call, ring or dial it (or names it
+  as a helpline or hotline), so a call to it is held like one to a number
+  written with its country code. Dates, prices, order and account numbers,
+  and codes stay out.
 - Times read the way your phone's language says them. The dashboard, More
   and the widget showed "Synced 5m ago" and "Last: 3h ago", which
   TalkBack read as letters and no language but English shortened that way.
