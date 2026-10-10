@@ -13,10 +13,13 @@ from pipeline_liveness import (
     MIN_BUCKET_SAMPLE,
     evaluate_evidence_expiry,
     evaluate_queue_health,
+    EXIT_WARNING,
+    SOURCE_STALE_WARNING_DAYS,
     evaluate_source_freshness,
     load_database_updated,
     load_queue,
     row_expiry_epoch_ms,
+    warn_source_staleness,
 )
 
 BUCKET = "0123456789abcdef"
@@ -234,8 +237,84 @@ def scheduled_checks() -> None:
     problems = evaluate_source_freshness(real_manifest, default_import, BASE)
     assert len(problems) == 1 and problems[0].startswith("fcc_complaints newest record is from 2026-08-01"), problems
 
+    source_warning_checks()
     evidence_expiry_checks()
     check_scheduled_switch()
+    check_scheduled_warning()
+
+
+def source_warning_checks() -> None:
+    """A source a week from its limit warns without failing; past the limit it fails instead."""
+    assert SOURCE_STALE_WARNING_DAYS == 7
+    manifest = {
+        "sources": [
+            {"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14},
+            {"id": "toastedspam", "cadence": "weekly", "stale_after_days": 30, "import_flag": "--allow-insecure-sources"},
+        ]
+    }
+
+    def ftc_aged(days: float) -> dict:
+        return {"newest_record_date": {"ftc_complaints": (BASE - timedelta(days=days)).isoformat()}}
+
+    assert warn_source_staleness(manifest, ftc_aged(6), BASE) == []
+    for days in (7, 13, 14):
+        warnings = warn_source_staleness(manifest, ftc_aged(days), BASE)
+        assert len(warnings) == 1, (days, warnings)
+        assert warnings[0].startswith(f"ftc_complaints newest record is from {(BASE - timedelta(days=days)).date().isoformat()}"), warnings
+        if days == 14:
+            assert warnings[0].endswith("limit after 2026-09-04 - run scripts/import_all_sources.py"), warnings
+        assert evaluate_source_freshness(manifest, ftc_aged(days), BASE) == [], days
+    stale = ftc_aged(15)
+    assert warn_source_staleness(manifest, stale, BASE) == []
+    assert len(evaluate_source_freshness(manifest, stale, BASE)) == 1
+
+    # A 30-day source warns from day 23, by its last import, naming its flag.
+    imported = ftc_aged(0)
+    imported["last_success"] = {"toastedspam": (BASE - timedelta(days=22)).isoformat()}
+    assert warn_source_staleness(manifest, imported, BASE) == []
+    imported["last_success"]["toastedspam"] = (BASE - timedelta(days=23)).isoformat()
+    warnings = warn_source_staleness(manifest, imported, BASE)
+    assert len(warnings) == 1 and warnings[0].startswith("toastedspam was last imported"), warnings
+    assert warnings[0].endswith("--allow-insecure-sources"), warnings
+
+    # A broken manifest stays a failure and adds no warnings.
+    assert warn_source_staleness(None, ftc_aged(10), BASE) == []
+
+
+def check_scheduled_warning() -> None:
+    """A source close to its limit exits with EXIT_WARNING and says so; nothing else fails."""
+    import contextlib
+    import io
+
+    import pipeline_liveness as liveness
+
+    saved = (liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE)
+    with tempfile.TemporaryDirectory() as directory:
+        data = Path(directory)
+        (data / "reports").mkdir()
+        today = datetime.now(timezone.utc)
+        (data / "spam_numbers.json").write_text(json.dumps({"updated": today.date().isoformat(), "numbers": []}), encoding="utf-8")
+        (data / "source-manifest.json").write_text(
+            json.dumps({"sources": [{"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14}]}),
+            encoding="utf-8",
+        )
+        aged = (today - timedelta(days=9)).date().isoformat()
+        (data / "source-freshness.json").write_text(json.dumps({"newest_record_date": {"ftc_complaints": aged}}), encoding="utf-8")
+        liveness.REPORTS_DIR = data / "reports"
+        liveness.DB_FILE = data / "spam_numbers.json"
+        liveness.MANIFEST_FILE = data / "source-manifest.json"
+        liveness.FRESHNESS_FILE = data / "source-freshness.json"
+        try:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                assert liveness.main(["--scheduled"]) == EXIT_WARNING, output.getvalue()
+            assert "close to stale" in output.getvalue() and f"newest record is from {aged}" in output.getvalue(), output.getvalue()
+
+            # Without --scheduled there's no clock, so nothing to warn about.
+            with contextlib.redirect_stdout(io.StringIO()):
+                assert liveness.main([]) == 0
+        finally:
+            liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE = saved
 
 
 def evidence_row(expires_in_days: float | None, *, number: str = "+15125550100") -> dict:

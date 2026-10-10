@@ -29,7 +29,8 @@ An empty queue is healthy: nothing has arrived, nothing is stuck.
 With `--scheduled` (the weekly workflow) the age check measures against the
 current time instead of the database date, upstream sources with a regular
 cadence are checked against `stale_after_days`, and published rows whose
-evidence expires within a month are reported. Both are left out of
+evidence expires within a month are reported. A source within a week of its
+limit is a warning, exit code 3, which the workflow reports without failing. Both are left out of
 `verifyPipelineTests`: that task runs inside `check`, where a clock would fail
 every later build of an old tag. Measured against the database date, the age
 check cannot fire in the weeks after a drain, because every report queued since
@@ -76,6 +77,12 @@ MIN_BUCKET_SAMPLE = 10
 REGULAR_CADENCES = frozenset({"daily", "weekly"})
 # How far ahead the weekly run looks for downloaded rows whose evidence runs out.
 EVIDENCE_EXPIRY_WARNING_DAYS = 30
+# A source this many days from its stale_after_days limit gets a warning. The
+# run is weekly, so a source that only failed once it lapsed could sit stale
+# for up to a week first (FTC lapsed 2026-10-07 and the next run was 10-12).
+SOURCE_STALE_WARNING_DAYS = 7
+# main()'s exit code when nothing failed but a source is close to its limit.
+EXIT_WARNING = 3
 
 
 def _parse_updated(value: object) -> datetime | None:
@@ -190,14 +197,29 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     A manifest this can't read is a failure rather than a pass: a broken
     manifest would otherwise switch the whole check off.
     """
+    return _source_freshness(manifest, freshness, now)[0]
+
+
+def warn_source_staleness(manifest: object, freshness: object, now: datetime) -> list[str]:
+    """One warning per regular-cadence source within SOURCE_STALE_WARNING_DAYS of its limit.
+
+    The source is still fresh, so the weekly run reports it without failing
+    (EXIT_WARNING), and a source past its limit is evaluate_source_freshness's.
+    """
+    return _source_freshness(manifest, freshness, now)[1]
+
+
+def _source_freshness(manifest: object, freshness: object, now: datetime) -> tuple[list[str], list[str]]:
+    """The failures and the warnings for every regular-cadence source."""
     sources = manifest.get("sources") if isinstance(manifest, dict) else None
     if not isinstance(sources, list):
-        return [f"{MANIFEST_FILE.name} is missing or unreadable, so upstream freshness can't be checked"]
+        return [f"{MANIFEST_FILE.name} is missing or unreadable, so upstream freshness can't be checked"], []
     recorded = freshness.get("last_success") if isinstance(freshness, dict) else None
     last_success = recorded if isinstance(recorded, dict) else {}
     recorded_dates = freshness.get("newest_record_date") if isinstance(freshness, dict) else None
     newest_record_date = recorded_dates if isinstance(recorded_dates, dict) else {}
     problems: list[str] = []
+    warnings: list[str] = []
     for source in sources:
         if not isinstance(source, dict):
             problems.append(f"{MANIFEST_FILE.name} has a source entry that isn't an object")
@@ -222,13 +244,15 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
                     f"{source_id} ({cadence} source) has no {'record date' if record_dated else 'successful import'} recorded in "
                     f"{FRESHNESS_FILE.name} - {refresh}"
                 )
-        elif now - stamp > timedelta(days=limit):
-            age_description = "newest record is from" if record_dated else "was last imported"
-            problems.append(
-                f"{source_id} {age_description} {stamp.date().isoformat()}, {(now - stamp).days} days ago, "
-                f"past its {limit:g}-day limit - {refresh}"
-            )
-    return problems
+            continue
+        age_description = "newest record is from" if record_dated else "was last imported"
+        age = f"{source_id} {age_description} {stamp.date().isoformat()}, {(now - stamp).days} days ago"
+        if now - stamp > timedelta(days=limit):
+            problems.append(f"{age}, past its {limit:g}-day limit - {refresh}")
+        elif now - stamp >= timedelta(days=limit - SOURCE_STALE_WARNING_DAYS):
+            stale_on = (stamp + timedelta(days=limit)).date().isoformat()
+            warnings.append(f"{age}, and passes its {limit:g}-day limit after {stale_on} - {refresh}")
+    return problems, warnings
 
 
 def row_expiry_epoch_ms(row: dict) -> int | None:
@@ -359,14 +383,22 @@ def main(argv: list[str] | None = None) -> int:
     reports, unreadable = load_queue(REPORTS_DIR)
     total = len(reports) + unreadable
     problems = evaluate_queue_health(reports, load_database_updated(DB_FILE), unreadable, now=now)
+    warnings: list[str] = []
     if now is not None:
-        problems += evaluate_source_freshness(_load_json(MANIFEST_FILE), _load_json(FRESHNESS_FILE), now)
+        manifest, freshness = _load_json(MANIFEST_FILE), _load_json(FRESHNESS_FILE)
+        problems += evaluate_source_freshness(manifest, freshness, now)
         problems += evaluate_evidence_expiry(_load_json(DB_FILE), now)
+        warnings = warn_source_staleness(manifest, freshness, now)
     if problems:
         print(f"Report pipeline is not healthy ({total} queued file(s) in {REPORTS_DIR}):", file=sys.stderr)
-        for problem in problems:
+        for problem in problems + [f"warning: {warning}" for warning in warnings]:
             print(f"  - {problem}", file=sys.stderr)
         return 1
+    if warnings:
+        print(f"Report pipeline warning, a source is close to stale ({total} queued file(s) in {REPORTS_DIR}):")
+        for warning in warnings:
+            print(f"  - {warning}")
+        return EXIT_WARNING
     suffix = f", {unreadable} unreadable" if unreadable else ""
     print(f"Report queue liveness OK ({total} file(s) pending{suffix}).")
     return 0

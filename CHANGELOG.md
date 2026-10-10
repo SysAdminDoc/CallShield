@@ -137,6 +137,10 @@ All notable changes to CallShield will be documented in this file.
   Singapore and Thailand. You can turn on "Allow apps from unverified
   developers" in Developer options and wait a day, or install over USB with
   `adb install`.
+- The weekly pipeline check warns a week before an upstream source goes
+  stale, without failing, so an overdue FCC or FTC import shows up while
+  there is still time to run it. FTC went stale on 2026-10-07 and nothing
+  said so until the next weekly run would have failed.
 
 ## v1.11.0 (2026-09-30)
 
