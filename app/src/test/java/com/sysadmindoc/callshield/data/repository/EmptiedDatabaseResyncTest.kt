@@ -78,6 +78,31 @@ class EmptiedDatabaseResyncTest {
         assertEquals(NUMBERS.toSet(), storedNumbers())
     }
 
+    @Test
+    fun `a block made while shards download survives on a row the sync keeps`() {
+        sync()
+        remote.fetched.clear()
+        val (lostShard, lostNumbers) = SHARDS.entries.first()
+        val kept = runBlocking { fixture.dao.getNumbersBySource("github") }.filter { it.number !in lostNumbers }
+        assertTrue("the test needs two rows outside the refetched shard", kept.size >= 2)
+        runBlocking { fixture.dao.replaceGithubData(kept, emptyList()) }
+        val blocked = kept.first().number
+        val unblocked = kept.last().number
+        runBlocking { fixture.repository.blockNumber(unblocked) }
+        remote.headCommit = "c2"
+        remote.duringFetch = {
+            fixture.repository.blockNumber(blocked)
+            fixture.repository.unblockByNumber(unblocked)
+        }
+
+        sync()
+
+        assertEquals(listOf(pathOf(lostShard)), remote.fetched)
+        val rows = runBlocking { fixture.dao.getNumbersBySource("github") }.associateBy { it.number }
+        assertTrue(rows.getValue(blocked).isUserBlocked)
+        assertEquals(false, rows.getValue(unblocked).isUserBlocked)
+    }
+
     private fun sync() = runBlocking { fixture.repository.syncFromGitHub(force = false) }
 
     private fun storedNumbers() = runBlocking { fixture.dao.getNumbersBySource("github") }.mapTo(HashSet()) { it.number }
@@ -85,6 +110,7 @@ class EmptiedDatabaseResyncTest {
     private class ShardedRemote : SpamDataSource {
         var headCommit = "c1"
         val fetched = mutableListOf<String>()
+        var duringFetch: (suspend () -> Unit)? = null
         private val parser = GitHubDataSource()
 
         override suspend fun checkForUpdate(
@@ -101,11 +127,13 @@ class EmptiedDatabaseResyncTest {
             path: String,
             owner: String,
             repo: String,
-        ): Result<String> =
-            BODIES[path]?.let {
+        ): Result<String> {
+            duringFetch?.invoke()
+            return BODIES[path]?.let {
                 fetched += path
                 Result.success(it)
             } ?: Result.failure(IOException("no shard at $path"))
+        }
 
         override fun parseSpamShardJson(body: String): Result<SpamDatabaseShard> = parser.parseSpamShardJson(body)
 

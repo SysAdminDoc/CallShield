@@ -556,11 +556,17 @@ class SyncRepository(
                 }
 
             val preservedUserBlocks = readPreservedUserBlocks()
+            // These rows were read before the downloads, so a block or unblock
+            // made while they ran is taken from the fresh read instead of
+            // being written back stale.
             val retainedNumbers =
-                storedNumbers.filter { number ->
-                    val shardId = spamShardIdFor(number.number)
-                    shardId in descriptorsById && shardId !in changedIds
-                }
+                storedNumbers
+                    .filter { number ->
+                        val shardId = spamShardIdFor(number.number)
+                        shardId in descriptorsById && shardId !in changedIds
+                    }.map { row ->
+                        row.copy(isUserBlocked = row.number in preservedUserBlocks, expiresAt = preservedUserBlocks[row.number])
+                    }
             val importedNumbers =
                 fetchedShards.values.flatMap { shard ->
                     sanitizeDatabaseNumbers(
