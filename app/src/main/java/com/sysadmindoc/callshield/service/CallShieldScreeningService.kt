@@ -502,8 +502,9 @@ class CallShieldScreeningService : CallScreeningService() {
                     )
                 }
             } catch (_: Exception) {
-                // The queued row survives process death; a worker retry will
-                // pick it up on the next run.
+                // A row that reached the queue survives process death, and a
+                // worker retry picks it up. A death before the queue write lands,
+                // or a failed fallback write, loses this log row (never the block).
             } finally {
                 PendingBlockedCallLogWorker.schedule(applicationContext)
             }
