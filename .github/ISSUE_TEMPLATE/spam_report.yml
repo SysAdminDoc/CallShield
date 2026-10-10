@@ -8,7 +8,7 @@ body:
       value: |
         **To get a number blocked for everyone, report it from inside CallShield.** Open the number in the app (Lookup, then Open full detail, or tap it in Activity) and tap **Report**. That sends an anonymous report, and a number goes in the database once enough different people report it.
 
-        This form files a public issue under your GitHub account instead, and issues aren't read into the database. It's still the right place to add something about a number, like what the caller said.
+        This form files a public issue under your GitHub account instead, and issues aren't read into the database automatically (a number can still get checked by hand and listed). It's still the right place to add something about a number, like what the caller said.
   - type: input
     id: number
     attributes:

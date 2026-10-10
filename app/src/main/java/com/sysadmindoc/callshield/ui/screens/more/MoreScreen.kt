@@ -325,7 +325,7 @@ fun MoreHub(
                 launchExternalLink(context, "https://github.com/SysAdminDoc/CallShield")
             }
             // Lookup, where Report sends the anonymous report that counts. The
-            // GitHub form files a public issue that nothing reads into the database.
+            // GitHub form files a public issue that isn't read into the database automatically.
             QuickLink(
                 Icons.Default.Flag,
                 stringResource(R.string.more_report_spam_number),

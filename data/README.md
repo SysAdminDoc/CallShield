@@ -119,8 +119,9 @@ in the `sources` array of the rows you are taking.
 ## Contributing
 
 ### Report a Spam Number
-1. [Open an Issue](../../issues/new?template=spam_report.yml) with the number and details
-2. Or submit a PR directly editing `spam_numbers.json`
+1. In the app, look the number up (or tap it in Activity) and tap **Report**. That sends an anonymous report, and a number is published once enough different people report it.
+2. [Open an issue](../../issues/new?template=spam_report.yml) to add a public note about a number, like what the caller said. Issues aren't read in automatically. The maintainer may check the number by hand against public complaint sites and list it through `spam_numbers_approved.json`.
+3. A pull request can add an entry to `spam_numbers_approved.json` with the number, a type, the date you checked it and a link to public complaints about it. Don't edit `spam_numbers.json` itself. The import scripts write it, and a row added by hand skips the evidence checks.
 
 ### Format
 ```json
