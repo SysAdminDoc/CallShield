@@ -1,8 +1,14 @@
 name: Spam number report
-description: Report a phone number that calls or texts spam, so it can go in the database.
+description: A public note about a spam number. Report on the number's screen in the app is what counts toward blocking it.
 title: "[SPAM] "
 labels: ["spam-report"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        **To get a number blocked for everyone, report it from inside CallShield.** Open the number in the app (Lookup, then Open full detail, or tap it in Activity) and tap **Report**. That sends an anonymous report, and a number goes in the database once enough different people report it.
+
+        This form files a public issue under your GitHub account instead, and issues aren't read into the database. It's still the right place to add something about a number, like what the caller said.
   - type: input
     id: number
     attributes:

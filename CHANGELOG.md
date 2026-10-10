@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The spam report form on GitHub now says up front that it files a public
+  note, and that Report on a number's screen in the app is what sends the
+  anonymous report that counts. It used to say a report there could go in
+  the database, but issues were never read into it.
+
 ## v1.12.0 (2026-10-09)
 
 - Numbers that other CallShield users reported, but that haven't been

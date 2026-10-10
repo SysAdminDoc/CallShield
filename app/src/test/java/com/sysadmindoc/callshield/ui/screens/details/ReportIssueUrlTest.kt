@@ -50,14 +50,28 @@ class ReportIssueUrlTest {
 
     @Test
     fun `every prefilled field is a field of the form`() {
-        val form =
-            listOf(File("../.github/ISSUE_TEMPLATE/spam_report.yml"), File(".github/ISSUE_TEMPLATE/spam_report.yml"))
-                .first { it.exists() }
-                .readText()
+        val form = spamForm()
         assertTrue(form, form.contains("labels: [\"spam-report\"]"))
         val fields = report(2).queryParameterNames - setOf("template", "title")
         for (field in fields) {
             assertTrue("$field isn't an id in the spam form", form.contains("id: $field\n") || form.contains("id: $field\r\n"))
         }
     }
+
+    @Test
+    fun `the form says the app's Report is what counts, before its first field`() {
+        // #29 and #33 were filed only on GitHub, which the form called the way
+        // into the database. Nothing reads issues into it; Report in the app does.
+        val form = spamForm()
+        val firstField = form.indexOf("id: number")
+
+        assertFalse(form, form.contains("so it can go in the database"))
+        assertTrue(form, form.indexOf("tap **Report**") in 0 until firstField)
+        assertTrue(form, form.indexOf("aren't read into the database") in 0 until firstField)
+    }
+
+    private fun spamForm(): String =
+        listOf(File("../.github/ISSUE_TEMPLATE/spam_report.yml"), File(".github/ISSUE_TEMPLATE/spam_report.yml"))
+            .first { it.exists() }
+            .readText()
 }
