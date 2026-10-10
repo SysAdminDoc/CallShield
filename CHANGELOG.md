@@ -13,6 +13,9 @@ All notable changes to CallShield will be documented in this file.
   report itself stays sent. One report rarely blocks a number for everyone,
   so you kept getting the calls unless you also tapped Block. A number you'd
   blocked already keeps its block exactly as it was.
+- Lookup's result card now offers to block the number's whole area code,
+  with Undo, the same way a number's own screen does. Before, you had to
+  scroll down and open the full detail to find it.
 
 ## v1.12.0 (2026-10-09)
 

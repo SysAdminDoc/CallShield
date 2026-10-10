@@ -97,6 +97,8 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.areaCodeBlock
+import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.friendlyPipelineCheckerLabel
 import com.sysadmindoc.callshield.ui.friendlySpamTypeLabel
@@ -529,6 +531,29 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 modifier = Modifier.fillMaxWidth(),
                                 outlined = true,
                             )
+                            // The same offer as the number's screen, which sat two
+                            // scrolls down behind Open full detail.
+                            val location = remember(resultNumber, homeRegion) { AreaCodeLookup.lookup(resultNumber, homeRegion) }
+                            remember(resultNumber, homeRegion) { areaCodeBlock(resultNumber, homeRegion) }?.let { areaCode ->
+                                val description =
+                                    if (location != null) {
+                                        stringResource(R.string.detail_block_area_code_description_location, areaCode.label, location)
+                                    } else {
+                                        stringResource(R.string.detail_block_area_code_description, areaCode.label)
+                                    }
+                                PremiumActionButton(
+                                    label = stringResource(R.string.detail_block_area_code, areaCode.label),
+                                    icon = Icons.Default.FilterAlt,
+                                    color = CatYellow,
+                                    onClick = {
+                                        scope.launch {
+                                            blockAreaCodeWithUndo(viewModel, snackbarHostState, resources, areaCode, description)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    outlined = true,
+                                )
+                            }
                         }
                     }
 
