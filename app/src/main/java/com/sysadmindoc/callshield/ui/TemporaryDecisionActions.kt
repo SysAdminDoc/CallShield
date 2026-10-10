@@ -87,18 +87,63 @@ suspend fun blockAreaCodeWithUndo(
     resources: Resources,
     block: AreaCodeBlock,
     description: String,
+) = blockRangeWithUndo(
+    viewModel,
+    snackbar,
+    resources,
+    block.wildcard,
+    description,
+    RangeBlockMessages(
+        added = resources.getString(R.string.dashboard_block_area_added, block.areaCode),
+        already = resources.getString(R.string.dashboard_block_area_already, block.areaCode),
+        failed = resources.getString(R.string.dashboard_block_area_failed, block.areaCode),
+    ),
+)
+
+/** Block one exchange, "(737) 259-xxxx", and offer Undo, the way [blockAreaCodeWithUndo] does an area code. */
+suspend fun blockExchangeWithUndo(
+    viewModel: MainViewModel,
+    snackbar: SnackbarHostState,
+    resources: Resources,
+    block: ExchangeBlock,
+    description: String,
+) = blockRangeWithUndo(
+    viewModel,
+    snackbar,
+    resources,
+    block.wildcard,
+    description,
+    RangeBlockMessages(
+        added = resources.getString(R.string.dashboard_block_exchange_added, block.display),
+        already = resources.getString(R.string.dashboard_block_exchange_already, block.display),
+        failed = resources.getString(R.string.dashboard_block_exchange_failed, block.display),
+    ),
+)
+
+private class RangeBlockMessages(
+    val added: String,
+    val already: String,
+    val failed: String,
+)
+
+private suspend fun blockRangeWithUndo(
+    viewModel: MainViewModel,
+    snackbar: SnackbarHostState,
+    resources: Resources,
+    wildcard: String,
+    description: String,
+    messages: RangeBlockMessages,
 ) {
-    val areaCode = block.areaCode
-    val undo = viewModel.blockAreaCodeUndoable(block.wildcard, description).getOrNull()
+    val undo = viewModel.blockAreaCodeUndoable(wildcard, description).getOrNull()
     when {
         undo == null -> {
             snackbar.currentSnackbarData?.dismiss()
-            snackbar.showSnackbar(resources.getString(R.string.dashboard_block_area_failed, areaCode))
+            snackbar.showSnackbar(messages.failed)
         }
 
         !undo.changed -> {
             if (snackbar.currentSnackbarData == null) {
-                snackbar.showSnackbar(resources.getString(R.string.dashboard_block_area_already, areaCode))
+                snackbar.showSnackbar(messages.already)
             }
         }
 
@@ -106,7 +151,7 @@ suspend fun blockAreaCodeWithUndo(
             snackbar.currentSnackbarData?.dismiss()
             val choice =
                 snackbar.showSnackbar(
-                    resources.getString(R.string.dashboard_block_area_added, areaCode),
+                    messages.added,
                     actionLabel = resources.getString(R.string.blocked_log_undo),
                     duration = SnackbarDuration.Long,
                 )

@@ -20,6 +20,10 @@
         <item quantity="one">更多匹配：+%s</item>
         <item quantity="other">更多匹配：+%s</item>
     </plurals>
+    <plurals name="dashboard_spam_from_exchange">
+        <item quantity="one">两周内来自 %2$s（%3$s）的号码：%1$s 个</item>
+        <item quantity="other">两周内来自 %2$s（%3$s）的号码：%1$s 个</item>
+    </plurals>
     <plurals name="dashboard_sms_scan_messages_scanned">
         <item quantity="one">已扫描 %s 条消息</item>
         <item quantity="other">已扫描 %s 条消息</item>

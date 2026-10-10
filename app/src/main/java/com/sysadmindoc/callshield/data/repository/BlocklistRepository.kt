@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
+import com.sysadmindoc.callshield.data.model.NumberSighting
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -751,6 +752,11 @@ class BlocklistRepository(
     fun observeLogNumberCounts(limit: Int): Flow<List<LogAggregate>> = dao.observeLogNumberCounts(limit)
 
     fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>> = dao.observeLogAreaCodeCounts(limit)
+
+    fun observeLogNanpSightingsSince(
+        since: Long,
+        limit: Int,
+    ): Flow<List<NumberSighting>> = dao.observeLogNanpSightingsSince(since, limit)
 
     fun observeLogCountBetween(
         start: Long,

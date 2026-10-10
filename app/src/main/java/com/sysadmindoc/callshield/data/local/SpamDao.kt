@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.model.FlaggedTextSighting
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberCount
+import com.sysadmindoc.callshield.data.model.NumberSighting
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -418,6 +419,23 @@ interface SpamDao {
             "GROUP BY substr(number, 1, length(number) - 7) ORDER BY `count` DESC, `key` ASC LIMIT :limit",
     )
     fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>>
+
+    /**
+     * Each blocked number that could be North American with when it was first
+     * blocked since [since], for the dashboard's exchange suggestion
+     * (ui.slowCampaignExchanges). A bare ten-digit number is read there by the
+     * phone's home region, as in [observeLogAreaCodeCounts].
+     */
+    @Query(
+        "SELECT number, MIN(timestamp) AS firstSeen FROM call_log " +
+            "WHERE wasBlocked = 1 AND timestamp >= :since " +
+            "AND ((length(number) = 12 AND substr(number, 1, 2) = '+1') OR length(number) = 10) " +
+            "GROUP BY number ORDER BY firstSeen DESC LIMIT :limit",
+    )
+    fun observeLogNanpSightingsSince(
+        since: Long,
+        limit: Int,
+    ): Flow<List<NumberSighting>>
 
     @Query("SELECT COUNT(*) FROM call_log WHERE timestamp >= :start AND timestamp < :end")
     fun observeLogCountBetween(

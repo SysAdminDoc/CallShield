@@ -1,7 +1,10 @@
 package com.sysadmindoc.callshield.ui
 
+import com.sysadmindoc.callshield.data.CommunityReportHistory
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.LogAggregate
+import com.sysadmindoc.callshield.data.model.NumberSighting
+import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
 /** An area code CallShield can block in one go, and the wildcard that does it. */
 data class AreaCodeBlock(
@@ -39,3 +42,96 @@ fun countsByAreaCode(
         .groupBy(keySelector = { it.first }, valueTransform = { it.second })
         .map { (block, counts) -> block to counts.sum() }
         .sortedWith(compareByDescending<Pair<AreaCodeBlock, Int>> { it.second }.thenBy { it.first.areaCode })
+
+/** A North American exchange, the area code and the three digits after it, and the wildcard that blocks it. */
+data class ExchangeBlock(
+    val areaCode: String,
+    val exchange: String,
+    val wildcard: String,
+) {
+    /** How the suggestion names it, "(737) 259-xxxx". */
+    val display: String get() = "($areaCode) $exchange-xxxx"
+}
+
+/** The exchange block for a North American [number], read as in [areaCodeBlock], or null. */
+fun exchangeBlock(
+    number: String,
+    homeRegionIso: String?,
+): ExchangeBlock? {
+    val areaCode = AreaCodeLookup.getAreaCode(number, homeRegionIso) ?: return null
+    val exchange = filterAsciiDigitsLast(number, 7).take(3)
+    // A North American exchange never starts with 0 or 1.
+    if (exchange.length != 3 || exchange[0] < '2') return null
+    return ExchangeBlock(areaCode, exchange, "+1$areaCode$exchange*")
+}
+
+const val SLOW_CAMPAIGN_WINDOW_MS = 14L * 24 * 60 * 60 * 1_000
+private const val SLOW_CAMPAIGN_MIN_NUMBERS = 3
+private const val BURST_MS = 24L * 60 * 60 * 1_000
+
+/**
+ * Exchanges a slow campaign keeps calling from, with how many of their
+ * numbers this phone blocked or reported, most first. A campaign that rotates
+ * through one exchange a number a day stays under every other detector: the
+ * campaign heuristics want several numbers within a day, and the community
+ * can't confirm one reporter by design. So an exchange qualifies with three or
+ * more distinct numbers first seen in the last 14 days, spread over more than
+ * a day. Three inside 24 hours are a burst the campaign heuristics already
+ * act on, and get no suggestion of their own.
+ *
+ * [sightings] are blocked log numbers (SpamDao.observeLogNanpSightingsSince).
+ * [reports] adds the numbers this phone reported as spam, and a number whose
+ * newest report is not spam counts for nothing. The phone's own exchange
+ * ([ownNumber]) and any exchange holding a contact ([contactExchanges], as
+ * [exchangeKey] gives them) are never offered, and neither is one a rule in
+ * [blockedPatterns] already blocks, alone or with its whole area code.
+ */
+fun slowCampaignExchanges(
+    sightings: List<NumberSighting>,
+    reports: List<CommunityReportHistory.Entry>,
+    now: Long,
+    homeRegionIso: String?,
+    ownNumber: String?,
+    contactExchanges: Set<String>,
+    blockedPatterns: Set<String> = emptySet(),
+): List<Pair<ExchangeBlock, Int>> {
+    // Only a North American number reads as its last ten digits: +44 7372 590001 isn't +1 737-259-0001.
+    val newestReports =
+        reports
+            .filter { exchangeBlock(it.number, homeRegionIso) != null }
+            .sortedByDescending { it.reportedAt }
+            .distinctBy { filterAsciiDigitsLast(it.number, 10) }
+    val cleared =
+        newestReports
+            .filter { it.type == CommunityReportHistory.NOT_SPAM }
+            .mapTo(HashSet()) { filterAsciiDigitsLast(it.number, 10) }
+    val reported =
+        newestReports
+            .filter { it.type != CommunityReportHistory.NOT_SPAM }
+            .map { NumberSighting(it.number, it.reportedAt) }
+    val ownExchange = ownNumber?.let { exchangeBlock(it, homeRegionIso) }
+    val since = now - SLOW_CAMPAIGN_WINDOW_MS
+    return (sightings + reported)
+        .asSequence()
+        .filter { it.firstSeen in since..now }
+        .mapNotNull { sighting ->
+            val digits = filterAsciiDigitsLast(sighting.number, 10)
+            exchangeBlock(sighting.number, homeRegionIso)
+                ?.takeIf { digits !in cleared }
+                ?.let { block -> Triple(block, digits, sighting.firstSeen) }
+        }.groupBy { it.first }
+        .filterKeys { block ->
+            block != ownExchange &&
+                exchangeKey(block) !in contactExchanges &&
+                block.wildcard !in blockedPatterns &&
+                "+1${block.areaCode}*" !in blockedPatterns
+        }
+        .mapNotNull { (block, rows) ->
+            val firstSeen = rows.groupBy { it.second }.values.map { sameNumber -> sameNumber.minOf { it.third } }
+            val spread = firstSeen.max() - firstSeen.min()
+            (block to firstSeen.size).takeIf { firstSeen.size >= SLOW_CAMPAIGN_MIN_NUMBERS && spread > BURST_MS }
+        }.sortedWith(compareByDescending<Pair<ExchangeBlock, Int>> { it.second }.thenBy { exchangeKey(it.first) })
+}
+
+/** The six digits that name an exchange, "737259". */
+fun exchangeKey(block: ExchangeBlock): String = block.areaCode + block.exchange

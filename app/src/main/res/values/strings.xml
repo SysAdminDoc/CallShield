@@ -165,6 +165,14 @@
     <string name="dashboard_block_area_added">Blocked area code %s, about 7.9 million numbers</string>
     <string name="dashboard_block_area_failed">Couldn\'t block area code %s. Try again.</string>
     <string name="dashboard_block_area_already">Area code %s is already blocked</string>
+    <plurals name="dashboard_spam_from_exchange">
+        <item quantity="one">%1$s number from %2$s (%3$s) over two weeks</item>
+        <item quantity="other">%1$s numbers from %2$s (%3$s) over two weeks</item>
+    </plurals>
+    <string name="dashboard_block_exchange_description">Exchange %1$s (%2$s)</string>
+    <string name="dashboard_block_exchange_added">Blocked %s, 10,000 numbers</string>
+    <string name="dashboard_block_exchange_failed">Couldn\'t block %s. Try again.</string>
+    <string name="dashboard_block_exchange_already">%s is already blocked</string>
 
     <!-- Blocked Log Screen -->
     <string name="blocked_log_heading">Blocked activity</string>

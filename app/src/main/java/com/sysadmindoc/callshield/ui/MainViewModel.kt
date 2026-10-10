@@ -47,6 +47,7 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.ListCatalogEntry
 import com.sysadmindoc.callshield.data.model.LogAggregate
+import com.sysadmindoc.callshield.data.model.NumberSighting
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -114,6 +115,7 @@ class MainViewModel
             const val DASHBOARD_RECENT_LOG_LIMIT = 50
             const val STATS_TOP_LIMIT = 10
             const val STATS_AREA_CODE_LIMIT = 15
+            const val EXCHANGE_SIGHTING_LIMIT = 2_000
         }
 
         val totalBlocked: StateFlow<Int> =
@@ -165,6 +167,12 @@ class MainViewModel
         val logAreaCodeCounts: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogAreaCodeCounts(STATS_AREA_CODE_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        /** Blocked North American numbers of the last 14 days, for the dashboard's exchange suggestion (slowCampaignExchanges). */
+        val recentNanpSightings: StateFlow<List<NumberSighting>> =
+            repo
+                .observeLogNanpSightingsSince(System.currentTimeMillis() - SLOW_CAMPAIGN_WINDOW_MS, EXCHANGE_SIGHTING_LIMIT)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         // Rolling time anchor — re-emits the current wall-clock every minute so the

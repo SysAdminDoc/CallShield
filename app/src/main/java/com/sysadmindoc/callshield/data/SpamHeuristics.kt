@@ -530,9 +530,10 @@ class SpamHeuristics
 
         @Suppress("DEPRECATION")
         @SuppressLint("HardwareIds")
-        private fun getUserPhoneNumber(context: Context): String? =
+        internal fun getUserPhoneNumber(context: Context): String? =
             try {
-                // Used only for local neighbor-spoof detection and never stored or transmitted.
+                // Used only on the phone, for neighbor-spoof detection and to keep the
+                // dashboard from suggesting the phone's own exchange. Never stored or transmitted.
                 val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
                 tm?.line1Number?.takeIf { it.isNotBlank() }
             } catch (_: SecurityException) {

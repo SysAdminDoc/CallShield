@@ -1076,6 +1076,11 @@ class SpamRepository(
 
     fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>> = blocklistRepository.observeLogAreaCodeCounts(limit)
 
+    fun observeLogNanpSightingsSince(
+        since: Long,
+        limit: Int,
+    ): Flow<List<NumberSighting>> = blocklistRepository.observeLogNanpSightingsSince(since, limit)
+
     fun observeLogCountBetween(
         start: Long,
         end: Long,

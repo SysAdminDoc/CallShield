@@ -87,6 +87,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -113,8 +114,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
+import com.sysadmindoc.callshield.data.ContactExchanges
 import com.sysadmindoc.callshield.data.ExpectingCall
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.AppReleaseNotice
@@ -122,10 +125,14 @@ import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionStatus
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
+import com.sysadmindoc.callshield.ui.ExchangeBlock
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
+import com.sysadmindoc.callshield.ui.blockExchangeWithUndo
 import com.sysadmindoc.callshield.ui.countsByAreaCode
+import com.sysadmindoc.callshield.ui.exchangeBlock
+import com.sysadmindoc.callshield.ui.exchangeKey
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -155,8 +162,10 @@ import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
 import com.sysadmindoc.callshield.util.relativeTimeSpan
 import com.sysadmindoc.callshield.util.startActivitySafely
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import java.util.Date
 
@@ -1149,7 +1158,29 @@ fun DashboardScreen(
                     .filter { it.second >= 5 }
                     .take(3)
             }
-        if (topAreaCodes.isNotEmpty()) {
+        val exchangeSightings by viewModel.recentNanpSightings.collectAsStateWithLifecycle()
+        val myReports by viewModel.communityReports.collectAsStateWithLifecycle()
+        val wildcardRules by viewModel.wildcardRules.collectAsStateWithLifecycle()
+        val slowExchanges by produceState(emptyList<Pair<ExchangeBlock, Int>>(), exchangeSightings, myReports, wildcardRules, homeRegion) {
+            val blocked = wildcardRules.filter { it.enabled && !it.isRegex }.mapTo(HashSet()) { it.pattern }
+            value =
+                withContext(Dispatchers.IO) {
+                    val now = System.currentTimeMillis()
+
+                    fun find(
+                        ownNumber: String?,
+                        contacts: Set<String>,
+                    ) = slowCampaignExchanges(exchangeSightings, myReports, now, homeRegion, ownNumber, contacts, blocked)
+                    // Contacts are read only when there's something to offer,
+                    // and contacts that can't be read offer nothing.
+                    if (find(null, emptySet()).isEmpty()) return@withContext emptyList()
+                    val contacts =
+                        ContactExchanges.read(context) { number -> exchangeBlock(number, homeRegion)?.let(::exchangeKey) }
+                            ?: return@withContext emptyList()
+                    find(SpamHeuristics.shared.getUserPhoneNumber(context), contacts).take(3)
+                }
+        }
+        if (topAreaCodes.isNotEmpty() || slowExchanges.isNotEmpty()) {
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
                 accentColor = CatYellow,
@@ -1165,8 +1196,32 @@ fun DashboardScreen(
                         )
                     }
                     Spacer(Modifier.height(10.dp))
-                    topAreaCodes.forEachIndexed { index, (block, count) ->
+                    slowExchanges.forEachIndexed { index, (block, count) ->
                         if (index > 0) {
+                            GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
+                        }
+                        val loc = AreaCodeLookup.lookup("+1${block.areaCode}", homeRegionIso = null) ?: block.areaCode
+                        val exchangeRuleDescription = stringResource(R.string.dashboard_block_exchange_description, block.display, loc)
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                pluralStringResource(R.plurals.dashboard_spam_from_exchange, count, numberFormatter.format(count), block.display, loc),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            PremiumCompactButton(
+                                label = stringResource(R.string.dashboard_block_area, "${block.areaCode}-${block.exchange}"),
+                                icon = Icons.Default.FilterAlt,
+                                color = CatYellow,
+                                onClick = {
+                                    profileScope.launch {
+                                        blockExchangeWithUndo(viewModel, areaSnackbar, areaResources, block, exchangeRuleDescription)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    topAreaCodes.forEachIndexed { index, (block, count) ->
+                        if (index > 0 || slowExchanges.isNotEmpty()) {
                             GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
                         }
                         val ac = block.areaCode

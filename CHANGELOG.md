@@ -149,6 +149,13 @@ All notable changes to CallShield will be documented in this file.
   where each number stands (in the database, pending with how many reports
   and reporter groups, on the watch list, or not seen), so they get looked
   at and answered in the same pass. They still never count as reports.
+- Smart suggestions on the dashboard now spot a campaign that calls from a
+  new number in the same exchange every day or so. When this phone blocked
+  or reported three or more numbers from one exchange, such as (737)
+  259-xxxx, spread over more than a day in the last two weeks, it offers to
+  block those 10,000 numbers, with Undo. It never offers your own exchange
+  or one where a contact's number is, so it needs access to your contacts
+  to check. North American numbers only.
 
 ## v1.11.0 (2026-09-30)
 

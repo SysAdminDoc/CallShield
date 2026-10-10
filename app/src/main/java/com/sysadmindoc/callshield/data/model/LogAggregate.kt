@@ -9,6 +9,12 @@ data class LogAggregate(
     @ColumnInfo(name = "count") val count: Int,
 )
 
+/** When a number first shows up in a window of the log. */
+data class NumberSighting(
+    @ColumnInfo(name = "number") val number: String,
+    @ColumnInfo(name = "firstSeen") val firstSeen: Long,
+)
+
 /** The newest row and occurrence count for one number in grouped log mode. */
 data class BlockedCallGroup(
     @Embedded val call: BlockedCall,
