@@ -329,7 +329,7 @@
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
     <string name="blocklist_empty_whitelist_sub">Trusted numbers always pass through screening, even when aggressive protection is active.</string>
-    <string name="whitelist_range_offer">Let its number block through too</string>
+    <string name="whitelist_range_offer">Let its whole block of lines through too</string>
     <string name="whitelist_range_covers">Also lets through %1$s</string>
     <string name="whitelist_range_menu_title">Offices and practices often call from a block of lines that share all but the last digits.</string>
     <string name="whitelist_range_exact">This number only</string>
@@ -464,7 +464,7 @@
     <string name="lookup_conflict">Conflict</string>
     <string name="lookup_trace_show">Show %d active</string>
     <string name="lookup_trace_hide">Hide</string>
-    <string name="lookup_checker_manual_whitelist">Saved safe numbers</string>
+    <string name="lookup_checker_manual_whitelist">Trusted numbers</string>
     <string name="lookup_checker_emergency_floor">Emergency safety floor</string>
     <string name="lookup_checker_otp_floor">Verification safety floor</string>
     <string name="lookup_checker_contact_whitelist">Contacts</string>
@@ -474,7 +474,7 @@
     <string name="lookup_checker_temporary_allow">Temporary allow</string>
     <string name="lookup_checker_expecting_call">Expecting a call</string>
     <string name="lookup_checker_system_block_list">System block list</string>
-    <string name="lookup_checker_user_blocklist">CallShield block list</string>
+    <string name="lookup_checker_user_blocklist">CallShield blocklist</string>
     <string name="lookup_checker_database">Spam database</string>
     <string name="lookup_checker_db_prefix_expansion">Spam database prefix</string>
     <string name="lookup_checker_prefix">Prefix rules</string>
@@ -1437,8 +1437,8 @@
         <item quantity="other">%d results</item>
     </plurals>
     <plurals name="search_result_type_reports">
-        <item quantity="one">%1$s - %2$d report</item>
-        <item quantity="other">%1$s - %2$d reports</item>
+        <item quantity="one">%1$s · %2$d report</item>
+        <item quantity="other">%1$s · %2$d reports</item>
     </plurals>
 
     <!-- Sync results -->
@@ -1716,7 +1716,7 @@
     <string name="accessibility_reason_emergency_floor">This item was allowed by a built-in emergency safety rule.</string>
     <string name="accessibility_reason_otp_floor">This item was allowed by a built-in verification safety rule.</string>
     <string name="accessibility_reason_emergency_contact">This item was allowed because it is an emergency contact.</string>
-    <string name="accessibility_reason_manual_whitelist">This item was allowed because you saved it as safe.</string>
+    <string name="accessibility_reason_manual_whitelist">This item was allowed because it\'s on your trusted list.</string>
     <string name="accessibility_reason_contact_whitelist">This item was allowed because it is in your contacts.</string>
     <string name="accessibility_reason_contacts_only">This item was allowed because it is in your contacts-only list.</string>
     <string name="accessibility_reason_stir_trusted">This item was allowed because the carrier verified the caller.</string>

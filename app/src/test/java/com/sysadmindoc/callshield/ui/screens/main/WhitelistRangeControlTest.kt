@@ -47,7 +47,7 @@ class WhitelistRangeControlTest {
         }
 
         composeRule.onAllNodesWithTag(WHITELIST_RANGE_TAG).assertCountEquals(1)
-        composeRule.onNodeWithText("Let its number block through too").performClick()
+        composeRule.onNodeWithText("Let its whole block of lines through too").performClick()
         composeRule.onNodeWithText("This number only").assertIsDisplayed()
         composeRule.onNodeWithText("⁦(555) 234-5XXX⁩ (1,000 numbers)").performClick()
 
