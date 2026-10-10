@@ -204,6 +204,22 @@ class ExternalBlocklistParserTest {
     @Test
     fun aByteOrderMarkDoesNotHideTheHeader() {
         assertEquals(12, declaredHours("\uFEFF# Expires: 12 hours\n212-555-0101"))
+        // The JSON reader stopped at the mark, so the list's own interval was lost.
+        assertEquals(6, declaredHours("\uFEFF{\"expires\": \"6h\", \"numbers\": [\"212-555-0101\"]}", "feed"))
+    }
+
+    @Test
+    fun aCommaInsideATrailingCommentDoesNotMakeATextListCsv() {
+        val parsed =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://lists.example.test/block",
+                rawLabel = "",
+                body = "212-555-0101 # spam, robocall\n508-555-0102\n",
+                normalizeNumber = ::canonicalizeUs,
+            )
+
+        assertEquals("txt", parsed.format)
+        assertEquals(listOf("+12125550101", "+15085550102"), parsed.numbers.map { it.number })
     }
 
     @Test

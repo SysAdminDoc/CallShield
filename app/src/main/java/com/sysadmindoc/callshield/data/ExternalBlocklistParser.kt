@@ -68,6 +68,9 @@ internal object ExternalBlocklistParser {
     // with no unit after it would mean days.
     private val expiresValue = Regex("""^(\d{1,5})(?![\d.])\s*([a-z]*)""", RegexOption.IGNORE_CASE)
 
+    // Only after whitespace, so a CSV header cell like "#" and a URL's "//" stay put.
+    private val trailingComment = Regex("""\s(#|//).*$""")
+
     fun parse(
         rawUrl: String,
         rawLabel: String,
@@ -78,7 +81,7 @@ internal object ExternalBlocklistParser {
         requireBodyWithinCap(body)
         // The body is decoded without BOM handling, and a byte-order mark survives
         // trim(): it hid a JSON list's opening brace and a CSV list's header.
-        val text = body.removePrefix("﻿")
+        val text = body.removePrefix("\uFEFF")
         val format = detectFormat(url, text)
         val rows =
             when (format) {
@@ -122,7 +125,7 @@ internal object ExternalBlocklistParser {
             format = format,
             numbers = numbers,
             skippedRows = skippedRows,
-            declaredRefreshHours = declaredRefreshHours(format, body) ?: 0,
+            declaredRefreshHours = declaredRefreshHours(format, text) ?: 0,
         )
     }
 
@@ -243,6 +246,8 @@ internal object ExternalBlocklistParser {
                 .map { it.trim() }
                 .firstOrNull { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("//") }
                 .orEmpty()
+                .replace(trailingComment, "")
+        // A comma in "212-555-0101 # spam, robocall" is the comment's, not a column.
         return if (firstDataLine.contains(",")) "csv" else "txt"
     }
 
