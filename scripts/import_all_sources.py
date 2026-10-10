@@ -873,47 +873,6 @@ def fetch_toastedspam(allow_insecure: bool = False) -> list[dict]:
     return list(numbers.values())
 
 
-# ── Source 5: ScamCallers community text lists (GitHub mirror) ─────────
-def fetch_community_text_lists() -> list[dict]:
-    print("\n[Community Text Blocklists]")
-    sources = [
-        # Repo-hosted plain-text spam number lists (one number per line, +1XXXXXXXXXX)
-        ("https://raw.githubusercontent.com/sunlei/denylist/master/denylist.txt", "sunlei/denylist"),
-    ]
-    numbers = {}
-    for url, name in sources:
-        try:
-            resp = requests.get(url, timeout=20)
-            if not resp.ok:
-                print(f"  {name}: HTTP {resp.status_code}, skipping")
-                continue
-            count = 0
-            for line in resp.text.splitlines():
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                normalized = normalize_phone(line)
-                if normalized:
-                    if normalized in numbers:
-                        numbers[normalized]["reports"] += 1
-                    else:
-                        numbers[normalized] = {
-                            "number": normalized,
-                            "type": "robocall",
-                            "reports": 1,
-                            "first_seen": datetime.now().strftime("%Y-%m-%d"),
-                            "last_seen": datetime.now().strftime("%Y-%m-%d"),
-                            "description": f"Community list: {name}",
-                        }
-                        count += 1
-            print(f"  {name}: {count:,} numbers")
-        except Exception as e:
-            print(f"  {name}: Error — {e}")
-
-    print(f"  Total from community lists: {len(numbers):,} unique numbers")
-    return list(numbers.values())
-
-
 COMPLAINT_SOURCE_IDS = {"ftc_complaints", "fcc_complaints"}
 
 
@@ -1289,17 +1248,6 @@ def main():
         "last_success_at": retrieved_at if ts else None,
     }
 
-    # Source 5: Community text lists
-    cl = fetch_community_text_lists()
-    attach_source_evidence(cl, manifest, "community_text_lists", retrieved_at=retrieved_at)
-    all_numbers.extend(cl)
-    source_stats["community_reports"] = {
-        "status": "ok",
-        "accepted": len(cl),
-        "checksum": payload_checksum(cl),
-        "last_success_at": retrieved_at,
-    }
-
     # Deduplicate across all sources (accumulate reports)
     deduped = {}
     for n in all_numbers:
@@ -1325,7 +1273,6 @@ def main():
         "fcc_complaints",
         "toastedspam",
         "community_reports",
-        "community_text_lists",
     }
     if pb:
         source_names.add("phoneblock_bulk")

@@ -160,6 +160,9 @@ All notable changes to CallShield will be documented in this file.
   block those 10,000 numbers, with Undo. It never offers your own exchange
   or one where a contact's number is, so it needs access to your contacts
   to check. North American numbers only.
+- The data import no longer asks for the sunlei/denylist text list. That
+  GitHub repository is gone, so every import got a 404 and skipped it, and
+  it never added a number. Its source entry is gone too.
 
 ## v1.11.0 (2026-09-30)
 

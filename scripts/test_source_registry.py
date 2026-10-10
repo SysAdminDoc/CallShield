@@ -226,6 +226,30 @@ class SourceRegistryTest(unittest.TestCase):
             self.assertGreaterEqual(ttl[source_id], 365, source_id)
         self.assertGreaterEqual(ttl["saracroche_prefixes"], 90)
 
+    def test_real_manifest_lists_exactly_the_sources_the_pipeline_uses(self):
+        # sunlei/denylist answered 404 for every import and stayed listed until
+        # 2026-10-10. Adding or dropping a source changes this list on purpose.
+        manifest = source_registry.load_source_manifest(Path(__file__).parent.parent / "data" / "source-manifest.json")
+        self.assertEqual(
+            [source["id"] for source in manifest["sources"]],
+            [
+                "ftc_complaints",
+                "fcc_complaints",
+                "phoneblock_bulk",
+                "saracroche_prefixes",
+                "nomorobo_irs",
+                "toastedspam",
+                "community_reports",
+                "github_database",
+                "maintainer_review",
+            ],
+        )
+
+    def test_importer_requests_no_retired_source(self):
+        importer = (Path(__file__).parent / "import_all_sources.py").read_text(encoding="utf-8")
+        for retired in ("sunlei/denylist", "community_text_lists"):
+            self.assertNotIn(retired, importer)
+
     def test_refresh_recomputes_expiry_from_retrieval_time_once(self):
         manifest = {"version": 1, "sources": [self._source("fcc", 14, ttl=365)]}
         rows = [

@@ -37,7 +37,7 @@ class ReleaseDriftTest(unittest.TestCase):
         self.assertEqual([], report["issues"], report)
         self.assertEqual("1.11.0", report["version_name"])
         self.assertEqual(71, report["version_code"])
-        self.assertEqual(10, report["sources"]["source_count"])
+        self.assertEqual(9, report["sources"]["source_count"])
         self.assertEqual(3, len(report["advisories"]))
 
     def test_readme_resource_counts_must_match_the_resource_file(self) -> None:

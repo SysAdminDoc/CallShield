@@ -116,20 +116,6 @@
       "evidence_ttl_days": 3650
     },
     {
-      "id": "community_text_lists",
-      "access_mode": "public_feed",
-      "geography": "global",
-      "license": "Upstream list terms; verify before redistribution",
-      "attribution": "Community-maintained text blocklists",
-      "cadence": "on demand",
-      "parser_version": "community-text-v1",
-      "evidence_type": "community_curated",
-      "confidence_tier": "unverified",
-      "redistributable": false,
-      "stale_after_days": 30,
-      "evidence_ttl_days": 365
-    },
-    {
       "id": "maintainer_review",
       "access_mode": "maintainer_review",
       "geography": "global",
