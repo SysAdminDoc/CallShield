@@ -7,6 +7,7 @@ the main spam_numbers.json database, then deletes processed files.
 import argparse
 import json
 import os
+import subprocess
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -64,6 +65,9 @@ MERGED_ID_RETENTION_DAYS = 14
 COMMUNITY_DESCRIPTION = "Community reported"
 COMMUNITY_SOURCE = "community"
 LEGACY_SOURCE = "legacy_import"
+# In-app GitHub reports are titled "[SPAM] +E164" (ReportIssueUrl.kt).
+GITHUB_REPO = "SysAdminDoc/CallShield"
+SPAM_ISSUE_PREFIX = "[SPAM]"
 
 
 def quarantine(report_file: Path, rejected_dir: Path) -> None:
@@ -228,17 +232,78 @@ def community_watch_reporter_count(state: dict) -> int:
     )
 
 
+def watch_reporter_count(number: str, state: dict, existing: dict[str, dict], today: str) -> int:
+    """The reporter count the watch feed would carry for [number]; 0 when it's left out."""
+    cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
+    # A maintainer approval publishes a number but keeps its ledger row
+    # unpublished, so the database itself is what says it's listed.
+    if number in existing or state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
+        return 0
+    return community_watch_reporter_count(state)
+
+
+def load_spam_issues(source: str) -> list[dict]:
+    """Open issues for --github-issues: "gh" asks GitHub, anything else is a saved
+    `gh issue list --json number,title,createdAt` file."""
+    if source != "gh":
+        return json.loads(Path(source).read_text(encoding="utf-8"))
+    listed = subprocess.run(
+        [
+            "gh", "issue", "list", "--repo", GITHUB_REPO, "--state", "open",
+            "--search", "SPAM in:title", "--limit", "500", "--json", "number,title,createdAt",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+    )
+    return json.loads(listed.stdout)
+
+
+def spam_issue_rows(issues: list[dict], existing: dict[str, dict], pending: dict[str, dict], today: str) -> list[str]:
+    """One line per open [SPAM] issue saying where its number stands.
+
+    The merge never reads these issues as reports: counting them as reporter
+    groups would let one person who files both ways pass the gate. Listing
+    them here puts review and reply in one step.
+    """
+    rows = []
+    for issue in sorted(issues, key=lambda item: item.get("number") or 0):
+        title = str(issue.get("title") or "")
+        if not title.startswith(SPAM_ISSUE_PREFIX):
+            continue
+        try:
+            age = f"{(date.fromisoformat(today) - date.fromisoformat(str(issue.get('createdAt'))[:10])).days} days old"
+        except ValueError:
+            age = "age unknown"
+        label = f"#{issue.get('number')} ({age})"
+        number = validated_report_number(title[len(SPAM_ISSUE_PREFIX):].strip())
+        if number is None:
+            rows.append(f"{label}: unreadable title {title!r}")
+            continue
+        entry, state = existing.get(number), pending.get(number)
+        if entry is not None:
+            where = f"in the database ({entry.get('type', 'spam')}, {entry.get('reports', 0)} reports)"
+        elif state is not None:
+            events = state.get("events", [])
+            groups = len({event.get("bucket") for event in events if event.get("bucket")})
+            reports = sum(int(event.get("count", 1)) for event in events)
+            where = f"pending, {reports} reports from {groups} reporter groups"
+            if watch_reporter_count(number, state, existing, today) >= COMMUNITY_WATCH_MIN_REPORTERS:
+                where += ", on the watch list"
+        else:
+            where = "not in the database or the pending pool"
+        rows.append(f"{label} {number}: {where}")
+    return rows
+
+
 def write_community_watch_feed(
     pending: dict[str, dict], existing: dict[str, dict], today: str, input_digest: str
 ) -> None:
-    cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
     rows = []
     for number, state in pending.items():
-        # A maintainer approval publishes a number but keeps its ledger row
-        # unpublished, so the database itself is what says it's listed.
-        if number in existing or state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
-            continue
-        reporters = community_watch_reporter_count(state)
+        reporters = watch_reporter_count(number, state, existing, today)
         if reporters >= COMMUNITY_WATCH_MIN_REPORTERS:
             rows.append({"number": number, "reporter_count": reporters})
     rows = sorted(rows, key=lambda row: (-row["reporter_count"], row["number"]))[:COMMUNITY_WATCH_MAX_NUMBERS]
@@ -670,6 +735,14 @@ def main(argv: list[str] | None = None):
         "--apply-reviewed-corrections",
         action="store_true",
         help="apply only review candidates explicitly marked approved: true",
+    )
+    parser.add_argument(
+        "--github-issues",
+        nargs="?",
+        const="gh",
+        metavar="ISSUES_JSON",
+        help="list open [SPAM] issues with their pool state, read through gh or from a saved "
+        "`gh issue list --json number,title,createdAt` file; they never change the counts",
     )
     args = parser.parse_args(argv)
     print("=== Merge Community Reports ===\n")
@@ -1130,6 +1203,17 @@ def main(argv: list[str] | None = None):
         f"{decayed} corrections decayed, {removed} rows removed"
     )
     print(f"Total database: {len(db['numbers'])} numbers")
+
+    if args.github_issues:
+        try:
+            issues = load_spam_issues(args.github_issues)
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            print(f"\nCouldn't read the open {SPAM_ISSUE_PREFIX} issues: {error}")
+        else:
+            rows = spam_issue_rows(issues, existing, pending, today)
+            print(f"\nOpen {SPAM_ISSUE_PREFIX} issues ({len(rows)}):")
+            for row in rows:
+                print(f"  {row}")
 
 
 if __name__ == "__main__":

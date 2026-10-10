@@ -965,6 +965,68 @@ def assert_community_watch_uses_90_day_device_evidence(data_dir: Path) -> None:
     assert expired_feed["numbers"] == [] and expired_feed["cleared"] is True, expired_feed
 
 
+def assert_spam_issues_listed_with_pool_state(data_dir: Path) -> None:
+    """--github-issues lists each open [SPAM] issue's pool state and never feeds the pool."""
+    listed, pending_number, watched, unseen = "+12122340501", "+12122340502", "+12122340503", "+12122340504"
+    write_json(
+        data_dir / "spam_numbers.json",
+        {
+            "version": 1,
+            "updated": TODAY,
+            "sources": ["community_reports"],
+            "numbers": [{"number": listed, "type": "telemarketer", "reports": 3, "sources": ["fcc_complaints"]}],
+            "prefixes": [],
+        },
+    )
+    day = (datetime.now(timezone.utc) - timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+    write_report(data_dir, "pending-1.json", pending_number, BUCKETS[0], day.replace(hour=9).isoformat(), device=BUCKETS[1])
+    write_report(data_dir, "watch-1.json", watched, BUCKETS[2], day.replace(hour=9).isoformat(), device=BUCKETS[3])
+    write_report(data_dir, "watch-2.json", watched, BUCKETS[4], day.replace(hour=10).isoformat(), device=BUCKETS[5])
+    created = (datetime.now(timezone.utc) - timedelta(days=4)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    issues = data_dir.parent / "issues.json"
+    issues.write_text(
+        json.dumps(
+            [
+                {"number": 44, "title": "[SPAM] call me maybe", "createdAt": created},
+                {"number": 40, "title": f"[SPAM] {listed}", "createdAt": created},
+                {"number": 41, "title": f"[SPAM] {pending_number}", "createdAt": created},
+                {"number": 42, "title": f"[SPAM] {watched}", "createdAt": created},
+                {"number": 43, "title": f"[SPAM] {unseen}", "createdAt": "soon"},
+                {"number": 45, "title": "Crash on start", "createdAt": created},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    result = run_script_result("merge_community_reports.py", data_dir, ["--github-issues", str(issues)])
+    assert result.returncode == 0, result.stdout + result.stderr
+    summary = result.stdout.split("Open [SPAM] issues (5):\n", 1)[1].splitlines()
+    assert summary == [
+        f"  #40 (4 days old) {listed}: in the database (telemarketer, 3 reports)",
+        f"  #41 (4 days old) {pending_number}: pending, 1 reports from 1 reporter groups",
+        f"  #42 (4 days old) {watched}: pending, 2 reports from 2 reporter groups, on the watch list",
+        f"  #43 (age unknown) {unseen}: not in the database or the pending pool",
+        "  #44 (4 days old): unreadable title '[SPAM] call me maybe'",
+    ], summary
+
+    # The issues added nothing: no pending row and no database row for the
+    # number only an issue named.
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert unseen not in pending and pending_reports_for(data_dir, pending_number) == 1, pending
+    assert reports_for(data_dir, unseen) == 0
+
+    # A run without the flag prints no issue list, and a missing file is reported, not fatal.
+    write_report(data_dir, "pending-2.json", pending_number, BUCKETS[0], day.replace(hour=11).isoformat(), device=BUCKETS[1])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    missing = run_script_result("merge_community_reports.py", data_dir, ["--github-issues", str(data_dir / "nope.json")])
+    assert missing.returncode == 0 and "Couldn't read the open [SPAM] issues" in missing.stdout, missing.stdout
+    plain = run_script_result("merge_community_reports.py", data_dir)
+    assert plain.returncode == 0 and "[SPAM] issues" not in plain.stdout, plain.stdout
+
+
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish without being told, and an empty feed has to be
@@ -1549,6 +1611,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_a_published_number_leaves_the_watch_list(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

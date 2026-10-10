@@ -141,6 +141,10 @@ All notable changes to CallShield will be documented in this file.
   stale, without failing, so an overdue FCC or FTC import shows up while
   there is still time to run it. FTC went stale on 2026-10-07 and nothing
   said so until the next weekly run would have failed.
+- The report merge can list the open in-app spam issues on GitHub with
+  where each number stands (in the database, pending with how many reports
+  and reporter groups, on the watch list, or not seen), so they get looked
+  at and answered in the same pass. They still never count as reports.
 
 ## v1.11.0 (2026-09-30)
 
