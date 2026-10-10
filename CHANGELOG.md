@@ -120,6 +120,10 @@ All notable changes to CallShield will be documented in this file.
 - Database v55 adds the FCC complaints published through 2026-10-09 and
   FTC's newest 400, for 51,368 numbers, and refreshes the 652 French
   telemarketing ranges.
+- The data pipeline needs urllib3 2.8.0 or later, which fixes three
+  advisories published 2026-09-30 (a hostile server could stall a download
+  with an endless chunk or deflate stream, and HTTPS proxy TLS settings
+  were ignored), and cryptography 50.0.2.
 
 ## v1.11.0 (2026-09-30)
 
