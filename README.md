@@ -78,6 +78,17 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware.** It won't block a number you recently called or keep answering, a callback after a local emergency call, or a caller who tries twice in five minutes.
 6. **Community-driven.** One-tap anonymous reports go through a Cloudflare Worker, and the maintainer merges them into the database.
 
+## v1.12.0 Highlights
+
+Reports from other users now show before a number is confirmed, and Report on a number's screen finally reaches the database.
+
+- **Reported by other users.** A number that people on two different networks reported on the same day, and nobody marked as not spam, reads "Reported by 2 CallShield users, not confirmed" in the caller ID popup and the after-call notice. It never blocks a call by itself.
+- **Faked support lines.** Real calls from 50 published support lines that scammers like to fake (Apple, the IRS, Social Security, Medicare and the big banks) ring when your carrier verified them. A faked one is still blocked, and the reason says whose number it was.
+- **Report counts.** Report on a number's screen sends the anonymous community report and says when the number is already listed or you reported it before. My reports in More lists what you sent in the last 90 days, with Send not spam to take one back.
+- **Lookup checks a message.** Paste a text you're unsure about and it gets the same content rules and link checks as an incoming one, on the phone.
+- **Smarter suggestions.** Home spots a campaign that calls from a new number in one exchange every day or so and offers to block that exchange. A number's screen offers its area code outside North America too, like +33 1 for Paris.
+- **Around the app.** Permission buttons open App info once Android stops asking, backups carry your subscribed blocklists, a call from abroad is labeled with its country, and times read the way your language says them.
+
 ## v1.11.0 Highlights
 
 Better at the calls and texts scams lead to, and your own lists survive a damaged database.
@@ -111,7 +122,7 @@ A new look for every screen, protection levels you can switch in one tap, and a 
 
 Earlier releases are in [CHANGELOG.md](CHANGELOG.md).
 
-## Detection Pipeline (v1.11.0)
+## Detection Pipeline (v1.12.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order through `CheckerPipeline.run`. The first layer with a verdict wins, and each layer is tested on its own. Priorities are stable numbers, and the ladder below is the live order.
 

@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.12.0 (2026-10-09)
+
 - Numbers that other CallShield users reported, but that haven't been
   confirmed enough to block, now get a label. When two people on different
   networks report the same number on the same day and nobody marks it as
