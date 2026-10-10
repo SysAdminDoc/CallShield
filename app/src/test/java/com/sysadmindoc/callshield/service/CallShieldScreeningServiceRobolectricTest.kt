@@ -25,6 +25,7 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,6 +33,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -385,6 +387,55 @@ class CallShieldScreeningServiceRobolectricTest {
         assertFalse(response.disallowCall)
         assertFalse(response.rejectCall)
         assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `a busy database delays the block log, not the block`() {
+        val number = "+12125550186"
+        val writeHeld = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        // Another write, such as a sync replacing the feed rows, holds the
+        // database once the checker has decided.
+        service.checkSpam =
+            CheckSpamUseCase(
+                object : SpamCheckRepository {
+                    override suspend fun checkSpam(
+                        number: String,
+                        smsBody: String?,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        callerIdentity: CallerIdentity?,
+                    ): SpamCheckResult {
+                        scope.launch {
+                            repository.runInTransaction {
+                                writeHeld.complete(Unit)
+                                release.await()
+                            }
+                        }
+                        writeHeld.await()
+                        return SpamCheckResult(isSpam = true, matchSource = "user_blocklist", confidence = 100)
+                    }
+
+                    override suspend fun checkSpamSms(
+                        number: String,
+                        body: String,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        subscriptionId: Int?,
+                    ): SpamCheckResult = SpamCheckResult(isSpam = false)
+                },
+            )
+        val startedAt = System.nanoTime()
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L
+        release.complete(Unit)
+        assertTrue("response took ${elapsedMillis}ms", elapsedMillis < 2_000L)
+        assertTrue(response.disallowCall)
+        awaitScopeIdle()
+        assertEquals(listOf(number), runBlocking { fixture.dao.getAllCallLogOnce() }.map { it.number })
     }
 
     @Test

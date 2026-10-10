@@ -29,6 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -383,24 +384,34 @@ class CallShieldScreeningService : CallScreeningService() {
         val repository = repository()
         val logTimestamp = System.currentTimeMillis()
         val logKey = blockedCallLogKey(callDetails, number, reason, confidence, logTimestamp)
-        var pendingLogQueued = false
-        try {
-            repository.enqueuePendingBlockedCallLog(
-                idempotencyKey = logKey,
-                number = number,
-                isCall = true,
-                matchReason = reason,
-                confidence = confidence,
-                timestamp = logTimestamp,
-                ruleId = ruleId,
-                pipelineDiagnostic = pipelineDiagnostic,
-                origid = callerIdentity?.passport?.origid,
-            )
-            pendingLogQueued = true
-        } catch (_: Exception) {
-            // The block decision is still more important than logging. If the
-            // queue write failed, the async fallback below makes a best effort.
-        }
+        // The queue write waits behind any other database write, such as a sync
+        // replacing the feed rows, and Telecom lets the call ring once its five
+        // seconds pass. So the response waits only briefly for it, and a slow
+        // write finishes after the response instead.
+        val pendingLog =
+            applicationScope.async {
+                try {
+                    repository.enqueuePendingBlockedCallLog(
+                        idempotencyKey = logKey,
+                        number = number,
+                        isCall = true,
+                        matchReason = reason,
+                        confidence = confidence,
+                        timestamp = logTimestamp,
+                        ruleId = ruleId,
+                        pipelineDiagnostic = pipelineDiagnostic,
+                        origid = callerIdentity?.passport?.origid,
+                    )
+                    true
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (_: Exception) {
+                    // The block decision is still more important than logging. If the
+                    // queue write failed, the async fallback below makes a best effort.
+                    false
+                }
+            }
+        withTimeoutOrNull(PENDING_LOG_WAIT_MS) { pendingLog.await() }
 
         val categoryAction =
             CategoryCallPolicy.parseMatchSource(reason)?.action
@@ -475,7 +486,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
         applicationScope.launch {
             try {
-                if (pendingLogQueued) {
+                if (pendingLog.await()) {
                     repository.flushPendingBlockedCallLogs()
                 } else {
                     repository.logBlockedCall(
@@ -700,6 +711,9 @@ class CallShieldScreeningService : CallScreeningService() {
     companion object {
         private const val TAG = "CallShieldScreening"
         private const val SCREENING_TIMEOUT_MS = 4_500L
+
+        /** An uncontended queue write takes a few milliseconds. */
+        private const val PENDING_LOG_WAIT_MS = 250L
         private const val AFTER_CALL_FEEDBACK_DELAY_MS = 10_000L
         private const val AFTER_CALL_STATE_POLL_MS = 1_000L
         private const val AFTER_CALL_MAX_WAIT_MS = 4L * 60L * 60L * 1000L
