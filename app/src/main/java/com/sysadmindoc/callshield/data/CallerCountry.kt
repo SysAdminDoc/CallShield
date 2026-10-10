@@ -27,22 +27,23 @@ internal object CallerCountry {
     ): String? {
         val home = homeRegionIso?.uppercase(Locale.ROOT) ?: return null
         val homeCode = RegionCallingCodes.forRegion(home) ?: return null
-        if (!number.trimStart().startsWith("+")) return null
-        val digits = filterAsciiDigits(number)
-        if (digits.length !in E164_DIGITS) return null
+        val digits = internationalDigits(number) ?: return null
         val code = RegionCallingCodes.callingCodeOf(digits) ?: return null
-        if (code == NANP_CODE) {
-            if (digits.length != NANP_DIGITS) return null
-            val caller = nanpCountry(digits.substring(1, 4), number) ?: return null
-            return caller.takeIf { homeCode != NANP_CODE || it != nanpGroup(home) }
+        return when (code) {
+            NANP_CODE -> nanpCaller(digits, number)?.takeIf { homeCode != NANP_CODE || it != nanpGroup(home) }
+            RU_KZ_CODE -> (if (digits.getOrNull(1) == '7') "KZ" else "RU").takeIf { it != home }
+            homeCode -> null
+            else -> RegionCallingCodes.mainRegionFor(code)
         }
-        if (code == RU_KZ_CODE) {
-            val caller = if (digits.getOrNull(1) == '7') "KZ" else "RU"
-            return caller.takeIf { it != home }
-        }
-        if (code == homeCode) return null
-        return RegionCallingCodes.mainRegionFor(code)
     }
+
+    /** The digits of [number] when it's written with a "+" and is as long as a phone line can be. */
+    private fun internationalDigits(number: String): String? = filterAsciiDigits(number).takeIf { number.trimStart().startsWith("+") && it.length in E164_DIGITS }
+
+    private fun nanpCaller(
+        digits: String,
+        number: String,
+    ): String? = if (digits.length == NANP_DIGITS) nanpCountry(digits.substring(1, 4), number) else null
 
     /** [iso]'s name in [locale], such as "Jamaica". */
     fun displayName(

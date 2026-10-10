@@ -727,6 +727,7 @@ class SmsContentAnalyzer
                 val text = plainNumberText(body.take(MAX_CALLBACK_SCAN_CHARS))
                 val found = LinkedHashSet<String>()
                 val taken = mutableListOf<IntRange>()
+
                 fun IntRange.overlapsTaken() = taken.any { it.first <= last && first <= it.last }
                 internationalNumber.findAll(text).forEach { match ->
                     val digits = match.value.filter { it in '0'..'9' }

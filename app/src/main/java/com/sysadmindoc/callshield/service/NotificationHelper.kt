@@ -592,8 +592,7 @@ object NotificationHelper {
      * detection is handled, so a blocked call's alert carries the detection
      * underneath it.
      */
-    fun notSpamReasonCode(reason: String): BlockReasonCode =
-        BlockReasonCode.fromMatchSource(CategoryCallPolicy.parseMatchSource(reason)?.originalMatchSource ?: reason)
+    fun notSpamReasonCode(reason: String): BlockReasonCode = BlockReasonCode.fromMatchSource(CategoryCallPolicy.parseMatchSource(reason)?.originalMatchSource ?: reason)
 
     /**
      * Whether "Not spam" on a block also tells the community database. Only a

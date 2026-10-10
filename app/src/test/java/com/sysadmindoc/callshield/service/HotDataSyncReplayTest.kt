@@ -306,8 +306,7 @@ class HotDataSyncReplayTest {
         override suspend fun fetchCommunityWatchSnapshot(
             owner: String,
             repo: String,
-        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> =
-            if (watchOffline) Result.failure(java.io.IOException("offline")) else Result.success(communityWatch)
+        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> = if (watchOffline) Result.failure(java.io.IOException("offline")) else Result.success(communityWatch)
 
         override fun parseHotListJson(body: String): List<HotNumber> = emptyList()
 

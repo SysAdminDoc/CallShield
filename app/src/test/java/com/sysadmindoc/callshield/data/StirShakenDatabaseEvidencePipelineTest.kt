@@ -5,9 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
-import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.HotDataSync
@@ -312,8 +312,7 @@ class StirShakenDatabaseEvidencePipelineTest {
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
 
-        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> =
-            HotFeedSnapshot(emptyList(), explicitlyCleared = true)
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = HotFeedSnapshot(emptyList(), explicitlyCleared = true)
     }
 
     private fun callFrom(

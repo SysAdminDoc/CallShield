@@ -319,6 +319,69 @@ class CallerIdOverlayService : Service() {
         return START_NOT_STICKY
     }
 
+    /** The lines under the number that say something about the caller. None of them is a verdict. */
+    private fun LinearLayout.addCallerLabels(
+        number: String,
+        confidence: Int,
+        displayReason: String,
+        outgoingRiskWarning: Boolean,
+        palette: CallerIdOverlayPalette,
+    ) {
+        // Where the caller dialed from, when that's another country.
+        // A label only, like the carrier's "Overseas call".
+        CallerCountry
+            .abroad(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
+            ?.takeUnless { outgoingRiskWarning }
+            ?.let { country ->
+                addView(
+                    TextView(context).apply {
+                        text = context.getString(R.string.caller_abroad, CallerCountry.displayName(country))
+                        setTextColor(palette.subtext)
+                        textSize = OVERLAY_TEXT_SP
+                    },
+                )
+            }
+        if (displayReason.isNotEmpty() && (confidence <= 0 || outgoingRiskWarning)) {
+            addView(
+                TextView(context).apply {
+                    text = displayReason
+                    setTextColor(palette.subtext)
+                    textSize = OVERLAY_TEXT_SP
+                },
+            )
+        }
+        // Pending community reports are a label, never a verdict: the
+        // watch list alone can't block, so this is the only place an
+        // otherwise clear caller shows it.
+        val watchReporters =
+            if (outgoingRiskWarning) 0 else SpamHeuristics.communityWatchReporterCount(context, number)
+        if (watchReporters >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS) {
+            addView(
+                TextView(context).apply {
+                    text =
+                        context.resources.getQuantityString(
+                            R.plurals.community_watch_label,
+                            watchReporters,
+                            watchReporters,
+                        )
+                    setTextColor(palette.warning)
+                    textSize = OVERLAY_TEXT_SP
+                },
+            )
+        }
+        // A published line rings when the carrier verified it. Name the
+        // owner, and warn, because the caller still controls the call.
+        OfficialLines.organization(number)?.takeUnless { outgoingRiskWarning }?.let { organization ->
+            addView(
+                TextView(context).apply {
+                    text = context.getString(R.string.overlay_official_line, organization)
+                    setTextColor(palette.warning)
+                    textSize = OVERLAY_TEXT_SP
+                },
+            )
+        }
+    }
+
     private fun showOverlay(
         number: String,
         confidence: Int,
@@ -403,59 +466,7 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(8f), 0, context.overlayDp(2f))
                     },
                 )
-                // Where the caller dialed from, when that's another country.
-                // A label only, like the carrier's "Overseas call".
-                CallerCountry
-                    .abroad(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
-                    ?.takeUnless { outgoingRiskWarning }
-                    ?.let { country ->
-                        addView(
-                            TextView(context).apply {
-                                text = context.getString(R.string.caller_abroad, CallerCountry.displayName(country))
-                                setTextColor(palette.subtext)
-                                textSize = OVERLAY_TEXT_SP
-                            },
-                        )
-                    }
-                if (displayReason.isNotEmpty() && (confidence <= 0 || outgoingRiskWarning)) {
-                    addView(
-                        TextView(context).apply {
-                            text = displayReason
-                            setTextColor(palette.subtext)
-                            textSize = OVERLAY_TEXT_SP
-                        },
-                    )
-                }
-                // Pending community reports are a label, never a verdict: the
-                // watch list alone can't block, so this is the only place an
-                // otherwise clear caller shows it.
-                val watchReporters =
-                    if (outgoingRiskWarning) 0 else SpamHeuristics.communityWatchReporterCount(context, number)
-                if (watchReporters >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS) {
-                    addView(
-                        TextView(context).apply {
-                            text =
-                                context.resources.getQuantityString(
-                                    R.plurals.community_watch_label,
-                                    watchReporters,
-                                    watchReporters,
-                                )
-                            setTextColor(palette.warning)
-                            textSize = OVERLAY_TEXT_SP
-                        },
-                    )
-                }
-                // A published line rings when the carrier verified it. Name the
-                // owner, and warn, because the caller still controls the call.
-                OfficialLines.organization(number)?.takeUnless { outgoingRiskWarning }?.let { organization ->
-                    addView(
-                        TextView(context).apply {
-                            text = context.getString(R.string.overlay_official_line, organization)
-                            setTextColor(palette.warning)
-                            textSize = OVERLAY_TEXT_SP
-                        },
-                    )
-                }
+                addCallerLabels(number, confidence, displayReason, outgoingRiskWarning, palette)
 
                 // Score — updates live
                 scoreText =

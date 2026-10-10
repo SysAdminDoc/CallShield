@@ -222,7 +222,14 @@ class UndoActionsTest {
 
             assertTrue(undone.message, undone.success)
             assertEquals(setOf(MY_LIST), listUrls())
-            assertEquals(1L, fixture.settingsStore.data.first().externalBlocklistSubscriptions().single().lastSyncedAt)
+            assertEquals(
+                1L,
+                fixture.settingsStore.data
+                    .first()
+                    .externalBlocklistSubscriptions()
+                    .single()
+                    .lastSyncedAt,
+            )
         }
 
     private suspend fun listUrls(): Set<String> =

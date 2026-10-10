@@ -88,8 +88,7 @@ internal object CommunityReportHistory {
         now: Long,
     ): List<Entry> = entries.mapNotNull(::decode).filter { now - it.reportedAt < WINDOW_MILLIS }
 
-    internal fun encode(entry: Entry): String =
-        listOf(entry.id, entry.number, entry.type, entry.reportedAt.toString(), entry.delivery.name).joinToString(SEPARATOR)
+    internal fun encode(entry: Entry): String = listOf(entry.id, entry.number, entry.type, entry.reportedAt.toString(), entry.delivery.name).joinToString(SEPARATOR)
 
     internal fun decode(raw: String): Entry? {
         val parts = raw.split(SEPARATOR)

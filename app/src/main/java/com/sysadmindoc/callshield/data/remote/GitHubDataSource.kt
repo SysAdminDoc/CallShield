@@ -783,19 +783,20 @@ class GitHubDataSource internal constructor(
             "community watch row count ${entries.size} exceeds cap $MAX_COMMUNITY_WATCH_ROWS"
         }
         val seen = mutableSetOf<String>()
-        val numbers = entries.map { entry ->
-            val number = entry.number.trim()
-            requireFeed(COMMUNITY_WATCH_NUMBER_REGEX.matches(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
-                "community watch contains an unusable phone number"
+        val numbers =
+            entries.map { entry ->
+                val number = entry.number.trim()
+                requireFeed(COMMUNITY_WATCH_NUMBER_REGEX.matches(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                    "community watch contains an unusable phone number"
+                }
+                requireFeed(entry.reporterCount in 2..MAX_COMMUNITY_WATCH_REPORTERS, GitHubFeedFailureReason.INVALID_SCHEMA) {
+                    "community watch contains an unusable reporter count"
+                }
+                requireFeed(seen.add(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                    "community watch contains a duplicate phone number"
+                }
+                CommunityWatchNumber(number, entry.reporterCount)
             }
-            requireFeed(entry.reporterCount in 2..MAX_COMMUNITY_WATCH_REPORTERS, GitHubFeedFailureReason.INVALID_SCHEMA) {
-                "community watch contains an unusable reporter count"
-            }
-            requireFeed(seen.add(number), GitHubFeedFailureReason.INVALID_SCHEMA) {
-                "community watch contains a duplicate phone number"
-            }
-            CommunityWatchNumber(number, entry.reporterCount)
-        }
         requireFeed(!payload.cleared || numbers.isEmpty(), GitHubFeedFailureReason.INVALID_SCHEMA) {
             "community watch cannot be cleared while it contains numbers"
         }

@@ -218,19 +218,20 @@ def generate() -> str:
         "    }",
         "",
         f"    private const val LONGEST = {longest}",
-        "",
-        "    /** Each calling code's area codes, space-separated, with a space at each end. */",
-        "    private val TABLES: Map<String, String> =",
-        "        mapOf(",
-        *kotlin_map(tables),
-        "        )",
-        "",
-        "    /** Each calling code's area codes that don't cover national numbers of one length, as \"code@length\". */",
-        "    private val EXCLUDED: Map<String, String> =",
-        "        mapOf(",
-        *kotlin_map(exclusions),
-        "        )",
         "}",
+        "",
+        # The tables live outside the object, which detekt would otherwise count as one large class.
+        "/** Each calling code's area codes, space-separated, with a space at each end. */",
+        "private val TABLES: Map<String, String> =",
+        "    mapOf(",
+        *kotlin_map(tables),
+        "    )",
+        "",
+        "/** Each calling code's area codes that don't cover national numbers of one length, as \"code@length\". */",
+        "private val EXCLUDED: Map<String, String> =",
+        "    mapOf(",
+        *kotlin_map(exclusions),
+        "    )",
         "",
     ]
     return "\n".join(lines)
@@ -241,12 +242,12 @@ def kotlin_map(entries: dict[int, list[str]]) -> list[str]:
     for cc, codes in sorted(entries.items(), key=lambda kv: str(kv[0])):
         chunks = kotlin_table(codes)
         if len(chunks) == 1:
-            lines.append(f'            "{cc}" to "{chunks[0]}",')
+            lines.append(f'        "{cc}" to "{chunks[0]}",')
             continue
-        lines.append(f'            "{cc}" to')
+        lines.append(f'        "{cc}" to')
         for i, chunk in enumerate(chunks):
             sep = " +" if i < len(chunks) - 1 else ","
-            lines.append(f'                "{chunk}"{sep}')
+            lines.append(f'            "{chunk}"{sep}')
     return lines
 
 

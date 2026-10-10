@@ -62,8 +62,7 @@ fun countsByAreaCode(
             areaCodeBlock(aggregate.key, homeRegionIso)
                 ?.takeIf { it.callingCode == NANP_CALLING_CODE }
                 ?.let { block -> block to aggregate.count }
-        }
-        .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+        }.groupBy(keySelector = { it.first }, valueTransform = { it.second })
         .map { (block, counts) -> block to counts.sum() }
         .sortedWith(compareByDescending<Pair<AreaCodeBlock, Int>> { it.second }.thenBy { it.first.areaCode })
 
@@ -151,8 +150,7 @@ internal fun slowCampaignExchanges(
                 exchangeKey(block) !in contactExchanges &&
                 block.wildcard !in blockedPatterns &&
                 "+1${block.areaCode}*" !in blockedPatterns
-        }
-        .mapNotNull { (block, rows) ->
+        }.mapNotNull { (block, rows) ->
             val firstSeen = rows.groupBy { it.second }.values.map { sameNumber -> sameNumber.minOf { it.third } }
             val spread = firstSeen.max() - firstSeen.min()
             (block to firstSeen.size).takeIf { firstSeen.size >= SLOW_CAMPAIGN_MIN_NUMBERS && spread > BURST_MS }

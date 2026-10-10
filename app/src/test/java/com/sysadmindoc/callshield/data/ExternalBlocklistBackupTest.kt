@@ -26,8 +26,7 @@ class ExternalBlocklistBackupTest {
                 Types.newParameterizedType(List::class.java, ExternalBlocklistSubscription::class.java),
             )
 
-    private fun phoneWith(vararg subscriptions: ExternalBlocklistSubscription): MutablePreferences =
-        mutablePreferencesOf(SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS to adapter.toJson(subscriptions.toList()))
+    private fun phoneWith(vararg subscriptions: ExternalBlocklistSubscription): MutablePreferences = mutablePreferencesOf(SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS to adapter.toJson(subscriptions.toList()))
 
     private fun fetched(
         url: String,
@@ -79,7 +78,11 @@ class ExternalBlocklistBackupTest {
                     ),
             )
 
-        backup.sanitized().addingExternalBlocklistsTo(phone.toBackupSettings().externalBlocklists).sanitized().writeTo(phone)
+        backup
+            .sanitized()
+            .addingExternalBlocklistsTo(phone.toBackupSettings().externalBlocklists)
+            .sanitized()
+            .writeTo(phone)
 
         val lists = phone.externalBlocklistSubscriptions().associateBy { it.url }
         assertEquals(setOf(MY_LIST, US_LIST), lists.keys)

@@ -866,7 +866,7 @@ class SettingsRepository(
         privateDataStore.data.map { CommunityReportHistory.list(it[SpamRepository.KEY_COMMUNITY_REPORT_HISTORY].orEmpty(), System.currentTimeMillis()) }
 
     /** Sets a report's delivery in the list behind My reports ([CommunityReportHistory.record]). */
-    suspend fun recordCommunityReport(
+    internal suspend fun recordCommunityReport(
         id: String,
         number: String,
         type: String,

@@ -546,6 +546,7 @@ class SpamHeuristics
 
             private const val CONTACT_CACHE_TTL_MS = 60_000L
             private const val CONTACT_CACHE_MAX = 128
+
             /** Reporters a number needs before the watch list scores or labels it. */
             const val COMMUNITY_WATCH_MIN_REPORTERS = 2
             private const val COMMUNITY_WATCH_SCORE = 15

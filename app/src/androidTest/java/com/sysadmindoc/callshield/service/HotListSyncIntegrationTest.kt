@@ -249,8 +249,7 @@ class HotListSyncIntegrationTest {
         override suspend fun fetchCommunityWatchSnapshot(
             owner: String,
             repo: String,
-        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> =
-            failure?.let { Result.failure(it) } ?: Result.success(HotFeedSnapshot(communityWatch, explicitlyCleared))
+        ): Result<HotFeedSnapshot<List<CommunityWatchNumber>>> = failure?.let { Result.failure(it) } ?: Result.success(HotFeedSnapshot(communityWatch, explicitlyCleared))
 
         override fun parseHotListJson(body: String): List<HotNumber> = hotList
 
@@ -258,7 +257,6 @@ class HotListSyncIntegrationTest {
 
         override fun parseSpamDomainsJson(body: String): List<String> = spamDomains
 
-        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> =
-            HotFeedSnapshot(communityWatch, explicitlyCleared)
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = HotFeedSnapshot(communityWatch, explicitlyCleared)
     }
 }

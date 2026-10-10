@@ -50,8 +50,7 @@ internal object RegionCallingCodes {
      * The region a [callingCode] is named for: the only one, or for a code
      * several regions share, the one libphonenumber treats as its main country.
      */
-    fun mainRegionFor(callingCode: String): String? =
-        MAIN_REGIONS[callingCode] ?: codes.entries.singleOrNull { it.value == callingCode }?.key
+    fun mainRegionFor(callingCode: String): String? = MAIN_REGIONS[callingCode] ?: codes.entries.singleOrNull { it.value == callingCode }?.key
 
     /** libphonenumber's main country for each calling code that several regions share. */
     private val MAIN_REGIONS =

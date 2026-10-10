@@ -97,8 +97,9 @@ class ExternalBlocklistParserTest {
             ExternalBlocklistParser.parse(
                 rawUrl = "https://listahu.org/descargar/csv/",
                 rawLabel = "Lista Hũ",
-                body = "\"#\",\"Numero\",\"Tipo\",\"Comentarios\",\"Captura\",\"Fecha_Denuncia\"\n" +
-                    "1,\"595985843100\",\"SPAM\",\"Llamadas grabadas\",\"https://listahu.org/media/d2.jpg\",\"2015-02-16 09:37\"\n",
+                body =
+                    "\"#\",\"Numero\",\"Tipo\",\"Comentarios\",\"Captura\",\"Fecha_Denuncia\"\n" +
+                        "1,\"595985843100\",\"SPAM\",\"Llamadas grabadas\",\"https://listahu.org/media/d2.jpg\",\"2015-02-16 09:37\"\n",
                 normalizeNumber = { paraguay.toInternational(it) ?: it },
             )
 

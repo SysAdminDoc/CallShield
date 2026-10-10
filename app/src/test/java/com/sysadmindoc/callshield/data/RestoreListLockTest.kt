@@ -58,7 +58,10 @@ class RestoreListLockTest {
             refresh.await()
             assertTrue(restore.await().success)
 
-            val lists = fixture.settingsStore.data.first().externalBlocklistSubscriptions()
+            val lists =
+                fixture.settingsStore.data
+                    .first()
+                    .externalBlocklistSubscriptions()
             assertEquals(setOf(MY_LIST, THEIR_LIST), lists.map { it.url }.toSet())
             assertTrue("the refresh's result is kept too", lists.single { it.url == MY_LIST }.lastSyncedAt > 1)
         }

@@ -156,6 +156,7 @@ internal object HotDataSync {
                 when {
                     // A refresh that landed while the file was read wins over it.
                     lines != null -> if (!hasData()) applyKept(lines)
+
                     feed !in health.clearedFeeds -> wantsRefresh = true
                 }
             }

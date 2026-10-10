@@ -6,10 +6,10 @@ import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
+import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
-import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.service.HotDataSync
 import kotlinx.coroutines.flow.first
@@ -195,8 +195,7 @@ class MirrorTrustAndSaveTest {
 
         override fun parseSpamDomainsJson(body: String): List<String> = emptyList()
 
-        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> =
-            HotFeedSnapshot(emptyList(), explicitlyCleared = true)
+        override fun parseCommunityWatchSnapshotJson(body: String): HotFeedSnapshot<List<CommunityWatchNumber>> = HotFeedSnapshot(emptyList(), explicitlyCleared = true)
     }
 
     private companion object {

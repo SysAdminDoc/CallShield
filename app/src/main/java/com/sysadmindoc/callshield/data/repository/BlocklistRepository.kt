@@ -468,15 +468,20 @@ class BlocklistRepository(
         val now = System.currentTimeMillis()
         val forms = equivalentForms(normalizeNumber(number))
         return when (NotificationHelper.notSpamReasonCode(matchReason)) {
-            BlockReasonCode.DATABASE ->
+            BlockReasonCode.DATABASE -> {
                 forms
                     .firstNotNullOfOrNull { form -> dao.findByNumber(form)?.activeDecision(now)?.takeUnless { it.isUserBlocked } }
                     ?.source
+            }
+
             BlockReasonCode.DB_PREFIX_EXPANSION -> {
                 val sources = forms.mapNotNull { SpamRepositoryImpl.dbExpansionPrefix(it) }.flatMap { dao.sourcesByPrefix(it, now) }
                 sources.firstOrNull { NotificationHelper.isSharedDatabaseRow(it) } ?: sources.firstOrNull()
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 

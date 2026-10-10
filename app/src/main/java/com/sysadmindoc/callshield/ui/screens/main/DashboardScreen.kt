@@ -2048,8 +2048,7 @@ internal fun rememberNowTick(): Long {
 }
 
 @Composable
-internal fun relativeTimeText(timestamp: Long): String =
-    relativeTimeSpan(timestamp, rememberNowTick()) ?: stringResource(R.string.dashboard_time_just_now)
+internal fun relativeTimeText(timestamp: Long): String = relativeTimeSpan(timestamp, rememberNowTick()) ?: stringResource(R.string.dashboard_time_just_now)
 
 @Composable
 private fun syncFreshnessColor(
