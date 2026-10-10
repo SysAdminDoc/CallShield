@@ -336,6 +336,16 @@ class BlocklistRepository(
         invalidateWildcardCache()
     }
 
+    /**
+     * Undo [deleteWildcardRule]: put the row back exactly as it was. Re-adding
+     * it through [addWildcardRule] turned a rule the user had switched off
+     * back on.
+     */
+    suspend fun restoreWildcardRule(rule: WildcardRule) {
+        dao.insertWildcardRule(rule)
+        invalidateWildcardCache()
+    }
+
     /** What adding a wildcard rule replaced: the rule that had the same pattern, if any. */
     data class WildcardUndo(
         val pattern: String,
@@ -361,6 +371,9 @@ class BlocklistRepository(
             undo = WildcardUndo(trimmedPattern, existing, changed = !alreadyBlocks)
             if (!alreadyBlocks) addWildcardRule(trimmedPattern, isRegex, description)
         }
+        // Again after the commit: a screening read between addWildcardRule's
+        // invalidation and the commit would cache the rules without this one.
+        invalidateWildcardCache()
         return undo
     }
 
@@ -409,6 +422,12 @@ class BlocklistRepository(
 
     suspend fun deleteHashWildcardRule(rule: HashWildcardRule) {
         dao.deleteHashWildcardRule(rule)
+        invalidateHashWildcardCache()
+    }
+
+    /** Undo [deleteHashWildcardRule] with the row as it was, switch and all. */
+    suspend fun restoreHashWildcardRule(rule: HashWildcardRule) {
+        dao.insertHashWildcardRule(rule)
         invalidateHashWildcardCache()
     }
 
@@ -909,6 +928,12 @@ class BlocklistRepository(
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
 
+    /**
+     * Undo [removeFromWhitelist] with the row as it was. Re-adding it through
+     * [addToWhitelist] dropped its expiry, so a temporary allow came back for good.
+     */
+    suspend fun restoreWhitelistEntry(entry: WhitelistEntry) = dao.insertWhitelistEntry(entry)
+
     suspend fun setWhitelistEmergency(
         id: Long,
         emergency: Boolean,
@@ -975,6 +1000,12 @@ class BlocklistRepository(
 
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) {
         dao.deleteKeywordRule(rule)
+        invalidateKeywordCache()
+    }
+
+    /** Undo [deleteKeywordRule] with the row as it was, switch and all. */
+    suspend fun restoreKeywordRule(rule: SmsKeywordRule) {
+        dao.insertKeywordRule(rule)
         invalidateKeywordCache()
     }
 

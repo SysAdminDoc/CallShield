@@ -152,6 +152,36 @@ class UndoActionsTest {
         }
 
     @Test
+    fun `undoing a deleted rule puts it back switched off when it was off`() =
+        runBlocking {
+            val caller = "+14152340123"
+            repo.addWildcardRule("+1415*", description = "San Francisco")
+            assertTrue(repo.isSpam(caller, realtimeCall = false).isSpam)
+            repo.toggleWildcardRule(requireNotNull(dao.findWildcardRule("+1415*")).id, enabled = false)
+            val deleted = requireNotNull(dao.findWildcardRule("+1415*"))
+
+            repo.deleteWildcardRule(deleted)
+            repo.restoreWildcardRule(deleted)
+
+            assertEquals(deleted, dao.findWildcardRule("+1415*"))
+            assertFalse(repo.isSpam(caller, realtimeCall = false).isSpam)
+        }
+
+    @Test
+    fun `undoing a deleted temporary allow keeps it temporary`() =
+        runBlocking {
+            val expiry = later
+            repo.addToWhitelist(NUMBER, "pharmacy", expiresAt = expiry)
+            val deleted = requireNotNull(dao.findWhitelistEntry(NUMBER))
+
+            repo.removeFromWhitelist(deleted)
+            repo.restoreWhitelistEntry(deleted)
+
+            assertEquals(expiry, dao.findWhitelistEntry(NUMBER)?.expiresAt)
+            assertEquals(deleted, dao.findWhitelistEntry(NUMBER))
+        }
+
+    @Test
     fun `undoing a replace restore puts back rows an import would refuse`() =
         runBlocking {
             val shortCode = repo.normalizeNumber("7726")

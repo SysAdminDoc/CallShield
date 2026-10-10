@@ -889,6 +889,15 @@ class SpamRepository(
 
     suspend fun undoWildcardRule(undo: BlocklistRepository.WildcardUndo) = blocklistRepository.undoWildcardRule(undo)
 
+    // Undo for a deleted rule or trusted number: the deleted row goes back as it was.
+    suspend fun restoreWildcardRule(rule: WildcardRule) = blocklistRepository.restoreWildcardRule(rule)
+
+    suspend fun restoreHashWildcardRule(rule: HashWildcardRule) = blocklistRepository.restoreHashWildcardRule(rule)
+
+    suspend fun restoreKeywordRule(rule: SmsKeywordRule) = blocklistRepository.restoreKeywordRule(rule)
+
+    suspend fun restoreWhitelistEntry(entry: WhitelistEntry) = blocklistRepository.restoreWhitelistEntry(entry)
+
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = blocklistRepository.getAllWildcardRules()
 
