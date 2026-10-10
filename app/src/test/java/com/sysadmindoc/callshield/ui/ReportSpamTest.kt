@@ -19,10 +19,12 @@ import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.service.CommunityReportWorker
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -124,6 +126,39 @@ class ReportSpamTest {
         assertNull(outcome.blockUndo)
         assertNull(runBlocking { fixture.dao.findByNumber(number) })
         assertEquals(1, sent.size)
+    }
+
+    @Test
+    fun `a second tap while the report is on its way is ignored, so Undo still unblocks`() {
+        val network = CompletableDeferred<Unit>()
+        CommunityContributor.transport = { report ->
+            network.await()
+            fakeNetwork(report)
+        }
+
+        val first = viewModel.reportSpam(number, "spam", blockHere = true)
+        val second = viewModel.reportSpam(number, "spam", blockHere = true)
+        network.complete(Unit)
+        val outcome = awaitOutcome()
+
+        assertNotNull(first)
+        assertNull(second)
+        assertEquals(first, outcome.requestId)
+        runBlocking { fixture.repository.undoBlock(requireNotNull(outcome.blockUndo)) }
+        assertNull(runBlocking { fixture.dao.findByNumber(number) }?.takeIf { it.isUserBlocked })
+        assertEquals(1, sent.size)
+    }
+
+    @Test
+    fun `each Report's outcome carries its own id`() {
+        val first = viewModel.reportSpam(number, "spam", blockHere = true)
+        assertEquals(first, awaitOutcome().requestId)
+        viewModel.clearReportOutcome()
+
+        val second = viewModel.reportSpam("+12125550178", "spam", blockHere = true)
+
+        assertEquals(second, awaitOutcome().requestId)
+        assertNotEquals(first, second)
     }
 
     private fun awaitOutcome(): MainViewModel.ReportOutcome {

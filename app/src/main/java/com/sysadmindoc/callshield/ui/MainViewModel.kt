@@ -1532,14 +1532,22 @@ class MainViewModel
         private val _contributeResult = MutableStateFlow<StatusMessage?>(null)
         val contributeResult: StateFlow<StatusMessage?> = _contributeResult
 
-        /** What Report on a number's screen did: the report's result, and the undo for the block it added on this phone. */
+        /**
+         * What Report on a number's screen did: the report's result, and the
+         * undo for the block it added on this phone. [requestId] is what
+         * [reportSpam] returned, so a screen shows only the outcome of its own
+         * tap and not one left over from a number it has since left.
+         */
         data class ReportOutcome(
+            val requestId: Long,
             val message: StatusMessage,
             val blockUndo: BlocklistRepository.BlockUndo?,
         )
 
         private val _reportOutcome = MutableStateFlow<ReportOutcome?>(null)
         val reportOutcome: StateFlow<ReportOutcome?> = _reportOutcome
+        private var reportRequests = 0L
+        private var reportJob: Job? = null
 
         /**
          * Report on a number's screen: block the number on this phone, then
@@ -1547,23 +1555,32 @@ class MainViewModel
          * everyone, so a reporter who didn't also tap Block kept getting the
          * calls. [blockHere] is false when the user blocked it already, which
          * leaves that block (a temporary one, say) as it was. The outcome's
-         * undo removes the block only; the report stays sent.
+         * undo removes the block only; the report stays sent. A report that
+         * can't go out yet is queued, so the block stays either way.
+         *
+         * Returns the request's id, or null for a tap while the last report is
+         * still on its way: that tap would read the first block as the row to
+         * restore, and its Undo would keep the number blocked.
          */
         fun reportSpam(
             number: String,
             type: String,
             blockHere: Boolean,
-        ) {
-            viewModelScope.launch {
-                val blockUndo =
-                    if (blockHere) {
-                        blockNumberUndoable(number, type, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
-                    } else {
-                        null
-                    }
-                val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
-                _reportOutcome.value = ReportOutcome(result.toStatusMessage(), blockUndo)
-            }
+        ): Long? {
+            if (reportJob?.isActive == true) return null
+            val requestId = ++reportRequests
+            reportJob =
+                viewModelScope.launch {
+                    val blockUndo =
+                        if (blockHere) {
+                            blockNumberUndoable(number, type, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
+                        } else {
+                            null
+                        }
+                    val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
+                    _reportOutcome.value = ReportOutcome(requestId, result.toStatusMessage(), blockUndo)
+                }
+            return requestId
         }
 
         fun clearReportOutcome() {

@@ -150,6 +150,7 @@ fun NumberDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.detail_undo)
     val reportBlockedMessage = stringResource(R.string.detail_report_blocked)
+    var reportRequestId by remember(number) { mutableStateOf<Long?>(null) }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
@@ -315,7 +316,9 @@ fun NumberDetailScreen(
                         note = reportNote,
                         onReport = {
                             hapticTick(context)
-                            viewModel.reportSpam(number, dbEntry?.type ?: liveResult?.type ?: "spam", blockHere = !isBlocked)
+                            viewModel.reportSpam(number, dbEntry?.type ?: liveResult?.type ?: "spam", blockHere = !isBlocked)?.let {
+                                reportRequestId = it
+                            }
                         },
                         onCall = {
                             context.startActivitySafely(
@@ -660,9 +663,15 @@ fun NumberDetailScreen(
                 }
             }
             // Report's result, with Undo for the block it added on this phone.
+            // One from another visit (the user went back before it arrived,
+            // or while its message showed) is dropped, not shown here.
             val reportOutcome by viewModel.reportOutcome.collectAsStateWithLifecycle()
-            LaunchedEffect(reportOutcome) {
+            LaunchedEffect(reportOutcome, reportRequestId) {
                 reportOutcome?.let { outcome ->
+                    if (outcome.requestId != reportRequestId) {
+                        viewModel.clearReportOutcome()
+                        return@LaunchedEffect
+                    }
                     val undo = outcome.blockUndo
                     if (undo == null) {
                         snackbarHostState.showSnackbar(outcome.message.text)
