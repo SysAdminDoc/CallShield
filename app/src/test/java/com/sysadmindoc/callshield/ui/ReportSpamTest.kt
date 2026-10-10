@@ -119,6 +119,15 @@ class ReportSpamTest {
     }
 
     @Test
+    fun `a number nothing flagged is blocked and reported as spam, not with a blank type`() {
+        viewModel.reportSpam(number, "", blockHere = true)
+        awaitOutcome()
+
+        assertEquals("spam", runBlocking { fixture.dao.findByNumber(number) }?.type)
+        assertEquals(listOf("spam"), sent.map { it.type })
+    }
+
+    @Test
     fun `a number the user blocked already is only reported`() {
         viewModel.reportSpam(number, "spam", blockHere = false)
         val outcome = awaitOutcome()

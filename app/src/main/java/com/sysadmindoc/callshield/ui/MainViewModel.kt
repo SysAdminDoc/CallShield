@@ -1584,15 +1584,18 @@ class MainViewModel
         ): Long? {
             if (reportJob?.isActive == true) return null
             val requestId = ++reportRequests
+            // A number nothing flagged has no type; the report goes out as
+            // spam, so the block it adds here says spam too, not "Other".
+            val reportType = type.ifBlank { "spam" }
             reportJob =
                 viewModelScope.launch {
                     val blockUndo =
                         if (blockHere) {
-                            blockNumberUndoable(number, type, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
+                            blockNumberUndoable(number, reportType, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
                         } else {
                             null
                         }
-                    val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
+                    val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), reportType)
                     _reportOutcome.value = ReportOutcome(requestId, result.toStatusMessage(), blockUndo)
                 }
             return requestId
