@@ -1320,7 +1320,7 @@
       "type": "robocall",
       "reports": 19,
       "first_seen": "2019-09-03",
-      "last_seen": "2026-09-08",
+      "last_seen": "2026-10-02",
       "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
@@ -1346,13 +1346,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2022-11-03",
-          "last_seen": "2026-09-08",
-          "retrieved_at": "2026-09-26T16:53:57+00:00",
+          "first_seen": "2026-10-02",
+          "last_seen": "2026-10-02",
+          "retrieved_at": "2026-10-10T00:42:01+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1821977637000,
+          "expires_at_epoch_ms": 1823128921000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
         },

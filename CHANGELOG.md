@@ -117,6 +117,9 @@ All notable changes to CallShield will be documented in this file.
   whatever country your phone is in, and ones from other countries that
   people reported there are left out rather than misread. Lists that name
   their columns in Spanish ("numero", "tipo", "comentarios") are read too.
+- Database v55 adds the FCC complaints published through 2026-10-09 and
+  FTC's newest 400, for 51,368 numbers, and refreshes the 652 French
+  telemarketing ranges.
 
 ## v1.11.0 (2026-09-30)
 

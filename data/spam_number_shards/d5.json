@@ -1293,12 +1293,27 @@
       "type": "robocall",
       "reports": 6,
       "first_seen": "2020-03-27",
-      "last_seen": "2022-03-25",
-      "description": "FCC: Unwanted Calls",
+      "last_seen": "2026-10-06",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
       ],
       "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-10-06",
+          "last_seen": "2026-10-06",
+          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1823128921000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
         {
           "source_id": "github_database",
           "evidence_type": "aggregate_database",
