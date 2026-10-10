@@ -24,21 +24,21 @@ All notable changes to CallShield will be documented in this file.
   lists, both area code offers with Undo, a number with no offer, Not
   spam's Undo and More's Report spam number. `--report` adds Report's block
   and Undo, and it sends a real report.
-- Lookup now offers Report on every number you check. It only showed for a number something had already flagged, so the new number you came from More to report left you with Block and Mark trusted. Mark trusted now shows only for a number that isn't flagged.
-- Reporting a number nothing had flagged sent the report with a blank type. It goes as spam now.
+- Lookup now offers Report on every number you check. It only showed for a number something had already flagged, so the new number you came from More to report left you with Block and Mark trusted. Report in Lookup works like Report on a number's screen: it blocks the number on your phone too, with Undo.
+- Reporting a number nothing had flagged sent the report with a blank type. It goes as spam now, and the block it adds on your phone says spam too, not Other.
 - Undo after deleting a rule puts back exactly what was there. A rule you'd switched off came back switched on, and a temporary allow came back for good.
 - Search shows an error with Retry when the first page of results fails to load. It used to show an empty list, as if nothing matched.
-- With TalkBack, the checkbox and switch rows in the blocklist dialogs, backup sections and update checks read their label with the control, and tapping the label toggles it. Settings links and rule conflicts are announced as buttons.
+- With TalkBack, the checkbox and switch rows in the blocklist dialogs, backup sections and update checks read their label with the control, and tapping anywhere on the row toggles it. Each row stays at least 48dp tall. Settings links and rule conflicts are announced as buttons.
 - Clearer wording in a few places. The allow-list range offer reads "Let its whole block of lines through too", and Lookup's checker names "Trusted numbers" and "CallShield blocklist".
 - The wildcard dialog now refuses a regex that call screening would skip as too slow to run, like `(\d{3}){3}`, and suggests the simple form. It used to save the rule, show it as active, and never match a call with it.
-- A text blocklist with a comment after a number on the same line (`+15551234567 # 3 reports`) read the comment's digits as part of the number. Lists that start with a byte-order mark also lost a JSON list's format or a CSV list's first column name.
+- A text blocklist with a comment after a number on the same line (`+15551234567 # 3 reports`) read the comment's digits as part of the number, and a comma in that comment could make the whole list read as CSV. Lists that start with a byte-order mark also lost a JSON list's format, its own refresh interval, or a CSV list's first column name.
 - The restore preview said a settings restore leaves out subscription URLs. It doesn't. It adds the backup's external blocklists and keeps the ones already on the phone, and the preview now says so.
-- A restore leaves a number's existing allow or block on this phone alone. Restoring a backup's block deleted any allow the phone had for that number, emergency allows included, and a backup's plain allow could clear an emergency flag or make a permanent allow temporary. Merge has no Undo, so the change stuck. The preview now counts these numbers among its matches and says what happens to them.
-- Blocking or unblocking a number while a database sync was downloading could be undone when the sync finished. It's kept now.
-- A block decision no longer waits for its call-log entry to be saved. When another database write was running, like a sync, that wait could push the block past Android's five-second limit, and the call rang.
+- A restore leaves a number's existing allow or block on this phone alone, unless the phone's is temporary and the backup's is permanent. Restoring a backup's block deleted any allow the phone had for that number, emergency allows included, and a backup's plain allow could clear an emergency flag or make a permanent allow temporary. Merge has no Undo, so the change stuck. The preview now counts these numbers among its matches and says what happens to them.
+- Blocking or unblocking a number from a downloaded list while a database sync was fetching its updated parts could be undone when the sync finished. It's kept now.
+- A block decision waits at most a quarter second for its call-log entry to be saved, then blocks the call and saves the entry after. When another database write was running, like a sync, that wait could push the block past Android's five-second limit, and the call rang.
 - The app now refuses the community watch list if it's served in place of the trending numbers feed. Both are signed and both list numbers, so a mirror could have passed one off as the other, turning numbers with a single report into blocked ones.
 - A failed link check on an RCS or chat message can no longer crash the app.
-- The community report merge counts one phone once a day per number, whichever spam type it picks. Picking a different type each time let one phone count up to nine times a day toward the trending list. A not-spam report still counts on its own.
+- The community report merge counts one phone once a day per number, whichever spam type it picks. Picking a different type each time let one phone count up to nine times a day toward the trending list. A not-spam report still counts on its own. Reports of one number that land within a minute of each other are folded together the same way, by spam or not spam instead of by type.
 - The Chinese translation's regex example in the wildcard dialog showed with its backslashes missing.
 
 ## v1.12.0 (2026-10-09)
