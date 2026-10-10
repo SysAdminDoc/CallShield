@@ -165,7 +165,7 @@ internal fun SettingsLinkRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

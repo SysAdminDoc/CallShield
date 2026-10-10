@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -100,6 +101,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -865,7 +867,10 @@ private fun RuleConflictAuditCard(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .clickable { onOpenRules(conflict.kind) }
+                                    .clickable(
+                                        onClickLabel = stringResource(R.string.rule_conflict_open),
+                                        role = Role.Button,
+                                    ) { onOpenRules(conflict.kind) }
                                     .padding(top = 8.dp),
                         ) {
                             Text(
@@ -1666,14 +1671,25 @@ fun AddWildcardDialog(
                             cursorColor = CatYellow,
                         ),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // The whole row toggles, so the label is tappable and TalkBack
+                // reads it with the checkbox instead of an unnamed checkbox.
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = isRegex,
+                                role = Role.Checkbox,
+                                onValueChange = {
+                                    isRegex = it
+                                    regexErrorDetail = null
+                                },
+                            ).testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     androidx.compose.material3.Checkbox(
                         checked = isRegex,
-                        onCheckedChange = {
-                            isRegex = it
-                            regexErrorDetail = null
-                        },
-                        modifier = Modifier.testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
+                        onCheckedChange = null,
                         colors =
                             androidx.compose.material3.CheckboxDefaults
                                 .colors(checkedColor = CatYellow),
@@ -1801,10 +1817,16 @@ fun AddWhitelistDialog(
                             cursorColor = CatGreen,
                         ),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(value = emergency, role = Role.Checkbox, onValueChange = { emergency = it }),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     androidx.compose.material3.Checkbox(
                         checked = emergency,
-                        onCheckedChange = { emergency = it },
+                        onCheckedChange = null,
                         colors =
                             androidx.compose.material3.CheckboxDefaults
                                 .colors(checkedColor = CatRed),
@@ -1883,10 +1905,16 @@ fun AddKeywordDialog(
                             cursorColor = CatMauve,
                         ),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(value = caseSensitive, role = Role.Checkbox, onValueChange = { caseSensitive = it }),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     androidx.compose.material3.Checkbox(
                         checked = caseSensitive,
-                        onCheckedChange = { caseSensitive = it },
+                        onCheckedChange = null,
                         colors =
                             androidx.compose.material3.CheckboxDefaults
                                 .colors(checkedColor = CatMauve),

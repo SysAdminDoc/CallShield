@@ -350,22 +350,31 @@ internal fun BackupSectionPicker(
         Text(title, style = MaterialTheme.typography.labelMedium, color = CatSubtext)
         backupSectionOrder.forEach { section ->
             val selected = section in selectedSections
+            // The row toggles, so each section's name and description are read
+            // with its checkbox and the text can be tapped too.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = selected,
+                            role = Role.Checkbox,
+                            onValueChange = { checked ->
+                                onSelectedSectionsChange(
+                                    if (checked) {
+                                        selectedSections + section
+                                    } else {
+                                        selectedSections - section
+                                    },
+                                )
+                            },
+                        ).padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Checkbox(
                     checked = selected,
-                    onCheckedChange = { checked ->
-                        onSelectedSectionsChange(
-                            if (checked) {
-                                selectedSections + section
-                            } else {
-                                selectedSections - section
-                            },
-                        )
-                    },
+                    onCheckedChange = null,
                     colors = CheckboxDefaults.colors(checkedColor = CatGreen, uncheckedColor = CatOverlay),
                 )
                 Column(modifier = Modifier.weight(1f)) {
