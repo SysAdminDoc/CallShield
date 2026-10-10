@@ -1713,7 +1713,7 @@ The rest of this section takes effect when the report Worker is next deployed.
   merge pipeline, but not by the report endpoint every client posts to, so a
   report filed that way was accepted, stored, and could never match the caller
   it was meant to block. Italy and Côte d'Ivoire are exempt: their national
-  numbers genuinely keep a leading zero.
+  numbers really do keep a leading zero.
 - One person can no longer promote a number to the trending hot list on their
   own. The report endpoint's duplicate check is deliberately permissive when
   its rate-limit storage is unavailable, and repeat submissions seconds apart
@@ -2154,7 +2154,7 @@ The rest of this section takes effect when the report Worker is next deployed.
  . The standing false-positive correction no longer re-warns on every dial ,
   and the warning overlay ignores the registration-time IDLE snapshot so it
   can no longer dismiss itself before it is readable.
-- Repeated-call urgency now recognizes genuinely spaced retries even when a
+- Repeated-call urgency now recognizes real, spaced-out retries even when a
   provider double-logs one attempt; machine-speed bursts remain rejected.
 - Unknown-direction calls receive an explicit allow response instead of no
   response, so OEM stacks that omit the direction no longer hold the call
@@ -3071,7 +3071,7 @@ passing.
 ### Improved
 
 - **Caller-ID overlay race & feedback**. `CallerIdOverlayService` no longer blocks on all three external lookups; first spam-hit-wins via the `Race.kt` helper, so user-visible callerID appears sooner.
-- **External lookup robustness**. Tightened `ExternalLookup.kt` against transient races and stale results when one provider returns much later than the others.
+- **External lookup hardening**. Tightened `ExternalLookup.kt` against transient races and stale results when one provider returns much later than the others.
 - **Push-alert allow feedback**. `PushAlertRegistry` + `OneShotNoticeGate` now surface "Allowed by you" notices the next time a previously-allowed number rings, so the user can revoke without digging into logs.
 
 ## [v1.7.0] (2026-04-24)
