@@ -217,11 +217,13 @@ fun LookupScreen(viewModel: MainViewModel) {
     val numberFieldRequested by viewModel.lookupNumberFieldRequested.collectAsStateWithLifecycle()
     LaunchedEffect(numberFieldRequested) {
         if (numberFieldRequested) {
-            viewModel.consumeLookupNumberFieldRequest()
             clearLookup()
             mode = LookupMode.NUMBER
             scrollState.scrollTo(0)
             focusNumberField = true
+            // Last: consuming changes this effect's key, which cancels it at
+            // the next recomposition, so a scroll that suspended would never focus.
+            viewModel.consumeLookupNumberFieldRequest()
         }
     }
 
