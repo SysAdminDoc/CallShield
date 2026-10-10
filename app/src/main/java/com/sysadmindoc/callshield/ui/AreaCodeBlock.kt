@@ -108,9 +108,11 @@ private const val BURST_MS = 24L * 60 * 60 * 1_000
  * newest report is not spam counts for nothing. The phone's own exchange
  * ([ownNumber]) and any exchange holding a contact ([contactExchanges], as
  * [exchangeKey] gives them) are never offered, and neither is one a rule in
- * [blockedPatterns] already blocks, alone or with its whole area code.
+ * [blockedPatterns] already blocks, alone or with its whole area code. A null
+ * [ownNumber] skips no exchange; [suggestedExchanges] is what the dashboard
+ * calls.
  */
-fun slowCampaignExchanges(
+internal fun slowCampaignExchanges(
     sightings: List<NumberSighting>,
     reports: List<CommunityReportHistory.Entry>,
     now: Long,
@@ -155,6 +157,31 @@ fun slowCampaignExchanges(
             val spread = firstSeen.max() - firstSeen.min()
             (block to firstSeen.size).takeIf { firstSeen.size >= SLOW_CAMPAIGN_MIN_NUMBERS && spread > BURST_MS }
         }.sortedWith(compareByDescending<Pair<ExchangeBlock, Int>> { it.second }.thenBy { exchangeKey(it.first) })
+}
+
+/**
+ * The exchanges the dashboard offers: [slowCampaignExchanges], or nothing
+ * when the phone's own number ([ownNumber], null when Android won't share it)
+ * or its contacts ([readContactExchanges] returning null) can't be read.
+ * Neighbor-spoofing campaigns rotate through the phone's own exchange, so
+ * offering without knowing it could suggest blocking the phone's neighbors.
+ * Contacts are read only when something would be offered.
+ */
+internal fun suggestedExchanges(
+    sightings: List<NumberSighting>,
+    reports: List<CommunityReportHistory.Entry>,
+    now: Long,
+    homeRegionIso: String?,
+    ownNumber: String?,
+    blockedPatterns: Set<String>,
+    readContactExchanges: () -> Set<String>?,
+): List<Pair<ExchangeBlock, Int>> {
+    if (ownNumber == null) return emptyList()
+
+    fun find(contacts: Set<String>) = slowCampaignExchanges(sightings, reports, now, homeRegionIso, ownNumber, contacts, blockedPatterns)
+    if (find(emptySet()).isEmpty()) return emptyList()
+    val contacts = readContactExchanges() ?: return emptyList()
+    return find(contacts)
 }
 
 /** The six digits that name an exchange, "737259". */

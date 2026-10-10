@@ -158,8 +158,9 @@ All notable changes to CallShield will be documented in this file.
   or reported three or more numbers from one exchange, such as (737)
   259-xxxx, spread over more than a day in the last two weeks, it offers to
   block those 10,000 numbers, with Undo. It never offers your own exchange
-  or one where a contact's number is, so it needs access to your contacts
-  to check. North American numbers only.
+  or one where a contact's number is, so it stays quiet unless it can read
+  this phone's number and your contacts. Android shares the phone's number
+  once SMS access is on, if the SIM has it. North American numbers only.
 - The data import no longer asks for the sunlei/denylist text list. That
   GitHub repository is gone, so every import got a 404 and skipped it, and
   it never added a number. Its source entry is gone too.

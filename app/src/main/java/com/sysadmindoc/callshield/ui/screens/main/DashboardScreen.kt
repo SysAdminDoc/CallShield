@@ -138,6 +138,7 @@ import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.rememberRoleRequest
+import com.sysadmindoc.callshield.ui.suggestedExchanges
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -1165,19 +1166,17 @@ fun DashboardScreen(
             val blocked = wildcardRules.filter { it.enabled && !it.isRegex }.mapTo(HashSet()) { it.pattern }
             value =
                 withContext(Dispatchers.IO) {
-                    val now = System.currentTimeMillis()
-
-                    fun find(
-                        ownNumber: String?,
-                        contacts: Set<String>,
-                    ) = slowCampaignExchanges(exchangeSightings, myReports, now, homeRegion, ownNumber, contacts, blocked)
-                    // Contacts are read only when there's something to offer,
-                    // and contacts that can't be read offer nothing.
-                    if (find(null, emptySet()).isEmpty()) return@withContext emptyList()
-                    val contacts =
+                    suggestedExchanges(
+                        exchangeSightings,
+                        myReports,
+                        System.currentTimeMillis(),
+                        homeRegion,
+                        // Null without READ_SMS, or on a SIM that doesn't carry its number.
+                        SpamHeuristics.shared.getUserPhoneNumber(context),
+                        blocked,
+                    ) {
                         ContactExchanges.read(context) { number -> exchangeBlock(number, homeRegion)?.let(::exchangeKey) }
-                            ?: return@withContext emptyList()
-                    find(SpamHeuristics.shared.getUserPhoneNumber(context), contacts).take(3)
+                    }.take(3)
                 }
         }
         if (topAreaCodes.isNotEmpty() || slowExchanges.isNotEmpty()) {

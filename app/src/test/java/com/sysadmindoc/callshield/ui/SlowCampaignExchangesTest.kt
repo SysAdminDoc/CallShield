@@ -116,6 +116,36 @@ class SlowCampaignExchangesTest {
     }
 
     @Test
+    fun `the dashboard offers nothing when it can't read the phone's own number or its contacts`() {
+        var contactReads = 0
+
+        fun suggest(
+            ownNumber: String?,
+            sightings: List<NumberSighting> = dailyCampaign(8),
+            contacts: Set<String>? = emptySet(),
+        ) = suggestedExchanges(sightings, emptyList(), now, "US", ownNumber, emptySet()) {
+            contactReads++
+            contacts
+        }
+
+        // Neighbor spoofing rotates through the phone's own exchange, so an
+        // unknown own number can't rule it out.
+        assertEquals(emptyList<Pair<ExchangeBlock, Int>>(), suggest(ownNumber = null))
+        assertEquals(emptyList<Pair<ExchangeBlock, Int>>(), suggest(ownNumber = "+17372605555", contacts = null))
+        assertEquals(1, contactReads)
+        // Contacts are read only when something would be offered.
+        assertEquals(emptyList<Pair<ExchangeBlock, Int>>(), suggest(ownNumber = "+17372605555", sightings = dailyCampaign(2)))
+        assertEquals(1, contactReads)
+        assertEquals(emptyList<Pair<ExchangeBlock, Int>>(), suggest(ownNumber = "+17372595555"))
+        assertEquals(1, contactReads)
+        assertEquals(emptyList<Pair<ExchangeBlock, Int>>(), suggest(ownNumber = "+17372605555", contacts = setOf("737259")))
+        assertEquals(listOf(austin to 8), suggest(ownNumber = "+17372605555"))
+        // A phone with a number outside North America shares no exchange with the campaign.
+        assertEquals(listOf(austin to 8), suggest(ownNumber = "+447700900123"))
+        assertEquals(4, contactReads)
+    }
+
+    @Test
     fun `the busiest exchange comes first`() {
         val sightings = dailyCampaign(3) + (1..5).map { NumberSighting("+1302927" + it.toString().padStart(4, '0'), now - it * day) }
 
