@@ -1,0 +1,14 @@
+{
+  "number": "+12347024931",
+  "type": "sms_spam",
+  "reported_at": "2026-10-10T15:35:01.739Z",
+  "source": "community_app",
+  "reporter_bucket": "14cc210f89b3e8bb",
+  "reporter_device": "49c9421f8b1bb23d",
+  "sms_domains": [
+    "actonforgovernor.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
