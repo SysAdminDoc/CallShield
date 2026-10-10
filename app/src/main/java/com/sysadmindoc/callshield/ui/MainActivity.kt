@@ -409,7 +409,15 @@ fun CallShieldApp(
                             }
 
                             4 -> {
-                                MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                                MoreScreen(
+                                    viewModel,
+                                    currentView = moreView,
+                                    onViewChange = { moreView = it },
+                                    onOpenLookup = {
+                                        viewModel.requestLookupNumberField()
+                                        selectedTab = 2
+                                    },
+                                )
                             }
                         }
                     }

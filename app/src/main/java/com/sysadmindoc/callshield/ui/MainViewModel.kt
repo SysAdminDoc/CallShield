@@ -420,6 +420,21 @@ class MainViewModel
             _lookupOutcome.value = null
         }
 
+        private val _lookupNumberFieldRequested = MutableStateFlow(false)
+
+        /** True from [requestLookupNumberField] until Lookup has opened an empty, focused number field. */
+        val lookupNumberFieldRequested: StateFlow<Boolean> = _lookupNumberFieldRequested
+
+        /** More's Report spam number: Lookup should start over on the number field, not show the last check. */
+        fun requestLookupNumberField() {
+            _lookupOutcome.value = null
+            _lookupNumberFieldRequested.value = true
+        }
+
+        fun consumeLookupNumberFieldRequest() {
+            _lookupNumberFieldRequested.value = false
+        }
+
         fun recordLookupOutcome(
             number: String,
             result: SpamCheckResult,

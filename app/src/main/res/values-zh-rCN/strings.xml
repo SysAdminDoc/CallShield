@@ -790,7 +790,7 @@
     <string name="more_github_repo_subtitle">在 GitHub 上直接阅读源码、路线图与发布历史。</string>
     <string name="more_report_bug_subtitle">当某处看起来损坏、混乱或未完成时，提交一个 issue。</string>
     <string name="more_star_github_subtitle">支持项目，帮助更多人发现 CallShield。</string>
-    <string name="more_report_spam_number_subtitle">将有可疑的号码连同有用上下文发回项目。</string>
+    <string name="more_report_spam_number_subtitle">先查询号码，再点按“举报”</string>
     <string name="more_share_crash_log_subtitle">导出最新的本地崩溃日志。电话号码、令牌与隐私 URL 部分会被脱敏；不会自动上传。</string>
     <string name="ftc_report_toast">%1$s 已复制。请粘贴到表单的电话号码字段。</string>
     <string name="ftc_report_no_browser">无可用浏览器打开举报表单。</string>

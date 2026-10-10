@@ -46,6 +46,7 @@ fun MoreScreen(
     viewModel: MainViewModel,
     currentView: Int,
     onViewChange: (Int) -> Unit,
+    onOpenLookup: () -> Unit = {},
 ) {
     if (currentView != 0) BackHandler { onViewChange(0) }
 
@@ -78,6 +79,7 @@ fun MoreScreen(
                 onChangelog = { onViewChange(3) },
                 onTest = { onViewChange(4) },
                 onReports = { onViewChange(MY_REPORTS_VIEW) },
+                onReportNumber = onOpenLookup,
             )
         }
     }
@@ -92,6 +94,7 @@ fun MoreHub(
     onChangelog: () -> Unit,
     onTest: () -> Unit,
     onReports: () -> Unit = {},
+    onReportNumber: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
@@ -321,17 +324,16 @@ fun MoreHub(
             ) {
                 launchExternalLink(context, "https://github.com/SysAdminDoc/CallShield")
             }
+            // Lookup, where Report sends the anonymous report that counts. The
+            // GitHub form files a public issue that nothing reads into the database.
             QuickLink(
                 Icons.Default.Flag,
                 stringResource(R.string.more_report_spam_number),
                 stringResource(R.string.more_report_spam_number_subtitle),
                 CatSubtext,
-            ) {
-                launchExternalLink(
-                    context,
-                    "https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.yml",
-                )
-            }
+                external = false,
+                onClick = onReportNumber,
+            )
         }
 
         Row(

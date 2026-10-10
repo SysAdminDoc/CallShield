@@ -16,6 +16,9 @@ All notable changes to CallShield will be documented in this file.
 - Lookup's result card now offers to block the number's whole area code,
   with Undo, the same way a number's own screen does. Before, you had to
   scroll down and open the full detail to find it.
+- Report spam number on the More tab now opens Lookup on an empty number
+  field, ready to type, where Report sends the anonymous report that counts.
+  It used to open the GitHub form, which files a public issue instead.
 - New `scripts/device_smoke.py` runs the release's phone checks over adb
   and prints PASS or FAIL for each: sync, What's new, the recommended
   lists, both area code offers with Undo, a number with no offer, and Not

@@ -70,6 +70,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -209,12 +211,26 @@ fun LookupScreen(viewModel: MainViewModel) {
         }
     }
 
+    val scrollState = rememberScrollState()
+    val numberFieldFocus = remember { FocusRequester() }
+    var focusNumberField by remember { mutableStateOf(false) }
+    val numberFieldRequested by viewModel.lookupNumberFieldRequested.collectAsStateWithLifecycle()
+    LaunchedEffect(numberFieldRequested) {
+        if (numberFieldRequested) {
+            viewModel.consumeLookupNumberFieldRequest()
+            clearLookup()
+            mode = LookupMode.NUMBER
+            scrollState.scrollTo(0)
+            focusNumberField = true
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -308,7 +324,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 )
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().focusRequester(numberFieldFocus),
                         shape = RoundedCornerShape(12.dp),
                         colors =
                             TextFieldDefaults.colors(
@@ -322,6 +338,14 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 cursorColor = CatGreen,
                             ),
                     )
+                    // Here beside the field, so the field is attached when it's asked to take focus.
+                    LaunchedEffect(focusNumberField) {
+                        if (focusNumberField) {
+                            focusNumberField = false
+                            numberFieldFocus.requestFocus()
+                            keyboard?.show()
+                        }
+                    }
 
                     PremiumActionButton(
                         label = stringResource(R.string.lookup_check_number),
