@@ -206,6 +206,45 @@ class ExternalBlocklistParserTest {
         assertEquals(12, declaredHours("\uFEFF# Expires: 12 hours\n212-555-0101"))
     }
 
+    @Test
+    fun anInlineCommentIsNotReadAsPartOfTheNumber() {
+        val parsed =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://lists.example.test/block.txt",
+                rawLabel = "",
+                body = "# full-line comment\n+1 212 555 0101 # 3 reports\n508-555-0102 // robocall\n",
+                normalizeNumber = ::canonicalizeUs,
+            )
+
+        assertEquals("txt", parsed.format)
+        assertEquals(listOf("+12125550101", "+15085550102"), parsed.numbers.map { it.number })
+        assertEquals(0, parsed.skippedRows)
+    }
+
+    @Test
+    fun aByteOrderMarkDoesNotHideJsonOrACsvHeader() {
+        val json =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://lists.example.test/feed",
+                rawLabel = "",
+                body = "\uFEFF{\"numbers\": [\"212-555-0101\"]}",
+                normalizeNumber = ::canonicalizeUs,
+            )
+        // The BOM sat on the first header cell, so the type column went unread.
+        val csv =
+            ExternalBlocklistParser.parse(
+                rawUrl = "https://lists.example.test/block.csv",
+                rawLabel = "",
+                body = "\uFEFFtype,phone\nscam,508-555-0102\n",
+                normalizeNumber = ::canonicalizeUs,
+            )
+
+        assertEquals("json", json.format)
+        assertEquals(listOf("+12125550101"), json.numbers.map { it.number })
+        assertEquals(listOf("+15085550102"), csv.numbers.map { it.number })
+        assertEquals("scam", csv.numbers.single().type)
+    }
+
     private fun declaredHours(
         body: String,
         file: String = "block.txt",

@@ -76,12 +76,15 @@ internal object ExternalBlocklistParser {
     ): ParsedExternalBlocklist {
         val url = validateHttpUrl(rawUrl)
         requireBodyWithinCap(body)
-        val format = detectFormat(url, body)
+        // The body is decoded without BOM handling, and a byte-order mark survives
+        // trim(): it hid a JSON list's opening brace and a CSV list's header.
+        val text = body.removePrefix("﻿")
+        val format = detectFormat(url, text)
         val rows =
             when (format) {
-                "json" -> parseJsonRows(body)
-                "csv" -> parseCsvRows(body)
-                else -> parseTextRows(body)
+                "json" -> parseJsonRows(text)
+                "csv" -> parseCsvRows(text)
+                else -> parseTextRows(text)
             }
         val id = idForUrl(url)
         val source = ExternalBlocklistSubscription.sourceFor(id)
@@ -247,9 +250,15 @@ internal object ExternalBlocklistParser {
         val rows = mutableListOf<ExternalBlocklistRow>()
         body.lineSequence().forEach { line ->
             enforceRowCap(rows.size + 1)
-            val trimmed = line.trim()
-            if (trimmed.isNotBlank() && !trimmed.startsWith("#") && !trimmed.startsWith("//")) {
-                rows += ExternalBlocklistRow(trimmed)
+            // Drop an inline comment, or its digits ("# 3 reports") would be
+            // glued onto the number by the normalizer.
+            val number =
+                line
+                    .substringBefore('#')
+                    .substringBefore("//")
+                    .trim()
+            if (number.isNotBlank()) {
+                rows += ExternalBlocklistRow(number)
             }
         }
         return rows
