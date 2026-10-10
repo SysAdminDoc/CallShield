@@ -41,7 +41,7 @@ class ListCatalogSubscriptionTest {
     fun `the bundled catalog shows before any sync`() {
         val catalog = runBlocking { repository.listCatalog.first() }
 
-        assertEquals(listOf("opencallshield-co", "spamchile-cl", "turkish-spam-numbers-tr"), catalog.map { it.id })
+        assertEquals(listOf("opencallshield-co", "spamchile-cl", "turkish-spam-numbers-tr", "listahu-py"), catalog.map { it.id })
     }
 
     @Test

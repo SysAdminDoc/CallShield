@@ -127,6 +127,7 @@ class SettingsRenderCoverageTest {
             "KEY_THEME_DEFAULT_SETTLED" to "the theme migration's record",
             "KEY_EVIDENCE_EXPIRY_RULE_APPLIED" to "a one-time fix to this phone's copy of the database",
             "KEY_COMMUNITY_REPORT_LEDGER" to "this phone's report outbox",
+            "KEY_COMMUNITY_REPORT_HISTORY" to "this phone's sent reports, shown on More > My reports",
             "KEY_DISMISSED_RULE_CONFLICTS" to "notices this phone already showed",
             "KEY_PROTECTION_ROLE_EVER_HELD" to "this install's role history",
             "KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN" to "a notice this phone already showed",

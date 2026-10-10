@@ -26,6 +26,7 @@ class BackupSettingsCoverageTest {
             "KEY_CNAP_SCREENED_WITH" to "a counter of this phone's calls",
             "KEY_CNAP_SCREENED_WITHOUT" to "a counter of this phone's calls",
             "KEY_COMMUNITY_REPORT_LEDGER" to "this phone's report outbox; restoring it would resend or drop reports",
+            "KEY_COMMUNITY_REPORT_HISTORY" to "My reports, this phone's record of what it sent, kept no-backup like the outbox",
             "KEY_DB_UPDATED" to "sync state of this phone's copy of the database",
             "KEY_EXPECTING_CALL_UNTIL" to "a window of a few hours that a restore days later would find long over",
             "KEY_DB_VERSION" to "sync state of this phone's copy of the database",

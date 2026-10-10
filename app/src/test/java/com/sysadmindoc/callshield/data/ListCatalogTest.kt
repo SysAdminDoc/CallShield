@@ -44,12 +44,12 @@ class ListCatalogTest {
     }
 
     @Test
-    fun `the published catalog offers three lists, all off, each with a license and a number plan`() {
+    fun `the published catalog offers four lists, all off, each with a license and a number plan`() {
         val catalog = ListCatalog.parse(File("../data/list_catalog.json").readText())
 
-        assertEquals(listOf("opencallshield-co", "spamchile-cl", "turkish-spam-numbers-tr"), catalog.entries.map { it.id })
-        assertEquals(listOf("MIT", "GPL-2.0", "GPL-3.0"), catalog.entries.map { it.license })
-        assertEquals(listOf("CO", "CL", "TR"), catalog.entries.map { it.numberPlan.country })
+        assertEquals(listOf("opencallshield-co", "spamchile-cl", "turkish-spam-numbers-tr", "listahu-py"), catalog.entries.map { it.id })
+        assertEquals(listOf("MIT", "GPL-2.0", "GPL-3.0", "CC BY-NC-SA 4.0"), catalog.entries.map { it.license })
+        assertEquals(listOf("CO", "CL", "TR", "PY"), catalog.entries.map { it.numberPlan.country })
         assertEquals(colombia, catalog.entries.first().numberPlan)
         assertTrue(catalog.entries.all { it.url.startsWith("https://") && it.licenseUrl.startsWith("https://") })
     }
