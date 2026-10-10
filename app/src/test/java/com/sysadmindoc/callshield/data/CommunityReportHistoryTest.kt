@@ -62,6 +62,25 @@ class CommunityReportHistoryTest {
     }
 
     @Test
+    fun `the number screen finds the newest spam report under any spelling of the number`() {
+        val older = CommunityReportHistory.Entry("r1", "+12122340101", "spam", now - day, Delivery.SENT)
+        val newer = older.copy(id = "r2", type = "robocall", reportedAt = now, delivery = Delivery.QUEUED)
+        val forms = listOf("2122340101", "+12122340101")
+
+        assertEquals("r2", CommunityReportHistory.lastSpamReport(listOf(newer, older), forms)?.id)
+        assertNull("another number", CommunityReportHistory.lastSpamReport(listOf(newer), listOf("+12122340102")))
+        assertNull(
+            "a not-spam vote isn't a spam report",
+            CommunityReportHistory.lastSpamReport(listOf(newer.copy(type = CommunityReportHistory.NOT_SPAM)), forms),
+        )
+        assertEquals(
+            "a report that never went out is passed over",
+            "r1",
+            CommunityReportHistory.lastSpamReport(listOf(newer.copy(delivery = Delivery.NOT_SENT), older), forms)?.id,
+        )
+    }
+
+    @Test
     fun `a damaged entry is skipped`() {
         assertNull(CommunityReportHistory.decode("r1|+12122340101|spam|soon|SENT"))
         assertNull(CommunityReportHistory.decode("r1|+12122340101|spam|1|LOST"))

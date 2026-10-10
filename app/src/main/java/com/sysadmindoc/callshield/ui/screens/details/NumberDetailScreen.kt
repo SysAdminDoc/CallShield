@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockReasoning
+import com.sysadmindoc.callshield.data.CommunityReportHistory
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.SourceDescriptions
@@ -40,6 +41,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.areaCodeBlock
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
@@ -100,6 +102,22 @@ fun NumberDetailScreen(
             }
         }
     val reportIssueUrl = reportIssueUrl(context.resources, number, numberCalls.size)
+    val myReports by viewModel.communityReports.collectAsStateWithLifecycle()
+    val lastReport = remember(myReports, forms) { CommunityReportHistory.lastSpamReport(myReports, forms) }
+    val reportNote =
+        when {
+            dbEntry?.let { NotificationHelper.isSharedDatabaseRow(it.source) } == true -> {
+                stringResource(R.string.detail_report_note_listed)
+            }
+
+            lastReport != null -> {
+                stringResource(R.string.detail_report_note_reported, dateFormat.format(Date(lastReport.reportedAt)))
+            }
+
+            else -> {
+                null
+            }
+        }
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
@@ -287,28 +305,19 @@ fun NumberDetailScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PremiumActionButton(
-                            label = stringResource(R.string.detail_report),
-                            icon = Icons.Default.Flag,
-                            color = CatRed,
-                            onClick = { context.launchViewUrlSafely(reportIssueUrl) },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                        PremiumActionButton(
-                            label = stringResource(R.string.detail_call),
-                            icon = Icons.Default.Phone,
-                            color = CatText,
-                            onClick = {
-                                context.startActivitySafely(
-                                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                    }
+                    NumberReportActions(
+                        note = reportNote,
+                        onReport = {
+                            hapticTick(context)
+                            viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
+                        },
+                        onCall = {
+                            context.startActivitySafely(
+                                Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                            )
+                        },
+                        onReportOnGitHub = { context.launchViewUrlSafely(reportIssueUrl) },
+                    )
                     if (blockableAreaCode != null) {
                         PremiumActionButton(
                             label = stringResource(R.string.detail_block_area_code, blockableAreaCode.areaCode),
@@ -605,46 +614,35 @@ fun NumberDetailScreen(
                 }
             }
 
-            // Community contribution buttons
+            // The spam report is the Report button up top. Its result, and this
+            // one's, shows as a snackbar, which stays in view wherever the
+            // screen is scrolled.
             val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_report_spam),
-                    icon = Icons.Default.Flag,
-                    color = CatRed,
-                    onClick = {
-                        hapticTick(context)
-                        viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_not_spam),
-                    icon = Icons.Default.ThumbUp,
-                    color = CatGreen,
-                    onClick = {
-                        hapticTick(context)
-                        viewModel.scheduleNotSpam(number)
-                        coroutineScope.launch {
-                            val result =
-                                snackbarHostState.showSnackbar(
-                                    message = notSpamPending,
-                                    actionLabel = undoLabel,
-                                    duration = SnackbarDuration.Short,
-                                )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                viewModel.undoNotSpam()
-                            }
+            PremiumActionButton(
+                label = stringResource(R.string.detail_not_spam),
+                icon = Icons.Default.ThumbUp,
+                color = CatGreen,
+                onClick = {
+                    hapticTick(context)
+                    viewModel.scheduleNotSpam(number)
+                    coroutineScope.launch {
+                        val result =
+                            snackbarHostState.showSnackbar(
+                                message = notSpamPending,
+                                actionLabel = undoLabel,
+                                duration = SnackbarDuration.Short,
+                            )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.undoNotSpam()
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                    outlined = true,
-                )
-            }
-            contributeResult?.let {
-                Text(it.text, style = MaterialTheme.typography.bodySmall, color = if (it.success) CatGreen else CatRed)
-                LaunchedEffect(it) {
-                    kotlinx.coroutines.delay(4000)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            LaunchedEffect(contributeResult) {
+                contributeResult?.let {
+                    snackbarHostState.showSnackbar(it.text)
                     viewModel.clearContributeResult()
                 }
             }
@@ -738,6 +736,44 @@ fun NumberDetailScreen(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
         )
+    }
+}
+
+/**
+ * The report row under Take action. Report sends the anonymous community
+ * report. GitHub is the smaller choice under it, because it files a public
+ * issue under the user's own account and nothing reads those into the
+ * database. [note] says what's already known about the number before either
+ * runs.
+ */
+@Composable
+internal fun NumberReportActions(
+    note: String?,
+    onReport: () -> Unit,
+    onCall: () -> Unit,
+    onReportOnGitHub: () -> Unit,
+) {
+    note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = CatSubtext) }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PremiumActionButton(
+            label = stringResource(R.string.detail_report),
+            icon = Icons.Default.Flag,
+            color = CatRed,
+            onClick = onReport,
+            modifier = Modifier.weight(1f),
+            outlined = true,
+        )
+        PremiumActionButton(
+            label = stringResource(R.string.detail_call),
+            icon = Icons.Default.Phone,
+            color = CatText,
+            onClick = onCall,
+            modifier = Modifier.weight(1f),
+            outlined = true,
+        )
+    }
+    TextButton(onClick = onReportOnGitHub) {
+        Text(stringResource(R.string.detail_report_github), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
     }
 }
 

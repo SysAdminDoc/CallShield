@@ -68,6 +68,15 @@ internal object CommunityReportHistory {
             entry.delivery != Delivery.NOT_SENT &&
             all.none { it.number == entry.number && it.type == NOT_SPAM && it.delivery != Delivery.NOT_SENT && it.reportedAt >= entry.reportedAt }
 
+    /**
+     * The newest spam report among [entries] (newest first, as [list] gives
+     * them) for any of [forms] that went out or is on its way, or null.
+     */
+    fun lastSpamReport(
+        entries: List<Entry>,
+        forms: Collection<String>,
+    ): Entry? = entries.firstOrNull { it.type != NOT_SPAM && it.delivery != Delivery.NOT_SENT && it.number in forms }
+
     /** The listed reports, newest first. */
     fun list(
         entries: Set<String>,

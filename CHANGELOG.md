@@ -124,6 +124,14 @@ All notable changes to CallShield will be documented in this file.
   advisories published 2026-09-30 (a hostile server could stall a download
   with an endless chunk or deflate stream, and HTTPS proxy TLS settings
   were ignored), and cryptography 50.0.2.
+- Report on a number's screen now sends the anonymous community report,
+  the one that counts toward blocking, and its result shows as a message
+  wherever you've scrolled. It used to open a GitHub issue under your own
+  account, which is public and never reaches the database. That's still
+  there as a smaller "Report publicly on GitHub" link, and the second
+  Report spam button lower down is gone. The screen also says when a number
+  is already in the database, or when you reported it in the last 90 days,
+  before you report it again.
 
 ## v1.11.0 (2026-09-30)
 

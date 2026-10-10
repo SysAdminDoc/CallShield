@@ -1367,7 +1367,9 @@
     <string name="detail_number_unblocked">Number unblocked</string>
     <string name="detail_currently_blocked">Currently blocked</string>
     <string name="detail_report">Report</string>
-    <string name="detail_report_spam">Report spam</string>
+    <string name="detail_report_github">Report publicly on GitHub</string>
+    <string name="detail_report_note_listed">This number is already in the CallShield database.</string>
+    <string name="detail_report_note_reported">You reported this number on %1$s.</string>
     <string name="detail_not_spam">Not spam</string>
     <string name="detail_not_spam_pending">Marked not spam</string>
     <string name="detail_undo">Undo</string>
