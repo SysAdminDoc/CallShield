@@ -3,10 +3,17 @@
 An area code here is one libphonenumber reads with
 length_of_geographical_area_code and its geocoder names a place for, so
 formatting groups that aren't area codes (Uruguay's "2345" inside
-Montevideo's 2) and unassigned ranges stay out. A code is kept only when
-every number sampled under it has that area code; a longer one nested in
-it (Hornby's 15242 inside Lancaster's 1524) is kept too, and the app reads
-the longest match.
+Montevideo's 2) and unassigned ranges stay out.
+
+A code is listed when every number sampled under it, including every
+two-digit continuation, has that area code, a longer listed one nested in it
+(Hornby's 15242 inside Lancaster's 1524; the app reads the longest match), or
+no area code at all. A number length where some have none is an exclusion,
+which offers nothing: Shanghai's 21 covers its 10-digit lines but not the 7-
+and 8-digit shared-cost 96 numbers, and Finland's 8 not the lengths of its
+toll-free 800. Dropping a code can break the shorter one that relied on it,
+so dropping repeats until nothing changes: Japan's 4 goes with 42, or
++81 42-700-3737 would block all of 04x.
 """
 
 from __future__ import annotations
@@ -78,18 +85,49 @@ def area_code(cc: int, nsn: str) -> str | None:
     return nsn[:length]
 
 
-def holds(cc: int, code: str, lengths: list[int], codes: set[str]) -> bool:
-    """Whether every sampled number under [code] has it, or a longer listed code, as its area code."""
-    for nsn in samples(code, lengths):
-        found = area_code(cc, nsn)
-        if found is None:
+def sweep(code: str, lengths: list[int]):
+    """[samples] plus every two-digit continuation, which two seeds per next digit miss (Finland's 800 under 8)."""
+    yield from samples(code, lengths)
+    for n in lengths:
+        rest = n - len(code)
+        if rest < SUBSCRIBER_MIN:
             continue
-        if found != code and not (found.startswith(code) and found in codes):
-            return False
-    return True
+        for pair in range(100):
+            yield code + f"{pair:02d}" + SEEDS[0][: rest - 2]
 
 
-def generate_codes() -> dict[int, list[str]]:
+def found_codes(cc: int, code: str, lengths: list[int]) -> dict[int, set[str]]:
+    """The area codes of the valid numbers swept under [code] by number length, "" for one without."""
+    found: dict[int, set[str]] = defaultdict(set)
+    for nsn in sweep(code, lengths):
+        area = area_code(cc, nsn)
+        if area is not None:
+            found[len(nsn)].add(area)
+    return found
+
+
+def settle(founds: dict[str, dict[int, set[str]]]) -> tuple[list[str], list[str]]:
+    """The codes that hold, and as "code@length" the lengths where they also hold numbers without an area code.
+
+    A code holds when every number swept under it has that code, no area code,
+    or a longer listed code nested in it, where the app stops looking. Any other
+    area code, at any length, means the sample can't place the code's numbers.
+    """
+    listed = set(founds)
+    while True:
+        holding = {
+            code
+            for code in listed
+            if all(area in ("", code) or (area.startswith(code) and area in listed) for areas in founds[code].values() for area in areas)
+        }
+        if holding == listed:
+            break
+        listed = holding
+    excluded = sorted(f"{code}@{n}" for code in listed for n, areas in sorted(founds[code].items()) if "" in areas)
+    return sorted(listed), excluded
+
+
+def generate_codes() -> tuple[dict[int, list[str]], dict[int, list[str]]]:
     places: dict[int, list[str]] = defaultdict(list)
     calling_codes = sorted(phonenumbers.COUNTRY_CODE_TO_REGION_CODE, key=lambda c: -len(str(c)))
     for prefix in GEOCODE_DATA:
@@ -99,6 +137,7 @@ def generate_codes() -> dict[int, list[str]]:
         places[cc].append(prefix[len(str(cc)):])
 
     result: dict[int, list[str]] = {}
+    exclusions: dict[int, list[str]] = {}
     for cc, nationals in sorted(places.items()):
         lengths = lengths_for(cc)
         candidates: set[str] = set()
@@ -110,10 +149,12 @@ def generate_codes() -> dict[int, list[str]]:
                     if len(found) <= len(national):
                         candidates.add(found)
                     break
-        kept = {code for code in candidates if holds(cc, code, lengths, candidates)}
+        kept, excluded = settle({code: found_codes(cc, code, lengths) for code in candidates})
         if kept:
-            result[cc] = sorted(kept)
-    return result
+            result[cc] = kept
+        if excluded:
+            exclusions[cc] = excluded
+    return result, exclusions
 
 
 def kotlin_table(codes: list[str]) -> list[str]:
@@ -129,14 +170,16 @@ def kotlin_table(codes: list[str]) -> list[str]:
 def generate() -> str:
     if phonenumbers.__version__ != PHONENUMBERS_VERSION:
         raise SystemExit(f"Needs phonenumbers {PHONENUMBERS_VERSION}, found {phonenumbers.__version__}")
-    tables = generate_codes()
+    tables, exclusions = generate_codes()
     longest = max(len(code) for codes in tables.values() for code in codes)
     total = sum(len(codes) for codes in tables.values())
+    excluded = sum(len(codes) for codes in exclusions.values())
     lines = [
         "package com.sysadmindoc.callshield.data.areacodes",
         "",
         f"// Generated by scripts/generate_geographic_area_codes.py from libphonenumber",
-        f"// metadata (Python phonenumbers {PHONENUMBERS_VERSION}): {total} area codes in {len(tables)} calling codes.",
+        f"// metadata (Python phonenumbers {PHONENUMBERS_VERSION}): {total} area codes in {len(tables)} calling codes,",
+        f"// and {excluded} lengths where one of them doesn't apply.",
         "// Don't edit by hand.",
         "",
         "/**",
@@ -150,7 +193,9 @@ def generate() -> str:
         "internal object GeographicAreaCodes {",
         "    /**",
         "     * The area code [nationalNumber] starts with under [callingCode], the",
-        "     * longest listed one shorter than the number, or null.",
+        "     * longest listed one shorter than the number, or null. Null too when",
+        "     * that code doesn't cover numbers of this length (Shanghai's 21 and its",
+        "     * 7- and 8-digit shared-cost 96 numbers), rather than a shorter code.",
         "     */",
         "    fun areaCode(",
         "        callingCode: String,",
@@ -159,7 +204,10 @@ def generate() -> str:
         "        val table = TABLES[callingCode] ?: return null",
         "        for (end in minOf(nationalNumber.length - 1, LONGEST) downTo 1) {",
         "            val prefix = nationalNumber.substring(0, end)",
-        "            if (table.contains(\" $prefix \")) return prefix",
+        "            if (table.contains(\" $prefix \")) {",
+        "                val excluded = EXCLUDED[callingCode]?.contains(\" $prefix@${nationalNumber.length} \") == true",
+        "                return prefix.takeUnless { excluded }",
+        "            }",
         "        }",
         "        return null",
         "    }",
@@ -169,8 +217,23 @@ def generate() -> str:
         "    /** Each calling code's area codes, space-separated, with a space at each end. */",
         "    private val TABLES: Map<String, String> =",
         "        mapOf(",
+        *kotlin_map(tables),
+        "        )",
+        "",
+        "    /** Each calling code's area codes that don't cover national numbers of one length, as \"code@length\". */",
+        "    private val EXCLUDED: Map<String, String> =",
+        "        mapOf(",
+        *kotlin_map(exclusions),
+        "        )",
+        "}",
+        "",
     ]
-    for cc, codes in sorted(tables.items(), key=lambda kv: str(kv[0])):
+    return "\n".join(lines)
+
+
+def kotlin_map(entries: dict[int, list[str]]) -> list[str]:
+    lines: list[str] = []
+    for cc, codes in sorted(entries.items(), key=lambda kv: str(kv[0])):
         chunks = kotlin_table(codes)
         if len(chunks) == 1:
             lines.append(f'            "{cc}" to "{chunks[0]}",')
@@ -179,8 +242,7 @@ def generate() -> str:
         for i, chunk in enumerate(chunks):
             sep = " +" if i < len(chunks) - 1 else ","
             lines.append(f'                "{chunk}"{sep}')
-    lines += ["        )", "}", ""]
-    return "\n".join(lines)
+    return lines
 
 
 def main() -> int:

@@ -38,6 +38,22 @@ class AreaCodeBlockTest {
     }
 
     @Test
+    fun `a range the table can't place offers nothing rather than a wider block`() {
+        // Japan's 042 sits inside 04, and not every 042 number is in 042, so neither is listed.
+        assertNull(areaCodeBlock("+81427003737", homeRegionIso = "JP"))
+        // Finland's toll-free 800 sits inside Oulu's 8.
+        assertNull(areaCodeBlock("+3588007862", homeRegionIso = "FI"))
+    }
+
+    @Test
+    fun `a code offers nothing at a number length it doesn't cover`() {
+        assertEquals(AreaCodeBlock("21", "+8621*", "86"), areaCodeBlock("+862112345678", homeRegionIso = "CN"))
+        assertEquals(AreaCodeBlock("10", "+8610*", "86"), areaCodeBlock("+861012345678", homeRegionIso = "CN"))
+        // Shanghai's 8-digit shared-cost 96 numbers start with 21 but aren't in its area.
+        assertNull(areaCodeBlock("+8621962345", homeRegionIso = "CN"))
+    }
+
+    @Test
     fun `a country without area codes offers nothing`() {
         assertNull(areaCodeBlock("+34912345678", homeRegionIso = "ES"))
         // A bare number outside North America isn't read for an area code.

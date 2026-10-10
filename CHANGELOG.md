@@ -45,7 +45,9 @@ All notable changes to CallShield will be documented in this file.
   too, written from the number's own country code: +33 1 for Paris, +49 30
   for Berlin, +49 33201 for Groß Glienicke. The table of area codes comes
   from libphonenumber, so a mobile number, or one from a country without
-  area codes like Spain, gets no offer rather than a wrong one.
+  area codes like Spain, gets no offer rather than a wrong one. The same
+  goes for a range the table can't pin down, so a toll-free 800 number in
+  Finland gets no offer rather than one for the whole Oulu area.
 - Backups now carry the blocklists you subscribed to: each list's address,
   name and on/off switch. Restoring on a new phone adds any you don't have
   and downloads them on the next refresh. Lists already on the phone are
