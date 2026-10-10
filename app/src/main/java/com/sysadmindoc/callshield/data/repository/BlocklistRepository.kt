@@ -111,6 +111,9 @@ class BlocklistRepository(
         // 3 UPDATE/DELETE sweeps per row turns a 100k-row import into ~300k
         // extra statements inside the write lock.
         cleanupExpired: Boolean = true,
+        // A restore: an allow or block this phone already has for the number
+        // stays as it is, rather than the backup's block replacing it.
+        keepLocal: Boolean = false,
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
@@ -124,7 +127,8 @@ class BlocklistRepository(
             if (cleanupExpired) cleanupExpiredTemporaryDecisions()
             val existingWhitelist = equivalentForms(normalized).mapNotNull { dao.findWhitelistEntry(it) }
             val permanentAllowExists = expiresAt != null && existingWhitelist.any { it.expiresAt == null }
-            if (!permanentAllowExists) {
+            val keptHere = keepLocal && (existingWhitelist.isNotEmpty() || hasUserBlock(normalized))
+            if (!permanentAllowExists && !keptHere) {
                 existingWhitelist.forEach { dao.deleteWhitelistEntry(it) }
                 when (val existing = dao.findByNumber(normalized)) {
                     null -> {
@@ -165,7 +169,10 @@ class BlocklistRepository(
         expiresAt: Long,
         type: String = "unknown",
         description: String = "",
-    ) = blockNumber(number, type, description, expiresAt)
+        keepLocal: Boolean = false,
+    ) = blockNumber(number, type, description, expiresAt, keepLocal = keepLocal)
+
+    private suspend fun hasUserBlock(normalized: String): Boolean = equivalentForms(normalized).any { dao.findByNumber(it)?.isUserBlocked == true }
 
     suspend fun temporaryAllowNumber(
         number: String,
@@ -891,6 +898,9 @@ class BlocklistRepository(
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
         rangeDigits: Int? = null,
+        // A restore: see blockNumber. Without it a backup's plain allow turned
+        // an emergency allow into an ordinary one, or a permanent one temporary.
+        keepLocal: Boolean = false,
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
@@ -900,8 +910,11 @@ class BlocklistRepository(
         runInTransaction {
             cleanupExpiredTemporaryDecisions()
             val existingSpam = equivalentForms(normalized).mapNotNull { dao.findByNumber(it) }
+            val keptHere =
+                keepLocal &&
+                    (existingSpam.any { it.isUserBlocked } || equivalentForms(normalized).any { dao.findWhitelistEntry(it) != null })
             val permanentUserBlock = existingSpam.any { it.isUserBlocked && it.expiresAt == null }
-            if (!(expiresAt != null && permanentUserBlock)) {
+            if (!keptHere && !(expiresAt != null && permanentUserBlock)) {
                 existingSpam
                     .filter { expiresAt == null || it.expiresAt != null }
                     .forEach { row ->

@@ -840,14 +840,16 @@ class SpamRepository(
         type: String = "unknown",
         description: String = "",
         cleanupExpired: Boolean = true,
-    ) = blocklistRepository.blockNumber(number, type, description, cleanupExpired = cleanupExpired)
+        keepLocal: Boolean = false,
+    ) = blocklistRepository.blockNumber(number, type, description, cleanupExpired = cleanupExpired, keepLocal = keepLocal)
 
     suspend fun temporaryBlockNumber(
         number: String,
         expiresAt: Long,
         type: String = "unknown",
         description: String = "",
-    ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description)
+        keepLocal: Boolean = false,
+    ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description, keepLocal)
 
     suspend fun cleanupExpiredTemporaryDecisions() = blocklistRepository.cleanupExpiredTemporaryDecisions()
 
@@ -1158,7 +1160,8 @@ class SpamRepository(
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
         rangeDigits: Int? = null,
-    ) = blocklistRepository.addToWhitelist(number, description, isEmergency, expiresAt, rangeDigits)
+        keepLocal: Boolean = false,
+    ) = blocklistRepository.addToWhitelist(number, description, isEmergency, expiresAt, rangeDigits, keepLocal)
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = blocklistRepository.removeFromWhitelist(entry)
 

@@ -820,12 +820,15 @@ object BackupRestore {
                     }
                     droppedListSources.forEach { dao.deleteBySource(it) }
 
+                    // A decision already on this phone for a number wins over the
+                    // backup's. Replace has cleared the sections it's replacing, so
+                    // what's left here belongs to sections the user kept.
                     for (n in payload.blockedNumbers) {
                         val applied =
                             if (n.expiresAt != null) {
-                                repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
+                                repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description, keepLocal = true)
                             } else {
-                                repo.blockNumber(n.number, n.type, n.description)
+                                repo.blockNumber(n.number, n.type, n.description, keepLocal = true)
                             }
                         // A temp block refused by a local permanent allow (and
                         // vice versa below) must not inflate the success toast.
@@ -842,6 +845,7 @@ object BackupRestore {
                                 // A backup from before ranges says 0; that keeps
                                 // the block a local entry already covers.
                                 rangeDigits = w.rangeDigits.takeIf { it > 0 },
+                                keepLocal = true,
                             )
                         if (applied) whitelistRestored++
                     }
@@ -1193,10 +1197,13 @@ object BackupRestore {
         // it — a settings-only restore preview must not query anything. Logs use
         // the conflict-key projection so restore never materializes full rows
         // (which carry SMS bodies) on a heavy-spam device.
+        // A backup's block meets a local allow too (and the other way round),
+        // which the restore leaves in place, so either table is read for both.
+        val hasNumbers = payload.blockedNumbers.isNotEmpty() || payload.whitelistNumbers.isNotEmpty()
         val existingBlocks =
-            if (payload.blockedNumbers.isEmpty()) emptySet() else dao.getUserBlockedNumbersSync().map { it.number }.toSet()
+            if (!hasNumbers) emptySet() else dao.getUserBlockedNumbersSync().map { it.number }.toSet()
         val existingWhitelist =
-            if (payload.whitelistNumbers.isEmpty()) {
+            if (!hasNumbers) {
                 emptySet()
             } else {
                 dao
@@ -1239,8 +1246,8 @@ object BackupRestore {
             if (payload.logs.isEmpty()) emptySet() else dao.getBlockedCallConflictKeysSync().toSet()
 
         return RestoreCounts(
-            blockedNumbers = payload.blockedNumbers.count { it.number in existingBlocks },
-            whitelistNumbers = payload.whitelistNumbers.count { it.number in existingWhitelist },
+            blockedNumbers = payload.blockedNumbers.count { it.number in existingBlocks || it.number in existingWhitelist },
+            whitelistNumbers = payload.whitelistNumbers.count { it.number in existingWhitelist || it.number in existingBlocks },
             wildcardRules = payload.wildcardRules.count { (it.pattern to it.isRegex) in existingWildcards },
             keywordRules = payload.keywordRules.count { (it.keyword to it.caseSensitive) in existingKeywords },
             rangeRules = payload.rangeRules.count { it.pattern in existingRanges },

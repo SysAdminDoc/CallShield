@@ -73,8 +73,8 @@
         <item quantity="other">%1$s - %2$d 条举报</item>
     </plurals>
     <plurals name="backup_restore_preview_conflicts">
-        <item quantity="one">%1$d 个现有条目存在匹配键，合并时可能被更新。</item>
-        <item quantity="other">%1$d 个现有条目存在匹配键，合并时可能被更新。</item>
+        <item quantity="one">本机有 %1$d 个条目与备份匹配。合并时，号码保留本机的允许或拦截状态，匹配的规则和设置采用备份中的版本。</item>
+        <item quantity="other">本机有 %1$d 个条目与备份匹配。合并时，号码保留本机的允许或拦截状态，匹配的规则和设置采用备份中的版本。</item>
     </plurals>
     <plurals name="settings_answered_caller_threshold_value">
         <item quantity="one">%1$d 次已接来电</item>

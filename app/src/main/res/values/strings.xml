@@ -1485,8 +1485,8 @@
     <string name="backup_restore_preview_ready">Backup ready: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_preview_summary">Blocked: %1$d; Trusted: %2$d; Wildcards: %3$d; Keywords: %4$d; Ranges: %5$d; Settings: %6$d; Logs: %7$d</string>
     <plurals name="backup_restore_preview_conflicts">
-        <item quantity="one">%1$d existing item has a matching key and may be updated during merge.</item>
-        <item quantity="other">%1$d existing items have matching keys and may be updated during merge.</item>
+        <item quantity="one">%1$d item on this phone matches the backup. When merging, a number keeps the allow or block it has here, and a matching rule or setting takes the backup\'s version.</item>
+        <item quantity="other">%1$d items on this phone match the backup. When merging, numbers keep the allow or block they have here, and matching rules and settings take the backup\'s version.</item>
     </plurals>
     <plurals name="settings_answered_caller_threshold_value">
         <item quantity="one">%1$d answered call</item>
