@@ -8,10 +8,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,5 +53,17 @@ class WildcardRegexDialogTest {
         composeRule.onNodeWithText("Add").performClick()
 
         composeRule.runOnIdle { assertEquals(listOf(simple), added) }
+    }
+
+    @Test
+    fun `the regex row keeps a 48dp touch target`() {
+        // The checkbox inside takes no clicks of its own, so it no longer pads itself to 48dp.
+        composeRule.setContent {
+            CallShieldTheme { AddWildcardDialog(onDismiss = {}) { _, _, _, _ -> } }
+        }
+
+        val row = composeRule.onNodeWithTag(BLOCKLIST_REGEX_CHECKBOX_TAG).fetchSemanticsNode()
+        val minimumPixels = with(composeRule.density) { 48.dp.toPx() }
+        assertTrue("Row was ${row.boundsInRoot.height}px", row.boundsInRoot.height >= minimumPixels)
     }
 }

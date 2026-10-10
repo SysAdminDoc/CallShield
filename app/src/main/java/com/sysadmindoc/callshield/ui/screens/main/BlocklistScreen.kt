@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -1691,6 +1692,7 @@ fun AddWildcardDialog(
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .toggleable(
                                 value = isRegex,
                                 role = Role.Checkbox,
@@ -1840,6 +1842,7 @@ fun AddWhitelistDialog(
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .toggleable(value = emergency, role = Role.Checkbox, onValueChange = { emergency = it }),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1928,6 +1931,7 @@ fun AddKeywordDialog(
                     modifier =
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .toggleable(value = caseSensitive, role = Role.Checkbox, onValueChange = { caseSensitive = it }),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

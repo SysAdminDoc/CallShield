@@ -445,7 +445,11 @@ private fun AppUpdatePreferenceRow(
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             // The row toggles, so TalkBack names the switch and the text can be tapped.
             Row(
-                modifier = Modifier.fillMaxWidth().toggleable(value = enabled, role = Role.Switch, onValueChange = onEnabledChange),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .toggleable(value = enabled, role = Role.Switch, onValueChange = onEnabledChange),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PremiumIconTile(icon = Icons.Default.SystemUpdate, color = CatSubtext, size = 34.dp, iconSize = 18.dp)

@@ -356,6 +356,7 @@ internal fun BackupSectionPicker(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .toggleable(
                             value = selected,
                             role = Role.Checkbox,
