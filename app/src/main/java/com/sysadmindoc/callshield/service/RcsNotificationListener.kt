@@ -323,25 +323,31 @@ class RcsNotificationListener : NotificationListenerService() {
     ) {
         if (body.isBlank()) return
         scope.launch {
-            val malicious =
-                UrlSafetyChecker.checkSmsBody(
-                    body,
-                    stripQuery = stripQuery,
-                    allowRemoteLookup = allowRemoteLookup,
-                )
-            if (malicious.isNotEmpty()) {
-                val threats = urlThreatLabels(applicationContext, malicious)
-                if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
-                    NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
-                } else {
-                    NotificationHelper.notifyScreenedMessage(
-                        context = applicationContext,
-                        sourceName = source.stableName,
-                        sender = sender,
-                        confidence = 100,
-                        reason = applicationContext.getString(R.string.url_threat_signal, threats),
+            // Best-effort, as in SmsReceiver. This scope has no exception
+            // handler, so a throw here would take the whole app down.
+            try {
+                val malicious =
+                    UrlSafetyChecker.checkSmsBody(
+                        body,
+                        stripQuery = stripQuery,
+                        allowRemoteLookup = allowRemoteLookup,
                     )
+                if (malicious.isNotEmpty()) {
+                    val threats = urlThreatLabels(applicationContext, malicious)
+                    if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
+                        NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
+                    } else {
+                        NotificationHelper.notifyScreenedMessage(
+                            context = applicationContext,
+                            sourceName = source.stableName,
+                            sender = sender,
+                            confidence = 100,
+                            reason = applicationContext.getString(R.string.url_threat_signal, threats),
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                // URL check is best-effort
             }
         }
     }
