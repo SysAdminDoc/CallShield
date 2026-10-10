@@ -1622,6 +1622,9 @@ fun AddWildcardDialog(
     var description by rememberSaveable { mutableStateOf("") }
     var isRegex by rememberSaveable { mutableStateOf(false) }
     var regexErrorDetail by remember { mutableStateOf<String?>(null) }
+    // Screening refuses backtracking-prone shapes, so a rule saved with one
+    // would show as active and never match.
+    var regexTooComplex by remember { mutableStateOf(false) }
     var scheduleState by rememberSaveable(stateSaver = ScheduleUiState.Saver) { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
     val conflict =
@@ -1644,14 +1647,25 @@ fun AddWildcardDialog(
                     onValueChange = {
                         pattern = it
                         regexErrorDetail = null
+                        regexTooComplex = false
                     },
                     label = { Text(stringResource(if (isRegex) R.string.dialog_regex_label else R.string.dialog_pattern_label)) },
                     placeholder = { Text(stringResource(if (isRegex) R.string.dialog_regex_placeholder else R.string.dialog_wildcard_placeholder)) },
                     singleLine = true,
-                    isError = regexErrorDetail != null,
+                    isError = regexErrorDetail != null || regexTooComplex,
                     supportingText =
-                        regexErrorDetail?.let { detail ->
-                            { Text(stringResource(R.string.dialog_invalid_regex, detail), color = CatRed) }
+                        when {
+                            regexErrorDetail != null -> {
+                                { Text(stringResource(R.string.dialog_invalid_regex, regexErrorDetail.orEmpty()), color = CatRed) }
+                            }
+
+                            regexTooComplex -> {
+                                { Text(stringResource(R.string.dialog_regex_too_complex), color = CatRed) }
+                            }
+
+                            else -> {
+                                null
+                            }
                         },
                     colors =
                         androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -1683,6 +1697,7 @@ fun AddWildcardDialog(
                                 onValueChange = {
                                     isRegex = it
                                     regexErrorDetail = null
+                                    regexTooComplex = false
                                 },
                             ).testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1710,7 +1725,11 @@ fun AddWildcardDialog(
                         if (isRegex) {
                             try {
                                 Regex(trimmedPattern)
-                                onAdd(trimmedPattern, true, description.trim(), scheduleState.toSchedule())
+                                if (WildcardRule.isSafeRegexPattern(trimmedPattern)) {
+                                    onAdd(trimmedPattern, true, description.trim(), scheduleState.toSchedule())
+                                } else {
+                                    regexTooComplex = true
+                                }
                             } catch (e: Exception) {
                                 regexErrorDetail = e.message ?: ""
                             }

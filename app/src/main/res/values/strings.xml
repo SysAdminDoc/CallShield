@@ -410,6 +410,7 @@
     <string name="dialog_description">Description</string>
     <string name="dialog_use_regex">Use regex</string>
     <string name="dialog_invalid_regex">Invalid regex: %s</string>
+    <string name="dialog_regex_too_complex">This pattern is too complex to check while a call rings. Drop the repeated groups, like \\d{9} in place of (\\d{3}){3}.</string>
     <string name="dialog_add">Add</string>
 
     <!-- Add Whitelist Dialog -->

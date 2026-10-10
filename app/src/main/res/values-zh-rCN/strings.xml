@@ -289,11 +289,12 @@
     <string name="dialog_add_wildcard_rule">添加通配符规则</string>
     <string name="dialog_regex_label">正则</string>
     <string name="dialog_pattern_label">模式</string>
-    <string name="dialog_regex_placeholder">^\+1832\d{7}$</string>
+    <string name="dialog_regex_placeholder">^\\+1832\\d{7}$</string>
     <string name="dialog_wildcard_placeholder">+1832555*</string>
     <string name="dialog_description">描述</string>
     <string name="dialog_use_regex">使用正则</string>
     <string name="dialog_invalid_regex">无效正则：%s</string>
+    <string name="dialog_regex_too_complex">这个模式太复杂，来电时无法快速检查。请去掉嵌套的重复分组，例如用 \\d{9} 代替 (\\d{3}){3}。</string>
     <string name="dialog_add">添加</string>
     <string name="dialog_add_to_whitelist">添加可信号码</string>
     <string name="dialog_whitelist_note">可信号码即使匹配垃圾规则也绝不会被拦截。</string>
