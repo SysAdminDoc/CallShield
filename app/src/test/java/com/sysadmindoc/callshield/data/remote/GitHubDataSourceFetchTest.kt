@@ -388,6 +388,17 @@ class GitHubDataSourceFetchTest {
     }
 
     @Test
+    fun `community watch served at the hot list's path is refused, though it also lists numbers`() {
+        // Read as a hot list, its below-threshold numbers would block, and its
+        // "cleared" would empty the real hot list.
+        val watch = GitHubDataSource.COMMUNITY_WATCH_PATH
+        val result = fetchHotList(masterFiles = mapOf(HOT_LIST to file(watch), "$HOT_LIST.sig" to file("$watch.sig")))
+
+        val refused = result.exceptionOrNull() as? GitHubFeedValidationException
+        assertEquals(GitHubFeedFailureReason.INVALID_SCHEMA, refused?.reason)
+    }
+
+    @Test
     fun `GitHub's certificate failure stays reported while the mirror serves, until GitHub serves again`() {
         FeedMirror.set(MIRROR)
         gitHubOutage = SSLPeerUnverifiedException("pin mismatch")

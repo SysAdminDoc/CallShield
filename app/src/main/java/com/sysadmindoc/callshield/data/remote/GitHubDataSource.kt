@@ -661,6 +661,12 @@ class GitHubDataSource internal constructor(
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotListEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot list payload")
+                    // Community watch is signed too and lists "numbers" as well, but
+                    // only it has a schema_version. Served here, its below-threshold
+                    // numbers would otherwise be read as hot ones.
+                    requireFeed(payload.schemaVersion == null, GitHubFeedFailureReason.INVALID_SCHEMA) {
+                        "hot list carries community watch's schema_version"
+                    }
                     val numbers = payload.numbers ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "hot list has no numbers")
                     generatedAt = payload.generated
                     inputDigest = payload.inputReportDigest
@@ -1278,6 +1284,7 @@ class GitHubDataSource internal constructor(
     // than read as empty. Signatures cover bytes, not paths, so another signed
     // feed, or the model, served at this path must not parse as this one.
     private data class HotListPayload(
+        @Json(name = "schema_version") val schemaVersion: Int? = null,
         val numbers: List<HotListEntry>? = null,
         val cleared: Boolean = false,
         val generated: String? = null,

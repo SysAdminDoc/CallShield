@@ -281,6 +281,8 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     # ── Write hot_numbers.json ────────────────────────────────────────
+    # No schema_version here: the app tells this file from community_watch.json,
+    # which also lists "numbers", by that key's absence.
     output = {
         "generated": now.isoformat(),
         "window_hours": HOT_WINDOW_HOURS,
