@@ -56,7 +56,7 @@ shard service is unavailable.
 
 ## Getting Started
 
-1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). [Installing](#installing) has the signature details. If a sideloaded install won't take its permissions, see [Permissions look granted but nothing works](#permissions-look-granted-but-nothing-works).
+1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). [Installing](#installing) has the signature details. If a sideloaded install won't take its permissions, see [Permissions look granted but nothing works](#permissions-look-granted-but-nothing-works). A phone in Brazil, Indonesia, Singapore or Thailand may hold the install back, and [Phones that block apps from unregistered developers](#phones-that-block-apps-from-unregistered-developers) has the way around it.
 2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. Notifications, Notification Access and Overlay are optional. Notification Access powers the RCS filter, push-alert caller trust and meeting mode, and Overlay shows live caller ID. The review at the end says what each skipped grant turns off.
 3. **Pick a protection level.** Setup ends with Recommended, Strict or Contacts only. Recommended keeps the default call and text controls. Strict adds aggressive call checks, blocks hidden callers and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Home and Settings switch levels later with Undo, and **Run setup again** in Settings walks through everything once more.
 4. **Let it sync.** Home runs the first database sync by itself. After that the database is checked every six hours and the trending feeds every 30 minutes.
@@ -478,6 +478,30 @@ longer show.
 
 Installing through a client that registers as the installing package (Obtainium
 does) avoids the restriction entirely.
+
+### Phones that block apps from unregistered developers
+
+Since 2026-09-30, certified Android phones in Brazil, Indonesia, Singapore and
+Thailand enforce Google's developer verification, and Google plans to extend it
+to every country in 2027. A phone that enforces it holds back the normal install
+of an app whose developer hasn't registered with Google, and CallShield ships
+from GitHub without that registration. There are two ways around it.
+
+1. **The advanced flow.** Turn on Developer options (tap **Build number** seven
+   times in **Settings → About phone**), then open **Developer options**, which
+   many phones keep under **Settings → System**. Turn on **Allow apps from
+   unverified developers** and follow the prompts. Android makes you wait one
+   day before the switch takes effect. After that the APK installs from your
+   browser or file manager as usual.
+2. **ADB.** An install over USB is exempt:
+
+   ```bash
+   adb install CallShield-vX.Y.Z.apk
+   ```
+
+It isn't confirmed yet whether a phone in those countries refuses a downloaded
+APK outright or warns first. If you're there and run into either, an issue with
+your phone model and Android version would help pin it down.
 
 ## Building
 

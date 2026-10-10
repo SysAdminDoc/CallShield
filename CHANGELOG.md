@@ -132,6 +132,11 @@ All notable changes to CallShield will be documented in this file.
   Report spam button lower down is gone. The screen also says when a number
   is already in the database, or when you reported it in the last 90 days,
   before you report it again.
+- The README explains how to install on phones that enforce Google's
+  developer verification, which started 2026-09-30 in Brazil, Indonesia,
+  Singapore and Thailand. You can turn on "Allow apps from unverified
+  developers" in Developer options and wait a day, or install over USB with
+  `adb install`.
 
 ## v1.11.0 (2026-09-30)
 
