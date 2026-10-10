@@ -144,6 +144,11 @@ All notable changes to CallShield will be documented in this file.
   filed it as unknown and My reports couldn't show it. Tapping Not spam
   right after a report no longer leaves its Undo waiting behind the
   report's message.
+- A number's screen now keeps clear of the status bar and the navigation
+  buttons. With three-button navigation the Undo message sat under the
+  buttons, so tapping Undo after blocking an area code or marking a number
+  not spam hit the bar instead and the change stayed. The back arrow and
+  copy button at the top had crept under the status bar too.
 - The README explains how to install on phones that enforce Google's
   developer verification, which started 2026-09-30 in Brazil, Indonesia,
   Singapore and Thailand. You can turn on "Allow apps from unverified
