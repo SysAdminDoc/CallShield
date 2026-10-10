@@ -149,6 +149,7 @@ fun NumberDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.detail_undo)
+    val reportBlockedMessage = stringResource(R.string.detail_report_blocked)
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
@@ -314,7 +315,7 @@ fun NumberDetailScreen(
                         note = reportNote,
                         onReport = {
                             hapticTick(context)
-                            viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
+                            viewModel.reportSpam(number, dbEntry?.type ?: liveResult?.type ?: "spam", blockHere = !isBlocked)
                         },
                         onCall = {
                             context.startActivitySafely(
@@ -635,6 +636,7 @@ fun NumberDetailScreen(
                     // report result. Clearing the result cancels one still
                     // waiting for its turn; dismissing ends the one showing.
                     viewModel.clearContributeResult()
+                    viewModel.clearReportOutcome()
                     snackbarHostState.currentSnackbarData?.dismiss()
                     coroutineScope.launch {
                         val result =
@@ -655,6 +657,25 @@ fun NumberDetailScreen(
                 contributeResult?.let {
                     snackbarHostState.showSnackbar(it.text)
                     viewModel.clearContributeResult()
+                }
+            }
+            // Report's result, with Undo for the block it added on this phone.
+            val reportOutcome by viewModel.reportOutcome.collectAsStateWithLifecycle()
+            LaunchedEffect(reportOutcome) {
+                reportOutcome?.let { outcome ->
+                    val undo = outcome.blockUndo
+                    if (undo == null) {
+                        snackbarHostState.showSnackbar(outcome.message.text)
+                    } else {
+                        val result =
+                            snackbarHostState.showSnackbar(
+                                message = reportBlockedMessage.format(outcome.message.text),
+                                actionLabel = undoLabel,
+                                duration = SnackbarDuration.Long,
+                            )
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undoBlock(undo)
+                    }
+                    viewModel.clearReportOutcome()
                 }
             }
 

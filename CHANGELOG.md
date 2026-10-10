@@ -8,6 +8,11 @@ All notable changes to CallShield will be documented in this file.
   note, and that Report on a number's screen in the app is what sends the
   anonymous report that counts. It used to say a report there could go in
   the database, but issues were never read into it.
+- Report on a number's screen now blocks the number on your phone too, and
+  the message after it says so, with Undo to take the block back off. The
+  report itself stays sent. One report rarely blocks a number for everyone,
+  so you kept getting the calls unless you also tapped Block. A number you'd
+  blocked already keeps its block exactly as it was.
 
 ## v1.12.0 (2026-10-09)
 

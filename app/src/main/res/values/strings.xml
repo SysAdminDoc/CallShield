@@ -1391,6 +1391,8 @@
     <string name="detail_block_area_code_description">Block area code %s</string>
     <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>
     <string name="detail_blocked_from_detail">Blocked from detail</string>
+    <string name="detail_blocked_from_report">Blocked when you reported it</string>
+    <string name="detail_report_blocked">Blocked on this phone. %1$s</string>
     <string name="detail_whitelisted_from_detail">Trusted from detail screen</string>
     <!-- The report title and body open a GitHub issue on the English-language tracker, so they stay in English in every locale. -->
     <string name="detail_report_issue_title" translatable="false">[SPAM] %s</string>

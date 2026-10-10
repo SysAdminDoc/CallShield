@@ -1532,14 +1532,42 @@ class MainViewModel
         private val _contributeResult = MutableStateFlow<StatusMessage?>(null)
         val contributeResult: StateFlow<StatusMessage?> = _contributeResult
 
-        fun contributeToDatabase(
+        /** What Report on a number's screen did: the report's result, and the undo for the block it added on this phone. */
+        data class ReportOutcome(
+            val message: StatusMessage,
+            val blockUndo: BlocklistRepository.BlockUndo?,
+        )
+
+        private val _reportOutcome = MutableStateFlow<ReportOutcome?>(null)
+        val reportOutcome: StateFlow<ReportOutcome?> = _reportOutcome
+
+        /**
+         * Report on a number's screen: block the number on this phone, then
+         * send the anonymous report. One report rarely blocks a number for
+         * everyone, so a reporter who didn't also tap Block kept getting the
+         * calls. [blockHere] is false when the user blocked it already, which
+         * leaves that block (a temporary one, say) as it was. The outcome's
+         * undo removes the block only; the report stays sent.
+         */
+        fun reportSpam(
             number: String,
-            type: String = "spam",
+            type: String,
+            blockHere: Boolean,
         ) {
             viewModelScope.launch {
+                val blockUndo =
+                    if (blockHere) {
+                        blockNumberUndoable(number, type, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
+                    } else {
+                        null
+                    }
                 val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
-                _contributeResult.value = result.toStatusMessage()
+                _reportOutcome.value = ReportOutcome(result.toStatusMessage(), blockUndo)
             }
+        }
+
+        fun clearReportOutcome() {
+            _reportOutcome.value = null
         }
 
         private var notSpamUndoJob: Job? = null
