@@ -821,8 +821,10 @@ object BackupRestore {
                     droppedListSources.forEach { dao.deleteBySource(it) }
 
                     // A decision already on this phone for a number wins over the
-                    // backup's. Replace has cleared the sections it's replacing, so
-                    // what's left here belongs to sections the user kept.
+                    // backup's unless only the backup's is permanent. Replace has
+                    // cleared the sections it's replacing, so what's left here
+                    // belongs to sections the user kept.
+                    val blockedByRestore = HashSet<String>()
                     for (n in payload.blockedNumbers) {
                         val applied =
                             if (n.expiresAt != null) {
@@ -832,7 +834,10 @@ object BackupRestore {
                             }
                         // A temp block refused by a local permanent allow (and
                         // vice versa below) must not inflate the success toast.
-                        if (applied) numbersRestored++
+                        if (applied) {
+                            numbersRestored++
+                            blockedByRestore += n.number
+                        }
                     }
 
                     for (w in payload.whitelistNumbers) {
@@ -845,7 +850,10 @@ object BackupRestore {
                                 // A backup from before ranges says 0; that keeps
                                 // the block a local entry already covers.
                                 rangeDigits = w.rangeDigits.takeIf { it > 0 },
-                                keepLocal = true,
+                                // A backup that lists a number both ways ends allowed, as
+                                // before: a block this restore just wrote doesn't count
+                                // as the phone's own.
+                                keepLocal = w.number !in blockedByRestore,
                             )
                         if (applied) whitelistRestored++
                     }

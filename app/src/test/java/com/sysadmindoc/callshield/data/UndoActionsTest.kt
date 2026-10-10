@@ -182,6 +182,20 @@ class UndoActionsTest {
         }
 
     @Test
+    fun `undoing a removed allow after blocking the number leaves it allowed, not both`() =
+        runBlocking {
+            repo.addToWhitelist(NUMBER, "pharmacy")
+            val deleted = requireNotNull(dao.findWhitelistEntry(NUMBER))
+
+            repo.removeFromWhitelist(deleted)
+            repo.blockNumber(NUMBER, "spam")
+            repo.restoreWhitelistEntry(deleted)
+
+            assertEquals(deleted, dao.findWhitelistEntry(NUMBER))
+            assertFalse(dao.findByNumber(NUMBER)?.isUserBlocked == true)
+        }
+
+    @Test
     fun `undoing a replace restore puts back rows an import would refuse`() =
         runBlocking {
             val shortCode = repo.normalizeNumber("7726")

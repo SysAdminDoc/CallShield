@@ -112,7 +112,7 @@ class BlocklistRepository(
         // extra statements inside the write lock.
         cleanupExpired: Boolean = true,
         // A restore: an allow or block this phone already has for the number
-        // stays as it is, rather than the backup's block replacing it.
+        // stays as it is, unless it's temporary and the backup's block is permanent.
         keepLocal: Boolean = false,
     ): Boolean {
         val normalized = normalizeNumber(number)
@@ -127,7 +127,14 @@ class BlocklistRepository(
             if (cleanupExpired) cleanupExpiredTemporaryDecisions()
             val existingWhitelist = equivalentForms(normalized).mapNotNull { dao.findWhitelistEntry(it) }
             val permanentAllowExists = expiresAt != null && existingWhitelist.any { it.expiresAt == null }
-            val keptHere = keepLocal && (existingWhitelist.isNotEmpty() || hasUserBlock(normalized))
+            // A local decision outlasts the backup's when it's permanent or both are temporary.
+            val outlasts = { localExpiresAt: Long? -> localExpiresAt == null || expiresAt != null }
+            val keptHere =
+                keepLocal &&
+                    (
+                        existingWhitelist.any { outlasts(it.expiresAt) } ||
+                            equivalentForms(normalized).mapNotNull { dao.findByNumber(it) }.any { it.isUserBlocked && outlasts(it.expiresAt) }
+                    )
             if (!permanentAllowExists && !keptHere) {
                 existingWhitelist.forEach { dao.deleteWhitelistEntry(it) }
                 when (val existing = dao.findByNumber(normalized)) {
@@ -171,8 +178,6 @@ class BlocklistRepository(
         description: String = "",
         keepLocal: Boolean = false,
     ) = blockNumber(number, type, description, expiresAt, keepLocal = keepLocal)
-
-    private suspend fun hasUserBlock(normalized: String): Boolean = equivalentForms(normalized).any { dao.findByNumber(it)?.isUserBlocked == true }
 
     suspend fun temporaryAllowNumber(
         number: String,
@@ -898,8 +903,10 @@ class BlocklistRepository(
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
         rangeDigits: Int? = null,
-        // A restore: see blockNumber. Without it a backup's plain allow turned
-        // an emergency allow into an ordinary one, or a permanent one temporary.
+        // A restore: an allow or block this phone already has stays, unless it's
+        // temporary and the backup's allow is permanent. Without it a backup's
+        // plain allow turned an emergency allow into an ordinary one, or a
+        // permanent one temporary.
         keepLocal: Boolean = false,
     ): Boolean {
         val normalized = normalizeNumber(number)
@@ -910,20 +917,17 @@ class BlocklistRepository(
         runInTransaction {
             cleanupExpiredTemporaryDecisions()
             val existingSpam = equivalentForms(normalized).mapNotNull { dao.findByNumber(it) }
+            // A local decision outlasts the backup's when it's permanent or both are temporary.
+            val outlasts = { localExpiresAt: Long? -> localExpiresAt == null || expiresAt != null }
             val keptHere =
                 keepLocal &&
-                    (existingSpam.any { it.isUserBlocked } || equivalentForms(normalized).any { dao.findWhitelistEntry(it) != null })
+                    (
+                        existingSpam.any { it.isUserBlocked && outlasts(it.expiresAt) } ||
+                            equivalentForms(normalized).mapNotNull { dao.findWhitelistEntry(it) }.any { outlasts(it.expiresAt) }
+                    )
             val permanentUserBlock = existingSpam.any { it.isUserBlocked && it.expiresAt == null }
             if (!keptHere && !(expiresAt != null && permanentUserBlock)) {
-                existingSpam
-                    .filter { expiresAt == null || it.expiresAt != null }
-                    .forEach { row ->
-                        when (val resolution = resolveSpamNumberForWhitelist(row)) {
-                            SpamNumberWhitelistResolution.None -> Unit
-                            is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
-                            is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
-                        }
-                    }
+                clearBlocksForAllow(existingSpam, expiresAt)
                 val range = rangeDigits ?: dao.findWhitelistEntry(normalized)?.takeIf { it.expiresAt == null }?.rangeDigits ?: 0
                 val entry =
                     WhitelistEntry(
@@ -944,8 +948,35 @@ class BlocklistRepository(
     /**
      * Undo [removeFromWhitelist] with the row as it was. Re-adding it through
      * [addToWhitelist] dropped its expiry, so a temporary allow came back for good.
+     * A block made since the removal gives way as it would to [addToWhitelist],
+     * so the number is never left both allowed and blocked.
      */
-    suspend fun restoreWhitelistEntry(entry: WhitelistEntry) = dao.insertWhitelistEntry(entry)
+    suspend fun restoreWhitelistEntry(entry: WhitelistEntry) {
+        runInTransaction {
+            val existingSpam = equivalentForms(entry.number).mapNotNull { dao.findByNumber(it) }
+            val permanentUserBlock = existingSpam.any { it.isUserBlocked && it.expiresAt == null }
+            if (!(entry.expiresAt != null && permanentUserBlock)) {
+                clearBlocksForAllow(existingSpam, entry.expiresAt)
+                dao.insertWhitelistEntry(entry)
+            }
+        }
+    }
+
+    /** Clears the blocks an allow expiring at [allowExpiresAt] overrides: all of them, or only temporary ones for a temporary allow. */
+    private suspend fun clearBlocksForAllow(
+        existingSpam: List<SpamNumber>,
+        allowExpiresAt: Long?,
+    ) {
+        existingSpam
+            .filter { allowExpiresAt == null || it.expiresAt != null }
+            .forEach { row ->
+                when (val resolution = resolveSpamNumberForWhitelist(row)) {
+                    SpamNumberWhitelistResolution.None -> Unit
+                    is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
+                    is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+                }
+            }
+    }
 
     suspend fun setWhitelistEmergency(
         id: Long,
