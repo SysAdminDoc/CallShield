@@ -86,14 +86,19 @@ def area_code(cc: int, nsn: str) -> str | None:
 
 
 def sweep(code: str, lengths: list[int]):
-    """[samples] plus every two-digit continuation, which two seeds per next digit miss (Finland's 800 under 8)."""
+    """[samples] plus every two-digit continuation, which two seeds per next digit miss (Finland's 800 under 8).
+
+    A one-digit code covers so much that it gets every three-digit continuation
+    too: Morocco's VoIP 0592 sits under its landlines' 5.
+    """
     yield from samples(code, lengths)
+    digits = 3 if len(code) == 1 else 2
     for n in lengths:
         rest = n - len(code)
         if rest < SUBSCRIBER_MIN:
             continue
-        for pair in range(100):
-            yield code + f"{pair:02d}" + SEEDS[0][: rest - 2]
+        for continuation in range(10**digits):
+            yield code + f"{continuation:0{digits}d}" + SEEDS[0][: rest - digits]
 
 
 def found_codes(cc: int, code: str, lengths: list[int]) -> dict[int, set[str]]:
