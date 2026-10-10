@@ -277,6 +277,12 @@ def source_warning_checks() -> None:
     assert len(warnings) == 1 and warnings[0].startswith("toastedspam was last imported"), warnings
     assert warnings[0].endswith("--allow-insecure-sources"), warnings
 
+    # A limit of a week or less warns from its halfway point, not the day it was imported.
+    short = {"sources": [{"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 6}]}
+    assert warn_source_staleness(short, ftc_aged(0), BASE) == []
+    assert warn_source_staleness(short, ftc_aged(2), BASE) == []
+    assert len(warn_source_staleness(short, ftc_aged(3), BASE)) == 1
+
     # A broken manifest stays a failure and adds no warnings.
     assert warn_source_staleness(None, ftc_aged(10), BASE) == []
 

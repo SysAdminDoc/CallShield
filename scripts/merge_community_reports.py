@@ -246,19 +246,27 @@ def load_spam_issues(source: str) -> list[dict]:
     """Open issues for --github-issues: "gh" asks GitHub, anything else is a saved
     `gh issue list --json number,title,createdAt` file."""
     if source != "gh":
-        return json.loads(Path(source).read_text(encoding="utf-8"))
-    listed = subprocess.run(
-        [
-            "gh", "issue", "list", "--repo", GITHUB_REPO, "--state", "open",
-            "--search", "SPAM in:title", "--limit", "500", "--json", "number,title,createdAt",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=60,
-    )
-    return json.loads(listed.stdout)
+        issues = json.loads(Path(source).read_text(encoding="utf-8"))
+    else:
+        try:
+            listed = subprocess.run(
+                [
+                    "gh", "issue", "list", "--repo", GITHUB_REPO, "--state", "open",
+                    "--search", "SPAM in:title", "--limit", "500", "--json", "number,title,createdAt",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=60,
+            )
+        except subprocess.CalledProcessError as error:
+            # gh says why on stderr ("run gh auth login"), which the exception leaves out.
+            raise ValueError(f"gh failed: {(error.stderr or '').strip() or error}") from error
+        issues = json.loads(listed.stdout)
+    if not isinstance(issues, list) or not all(isinstance(issue, dict) for issue in issues):
+        raise ValueError("expected a list of issues, as gh issue list --json writes")
+    return issues
 
 
 def spam_issue_rows(issues: list[dict], existing: dict[str, dict], pending: dict[str, dict], today: str) -> list[str]:
@@ -287,9 +295,11 @@ def spam_issue_rows(issues: list[dict], existing: dict[str, dict], pending: dict
             where = f"in the database ({entry.get('type', 'spam')}, {entry.get('reports', 0)} reports)"
         elif state is not None:
             events = state.get("events", [])
-            groups = len({event.get("bucket") for event in events if event.get("bucket")})
+            # Counted the way the gate counts them: a bucket changes at midnight,
+            # so only one day's buckets are known to be different reporters.
+            groups = same_day_reporters(events)
             reports = sum(int(event.get("count", 1)) for event in events)
-            where = f"pending, {reports} reports from {groups} reporter groups"
+            where = f"pending, {reports} reports, {groups} reporter groups on its busiest day"
             if watch_reporter_count(number, state, existing, today) >= COMMUNITY_WATCH_MIN_REPORTERS:
                 where += ", on the watch list"
         else:

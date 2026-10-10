@@ -249,7 +249,9 @@ def _source_freshness(manifest: object, freshness: object, now: datetime) -> tup
         age = f"{source_id} {age_description} {stamp.date().isoformat()}, {(now - stamp).days} days ago"
         if now - stamp > timedelta(days=limit):
             problems.append(f"{age}, past its {limit:g}-day limit - {refresh}")
-        elif now - stamp >= timedelta(days=limit - SOURCE_STALE_WARNING_DAYS):
+        # A limit of a week or less would warn the day it was imported, so a
+        # short limit warns from its halfway point instead.
+        elif now - stamp >= timedelta(days=max(limit - SOURCE_STALE_WARNING_DAYS, limit / 2)):
             stale_on = (stamp + timedelta(days=limit)).date().isoformat()
             warnings.append(f"{age}, and passes its {limit:g}-day limit after {stale_on} - {refresh}")
     return problems, warnings
