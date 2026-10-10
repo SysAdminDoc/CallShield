@@ -491,8 +491,8 @@ from GitHub without that registration. There are two ways around it.
    times in **Settings → About phone**), then open **Developer options**, which
    many phones keep under **Settings → System**. Turn on **Allow apps from
    unverified developers** and follow the prompts. Android makes you wait one
-   day before the switch takes effect. After that the APK installs from your
-   browser or file manager as usual.
+   day before the switch takes effect. The APK can then be installed from your
+   browser or file manager.
 2. **ADB.** An install over USB is exempt:
 
    ```bash

@@ -629,7 +629,9 @@ fun NumberDetailScreen(
                     viewModel.scheduleNotSpam(number)
                     // Snackbars queue, and the not-spam report goes out five
                     // seconds after this tap, so Undo can't wait behind a
-                    // report result.
+                    // report result. Clearing the result cancels one still
+                    // waiting for its turn; dismissing ends the one showing.
+                    viewModel.clearContributeResult()
                     snackbarHostState.currentSnackbarData?.dismiss()
                     coroutineScope.launch {
                         val result =

@@ -77,5 +77,6 @@ class NumberReportActionsTest {
         assertFalse("evidence ran out", isListedInSharedDatabase(row.copy(evidenceExpiresAt = now), now))
         assertFalse("unverified hot list", isListedInSharedDatabase(row.copy(source = "hot_list"), now))
         assertFalse("the user's own block", isListedInSharedDatabase(row.copy(source = "user"), now))
+        assertFalse("a subscribed list", isListedInSharedDatabase(row.copy(source = "subscription:lista-hu"), now))
     }
 }
