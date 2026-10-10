@@ -68,13 +68,17 @@ internal class CommunityReportSubmitter(
         val normalized =
             CommunityContributor.normalizeForReport(number)
                 ?: return ContributeResult(false, "Invalid number", ContributeOutcome.INVALID_NUMBER)
-        val vote = CommunityReportLedger.voteOf(type)
+        // Number Detail sends the live check's type, which is empty for a
+        // number nothing flagged. The Worker filed that as "unknown", and My
+        // reports couldn't read back an entry with an empty type.
+        val reportType = type.ifBlank { "spam" }
+        val vote = CommunityReportLedger.voteOf(reportType)
         if (!claim(normalized, vote, clock())) {
             // The community already has this report from this device, so it
             // counts as done rather than as a failure.
             return ContributeResult(true, "Already submitted", ContributeOutcome.ALREADY_SUBMITTED)
         }
-        val report = CommunityReport(newId(), normalized, type, indicators)
+        val report = CommunityReport(newId(), normalized, reportType, indicators)
         note(report, Delivery.QUEUED)
         val queued =
             try {

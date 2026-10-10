@@ -131,7 +131,11 @@ All notable changes to CallShield will be documented in this file.
   there as a smaller "Report publicly on GitHub" link, and the second
   Report spam button lower down is gone. The screen also says when a number
   is already in the database, or when you reported it in the last 90 days,
-  before you report it again.
+  before you report it again. Reporting a number nothing had flagged now
+  sends it as spam. It used to go out with no category, so the service
+  filed it as unknown and My reports couldn't show it. Tapping Not spam
+  right after a report no longer leaves its Undo waiting behind the
+  report's message.
 - The README explains how to install on phones that enforce Google's
   developer verification, which started 2026-09-30 in Brazil, Indonesia,
   Singapore and Thailand. You can turn on "Allow apps from unverified

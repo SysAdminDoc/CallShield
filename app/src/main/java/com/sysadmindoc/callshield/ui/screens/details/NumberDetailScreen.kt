@@ -38,8 +38,10 @@ import com.sysadmindoc.callshield.data.SourceDescriptions
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -106,7 +108,7 @@ fun NumberDetailScreen(
     val lastReport = remember(myReports, forms) { CommunityReportHistory.lastSpamReport(myReports, forms) }
     val reportNote =
         when {
-            dbEntry?.let { NotificationHelper.isSharedDatabaseRow(it.source) } == true -> {
+            isListedInSharedDatabase(dbEntry, System.currentTimeMillis()) -> {
                 stringResource(R.string.detail_report_note_listed)
             }
 
@@ -625,6 +627,10 @@ fun NumberDetailScreen(
                 onClick = {
                     hapticTick(context)
                     viewModel.scheduleNotSpam(number)
+                    // Snackbars queue, and the not-spam report goes out five
+                    // seconds after this tap, so Undo can't wait behind a
+                    // report result.
+                    snackbarHostState.currentSnackbarData?.dismiss()
                     coroutineScope.launch {
                         val result =
                             snackbarHostState.showSnackbar(
@@ -738,6 +744,21 @@ fun NumberDetailScreen(
         )
     }
 }
+
+/**
+ * Whether [row] is a live row of the shared database, which a report only
+ * adds to. The user's own blocks, subscribed lists and the unverified hot
+ * list don't count, and neither does a row whose evidence has run out, since
+ * screening no longer uses it and a report is what brings it back.
+ */
+internal fun isListedInSharedDatabase(
+    row: SpamNumber?,
+    now: Long,
+): Boolean =
+    row != null &&
+        NotificationHelper.isSharedDatabaseRow(row.source) &&
+        row.source != BlockReasonCode.HOT_LIST.wireValue &&
+        (row.evidenceExpiresAt == null || row.evidenceExpiresAt > now)
 
 /**
  * The report row under Take action. Report sends the anonymous community

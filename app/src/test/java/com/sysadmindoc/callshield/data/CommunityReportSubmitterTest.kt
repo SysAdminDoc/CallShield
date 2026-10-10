@@ -107,6 +107,18 @@ class CommunityReportSubmitterTest {
     }
 
     @Test
+    fun `a report without a category goes out as spam`() {
+        // Number Detail passes the live check's type, empty for a number
+        // nothing flagged. It reached the Worker as "unknown" and left a My
+        // reports entry that couldn't be read back.
+        val store = store()
+
+        assertEquals(ContributeOutcome.REPORTED_SPAM, store.submit("+12122340101", " ").outcome)
+        assertEquals(listOf("+12122340101:spam"), sent.keys())
+        assertEquals(listOf("+12122340101:spam"), queued.keys())
+    }
+
+    @Test
     fun `a category is not a separate vote`() {
         // A notification's Block sends "spam" and Number Detail sends the row's
         // category. Both are one person's spam vote, and the pipeline counts

@@ -6,8 +6,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,5 +64,18 @@ class NumberReportActionsTest {
 
         composeRule.onNodeWithText("This number is already in the CallShield database.").assertIsDisplayed()
         assertEquals(emptyList<String>(), taps)
+    }
+
+    @Test
+    fun `only a live shared database row counts as already listed`() {
+        val now = 1_790_000_000_000L
+        val row = SpamNumber(number = "+12122340101", type = "robocall", source = "ftc")
+
+        assertTrue(isListedInSharedDatabase(row, now))
+        assertTrue(isListedInSharedDatabase(row.copy(evidenceExpiresAt = now + 1), now))
+        assertFalse("no row", isListedInSharedDatabase(null, now))
+        assertFalse("evidence ran out", isListedInSharedDatabase(row.copy(evidenceExpiresAt = now), now))
+        assertFalse("unverified hot list", isListedInSharedDatabase(row.copy(source = "hot_list"), now))
+        assertFalse("the user's own block", isListedInSharedDatabase(row.copy(source = "user"), now))
     }
 }
