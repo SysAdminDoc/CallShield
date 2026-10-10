@@ -506,7 +506,6 @@
     <string name="lookup_block">Block</string>
     <string name="lookup_number_blocked">Number blocked</string>
     <string name="lookup_block_failed">Couldn\'t block this number.</string>
-    <string name="lookup_reported">Reported to community</string>
     <string name="lookup_report_failed">Couldn\'t submit the report.</string>
     <string name="lookup_report">Report</string>
     <string name="lookup_marked_safe_with_status">Marked as not spam. %1$s</string>

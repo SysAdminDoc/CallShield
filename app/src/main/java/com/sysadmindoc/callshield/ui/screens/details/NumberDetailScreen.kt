@@ -51,6 +51,7 @@ import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
+import com.sysadmindoc.callshield.ui.showReportOutcome
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
@@ -149,7 +150,6 @@ fun NumberDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.detail_undo)
-    val reportBlockedMessage = stringResource(R.string.detail_report_blocked)
     var reportRequestId by remember(number) { mutableStateOf<Long?>(null) }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
@@ -668,22 +668,7 @@ fun NumberDetailScreen(
             val reportOutcome by viewModel.reportOutcome.collectAsStateWithLifecycle()
             LaunchedEffect(reportOutcome, reportRequestId) {
                 reportOutcome?.let { outcome ->
-                    if (outcome.requestId != reportRequestId) {
-                        viewModel.clearReportOutcome()
-                        return@LaunchedEffect
-                    }
-                    val undo = outcome.blockUndo
-                    if (undo == null) {
-                        snackbarHostState.showSnackbar(outcome.message.text)
-                    } else {
-                        val result =
-                            snackbarHostState.showSnackbar(
-                                message = reportBlockedMessage.format(outcome.message.text),
-                                actionLabel = undoLabel,
-                                duration = SnackbarDuration.Long,
-                            )
-                        if (result == SnackbarResult.ActionPerformed) viewModel.undoBlock(undo)
-                    }
+                    if (outcome.requestId == reportRequestId) showReportOutcome(viewModel, snackbarHostState, context.resources, outcome)
                     viewModel.clearReportOutcome()
                 }
             }

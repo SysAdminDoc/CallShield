@@ -105,6 +105,7 @@ import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.friendlyPipelineCheckerLabel
 import com.sysadmindoc.callshield.ui.friendlySpamTypeLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
+import com.sysadmindoc.callshield.ui.showReportOutcome
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -161,7 +162,6 @@ fun LookupScreen(viewModel: MainViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val canLookup = hasMinAsciiDigits(normalizedNumber)
     val numberBlockedMessage = stringResource(R.string.lookup_number_blocked)
-    val reportedMessage = stringResource(R.string.lookup_reported)
     val markedSafeReportedMessage = stringResource(R.string.lookup_marked_safe_reported)
     // Says what happened to the not-spam report too: sent, queued, or already made today.
     val markedSafeMessage: (CommunityContributor.ContributeResult) -> String = { report ->
@@ -224,6 +224,17 @@ fun LookupScreen(viewModel: MainViewModel) {
             // Last: consuming changes this effect's key, which cancels it at
             // the next recomposition, so a scroll that suspended would never focus.
             viewModel.consumeLookupNumberFieldRequest()
+        }
+    }
+
+    // Report works here as on a number's screen: it blocks the number on this
+    // phone too, with Undo. An outcome another screen asked for is dropped.
+    var reportRequestId by remember { mutableStateOf<Long?>(null) }
+    val reportOutcome by viewModel.reportOutcome.collectAsStateWithLifecycle()
+    LaunchedEffect(reportOutcome, reportRequestId) {
+        reportOutcome?.let { outcome ->
+            if (outcome.requestId == reportRequestId) showReportOutcome(viewModel, snackbarHostState, resources, outcome)
+            viewModel.clearReportOutcome()
         }
     }
 
@@ -622,34 +633,33 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 modifier = Modifier.weight(1f),
                             )
                         }
+                        // Report on every result: a number nothing flags yet is the one
+                        // worth reporting, and More's Report spam number lands here.
                         PremiumActionButton(
-                            label =
-                                if (lookupResult.isSpam) {
-                                    stringResource(R.string.lookup_report)
-                                } else {
-                                    stringResource(R.string.lookup_mark_trusted)
-                                },
-                            icon = if (lookupResult.isSpam) Icons.Default.Flag else Icons.Default.VerifiedUser,
+                            label = stringResource(R.string.lookup_report),
+                            icon = Icons.Default.Flag,
                             color = CatGreen,
                             onClick = {
-                                scope.launch {
-                                    val message =
-                                        try {
-                                            val repo = SpamRepository.getInstance(context)
-                                            withContext(Dispatchers.IO) {
-                                                if (lookupResult.isSpam) {
-                                                    val report =
-                                                        CommunityContributor.contribute(
-                                                            context,
-                                                            repo.normalizeNumber(resultNumber),
-                                                            lookupResult.type.ifEmpty { "spam" },
-                                                        )
-                                                    if (report.outcome == CommunityContributor.ContributeOutcome.REPORTED_SPAM) {
-                                                        reportedMessage
-                                                    } else {
-                                                        viewModel.contributeMessage(report)
-                                                    }
-                                                } else {
+                                hapticTick(context)
+                                // A number the user's own rule blocks keeps that rule as it is.
+                                viewModel
+                                    .reportSpam(resultNumber, lookupResult.type, blockHere = !(userRule && lookupResult.isSpam))
+                                    ?.let { reportRequestId = it }
+                            },
+                            modifier = Modifier.weight(1f),
+                            outlined = true,
+                        )
+                        if (!lookupResult.isSpam) {
+                            PremiumActionButton(
+                                label = stringResource(R.string.lookup_mark_trusted),
+                                icon = Icons.Default.VerifiedUser,
+                                color = CatGreen,
+                                onClick = {
+                                    scope.launch {
+                                        val message =
+                                            try {
+                                                val repo = SpamRepository.getInstance(context)
+                                                withContext(Dispatchers.IO) {
                                                     repo.addToWhitelist(resultNumber, markedSafeDescription)
                                                     markedSafeMessage(
                                                         CommunityContributor.reportNotSpam(
@@ -658,17 +668,17 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                         ),
                                                     )
                                                 }
+                                            } catch (_: Exception) {
+                                                resources.getString(R.string.lookup_report_failed)
                                             }
-                                        } catch (_: Exception) {
-                                            resources.getString(R.string.lookup_report_failed)
-                                        }
-                                    hapticTick(context)
-                                    snackbarHostState.showSnackbar(message)
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
+                                        hapticTick(context)
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                outlined = true,
+                            )
+                        }
                     }
 
                     PremiumActionButton(

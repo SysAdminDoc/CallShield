@@ -67,6 +67,31 @@ suspend fun applyTemporaryDecision(
     if (choice == SnackbarResult.ActionPerformed) viewModel.undoDecision(undoTo)
 }
 
+/**
+ * What Report did, on the screen that asked: the report's result and, when
+ * it blocked the number on this phone, Undo for that block. The report itself
+ * stays sent.
+ */
+suspend fun showReportOutcome(
+    viewModel: MainViewModel,
+    snackbar: SnackbarHostState,
+    resources: Resources,
+    outcome: MainViewModel.ReportOutcome,
+) {
+    val undo = outcome.blockUndo
+    if (undo == null) {
+        snackbar.showSnackbar(outcome.message.text)
+        return
+    }
+    val choice =
+        snackbar.showSnackbar(
+            message = resources.getString(R.string.detail_report_blocked, outcome.message.text),
+            actionLabel = resources.getString(R.string.detail_undo),
+            duration = SnackbarDuration.Long,
+        )
+    if (choice == SnackbarResult.ActionPerformed) viewModel.undoBlock(undo)
+}
+
 /** A temporary decision's snackbar, carrying what its Undo puts back. */
 private class DecisionUndoVisuals(
     override val message: String,
