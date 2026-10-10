@@ -163,6 +163,7 @@
     <string name="dashboard_block_area">Block %s</string>
     <string name="dashboard_block_area_description">Area code %1$s (%2$s)</string>
     <string name="dashboard_block_area_added">Blocked area code %s, about 7.9 million numbers</string>
+    <string name="dashboard_block_area_added_plain">Blocked area code %s</string>
     <string name="dashboard_block_area_failed">Couldn\'t block area code %s. Try again.</string>
     <string name="dashboard_block_area_already">Area code %s is already blocked</string>
     <plurals name="dashboard_spam_from_exchange">

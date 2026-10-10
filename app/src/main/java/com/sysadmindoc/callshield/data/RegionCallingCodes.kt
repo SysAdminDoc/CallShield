@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
  * the phone's home region, and region rules read such a number in that
  * region's numbering, so they need both.
  *
- * Generated from libphonenumber's metadata (Python `phonenumbers` 9.0.39,
+ * Generated from libphonenumber's metadata (Python `phonenumbers` 9.0.41,
  * `country_code_for_region` over `SUPPORTED_REGIONS`, 245 regions).
  */
 internal object RegionCallingCodes {
@@ -126,7 +126,7 @@ internal object RegionCallingCodes {
     /**
      * National numbers that start with a prefix the reader strips: the
      * region's own international prefix or the ITU 00. These are the
-     * libphonenumber national-number patterns (phonenumbers 9.0.39, every
+     * libphonenumber national-number patterns (phonenumbers 9.0.41, every
      * number type) whose language intersects "that prefix, then digits",
      * found by intersecting the two as automata rather than by looking for a
      * literal leading 00, which missed Tajik mobiles (`0[0-57-9]...`) and

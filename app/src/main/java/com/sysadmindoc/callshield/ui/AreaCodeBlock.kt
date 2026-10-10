@@ -1,44 +1,68 @@
 package com.sysadmindoc.callshield.ui
 
 import com.sysadmindoc.callshield.data.CommunityReportHistory
+import com.sysadmindoc.callshield.data.RegionCallingCodes
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.data.areacodes.GeographicAreaCodes
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberSighting
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
 /** An area code CallShield can block in one go, and the wildcard that does it. */
 data class AreaCodeBlock(
     val areaCode: String,
     val wildcard: String,
-)
+    /** The calling code the area code is under, "1" for North America. */
+    val callingCode: String = NANP_CALLING_CODE,
+) {
+    /** How the screen names it: "415" in North America, "+33 1" anywhere else. */
+    val label: String get() = if (callingCode == NANP_CALLING_CODE) areaCode else "+$callingCode $areaCode"
+}
+
+private const val NANP_CALLING_CODE = "1"
 
 /**
  * The area code block for [number], written from the number's own calling
- * code, or null when CallShield can't tell where its area code ends. Only
- * North America gives every area code one length, three digits after +1.
- * Elsewhere the length changes even inside a country (Berlin is +49 30,
- * Brandenburg an der Havel +49 3381) and the app has no table of them, so
- * offering nothing beats blocking the wrong numbers. A number without a `+`
- * reads by [homeRegionIso], as in AreaCodeLookup.getAreaCode.
+ * code, or null when CallShield can't tell where its area code ends. North
+ * America gives every area code three digits after +1. Elsewhere the length
+ * changes even inside a country (Berlin is +49 30, Brandenburg an der Havel
+ * +49 3381), so an international number reads by GeographicAreaCodes, and a
+ * number it has no place for (a mobile, or Spain, which has no area codes)
+ * gets nothing rather than a block on the wrong numbers. A number without a
+ * `+` reads by [homeRegionIso], as in AreaCodeLookup.getAreaCode, and only as
+ * North American.
  */
 fun areaCodeBlock(
     number: String,
     homeRegionIso: String?,
-): AreaCodeBlock? = AreaCodeLookup.getAreaCode(number, homeRegionIso)?.let { areaCode -> AreaCodeBlock(areaCode, "+1$areaCode*") }
+): AreaCodeBlock? {
+    AreaCodeLookup.getAreaCode(number, homeRegionIso)?.let { areaCode -> return AreaCodeBlock(areaCode, "+1$areaCode*") }
+    if (!number.trimStart().startsWith("+")) return null
+    val digits = filterAsciiDigits(number)
+    val callingCode = RegionCallingCodes.callingCodeOf(digits)?.takeIf { it != NANP_CALLING_CODE } ?: return null
+    val areaCode = GeographicAreaCodes.areaCode(callingCode, digits.substring(callingCode.length)) ?: return null
+    return AreaCodeBlock(areaCode, "+$callingCode$areaCode*", callingCode)
+}
 
 /**
- * The log's count for each area code it can block, most first. Each
- * aggregate is one number prefix keyed by one of its numbers
- * (SpamDao.observeLogAreaCodeCounts), so a number without a `+` counts only
- * where it reads as North American: on a phone from India, 98450 12345 is a
- * mobile number, not Raleigh's 984.
+ * The log's count for each North American area code it can block, most
+ * first. Each aggregate is one number prefix keyed by one of its numbers
+ * (SpamDao.observeLogAreaCodeCounts, which groups only +1 and ten-digit
+ * numbers), so a number without a `+` counts only where it reads as North
+ * American: on a phone from India, 98450 12345 is a mobile number, not
+ * Raleigh's 984.
  */
 fun countsByAreaCode(
     aggregates: List<LogAggregate>,
     homeRegionIso: String?,
 ): List<Pair<AreaCodeBlock, Int>> =
     aggregates
-        .mapNotNull { aggregate -> areaCodeBlock(aggregate.key, homeRegionIso)?.let { block -> block to aggregate.count } }
+        .mapNotNull { aggregate ->
+            areaCodeBlock(aggregate.key, homeRegionIso)
+                ?.takeIf { it.callingCode == NANP_CALLING_CODE }
+                ?.let { block -> block to aggregate.count }
+        }
         .groupBy(keySelector = { it.first }, valueTransform = { it.second })
         .map { (block, counts) -> block to counts.sum() }
         .sortedWith(compareByDescending<Pair<AreaCodeBlock, Int>> { it.second }.thenBy { it.first.areaCode })

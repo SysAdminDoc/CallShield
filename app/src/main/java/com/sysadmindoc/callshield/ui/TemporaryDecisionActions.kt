@@ -94,9 +94,15 @@ suspend fun blockAreaCodeWithUndo(
     block.wildcard,
     description,
     RangeBlockMessages(
-        added = resources.getString(R.string.dashboard_block_area_added, block.areaCode),
-        already = resources.getString(R.string.dashboard_block_area_already, block.areaCode),
-        failed = resources.getString(R.string.dashboard_block_area_failed, block.areaCode),
+        // Every North American area code holds 7.9 million numbers; elsewhere sizes vary too much to say.
+        added =
+            if (block.callingCode == "1") {
+                resources.getString(R.string.dashboard_block_area_added, block.label)
+            } else {
+                resources.getString(R.string.dashboard_block_area_added_plain, block.label)
+            },
+        already = resources.getString(R.string.dashboard_block_area_already, block.label),
+        failed = resources.getString(R.string.dashboard_block_area_failed, block.label),
     ),
 )
 

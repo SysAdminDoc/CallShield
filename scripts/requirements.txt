@@ -5,3 +5,5 @@ numpy>=1.24.0
 idna>=3.15
 publicsuffixlist>=1.0.2.20260625
 cryptography>=50.0.2
+# generate_geographic_area_codes.py only: the table is pinned to this version.
+phonenumbers==9.0.41

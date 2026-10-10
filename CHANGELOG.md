@@ -38,10 +38,14 @@ All notable changes to CallShield will be documented in this file.
   Android stops showing their prompt. Closing a permission prompt without
   answering, the first time, no longer counts as the refusal that sends you
   to App info.
-- The "Block area code" suggestion on Home, number details and the Stats
-  map is only offered for North American numbers now. For numbers from
-  other countries it used to suggest a +1 rule that would block the wrong
-  callers.
+- The "Block area code" suggestion on Home and the Stats map is only
+  offered for North American numbers now. For numbers from other countries
+  it used to suggest a +1 rule that would block the wrong callers.
+- A number's screen offers to block its area code outside North America
+  too, written from the number's own country code: +33 1 for Paris, +49 30
+  for Berlin, +49 33201 for Groß Glienicke. The table of area codes comes
+  from libphonenumber, so a mobile number, or one from a country without
+  area codes like Spain, gets no offer rather than a wrong one.
 - Backups now carry the blocklists you subscribed to: each list's address,
   name and on/off switch. Restoring on a new phone adds any you don't have
   and downloads them on the next refresh. Lists already on the phone are

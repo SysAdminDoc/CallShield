@@ -88,7 +88,7 @@ fun NumberDetailScreen(
     val homeRegion = rememberHomeRegion()
     val location = remember(number, homeRegion) { AreaCodeLookup.lookup(number, homeRegion) }
     val blockableAreaCode = remember(number, homeRegion) { areaCodeBlock(number, homeRegion) }
-    val areaCode = blockableAreaCode?.areaCode
+    val areaCode = blockableAreaCode?.label
     val copiedMessage = stringResource(R.string.detail_copied)
     val numberBlockedMessage = stringResource(R.string.detail_number_blocked)
     val numberUnblockedMessage = stringResource(R.string.detail_number_unblocked)
@@ -322,7 +322,7 @@ fun NumberDetailScreen(
                     )
                     if (blockableAreaCode != null) {
                         PremiumActionButton(
-                            label = stringResource(R.string.detail_block_area_code, blockableAreaCode.areaCode),
+                            label = stringResource(R.string.detail_block_area_code, blockableAreaCode.label),
                             icon = Icons.Default.FilterAlt,
                             color = CatYellow,
                             onClick = {
