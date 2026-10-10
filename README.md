@@ -542,6 +542,14 @@ After `gh release create` has published the tag, write and sign the release noti
 python scripts/write_app_release.py
 ```
 
+With the new APK installed on a phone, run the device pass. It prints PASS or FAIL for each step (sync, What's new, the recommended lists, the area code offers and their Undo, Not spam's Undo) and exits 1 if any failed:
+
+```powershell
+python scripts/device_smoke.py --serial <adb serial>
+```
+
+`--report <number>` also checks that Report blocks the number on the phone. It sends a real anonymous report, so only use it for a number you mean to report.
+
 `verifyReleaseSbom` also writes `<release-apk-stem>.cdx.json`,
 `<release-apk-stem>.provenance.json`, and `<release-apk-stem>.sha256` beside the
 APK. The SBOM contains the exact `releaseRuntimeClasspath` coordinates from
