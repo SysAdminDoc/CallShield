@@ -247,9 +247,19 @@ def step_no_area_code(phone: Phone) -> None:
     if phone.find("Block all", contains=True, swipes=2):
         raise StepFailed(f"Lookup offered an area code for {NO_AREA_NUMBER}")
     phone.tap_label("Open full detail", swipes=2)
-    found = phone.find("Block all", contains=True, swipes=2)
+    # Read down to Report, so a screen that hadn't loaded can't pass as "no offer".
+    labels: list[str] = []
+    for _ in range(5):
+        time.sleep(0.5)
+        labels += [n.label for n in phone.nodes()]
+        if "Report" in labels:
+            break
+        phone.scroll()
+    labels += [n.label for n in phone.nodes()]
     phone.back()
-    if found:
+    if "Report" not in labels:
+        raise StepFailed(f"the number's screen for {NO_AREA_NUMBER} never showed Report")
+    if any("Block all" in label for label in labels):
         raise StepFailed(f"the number's screen offered an area code for {NO_AREA_NUMBER}")
 
 
@@ -260,6 +270,20 @@ def step_detail_area_code(phone: Phone) -> None:
     undo_snackbar(phone, "the area code block on the number's screen")
     phone.back()
     wildcards_empty(phone)
+
+
+def step_more_report_opens_lookup(phone: Phone) -> None:
+    phone.tab("More")
+    phone.to_top()
+    phone.tap_label("Report spam number", swipes=10)
+    time.sleep(1)
+    # mCurrentFocus is per display and the first one listed can be null, so
+    # ask which activity is on top instead.
+    top = re.search(r"topResumedActivity=.*", phone.shell("dumpsys", "activity", "activities"))
+    if top is None or PACKAGE not in top.group(0):
+        raise StepFailed("Report spam number left the app")
+    if phone.find("Phone number") is None or phone.find("Check number") is None:
+        raise StepFailed("Report spam number didn't open Lookup")
 
 
 def my_reports(phone: Phone) -> list[str]:
@@ -288,14 +312,17 @@ def step_report_blocks(phone: Phone, number: str) -> None:
     phone.tap_label("Open full detail", swipes=3)
     phone.tap_label("Report", swipes=3)
     time.sleep(2)
-    message = phone.find("Blocked on this phone.", contains=True)
-    if message is None:
+    labels = [n.label for n in phone.nodes()]
+    if not any("Blocked on this phone." in label for label in labels):
         raise StepFailed("Report's message doesn't say it blocked the number")
+    # Block sits just above Report and turns into Unblock while blocked.
+    if "Unblock" not in labels:
+        raise StepFailed("Report didn't block the number")
     undo_snackbar(phone, "Report's block")
     time.sleep(1)
-    blocked = phone.find("Unblock", swipes=3, down=False)
+    labels = [n.label for n in phone.nodes()]
     phone.back()
-    if blocked:
+    if "Unblock" in labels or "Block" not in labels:
         raise StepFailed("the number is still blocked after Undo")
 
 
@@ -322,6 +349,7 @@ def main() -> int:
         ("no area code offer for +81 42", lambda: step_no_area_code(phone)),
         ("number's screen offers +33 1, and Undo removes it", lambda: step_detail_area_code(phone)),
         ("Not spam then Undo sends nothing", lambda: step_not_spam_undo(phone, args.database_number)),
+        ("More's Report spam number opens Lookup", lambda: step_more_report_opens_lookup(phone)),
     ]
     if args.report:
         steps.append(("Report blocks the number, and Undo unblocks it", lambda: step_report_blocks(phone, args.report)))

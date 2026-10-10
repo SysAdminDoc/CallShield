@@ -21,9 +21,9 @@ All notable changes to CallShield will be documented in this file.
   It used to open the GitHub form, which files a public issue instead.
 - New `scripts/device_smoke.py` runs the release's phone checks over adb
   and prints PASS or FAIL for each: sync, What's new, the recommended
-  lists, both area code offers with Undo, a number with no offer, and Not
-  spam's Undo. `--report` adds Report's block and Undo, and it sends a
-  real report.
+  lists, both area code offers with Undo, a number with no offer, Not
+  spam's Undo and More's Report spam number. `--report` adds Report's block
+  and Undo, and it sends a real report.
 
 ## v1.12.0 (2026-10-09)
 

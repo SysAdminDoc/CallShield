@@ -542,7 +542,7 @@ After `gh release create` has published the tag, write and sign the release noti
 python scripts/write_app_release.py
 ```
 
-With the new APK installed on a phone, run the device pass. It prints PASS or FAIL for each step (sync, What's new, the recommended lists, the area code offers and their Undo, Not spam's Undo) and exits 1 if any failed:
+With the new APK installed on a phone, run the device pass. It prints PASS or FAIL for each step (sync, What's new, the recommended lists, the area code offers and their Undo, Not spam's Undo, More's Report spam number) and exits 1 if any failed:
 
 ```powershell
 python scripts/device_smoke.py --serial <adb serial>
