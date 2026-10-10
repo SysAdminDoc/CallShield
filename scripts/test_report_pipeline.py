@@ -1465,6 +1465,32 @@ def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     assert pending_reports_for(data_dir, number) == 2
 
 
+def assert_one_reporter_counts_once_a_day_whatever_the_type(data_dir: Path) -> None:
+    """A row from another source keeps no ledger, so the same-day check is all
+    that stops one reporter from counting again under each type the app offers."""
+    fcc_number = "+12122340690"
+    write_json(
+        data_dir / "spam_numbers.json",
+        {
+            "version": 1,
+            "updated": "2026-06-11",
+            "sources": ["fcc_complaints"],
+            "numbers": [
+                {"number": fcc_number, "type": "robocall", "reports": 5, "first_seen": BASE_DAY,
+                 "last_seen": BASE_DAY, "description": "FCC complaints", "sources": ["fcc_complaints"],
+                 "evidence": [{"source_id": "fcc_complaints", "evidence_type": "complaint"}]},
+            ],
+            "prefixes": [],
+        },
+    )
+    for index, report_type in enumerate(["spam", "robocall", "scam", "telemarketer"]):
+        write_report(data_dir, f"rotate_{index}.json", fcc_number, BUCKETS[0], TIMES[index], report_type=report_type)
+    write_report(data_dir, "other_reporter.json", fcc_number, BUCKETS[1], TIMES[1], report_type="scam")
+    run_drain(data_dir)
+    assert reports_for(data_dir, fcc_number) == 7, "one reporter counted again under each type on one day"
+    assert not list((data_dir / "reports").glob("*.json")), "the duplicates were left in the queue"
+
+
 def assert_ledger_retention(data_dir: Path) -> None:
     """Past, future, and non-date entries in the ledger are handled.
 
@@ -1605,6 +1631,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_resend_across_drains_counts_once(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_one_reporter_counts_once_a_day_whatever_the_type(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_ledger_retention(Path(tmp) / "data")

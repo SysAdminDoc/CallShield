@@ -852,14 +852,17 @@ def main(argv: list[str] | None = None):
     for report_file, peeked_number, peek in peeked:
         if report_file.name in resent_reports:
             continue
-        spam_type = peek.get("type", "unknown")
+        # Keyed on the vote, not the type: a reporter who picks a different
+        # type for each report is still one reporter that day. A row from
+        # another source keeps no ledger, so nothing later would catch it.
+        vote = "not_spam" if peek.get("type") == "not_spam" else "spam"
         reported_at = parse_reported_at(peek.get("reported_at"))
         identity = reporter_identity(peek)
         if identity is None or reported_at is None:
-            burst_candidates.append(((peeked_number, spam_type), reported_at, report_file.name))
+            burst_candidates.append(((peeked_number, vote), reported_at, report_file.name))
         else:
             report_day = reported_at.astimezone(timezone.utc).date().isoformat()
-            identity_key = (peeked_number, spam_type, report_day, *identity)
+            identity_key = (peeked_number, vote, report_day, *identity)
             if identity_key in seen_reporter_days:
                 identity_duplicates.add(report_file.name)
             else:
