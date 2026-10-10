@@ -1078,7 +1078,7 @@
     <string name="backup_restore_preview_ready">备份就绪：%1$d 个号码，%2$d 条白名单，%3$d 条通配符规则，%4$d 条关键词规则，%5$d 条号段规则，%6$d 个设置部分，%7$d 条日志</string>
     <string name="backup_restore_preview_summary">已拦截：%1$d；白名单：%2$d；通配符：%3$d；关键词：%4$d；号段：%5$d；设置：%6$d；日志：%7$d</string>
     <string name="backup_restore_preview_no_conflicts">未发现匹配的本地项。</string>
-    <string name="backup_restore_preview_settings_privacy">设置恢复不含外部订阅 URL。</string>
+    <string name="backup_restore_preview_settings_privacy">恢复设置会添加此备份中的外部拦截列表，并保留本机已有的列表。</string>
     <string name="backup_restore_preview_logs_privacy">日志恢复可导入此备份中被标记短信的文本。</string>
     <string name="backup_restore_replace_warning">替换将在恢复前仅清除所选本地部分。已同步的订阅源保持安装。</string>
     <string name="backup_restore_merge">合并</string>

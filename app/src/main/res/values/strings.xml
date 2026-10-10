@@ -1509,7 +1509,7 @@
         <item quantity="other">%1$d minutes</item>
     </plurals>
     <string name="backup_restore_preview_no_conflicts">No matching local items found.</string>
-    <string name="backup_restore_preview_settings_privacy">Settings restore excludes external subscription URLs.</string>
+    <string name="backup_restore_preview_settings_privacy">Restoring settings adds this backup\'s external blocklists and keeps the ones already on this phone.</string>
     <string name="backup_restore_preview_logs_privacy">Log restore can import the text of flagged messages from this backup.</string>
     <string name="backup_restore_replace_warning">Replace clears only the selected local sections before restore. Synced feeds stay installed.</string>
     <string name="backup_restore_merge">Merge</string>
