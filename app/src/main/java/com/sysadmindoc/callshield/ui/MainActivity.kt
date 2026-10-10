@@ -441,6 +441,20 @@ fun SearchResultsView(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = CatBlue)
         }
+    } else if (firstPageFailed(results.loadState.refresh, stale = false, itemCount = results.itemCount)) {
+        // A query that failed found nothing because it never ran, not because
+        // nothing matched, so say that and offer Retry like the other lists.
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            PremiumStateCard(
+                icon = Icons.Default.PriorityHigh,
+                title = stringResource(R.string.blocklist_load_error),
+                body = stringResource(R.string.blocklist_load_error_sub),
+                accentColor = CatRed,
+                modifier = Modifier.fillMaxWidth(),
+                actionLabel = stringResource(R.string.blocklist_retry),
+                onAction = { results.retry() },
+            )
+        }
     } else if (results.itemCount == 0) {
         Column(
             modifier =
