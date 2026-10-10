@@ -1,0 +1,14 @@
+{
+  "number": "+17712430931",
+  "type": "sms_spam",
+  "reported_at": "2026-10-10T18:39:31.791Z",
+  "source": "community_app",
+  "reporter_bucket": "14cc210f89b3e8bb",
+  "reporter_device": "49c9421f8b1bb23d",
+  "sms_domains": [
+    "letamericavote.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
