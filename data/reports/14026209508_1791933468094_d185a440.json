@@ -1,0 +1,14 @@
+{
+  "number": "+14026209508",
+  "type": "sms_spam",
+  "reported_at": "2026-10-13T23:17:48.094Z",
+  "source": "community_app",
+  "reporter_bucket": "f1d35528e86a0c63",
+  "reporter_device": "4056bb3780f74c90",
+  "sms_domains": [
+    "osbornforsenate.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
