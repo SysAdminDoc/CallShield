@@ -1,0 +1,14 @@
+{
+  "number": "+17706660869",
+  "type": "sms_spam",
+  "reported_at": "2026-10-13T17:55:45.149Z",
+  "source": "community_app",
+  "reporter_bucket": "f1d35528e86a0c63",
+  "reporter_device": "4056bb3780f74c90",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
