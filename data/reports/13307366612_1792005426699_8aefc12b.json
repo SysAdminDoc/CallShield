@@ -1,0 +1,14 @@
+{
+  "number": "+13307366612",
+  "type": "sms_spam",
+  "reported_at": "2026-10-14T19:17:06.699Z",
+  "source": "community_app",
+  "reporter_bucket": "457ac0473b94669b",
+  "reporter_device": "92b711735f6db4fc",
+  "sms_domains": [
+    "sherrodbrown.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
