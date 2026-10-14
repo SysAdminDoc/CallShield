@@ -1,0 +1,14 @@
+{
+  "number": "+13093223117",
+  "type": "sms_spam",
+  "reported_at": "2026-10-14T15:16:48.107Z",
+  "source": "community_app",
+  "reporter_bucket": "457ac0473b94669b",
+  "reporter_device": "92b711735f6db4fc",
+  "sms_domains": [
+    "bck-the-bld.c"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
