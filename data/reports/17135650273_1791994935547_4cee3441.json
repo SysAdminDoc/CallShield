@@ -1,0 +1,15 @@
+{
+  "number": "+17135650273",
+  "type": "sms_spam",
+  "reported_at": "2026-10-14T16:22:15.547Z",
+  "source": "community_app",
+  "reporter_bucket": "782890f91f1911ba",
+  "reporter_device": "3c5e62f12f99efc4",
+  "report_id": "3ef00407-d4db-4278-8ea1-17758f9ea922",
+  "sms_domains": [
+    "gregabbott.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
