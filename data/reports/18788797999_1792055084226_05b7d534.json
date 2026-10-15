@@ -1,0 +1,15 @@
+{
+  "number": "+18788797999",
+  "type": "sms_spam",
+  "reported_at": "2026-10-15T09:04:44.226Z",
+  "source": "community_app",
+  "reporter_bucket": "4e37a9890f21f771",
+  "reporter_device": "9a89e3f2909983e5",
+  "report_id": "b849d451-249d-4205-84b2-8df9263d53ec",
+  "sms_domains": [
+    "go.zip.co"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
