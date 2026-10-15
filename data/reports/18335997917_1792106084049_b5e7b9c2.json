@@ -1,0 +1,14 @@
+{
+  "number": "+18335997917",
+  "type": "sms_spam",
+  "reported_at": "2026-10-15T23:14:44.049Z",
+  "source": "community_app",
+  "reporter_bucket": "a03d8455085918cb",
+  "reporter_device": "ac238a7575990d86",
+  "sms_domains": [
+    "iwillvote.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
