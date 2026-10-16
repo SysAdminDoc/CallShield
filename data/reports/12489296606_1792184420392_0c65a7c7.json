@@ -1,0 +1,14 @@
+{
+  "number": "+12489296606",
+  "type": "sms_spam",
+  "reported_at": "2026-10-16T21:00:20.392Z",
+  "source": "community_app",
+  "reporter_bucket": "7b28d8b41b23c4b7",
+  "reporter_device": "1d6e865ca91a5706",
+  "sms_domains": [
+    "abdulforsenate.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
