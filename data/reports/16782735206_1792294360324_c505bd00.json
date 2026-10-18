@@ -1,0 +1,14 @@
+{
+  "number": "+16782735206",
+  "type": "sms_spam",
+  "reported_at": "2026-10-18T03:32:40.324Z",
+  "source": "community_app",
+  "reporter_bucket": "bb3c92b2e7ba205e",
+  "reporter_device": "eb3bd32c3dd27324",
+  "sms_domains": [
+    "gochecks.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
