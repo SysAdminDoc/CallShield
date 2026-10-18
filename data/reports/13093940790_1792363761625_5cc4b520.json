@@ -1,0 +1,14 @@
+{
+  "number": "+13093940790",
+  "type": "sms_spam",
+  "reported_at": "2026-10-18T22:49:21.625Z",
+  "source": "community_app",
+  "reporter_bucket": "47e9398d0ab8db29",
+  "reporter_device": "1ac7985ec22897e7",
+  "sms_domains": [
+    "backthebold.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
