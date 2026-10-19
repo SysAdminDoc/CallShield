@@ -1,0 +1,14 @@
+{
+  "number": "+16514275567",
+  "type": "sms_spam",
+  "reported_at": "2026-10-19T20:46:52.679Z",
+  "source": "community_app",
+  "reporter_bucket": "e5267323dcf7ba03",
+  "reporter_device": "40e0d90b71368bfd",
+  "sms_domains": [
+    "mnforklobuchar.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
