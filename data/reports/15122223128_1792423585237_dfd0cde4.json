@@ -1,0 +1,15 @@
+{
+  "number": "+15122223128",
+  "type": "sms_spam",
+  "reported_at": "2026-10-19T15:26:25.237Z",
+  "source": "community_app",
+  "reporter_bucket": "28ef83eddbd5992a",
+  "reporter_device": "c2fe1c3500d284c8",
+  "report_id": "6bd72031-3c22-4579-ab6c-a6dd49d2a7c4",
+  "sms_domains": [
+    "jt4tx.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
