@@ -1,0 +1,14 @@
+{
+  "number": "+17706280036",
+  "type": "sms_spam",
+  "reported_at": "2026-10-20T15:34:58.895Z",
+  "source": "community_app",
+  "reporter_bucket": "0fecbdcf6be22eb1",
+  "reporter_device": "81b4dad69c5b58ff",
+  "sms_domains": [
+    "keishaforgovernor.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
