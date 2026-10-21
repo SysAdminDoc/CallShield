@@ -1,0 +1,14 @@
+{
+  "number": "+18439949242",
+  "type": "sms_spam",
+  "reported_at": "2026-10-21T23:30:53.941Z",
+  "source": "community_app",
+  "reporter_bucket": "aa38297c8a125166",
+  "reporter_device": "661013602747384f",
+  "sms_domains": [
+    "drannieandrews.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
