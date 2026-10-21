@@ -1,0 +1,14 @@
+{
+  "number": "+15154891285",
+  "type": "sms_spam",
+  "reported_at": "2026-10-21T21:29:15.120Z",
+  "source": "community_app",
+  "reporter_bucket": "aa38297c8a125166",
+  "reporter_device": "661013602747384f",
+  "sms_domains": [
+    "blue.gifts"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
