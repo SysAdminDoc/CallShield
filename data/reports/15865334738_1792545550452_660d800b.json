@@ -1,0 +1,14 @@
+{
+  "number": "+15865334738",
+  "type": "sms_spam",
+  "reported_at": "2026-10-21T01:19:10.452Z",
+  "source": "community_app",
+  "reporter_bucket": "aa38297c8a125166",
+  "reporter_device": "661013602747384f",
+  "sms_domains": [
+    "abdul-4-mi.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
