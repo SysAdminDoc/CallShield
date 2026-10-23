@@ -1,0 +1,14 @@
+{
+  "number": "+17712430706",
+  "type": "sms_spam",
+  "reported_at": "2026-10-23T23:44:32.963Z",
+  "source": "community_app",
+  "reporter_bucket": "ac8f05e97496b143",
+  "reporter_device": "c83962e6ae61887d",
+  "sms_domains": [
+    "thehousemajoritypac.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
