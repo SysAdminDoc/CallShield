@@ -1,0 +1,15 @@
+{
+  "number": "+15125663799",
+  "type": "sms_spam",
+  "reported_at": "2026-10-24T23:35:09.690Z",
+  "source": "community_app",
+  "reporter_bucket": "0773f2dbb99d9dea",
+  "reporter_device": "98daafe1e09eb8b6",
+  "report_id": "d8d3a1cf-c3a4-417c-9664-fc63f485e1d1",
+  "sms_domains": [
+    "gina4tx.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
