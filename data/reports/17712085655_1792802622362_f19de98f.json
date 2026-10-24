@@ -1,0 +1,14 @@
+{
+  "number": "+17712085655",
+  "type": "sms_spam",
+  "reported_at": "2026-10-24T00:43:42.362Z",
+  "source": "community_app",
+  "reporter_bucket": "6e72baf79f219434",
+  "reporter_device": "8347fddae49443e6",
+  "sms_domains": [
+    "demsdefend.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
