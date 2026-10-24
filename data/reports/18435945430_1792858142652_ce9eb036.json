@@ -1,0 +1,14 @@
+{
+  "number": "+18435945430",
+  "type": "sms_spam",
+  "reported_at": "2026-10-24T16:09:02.652Z",
+  "source": "community_app",
+  "reporter_bucket": "be6b67229a7cd197",
+  "reporter_device": "8b49c95fd0f16d3e",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
