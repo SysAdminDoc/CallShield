@@ -1,0 +1,14 @@
+{
+  "number": "+14153630624",
+  "type": "sms_spam",
+  "reported_at": "2026-10-26T22:44:52.869Z",
+  "source": "community_app",
+  "reporter_bucket": "0cc7bd8e1d8ae104",
+  "reporter_device": "0fd9e9202ea1dda4",
+  "sms_domains": [
+    "adamschiff.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
