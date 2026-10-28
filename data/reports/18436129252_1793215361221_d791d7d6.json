@@ -1,0 +1,14 @@
+{
+  "number": "+18436129252",
+  "type": "sms_spam",
+  "reported_at": "2026-10-28T19:22:41.221Z",
+  "source": "community_app",
+  "reporter_bucket": "b286964c5886cb90",
+  "reporter_device": "c935821daad7de2d",
+  "sms_domains": [
+    "dr-annie.net"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
