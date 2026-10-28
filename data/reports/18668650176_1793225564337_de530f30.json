@@ -1,0 +1,15 @@
+{
+  "number": "+18668650176",
+  "type": "sms_spam",
+  "reported_at": "2026-10-28T22:12:44.337Z",
+  "source": "community_app",
+  "reporter_bucket": "6f614d1a01e2c369",
+  "reporter_device": "09d17686f47614ee",
+  "report_id": "29dbecfe-9188-4933-ac3f-c61681dc2d15",
+  "sms_domains": [
+    "info38.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
