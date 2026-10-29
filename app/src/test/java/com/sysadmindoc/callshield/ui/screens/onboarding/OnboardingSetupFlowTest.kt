@@ -1,8 +1,10 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
+import com.sysadmindoc.callshield.permissions.InstallSourceKind
 import com.sysadmindoc.callshield.ui.screens.main.requiredSetupProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,6 +30,34 @@ class OnboardingSetupFlowTest {
         assertFalse(restrictedSettingsHintApplies(OnboardingSetupStep.NotificationAccess, OnboardingSetupStep.NotificationAccess, readyState(), 36))
         assertFalse(restrictedSettingsHintApplies(OnboardingSetupStep.CallScreening, OnboardingSetupStep.CallScreening, missing, 36))
         assertFalse(restrictedSettingsHintApplies(OnboardingSetupStep.Notifications, OnboardingSetupStep.Notifications, missing, 36))
+    }
+
+    @Test
+    fun `SMS and call log from another installer point at a reinstall on every release`() {
+        val state = readyState().copy(runtimePermissionsGranted = false, overlayGranted = false)
+        val step = OnboardingSetupStep.RuntimePermissions
+
+        (29..37).forEach { sdk ->
+            assertEquals("sdk $sdk", SetupHint.ReinstallOverThisCopy, setupHint(step, step, state, sdk, InstallSourceKind.OtherInstaller))
+        }
+        // The phone's own installer allowlists them, so only restricted settings is left to point at.
+        assertEquals(SetupHint.RestrictedSettings, setupHint(step, step, state, 35, InstallSourceKind.SystemInstaller))
+        assertNull(setupHint(step, step, state, 34, InstallSourceKind.SystemInstaller))
+        assertEquals(SetupHint.RestrictedSettings, setupHint(step, step, state, 36, InstallSourceKind.Shell))
+        assertNull(setupHint(step, step, state, 34, InstallSourceKind.PlayStore))
+        // The overlay isn't held back by the installer.
+        assertEquals(
+            SetupHint.RestrictedSettings,
+            setupHint(OnboardingSetupStep.Overlay, OnboardingSetupStep.Overlay, state, 35, InstallSourceKind.OtherInstaller),
+        )
+    }
+
+    @Test
+    fun `no reinstall hint before the user tried or once the grant stuck`() {
+        val step = OnboardingSetupStep.RuntimePermissions
+
+        assertNull(setupHint(step, null, readyState().copy(runtimePermissionsGranted = false), 36, InstallSourceKind.OtherInstaller))
+        assertNull(setupHint(step, step, readyState(), 36, InstallSourceKind.OtherInstaller))
     }
 
     @Test

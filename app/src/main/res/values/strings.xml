@@ -1272,6 +1272,8 @@
     <string name="onboarding_notification_access_body">This lets on-device protection recognize suspicious RCS and supported messaging alerts.</string>
     <string name="onboarding_restricted_settings_hint">Android can block this for apps installed from outside an app store. If it said the setting is restricted, open App info, tap the three-dot menu, choose Allow restricted settings, then try again.</string>
     <string name="onboarding_open_app_info">Open App info</string>
+    <string name="onboarding_reinstall_hint">Android didn\'t ask about SMS or Call logs, or they flip back to Deny? It holds them back from apps that %1$s installs. Download the APK from GitHub Releases, open it in your Files app and install it over this copy. Your settings stay.</string>
+    <string name="onboarding_get_apk">Get the APK</string>
     <string name="onboarding_notification_access_instruction">Find CallShield, turn access on, confirm the Android warning, then press Back to return here.</string>
     <string name="onboarding_what_happens_next">What to do</string>
     <string name="onboarding_android_verified">Verified by Android</string>

@@ -91,6 +91,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.permissions.InstallSource
+import com.sysadmindoc.callshield.permissions.InstallSourceKind
+import com.sysadmindoc.callshield.service.FeedTrustNotice
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.rememberRoleRequest
@@ -154,6 +157,8 @@ fun OnboardingScreen(
         mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager))
     }
     var runtimePermissionsBlocked by rememberSaveable { mutableStateOf(false) }
+    val installSource = remember(context) { InstallSource.evaluate(context) }
+    val installerLabel = remember(context) { InstallSource.installerLabel(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -281,6 +286,11 @@ fun OnboardingScreen(
             )
         },
         reviewing = reviewing,
+        installSource = installSource,
+        installerLabel = installerLabel,
+        onOpenReleases = {
+            context.startActivitySafely(Intent(Intent.ACTION_VIEW, Uri.parse(FeedTrustNotice.RELEASES_URL)), onFailure = ::reportLaunchFailure)
+        },
     )
 }
 
@@ -300,6 +310,9 @@ internal fun OnboardingScreenContent(
     onOpenAppInfo: () -> Unit = {},
     // A "Run setup again" review can finish without picking a new level.
     reviewing: Boolean = false,
+    installSource: InstallSourceKind = InstallSourceKind.SystemInstaller,
+    installerLabel: String? = null,
+    onOpenReleases: () -> Unit = {},
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
@@ -472,8 +485,10 @@ internal fun OnboardingScreenContent(
             )
         }
 
-        if (restrictedSettingsHintApplies(currentStep, awaitingStep, setupState, Build.VERSION.SDK_INT)) {
-            RestrictedSettingsHint(onOpenAppInfo = onOpenAppInfo)
+        when (setupHint(currentStep, awaitingStep, setupState, Build.VERSION.SDK_INT, installSource)) {
+            SetupHint.RestrictedSettings -> RestrictedSettingsHint(onOpenAppInfo = onOpenAppInfo)
+            SetupHint.ReinstallOverThisCopy -> ReinstallHint(installerLabel = installerLabel.orEmpty(), onOpenReleases = onOpenReleases)
+            null -> Unit
         }
         SnackbarHost(snackbarHostState)
         Spacer(Modifier.height(8.dp))
@@ -564,6 +579,30 @@ private fun RestrictedSettingsHint(onOpenAppInfo: () -> Unit) {
         )
         TextButton(onClick = onOpenAppInfo) {
             Text(stringResource(R.string.onboarding_open_app_info))
+        }
+    }
+}
+
+/** Points a user whose SMS and call log grant flips back to Deny at installing the APK over this copy. */
+@Composable
+private fun ReinstallHint(
+    installerLabel: String,
+    onOpenReleases: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Text(
+            stringResource(R.string.onboarding_reinstall_hint, installerLabel),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatPeach,
+        )
+        TextButton(onClick = onOpenReleases) {
+            Text(stringResource(R.string.onboarding_get_apk))
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.permissions.InstallSourceKind
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityId
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
 
@@ -95,6 +96,38 @@ internal fun restrictedSettingsHintApplies(
     val restrictedFrom = restrictedFromSdk(step) ?: return false
     return sdkInt >= restrictedFrom && awaitingStep == step && !state.isComplete(step)
 }
+
+internal enum class SetupHint {
+    /** Allow restricted settings from App info's three-dot menu. */
+    RestrictedSettings,
+
+    /** Install the GitHub APK over this copy with the Files app (issue #39). */
+    ReinstallOverThisCopy,
+}
+
+/**
+ * The hint the step on screen gets once a grant didn't stick, if any. SMS and
+ * call log from an installer that may not allowlist them flip back to Deny on
+ * every release CallShield runs on, and Allow restricted settings can't lift
+ * that, so the reinstall wins for that step.
+ */
+internal fun setupHint(
+    step: OnboardingSetupStep,
+    awaitingStep: OnboardingSetupStep?,
+    state: OnboardingSetupState,
+    sdkInt: Int,
+    installSource: InstallSourceKind,
+): SetupHint? =
+    when {
+        step == OnboardingSetupStep.RuntimePermissions &&
+            installSource == InstallSourceKind.OtherInstaller &&
+            awaitingStep == step &&
+            !state.isComplete(step) -> SetupHint.ReinstallOverThisCopy
+
+        restrictedSettingsHintApplies(step, awaitingStep, state, sdkInt) -> SetupHint.RestrictedSettings
+
+        else -> null
+    }
 
 internal val setupSteps =
     listOf(

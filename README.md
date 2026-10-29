@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C368-f38ba8?style=flat-square" alt="51,368 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-1996-94e2d5?style=flat-square" alt="1996 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2003-94e2d5?style=flat-square" alt="2003 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -462,11 +462,15 @@ Every release also ships a `.sha256` sidecar for the APK itself.
 
 ### Permissions look granted but nothing works
 
+Two different Android blocks cause this, and from the outside they look the same.
+
+#### Restricted settings
+
 On Android 13 and later a sideloaded app is put behind **restricted settings**.
 The system holds back SMS permissions and notification access from an app that
-wasn't installed by an app store, and the permission dialog either never appears or
-appears and changes nothing. GrapheneOS and CalyxOS apply this the same way
-stock Android does, and it is the most likely reason CallShield sees no
+was installed from a downloaded file, and the permission dialog either never
+appears or appears and changes nothing. GrapheneOS and CalyxOS apply this the
+same way stock Android does, and it's the most likely reason CallShield sees no
 messages after a clean sideload.
 
 To lift it:
@@ -478,17 +482,30 @@ To lift it:
 4. Reopen CallShield and grant the permissions again. Onboarding rechecks each
    one and will move on by itself once they take.
 
-Setup points you here too. A step you were sent to grant that comes back still
-off shows this hint, with a button that opens App info.
+Setup points you here too. If a permission you went to grant comes back still
+off, setup shows this hint with a button that opens App info. An app store or
+installer app that installs CallShield itself skips restricted settings, though
+the next block can still apply.
 
-If the ⋮ menu has no such entry, the permission is actually denied rather than
-restricted. Grant it from **App info → Permissions**. A permission you denied
-twice is treated as permanently denied by Android, and CallShield's onboarding
-sends you to App info instead of re-prompting, because the prompt would no
-longer show.
+#### An installer that holds back SMS and call logs
 
-Installing through a client that registers as the installing package (Obtainium
-does) avoids the restriction entirely.
+Since Android 10, SMS and call log access only work when whatever installed the
+app allowed them at install time. The phone's own package installer (what your
+Files app or browser hands an APK to) does, and so does adb. Some app stores and
+installer apps don't. Android then never asks about SMS or call logs, and their
+switches in App info flip straight back to **Deny**. Allow restricted settings
+doesn't help with this one.
+
+To fix it, download the APK from the
+[latest release](https://github.com/SysAdminDoc/CallShield/releases/latest),
+open it in your Files app and install it over the copy you have. It installs as
+an update, so your settings and history stay. On Android 13 and later you may
+then need the restricted settings steps above. When SMS and call logs don't
+take, setup names the app that installed CallShield and links the release.
+
+If neither block fits, the permission was just denied. Grant it from
+**App info → Permissions**. After you deny a permission twice Android stops
+showing the prompt, so onboarding sends you to App info instead of asking again.
 
 ### Phones that block apps from unregistered developers
 
@@ -575,12 +592,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1996 tests
+./gradlew testDebugUnitTest   # 2003 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1996 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2003 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -617,8 +634,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1996 JVM unit tests (JUnit) |
-| Strings | 1789 string resources and 49 plural groups (translation-ready) |
+| Tests | 2003 JVM unit tests (JUnit) |
+| Strings | 1791 string resources and 49 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
