@@ -69,6 +69,7 @@ import com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -117,6 +118,18 @@ class MainViewModel
             const val STATS_AREA_CODE_LIMIT = 15
             const val EXCHANGE_SIGHTING_LIMIT = 2_000
         }
+
+        // Every action's launch below takes this. viewModelScope has no handler of its own, so a
+        // write that throws (a full disk, a closed database) took the whole app down from
+        // a tap. Declared first: the init blocks launch with it.
+        private val actionFailed =
+            CoroutineExceptionHandler { _, e ->
+                Log.e(TAG, "View model action failed", e)
+                Toast.makeText(appContext, appContext.getString(R.string.action_failed), Toast.LENGTH_LONG).show()
+            }
+
+        // Startup housekeeping only logs: the user didn't tap anything, so there's nothing to retry.
+        private val startupFailed = CoroutineExceptionHandler { _, e -> Log.e(TAG, "Startup work failed", e) }
 
         val totalBlocked: StateFlow<Int> =
             repo
@@ -671,7 +684,7 @@ class MainViewModel
             _restoreUndo.value = undo
             restoreUndoExpiry =
                 undo?.let {
-                    viewModelScope.launch {
+                    viewModelScope.launch(actionFailed) {
                         delay(RESTORE_UNDO_WINDOW_MS)
                         _restoreUndo.value = null
                     }
@@ -693,14 +706,14 @@ class MainViewModel
         }
 
         init {
-            viewModelScope.launch {
+            viewModelScope.launch(startupFailed) {
                 val initialCount = repo.getSpamCount()
                 val onboardingAlreadyDone = repo.onboardingDone.first()
                 if (initialCount == 0 && onboardingAlreadyDone) sync(showProgress = false)
             }
             // Backfill the synchronous theme mirror so the next cold start reflects
             // the current theme even for users who set it before this cache existed.
-            viewModelScope.launch {
+            viewModelScope.launch(startupFailed) {
                 val persistedTheme = AppThemeMode.fromStorage(repo.appTheme.first())
                 repo.cacheAppTheme(persistedTheme.storageValue)
                 repo.cachePostCallScreenEnabled(repo.postCallScreenEnabled.first())
@@ -722,7 +735,7 @@ class MainViewModel
 
         fun completeOnboarding() {
             _reviewingSetup.value = false
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setOnboardingDone(true)
                 // Trigger first sync after onboarding
                 sync()
@@ -740,7 +753,7 @@ class MainViewModel
         fun sync() = sync(showProgress = true)
 
         private fun sync(showProgress: Boolean) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 _syncState.value = SyncState.Syncing
                 if (showProgress) NotificationHelper.showSyncProgress(appContext)
                 try {
@@ -767,6 +780,12 @@ class MainViewModel
                         } else {
                             SyncState.Error(result.message)
                         }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Left at Syncing, the Sync button would stay disabled until the app restarts.
+                    Log.e(TAG, "Sync failed", e)
+                    _syncState.value = SyncState.Error(appContext.getString(R.string.action_failed))
                 } finally {
                     if (showProgress) NotificationHelper.hideSyncProgress(appContext)
                 }
@@ -778,7 +797,7 @@ class MainViewModel
             label: String = "",
         ) {
             _externalBlocklistUndo.value = null
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.previewExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = result.preview
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -790,7 +809,7 @@ class MainViewModel
             label: String = "",
         ) {
             _externalBlocklistUndo.value = null
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -799,7 +818,7 @@ class MainViewModel
 
         fun addCatalogList(entry: ListCatalogEntry) {
             _externalBlocklistUndo.value = null
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.applyCatalogListSubscription(entry)
                 _externalBlocklistPreview.value = null
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -811,14 +830,14 @@ class MainViewModel
             enabled: Boolean,
         ) {
             _externalBlocklistUndo.value = null
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
         fun removeExternalBlocklist(subscription: ExternalBlocklistSubscription) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
                 _externalBlocklistUndo.value = subscription.takeIf { result.success }
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -828,14 +847,14 @@ class MainViewModel
         fun undoRemoveExternalBlocklist() {
             val removed = _externalBlocklistUndo.value ?: return
             _externalBlocklistUndo.value = null
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = repo.undoRemoveExternalBlocklistSubscription(removed.id)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
         fun saveFeedMirror(url: String) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_checking), success = true)
                 _feedMirrorResult.value =
                     when (repo.saveFeedMirrorUrl(url)) {
@@ -847,7 +866,7 @@ class MainViewModel
         }
 
         fun removeFeedMirror() {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setFeedMirrorUrl(null)
                 _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_removed), success = true)
             }
@@ -860,7 +879,7 @@ class MainViewModel
         fun scanCallLog() {
             if (_scanningCalls.value) return
             _scanningCalls.value = true
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     _scanResult.value = CallLogScanner.scan(appContext)
                 } catch (e: Exception) {
@@ -880,7 +899,7 @@ class MainViewModel
         fun scanSmsInbox() {
             if (_scanningSms.value) return
             _scanningSms.value = true
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     _smsScanResult.value = SmsInboxScanner.scan(appContext)
                 } catch (e: Exception) {
@@ -929,7 +948,7 @@ class MainViewModel
                     ).show()
                 return
             }
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 manageBlocklist.blockNumber(number, type, description)
             }
         }
@@ -941,7 +960,7 @@ class MainViewModel
             description: String = "",
         ) {
             val expiresAt = System.currentTimeMillis() + durationMillis.coerceAtLeast(0L)
-            viewModelScope.launch { manageBlocklist.temporaryBlockNumber(number, expiresAt, type, description) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.temporaryBlockNumber(number, expiresAt, type, description) }
         }
 
         fun temporaryAllowNumber(
@@ -950,7 +969,7 @@ class MainViewModel
             description: String = "",
         ) {
             val expiresAt = System.currentTimeMillis() + durationMillis.coerceAtLeast(0L)
-            viewModelScope.launch { manageBlocklist.temporaryAllowNumber(number, expiresAt, description) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.temporaryAllowNumber(number, expiresAt, description) }
         }
 
         /**
@@ -1010,7 +1029,7 @@ class MainViewModel
             what: String,
             undo: suspend () -> Unit,
         ) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     undo()
                 } catch (e: CancellationException) {
@@ -1023,11 +1042,11 @@ class MainViewModel
         }
 
         fun unblockNumber(number: SpamNumber) {
-            viewModelScope.launch { manageBlocklist.unblockNumber(number) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.unblockNumber(number) }
         }
 
         fun dismissRuleConflict(key: String) {
-            viewModelScope.launch { repo.dismissRuleConflict(key) }
+            viewModelScope.launch(actionFailed) { repo.dismissRuleConflict(key) }
         }
 
         /**
@@ -1036,12 +1055,12 @@ class MainViewModel
          * instead of re-deriving it as a permanent block.
          */
         fun restoreBlockedNumber(entity: SpamNumber) {
-            viewModelScope.launch { repo.restoreBlockedNumber(entity) }
+            viewModelScope.launch(actionFailed) { repo.restoreBlockedNumber(entity) }
         }
 
         /** Undo a block created by number string (e.g. an accidental log swipe). */
         fun unblockByNumber(number: String) {
-            viewModelScope.launch { repo.unblockByNumber(number) }
+            viewModelScope.launch(actionFailed) { repo.unblockByNumber(number) }
         }
 
         /**
@@ -1078,7 +1097,7 @@ class MainViewModel
         }
 
         fun undoBlock(undo: BlocklistRepository.BlockUndo) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     repo.undoBlock(undo)
                 } catch (e: CancellationException) {
@@ -1091,15 +1110,15 @@ class MainViewModel
         }
 
         fun deleteLogEntry(call: BlockedCall) {
-            viewModelScope.launch { repo.deleteBlockedCall(call) }
+            viewModelScope.launch(actionFailed) { repo.deleteBlockedCall(call) }
         }
 
         fun restoreLogEntry(call: BlockedCall) {
-            viewModelScope.launch { repo.insertBlockedCall(call) }
+            viewModelScope.launch(actionFailed) { repo.insertBlockedCall(call) }
         }
 
         fun clearLog() {
-            viewModelScope.launch { repo.clearCallLog() }
+            viewModelScope.launch(actionFailed) { repo.clearCallLog() }
         }
 
         // Wildcards
@@ -1109,11 +1128,11 @@ class MainViewModel
             description: String,
             schedule: TimeSchedule = TimeSchedule(),
         ) {
-            viewModelScope.launch { manageBlocklist.addWildcardRule(pattern, isRegex, description, schedule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.addWildcardRule(pattern, isRegex, description, schedule) }
         }
 
         fun deleteWildcardRule(rule: WildcardRule) {
-            viewModelScope.launch { manageBlocklist.deleteWildcardRule(rule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.deleteWildcardRule(rule) }
         }
 
         // Hash wildcard rules (A5 — length-locked `#` patterns)
@@ -1126,18 +1145,18 @@ class MainViewModel
             description: String = "",
             schedule: TimeSchedule = TimeSchedule(),
         ) {
-            viewModelScope.launch { manageBlocklist.addHashWildcardRule(pattern, description, schedule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.addHashWildcardRule(pattern, description, schedule) }
         }
 
         fun deleteHashWildcardRule(rule: HashWildcardRule) {
-            viewModelScope.launch { manageBlocklist.deleteHashWildcardRule(rule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.deleteHashWildcardRule(rule) }
         }
 
         fun toggleHashWildcardRule(
             id: Long,
             enabled: Boolean,
         ) {
-            viewModelScope.launch { manageBlocklist.toggleHashWildcardRule(id, enabled) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.toggleHashWildcardRule(id, enabled) }
         }
 
         // SMS keyword rules
@@ -1147,25 +1166,25 @@ class MainViewModel
             description: String = "",
             schedule: TimeSchedule = TimeSchedule(),
         ) {
-            viewModelScope.launch { manageBlocklist.addKeywordRule(keyword, caseSensitive, description, schedule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.addKeywordRule(keyword, caseSensitive, description, schedule) }
         }
 
         fun deleteKeywordRule(rule: SmsKeywordRule) {
-            viewModelScope.launch { manageBlocklist.deleteKeywordRule(rule) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.deleteKeywordRule(rule) }
         }
 
         fun toggleKeywordRule(
             id: Long,
             enabled: Boolean,
         ) {
-            viewModelScope.launch { manageBlocklist.toggleKeywordRule(id, enabled) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.toggleKeywordRule(id, enabled) }
         }
 
         fun toggleWildcardRule(
             id: Long,
             enabled: Boolean,
         ) {
-            viewModelScope.launch { manageBlocklist.toggleWildcardRule(id, enabled) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.toggleWildcardRule(id, enabled) }
         }
 
         // Whitelist
@@ -1174,25 +1193,25 @@ class MainViewModel
             description: String = "",
             isEmergency: Boolean = false,
         ) {
-            viewModelScope.launch { manageBlocklist.addToWhitelist(number, description, isEmergency) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.addToWhitelist(number, description, isEmergency) }
         }
 
         fun removeFromWhitelist(entry: WhitelistEntry) {
-            viewModelScope.launch { manageBlocklist.removeFromWhitelist(entry) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.removeFromWhitelist(entry) }
         }
 
         fun toggleWhitelistEmergency(
             id: Long,
             emergency: Boolean,
         ) {
-            viewModelScope.launch { manageBlocklist.setWhitelistEmergency(id, emergency) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.setWhitelistEmergency(id, emergency) }
         }
 
         fun setWhitelistRange(
             id: Long,
             rangeDigits: Int,
         ) {
-            viewModelScope.launch { manageBlocklist.setWhitelistRange(id, rangeDigits) }
+            viewModelScope.launch(actionFailed) { manageBlocklist.setWhitelistRange(id, rangeDigits) }
         }
 
         // ── Undo support for rule deletion ────────────────────────────────
@@ -1201,19 +1220,19 @@ class MainViewModel
         // the deleted row back as it was. Re-adding it through the add paths
         // switched a disabled rule back on and made a temporary allow permanent.
         fun restoreWildcardRule(rule: WildcardRule) {
-            viewModelScope.launch { repo.restoreWildcardRule(rule) }
+            viewModelScope.launch(actionFailed) { repo.restoreWildcardRule(rule) }
         }
 
         fun restoreHashWildcardRule(rule: HashWildcardRule) {
-            viewModelScope.launch { repo.restoreHashWildcardRule(rule) }
+            viewModelScope.launch(actionFailed) { repo.restoreHashWildcardRule(rule) }
         }
 
         fun restoreKeywordRule(rule: SmsKeywordRule) {
-            viewModelScope.launch { repo.restoreKeywordRule(rule) }
+            viewModelScope.launch(actionFailed) { repo.restoreKeywordRule(rule) }
         }
 
         fun restoreWhitelistEntry(entry: WhitelistEntry) {
-            viewModelScope.launch { repo.restoreWhitelistEntry(entry) }
+            viewModelScope.launch(actionFailed) { repo.restoreWhitelistEntry(entry) }
         }
 
         // Export/import
@@ -1232,7 +1251,7 @@ class MainViewModel
          * tell the user instead.
          */
         private fun launchExport(work: suspend () -> Unit) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     work()
                 } catch (e: Exception) {
@@ -1245,7 +1264,7 @@ class MainViewModel
         }
 
         fun importBlocklist(uri: Uri) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = BlocklistExporter.importFromUri(appContext, uri)
                 _importResult.value = result.message
             }
@@ -1275,7 +1294,7 @@ class MainViewModel
             val ownedPassphrase = passphrase?.copyOf()
             passphrase?.fill('\u0000')
             setRestoreUndo(null)
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 try {
                     val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections, ownedPassphrase)
                     if (result.success) {
@@ -1298,7 +1317,7 @@ class MainViewModel
                         StatusMessage(appContext.getString(R.string.backup_restore_no_preview), success = false)
                     return
                 }
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = BackupRestore.restoreFromPreview(appContext, preview, mode)
                 setRestoreUndo(result.undo)
                 _restoreResult.value = StatusMessage(result.message, result.success)
@@ -1311,7 +1330,7 @@ class MainViewModel
         fun undoRestore() {
             val undo = _restoreUndo.value ?: return
             setRestoreUndo(null)
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 val result = BackupRestore.undoRestore(appContext, undo)
                 _restoreResult.value =
                     StatusMessage(
@@ -1325,13 +1344,13 @@ class MainViewModel
 
         // Settings
         fun setAppTheme(theme: AppThemeMode) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setAppTheme(theme.storageValue)
                 syncApplicationNightMode(appContext, theme)
             }
 
         fun setAppUpdateChecks(enabled: Boolean) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setAppUpdateChecksEnabled(enabled)
                 if (enabled) {
                     AppUpdateWorker.schedule(appContext)
@@ -1346,73 +1365,73 @@ class MainViewModel
             if (appUpdateChecksEnabled.value) AppUpdateWorker.checkNow(appContext)
         }
 
-        fun setBlockCalls(v: Boolean) = viewModelScope.launch { repo.setBlockCalls(v) }
+        fun setBlockCalls(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockCalls(v) }
 
-        fun setBlockSms(v: Boolean) = viewModelScope.launch { repo.setBlockSms(v) }
+        fun setBlockSms(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockSms(v) }
 
-        fun setBlockUnknown(v: Boolean) = viewModelScope.launch { repo.setBlockUnknown(v) }
+        fun setBlockUnknown(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockUnknown(v) }
 
-        fun setStirShaken(v: Boolean) = viewModelScope.launch { repo.setStirShaken(v) }
+        fun setStirShaken(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setStirShaken(v) }
 
-        fun setStirTrustedAllow(v: Boolean) = viewModelScope.launch { repo.setStirTrustedAllow(v) }
+        fun setStirTrustedAllow(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setStirTrustedAllow(v) }
 
-        fun setAutoMuteLowConfidence(v: Boolean) = viewModelScope.launch { repo.setAutoMuteLowConfidence(v) }
+        fun setAutoMuteLowConfidence(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAutoMuteLowConfidence(v) }
 
-        fun setNeighborSpoof(v: Boolean) = viewModelScope.launch { repo.setNeighborSpoof(v) }
+        fun setNeighborSpoof(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setNeighborSpoof(v) }
 
-        fun setHeuristics(v: Boolean) = viewModelScope.launch { repo.setHeuristics(v) }
+        fun setHeuristics(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setHeuristics(v) }
 
-        fun setSmsContent(v: Boolean) = viewModelScope.launch { repo.setSmsContent(v) }
+        fun setSmsContent(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setSmsContent(v) }
 
-        fun setSmsBurst(v: Boolean) = viewModelScope.launch { repo.setSmsBurst(v) }
+        fun setSmsBurst(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setSmsBurst(v) }
 
-        fun setUrlStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlStripQuery(v) }
+        fun setUrlStripQuery(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setUrlStripQuery(v) }
 
-        fun setRemoteUrlLookup(v: Boolean) = viewModelScope.launch { repo.setRemoteUrlLookup(v) }
+        fun setRemoteUrlLookup(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setRemoteUrlLookup(v) }
 
-        fun setLiveCallerEnrichment(v: Boolean) = viewModelScope.launch { repo.setLiveCallerEnrichment(v) }
+        fun setLiveCallerEnrichment(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setLiveCallerEnrichment(v) }
 
-        fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
+        fun setContactWhitelist(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setContactWhitelist(v) }
 
-        fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
+        fun setContactsOnly(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setContactsOnly(v) }
 
         fun setSelectedContactGroups(groupKeys: Set<String>) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setSelectedContactGroups(groupKeys)
                 SpamHeuristics.clearContactCache()
             }
 
         fun setOutgoingRiskWarning(enabled: Boolean) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setOutgoingRiskWarning(enabled)
             }
 
         fun setOutgoingCallHold(enabled: Boolean) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setOutgoingCallHold(enabled)
             }
 
         fun setRegulatoryPrefix(
             prefix: RegulatoryPrefix,
             enabled: Boolean,
-        ) = viewModelScope.launch {
+        ) = viewModelScope.launch(actionFailed) {
             repo.setRegulatoryPrefix(prefix, enabled)
         }
 
         fun setMeetingMode(enabled: Boolean) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 repo.setMeetingMode(enabled)
             }
 
         fun setMeetingModeApp(
             packageName: String,
             selected: Boolean,
-        ) = viewModelScope.launch {
+        ) = viewModelScope.launch(actionFailed) {
             repo.setMeetingModeApp(packageName, selected)
         }
 
         fun refreshContactGroups() {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 (appContext.applicationContext as? CallShieldApp)?.ensureContactsObserver()
                 SpamHeuristics.clearContactCache()
                 _contactGroupsLoading.value = true
@@ -1441,7 +1460,7 @@ class MainViewModel
             allowedRegions: Set<String>,
             cnapTrustPatterns: Set<String>,
             cnapBlockPatterns: Set<String>,
-        ) = viewModelScope.launch {
+        ) = viewModelScope.launch(actionFailed) {
             repo.setAllowedRegions(allowedRegions)
             repo.setRegionBlock(regionBlockEnabled && allowedRegions.isNotEmpty())
             repo.setCnapTrustPatterns(cnapTrustPatterns)
@@ -1451,67 +1470,67 @@ class MainViewModel
         fun setCategoryCallAction(
             category: CallCategory,
             action: CategoryCallAction,
-        ) = viewModelScope.launch { repo.setCategoryCallAction(category, action) }
+        ) = viewModelScope.launch(actionFailed) { repo.setCategoryCallAction(category, action) }
 
-        fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }
+        fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setDbPrefixExpansion(v) }
 
-        fun setAggressiveMode(v: Boolean) = viewModelScope.launch { repo.setAggressiveMode(v) }
+        fun setAggressiveMode(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAggressiveMode(v) }
 
-        fun setAnsweredCallerTrust(v: Boolean) = viewModelScope.launch { repo.setAnsweredCallerTrust(v) }
+        fun setAnsweredCallerTrust(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAnsweredCallerTrust(v) }
 
-        fun setAnsweredCallerThreshold(v: Int) = viewModelScope.launch { repo.setAnsweredCallerThreshold(v) }
+        fun setAnsweredCallerThreshold(v: Int) = viewModelScope.launch(actionFailed) { repo.setAnsweredCallerThreshold(v) }
 
-        fun setFreqThreshold(v: Int) = viewModelScope.launch { repo.setFreqThreshold(v) }
+        fun setFreqThreshold(v: Int) = viewModelScope.launch(actionFailed) { repo.setFreqThreshold(v) }
 
-        fun setAnsweredCallerWindowDays(v: Int) = viewModelScope.launch { repo.setAnsweredCallerWindowDays(v) }
+        fun setAnsweredCallerWindowDays(v: Int) = viewModelScope.launch(actionFailed) { repo.setAnsweredCallerWindowDays(v) }
 
-        fun setEmergencyCallbackGrace(v: Boolean) = viewModelScope.launch { repo.setEmergencyCallbackGrace(v) }
+        fun setEmergencyCallbackGrace(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setEmergencyCallbackGrace(v) }
 
-        fun setEmergencyCallbackWindowMinutes(v: Int) = viewModelScope.launch { repo.setEmergencyCallbackWindowMinutes(v) }
+        fun setEmergencyCallbackWindowMinutes(v: Int) = viewModelScope.launch(actionFailed) { repo.setEmergencyCallbackWindowMinutes(v) }
 
-        fun setTimeBlock(v: Boolean) = viewModelScope.launch { repo.setTimeBlock(v) }
+        fun setTimeBlock(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setTimeBlock(v) }
 
-        fun setTimeBlockStart(h: Int) = viewModelScope.launch { repo.setTimeBlockStart(h) }
+        fun setTimeBlockStart(h: Int) = viewModelScope.launch(actionFailed) { repo.setTimeBlockStart(h) }
 
-        fun setTimeBlockEnd(h: Int) = viewModelScope.launch { repo.setTimeBlockEnd(h) }
+        fun setTimeBlockEnd(h: Int) = viewModelScope.launch(actionFailed) { repo.setTimeBlockEnd(h) }
 
-        fun setFreqEscalation(v: Boolean) = viewModelScope.launch { repo.setFreqEscalation(v) }
+        fun setFreqEscalation(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setFreqEscalation(v) }
 
-        fun setAutoCleanup(v: Boolean) = viewModelScope.launch { repo.setAutoCleanup(v) }
+        fun setAutoCleanup(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAutoCleanup(v) }
 
-        fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
+        fun setCleanupDays(d: Int) = viewModelScope.launch(actionFailed) { repo.setCleanupDays(d) }
 
-        fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
+        fun setMlScorer(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setMlScorer(v) }
 
-        fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
+        fun setRcsFilter(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setRcsFilter(v) }
 
-        fun setPostCallScreen(v: Boolean) = viewModelScope.launch { repo.setPostCallScreen(v) }
+        fun setPostCallScreen(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setPostCallScreen(v) }
 
         fun setNotificationScreeningPackage(
             packageName: String,
             enabled: Boolean,
-        ) = viewModelScope.launch { repo.setNotificationScreeningPackage(packageName, enabled) }
+        ) = viewModelScope.launch(actionFailed) { repo.setNotificationScreeningPackage(packageName, enabled) }
 
-        fun resetNotificationScreeningPackages() = viewModelScope.launch { repo.resetNotificationScreeningPackages() }
+        fun resetNotificationScreeningPackages() = viewModelScope.launch(actionFailed) { repo.resetNotificationScreeningPackages() }
 
-        fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
+        fun setSilentVoicemail(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setSilentVoicemail(v) }
 
-        fun setAnswerHangUpEnabled(v: Boolean) = viewModelScope.launch { repo.setAnswerHangUpEnabled(v) }
+        fun setAnswerHangUpEnabled(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAnswerHangUpEnabled(v) }
 
-        fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch { repo.setHangUpDelaySeconds(seconds) }
+        fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch(actionFailed) { repo.setHangUpDelaySeconds(seconds) }
 
-        fun setPushAlert(v: Boolean) = viewModelScope.launch { repo.setPushAlert(v) }
+        fun setPushAlert(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setPushAlert(v) }
 
-        fun dismissAppReleaseNotice(versionCode: Int) = viewModelScope.launch { repo.dismissAppReleaseNotice(versionCode) }
+        fun dismissAppReleaseNotice(versionCode: Int) = viewModelScope.launch(actionFailed) { repo.dismissAppReleaseNotice(versionCode) }
 
         internal fun startExpectingCall(length: com.sysadmindoc.callshield.data.ExpectingCall.Length) =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 com.sysadmindoc.callshield.service.ExpectingCallController
                     .start(appContext, repo, length)
             }
 
         fun endExpectingCall() =
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 com.sysadmindoc.callshield.service.ExpectingCallController
                     .end(appContext, repo)
             }
@@ -1521,11 +1540,11 @@ class MainViewModel
             pkg: String,
             allowed: Boolean,
         ) {
-            viewModelScope.launch { repo.togglePushAlertPackage(pkg, allowed) }
+            viewModelScope.launch(actionFailed) { repo.togglePushAlertPackage(pkg, allowed) }
         }
 
         fun resetPushAlertPackages() {
-            viewModelScope.launch { repo.resetPushAlertPackages() }
+            viewModelScope.launch(actionFailed) { repo.resetPushAlertPackages() }
         }
 
         // Profiles
@@ -1588,7 +1607,7 @@ class MainViewModel
             // spam, so the block it adds here says spam too, not "Other".
             val reportType = type.ifBlank { "spam" }
             reportJob =
-                viewModelScope.launch {
+                viewModelScope.launch(actionFailed) {
                     val blockUndo =
                         if (blockHere) {
                             blockNumberUndoable(number, reportType, appContext.getString(R.string.detail_blocked_from_report)).getOrNull()
@@ -1610,7 +1629,7 @@ class MainViewModel
         fun scheduleNotSpam(number: String) {
             notSpamUndoJob?.cancel()
             notSpamUndoJob =
-                viewModelScope.launch {
+                viewModelScope.launch(actionFailed) {
                     delay(5000L)
                     reportNotSpam(number)
                 }
@@ -1622,7 +1641,7 @@ class MainViewModel
         }
 
         fun reportNotSpam(number: String) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
                 val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                 _contributeResult.value = result.toStatusMessage()
@@ -1638,7 +1657,7 @@ class MainViewModel
          * It goes through the outbox like any report; nothing is allow-listed.
          */
         fun correctReport(number: String) {
-            viewModelScope.launch {
+            viewModelScope.launch(actionFailed) {
                 _contributeResult.value = CommunityContributor.reportNotSpam(appContext, number).toStatusMessage()
             }
         }

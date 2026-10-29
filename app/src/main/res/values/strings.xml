@@ -1339,6 +1339,7 @@
     <string name="temporary_decision_unchanged">Nothing changed. %1$s has a permanent rule or is an emergency number.</string>
     <string name="temporary_decision_failed">Couldn\'t change %1$s. Try again.</string>
     <string name="undo_failed">Couldn\'t undo that.</string>
+    <string name="action_failed">Something went wrong, so that didn\'t go through. Try again.</string>
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>
