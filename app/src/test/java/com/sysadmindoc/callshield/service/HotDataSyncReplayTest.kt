@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
@@ -23,9 +24,13 @@ import org.robolectric.annotation.Config
  * serve files (a mirror, or anyone once pinning fails) could hand back a
  * genuine older copy, such as a past `cleared: true`, and wipe the phone's
  * trending rows. The real refresh path, over a real repository.
+ *
+ * A plain Application, since CallShieldApp primes the real build-time feeds in
+ * the background at start, and once the published watch list isn't empty that
+ * races the tests' own copies.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(application = Application::class, sdk = [34])
 class HotDataSyncReplayTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val fixture = IsolatedRepositoryFixture(context)
