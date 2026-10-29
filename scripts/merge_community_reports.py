@@ -5,9 +5,12 @@ the main spam_numbers.json database, then deletes processed files.
 """
 
 import argparse
+import http.client
 import json
 import os
 import subprocess
+import urllib.parse
+import urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -61,6 +64,15 @@ COMMUNITY_REPORT_GAP = timedelta(hours=24)
 # answer it never saw, and a resend that lands after its original was merged
 # and deleted is invisible to the queue.
 MERGED_ID_RETENTION_DAYS = 14
+# One report publishes a US number when an FCC complaint from the last 90 days
+# names it as the caller ID and doesn't call it spoofed. Measured on the
+# 2026-10-29 pool, that was 24 of 709 unpublished US numbers, none of which
+# ever drew a not-spam report. Without it nearly every report aged out unseen.
+FCC_COMPLAINTS_URL = "https://opendata.fcc.gov/resource/vakf-fz8e.json"
+FCC_COMPLAINT_DAYS = 90
+FCC_LOOKUP_BATCH = 80
+# A saved lookup (a JSON list of rows as FCC returns them) read instead of asking FCC.
+FCC_COMPLAINTS_FILE = os.environ.get("CALLSHIELD_FCC_COMPLAINTS_FILE")
 
 COMMUNITY_DESCRIPTION = "Community reported"
 COMMUNITY_SOURCE = "community"
@@ -407,6 +419,73 @@ def promote_community_row(state: dict) -> None:
     """
     state["published"] = True
     state["bucket_quorum"] = same_day_reporters(state["events"]) >= COMMUNITY_REPORTER_QUORUM
+
+
+def keeps_its_place(state: dict) -> bool:
+    """Three same-day reporters or an FCC complaint published it, so later reports can't undo that."""
+    return bool(state.get("bucket_quorum") or state.get("fcc_complaint_day"))
+
+
+def fcc_caller_id(number: str) -> str:
+    """+12037601637 as FCC writes it: 203-760-1637."""
+    return f"{number[2:5]}-{number[5:8]}-{number[8:]}"
+
+
+def fcc_complaint_rows(numbers: list[str], since: str) -> list[dict]:
+    """FCC unwanted-call complaints since [since] that name one of [numbers] as the caller ID."""
+    if FCC_COMPLAINTS_FILE is not None:
+        saved = Path(FCC_COMPLAINTS_FILE)
+        rows = json.loads(saved.read_text(encoding="utf-8")) if saved.exists() else []
+        if not isinstance(rows, list):
+            raise ValueError(f"{saved.name} doesn't hold a list of complaint rows")
+        return rows
+    rows = []
+    for start in range(0, len(numbers), FCC_LOOKUP_BATCH):
+        caller_ids = ",".join(f"'{fcc_caller_id(number)}'" for number in numbers[start : start + FCC_LOOKUP_BATCH])
+        query = urllib.parse.urlencode(
+            {
+                "$select": "caller_id_number,issue_date,issue,type_of_call_or_messge",
+                "$where": f"caller_id_number in ({caller_ids}) AND issue_date >= '{since}T00:00:00'",
+                "$limit": "50000",
+            }
+        )
+        with urllib.request.urlopen(f"{FCC_COMPLAINTS_URL}?{query}", timeout=60) as response:
+            batch = json.load(response)
+        if not isinstance(batch, list):
+            raise ValueError("FCC answered with something other than a list of rows")
+        rows.extend(batch)
+    return rows
+
+
+def fcc_complaint_days(rows: list[dict], numbers: list[str], since: str, today: str) -> dict[str, str]:
+    """number -> the newest complaint day that agrees with its reports.
+
+    The row must name the number as the caller ID. A complaint that calls the
+    caller ID spoofed says the number was borrowed, so it never counts, the
+    same as in the import.
+    """
+    by_caller_id = {fcc_caller_id(number): number for number in numbers}
+    days: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        number = by_caller_id.get(str(row.get("caller_id_number") or ""))
+        day = str(row.get("issue_date") or "")[:10]
+        context = f"{row.get('issue') or ''} {row.get('type_of_call_or_messge') or ''}".lower()
+        if number is None or not _is_valid_day(day, today) or day < since or "spoof" in context:
+            continue
+        days[number] = max(days.get(number, ""), day)
+    return days
+
+
+def fcc_complaint_lookup(numbers: list[str], since: str, today: str) -> dict[str, str]:
+    """fcc_complaint_days for [numbers], or none when FCC can't be asked. The merge goes on either way."""
+    try:
+        return fcc_complaint_days(fcc_complaint_rows(numbers, since), numbers, since, today)
+    except (OSError, ValueError, http.client.HTTPException) as error:
+        # A body cut off mid-read raises IncompleteRead, which isn't an OSError.
+        print(f"Couldn't check FCC complaints for {len(numbers)} pending numbers ({error}). None published on one this run.")
+        return {}
 
 
 def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
@@ -887,7 +966,7 @@ def main(argv: list[str] | None = None):
                 pending.pop(number, None)
             continue
         state = pending.setdefault(number, legacy_community_state(entry, today))
-        if state["published"] and (state.get("bucket_quorum") or not any(event["bucket"] for event in state["events"])):
+        if state["published"] and (keeps_its_place(state) or not any(event["bucket"] for event in state["events"])):
             continue
         if community_has_quorum(state):
             promote_community_row(state)
@@ -1038,7 +1117,7 @@ def main(argv: list[str] | None = None):
                             if (
                                 bucket
                                 and state["published"]
-                                and not state.get("bucket_quorum")
+                                and not keeps_its_place(state)
                                 and not has_maintainer_review(entry)
                                 and not community_has_quorum(state)
                             ):
@@ -1086,6 +1165,34 @@ def main(argv: list[str] | None = None):
         )
         if approved_added or approved_updated:
             print(f"Maintainer approvals: {approved_added} published, {approved_updated} existing rows marked reviewed")
+
+    # FCC only covers North American numbers. A not-spam vote in the last 90
+    # days keeps a number off this path, as it keeps it off the watch list.
+    fcc_candidates = sorted(
+        number
+        for number, state in pending.items()
+        if not state["published"]
+        and state["events"]
+        and not state.get("not_spam_days")
+        and number not in existing
+        and number.startswith("+1")
+        and len(number) == 12
+    )
+    fcc_published = 0
+    if fcc_candidates:
+        since = (date.fromisoformat(today) - timedelta(days=FCC_COMPLAINT_DAYS)).isoformat()
+        for number, day in sorted(fcc_complaint_lookup(fcc_candidates, since, today).items()):
+            state = pending[number]
+            days = [event["day"] for event in state["events"]]
+            entry = state["entry"]
+            entry["reports"] = sum(event["count"] for event in state["events"])
+            entry["first_seen"] = min(days)
+            entry["last_seen"] = max(days)
+            existing[number] = entry
+            promote_community_row(state)
+            state["fcc_complaint_day"] = day
+            fcc_published += 1
+        print(f"FCC complaints: {len(fcc_candidates)} pending numbers checked, {fcc_published} published on one")
 
     # Anonymous false-positive votes never mutate the shipped database by
     # default. A distinct-source quorum strictly larger than the spam count can
@@ -1147,6 +1254,7 @@ def main(argv: list[str] | None = None):
     # it on a no-op run costs every device a pointless download.
     changed = (
         added > 0
+        or fcc_published > 0
         or updated > 0
         or purged > 0
         or provenance_migrated > 0

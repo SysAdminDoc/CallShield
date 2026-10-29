@@ -32,6 +32,9 @@ def run_script_result(
     env = os.environ.copy()
     env["CALLSHIELD_DATA_DIR"] = str(data_dir)
     env["CALLSHIELD_NOW"] = NOW
+    # The merge asks FCC about pending numbers. Here it reads a saved lookup
+    # instead, and a test that has no such file gets no complaints.
+    env["CALLSHIELD_FCC_COMPLAINTS_FILE"] = str(fcc_complaints_file(data_dir))
     result = subprocess.run(
         [sys.executable, str(SCRIPTS_DIR / name), *(args or [])],
         cwd=ROOT,
@@ -41,6 +44,10 @@ def run_script_result(
         check=False,
     )
     return result
+
+
+def fcc_complaints_file(data_dir: Path) -> Path:
+    return data_dir.parent / "fcc_complaints.json"
 
 
 def run_script(name: str, data_dir: Path, args: list[str] | None = None) -> None:
@@ -1559,6 +1566,140 @@ def assert_not_spam_id_not_recorded(data_dir: Path) -> None:
         assert vote_id not in ledger, f"not_spam vote id was recorded: {ledger}"
 
 
+def assert_one_report_and_an_fcc_complaint_publish(data_dir: Path) -> None:
+    """One report alone never publishes. One report plus a recent FCC complaint
+    that names the number as the caller ID, without calling it spoofed, does."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    days_ago = lambda days: (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()  # noqa: E731
+    agreed = "+12122340701"
+    spoofed = "+12122340702"
+    callback_only = "+12122340703"
+    stale = "+12122340704"
+    disputed = "+12122340705"
+    future = "+12122340706"
+    unconfirmed = "+12122340707"
+    complaint_only = "+12122340708"
+
+    def complaint(number: str, day: str, issue: str = "Unwanted Calls", caller_id: bool = True) -> dict:
+        dashed = f"{number[2:5]}-{number[5:8]}-{number[8:]}"
+        return {
+            "caller_id_number": dashed if caller_id else "None",
+            "advertiser_business_phone_number": "None" if caller_id else dashed,
+            "issue_date": f"{day}T00:00:00.000",
+            "issue": issue,
+            "type_of_call_or_messge": "Prerecorded Voice",
+        }
+
+    write_json(fcc_complaints_file(data_dir), [
+        complaint(agreed, days_ago(40)),
+        complaint(agreed, days_ago(10)),
+        complaint(spoofed, days_ago(5), issue="Caller ID Spoofing"),
+        complaint(callback_only, days_ago(5), caller_id=False),
+        complaint(stale, days_ago(120)),
+        complaint(disputed, days_ago(5)),
+        complaint(future, days_ago(-3)),
+        complaint(complaint_only, days_ago(5)),
+    ])
+    for index, number in enumerate((agreed, spoofed, callback_only, stale, disputed, future, unconfirmed)):
+        write_report(data_dir, f"single_{index}.json", number, BUCKETS[0], TIMES[0], device=BUCKETS[0])
+    write_report(data_dir, "disputed_not_spam.json", disputed, BUCKETS[1], TIMES[1], report_type="not_spam")
+    run_drain(data_dir)
+
+    assert reports_for(data_dir, agreed) == 1, "one report and a recent FCC complaint did not publish"
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert pending[agreed]["fcc_complaint_day"] == days_ago(10), "the ledger didn't keep the newest complaint day"
+    for number, why in (
+        (spoofed, "a complaint that calls the caller ID spoofed"),
+        (callback_only, "a complaint naming it only as the callback number"),
+        (stale, "a complaint older than 90 days"),
+        (disputed, "a complaint for a number with a not-spam vote"),
+        (future, "a complaint dated in the future"),
+        (unconfirmed, "one report with no complaint at all"),
+    ):
+        assert reports_for(data_dir, number) == 0, f"{why} published a number"
+    assert complaint_only not in pending and reports_for(data_dir, complaint_only) == 0, (
+        "a complaint with no community report published a number"
+    )
+
+    # A second reporter short of quorum demotes a row published on report times
+    # alone. One published on a complaint keeps its place, queue or no queue,
+    # even once FCC no longer shows the complaint.
+    fcc_complaints_file(data_dir).unlink()
+    write_report(data_dir, "agreed_second.json", agreed, BUCKETS[2], f"{TODAY}T00:01:00+00:00", device=BUCKETS[2])
+    run_drain(data_dir)
+    assert reports_for(data_dir, agreed) == 2, "a second report demoted a number an FCC complaint had published"
+    run_script("merge_community_reports.py", data_dir)
+    assert reports_for(data_dir, agreed) == 2, "the next merge demoted a number an FCC complaint had published"
+
+    # An unreadable lookup publishes nothing on a complaint, and the merge goes on.
+    late = "+12122340709"
+    fcc_complaints_file(data_dir).write_text(json.dumps({"error": "rate limited"}), encoding="utf-8")
+    write_report(data_dir, "late_single.json", late, BUCKETS[3], f"{TODAY}T00:02:00+00:00", device=BUCKETS[3])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    result = run_script_result("merge_community_reports.py", data_dir)
+    assert result.returncode == 0, f"a failed FCC lookup stopped the merge\n{result.stdout}\n{result.stderr}"
+    assert "Couldn't check FCC complaints" in result.stdout, "a failed FCC lookup wasn't reported"
+    assert pending_reports_for(data_dir, late) == 1 and reports_for(data_dir, late) == 0, (
+        "a failed FCC lookup lost or published the report"
+    )
+
+
+def assert_fcc_lookup_failures_publish_nothing() -> None:
+    """Every way the live FCC lookup can fail leaves the merge running with no
+    complaints. Checked in-process with urlopen replaced, so nothing asks FCC."""
+    import contextlib
+    import http.client
+    import io
+    import urllib.error
+    import urllib.request
+
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    import merge_community_reports
+
+    class Response:
+        def __init__(self, read):
+            self.read = read
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+    def cut_off(*_args):
+        raise http.client.IncompleteRead(b'[{"caller_id_number": "212-')
+
+    def raises(error):
+        def urlopen(*_args, **_kwargs):
+            raise error
+        return urlopen
+
+    failures = {
+        "a body cut off mid-read": lambda *_args, **_kwargs: Response(cut_off),
+        "a body that isn't JSON": lambda *_args, **_kwargs: Response(lambda *_: b"<html>busy</html>"),
+        "a body that isn't a list": lambda *_args, **_kwargs: Response(lambda *_: b'{"error": "throttled"}'),
+        "no connection": raises(urllib.error.URLError("unreachable")),
+        "a timeout": raises(TimeoutError("timed out")),
+    }
+    original_file, original_urlopen = merge_community_reports.FCC_COMPLAINTS_FILE, urllib.request.urlopen
+    merge_community_reports.FCC_COMPLAINTS_FILE = None
+    try:
+        for name, urlopen in failures.items():
+            urllib.request.urlopen = urlopen
+            printed = io.StringIO()
+            with contextlib.redirect_stdout(printed):
+                days = merge_community_reports.fcc_complaint_lookup(["+12122340701"], BASE_DAY, TODAY)
+            assert days == {}, f"{name} still published on a complaint"
+            assert "Couldn't check FCC complaints" in printed.getvalue(), f"{name} wasn't reported"
+    finally:
+        merge_community_reports.FCC_COMPLAINTS_FILE = original_file
+        urllib.request.urlopen = original_urlopen
+
+
 def assert_fixed_clock_is_for_tests_only() -> None:
     """A feed stamped by CALLSHIELD_NOW and published would be refused by every
     device as a replay, or block every later feed until its time passed. So the
@@ -1592,6 +1733,7 @@ def assert_fixed_clock_is_for_tests_only() -> None:
 
 def main() -> None:
     assert_fixed_clock_is_for_tests_only()
+    assert_fcc_lookup_failures_publish_nothing()
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_unknown_approval_shape_fails(Path(tmp) / "data")
@@ -1616,6 +1758,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_community_promotion(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_one_report_and_an_fcc_complaint_publish(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")
