@@ -1176,7 +1176,7 @@
     <string name="export_share_failed">无法创建导出文件 — 存储空间可能已满</string>
     <string name="backup_restore_not_protected">此文件不是口令保护的备份。请清空口令字段以原样恢复。</string>
     <string name="settings_post_call_screen">Android 通话后界面</string>
-    <string name="settings_post_call_screen_desc">符合条件来电结束后可选打开 CallShield，提供举报垃圾与保存联系人操作。默认关闭；评分通知保持启用。</string>
+    <string name="settings_post_call_screen_desc">符合条件来电结束后可选打开 CallShield，提供举报垃圾、回拨与保存联系人操作。默认关闭；评分通知保持启用。</string>
     <string name="post_call_title">回顾此通话</string>
     <string name="post_call_subtitle">Android 已将此已结束通话分享给 CallShield。</string>
     <string name="post_call_number_label">主叫</string>
@@ -1186,6 +1186,7 @@
     <string name="post_call_duration_long">超过 2 分钟</string>
     <string name="post_call_duration_unknown">时长不可用</string>
     <string name="post_call_mark_spam">标记为垃圾并拦截</string>
+    <string name="post_call_call_back">回拨</string>
     <string name="post_call_add_contact">加入联系人</string>
     <string name="post_call_done">暂不</string>
     <string name="post_call_contact_unavailable">无可用联系人应用</string>

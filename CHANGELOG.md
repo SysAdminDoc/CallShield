@@ -43,6 +43,7 @@ All notable changes to CallShield will be documented in this file.
 - Setup now spots a copy installed by an app store or installer that doesn't let Android allow SMS and call logs. Android never asks about those on such a copy, and their switches in App info flip back to Deny with no reason given. Once you've tried them, setup names the installer and offers Get the APK, which opens the latest release so you can install it over your copy from the Files app. Your settings stay. The README's troubleshooting section now covers this block next to restricted settings.
 - Database v57 adds the FCC complaints published through 2026-10-29 and FTC's through 2026-10-28, for 51,379 numbers, and refreshes the 652 French telemarketing ranges. The community watch list now carries 7 numbers that several people reported.
 - The Simplified Chinese translation now covers nearly every screen, with 311 more strings and every plural, from aixtin (#42). Only the two newest strings still show in English.
+- The Android post-call screen has a Call back button (#43). It opens your dialer with the number filled in, so a call that dropped is one tap from a redial and CallShield still needs no permission to place calls.
 
 ## v1.12.0 (2026-10-09)
 

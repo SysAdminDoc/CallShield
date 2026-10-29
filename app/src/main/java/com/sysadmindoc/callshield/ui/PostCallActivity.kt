@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PhoneInTalk
@@ -63,6 +64,7 @@ import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -124,6 +126,7 @@ class PostCallActivity : AppCompatActivity() {
                 PostCallScreen(
                     details = details,
                     onMarkSpam = ::markSpam,
+                    onCallBack = ::callBack,
                     onAddContact = ::addContact,
                     onDismiss = ::finishAndRemoveTask,
                 )
@@ -156,6 +159,12 @@ class PostCallActivity : AppCompatActivity() {
         finishAndRemoveTask()
     }
 
+    private fun callBack() {
+        if (startActivitySafely(PostCallIntents.callBack(details.number))) {
+            finishAndRemoveTask()
+        }
+    }
+
     private fun addContact() {
         val contactIntent =
             Intent(ContactsContract.Intents.Insert.ACTION)
@@ -183,6 +192,11 @@ internal data class PostCallDetails(
     val durationBucket: Int,
     val disconnectCause: Int,
 )
+
+internal object PostCallIntents {
+    /** Opens the dialer with the number filled in, so it needs no call permission and the user still places the call. */
+    fun callBack(number: String): Intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null))
+}
 
 internal object PostCallReportPolicy {
     /** Only a positively verified call-log match may reach the community feed. */
@@ -277,9 +291,10 @@ internal object PostCallIntentParser {
 }
 
 @Composable
-private fun PostCallScreen(
+internal fun PostCallScreen(
     details: PostCallDetails,
     onMarkSpam: () -> Unit,
+    onCallBack: () -> Unit,
     onAddContact: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -321,7 +336,7 @@ private fun PostCallScreen(
                     )
                 }
             }
-            PostCallActions(onMarkSpam, onAddContact)
+            PostCallActions(onMarkSpam, onCallBack, onAddContact)
             Spacer(Modifier.weight(1f))
             PremiumActionButton(
                 label = stringResource(R.string.post_call_done),
@@ -366,6 +381,7 @@ private fun PostCallHeader() {
 @Composable
 private fun PostCallActions(
     onMarkSpam: () -> Unit,
+    onCallBack: () -> Unit,
     onAddContact: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -375,6 +391,14 @@ private fun PostCallActions(
             color = CatRed,
             onClick = onMarkSpam,
             modifier = Modifier.fillMaxWidth().height(54.dp),
+        )
+        PremiumActionButton(
+            label = stringResource(R.string.post_call_call_back),
+            icon = Icons.Default.Call,
+            color = CatBlue,
+            onClick = onCallBack,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            outlined = true,
         )
         PremiumActionButton(
             label = stringResource(R.string.post_call_add_contact),

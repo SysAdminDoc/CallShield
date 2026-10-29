@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C379-f38ba8?style=flat-square" alt="51,379 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2003-94e2d5?style=flat-square" alt="2003 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2005-94e2d5?style=flat-square" alt="2005 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -183,7 +183,7 @@ SMS-specific layers run after the shared chain, in their own priority order: **S
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. So is a number that showed up in a text CallShield flagged as spam in the last 30 days. The notification names the day that text came in, since "call us back" scams pair a fake text with the number to call. Marking the sender Not spam lets those numbers ring again. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
 - **Answer & hang up**. Opt-in. A call CallShield would reject is answered without video and hung up after a delay you set (1 to 10 seconds), so spam can't leave a voicemail. Silent voicemail mode, auto-mute and a meeting-mode silence still go to voicemail, and the short answered call never counts toward trusting the caller. Contributed by tikkamasalla
-- **After-Call Feedback**. "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report and save-contact actions
+- **After-Call Feedback**. "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report, call-back and save-contact actions
 
 ### Per-Rule Schedules (A7)
 Any wildcard, range, or SMS keyword rule can be time-gated to specific days of the week and an hour window. The hour picker supports overnight wrap. `daysMask = 0` is the "no gating" sentinel, so rules created before v1.6 behave identically.
@@ -592,12 +592,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2003 tests
+./gradlew testDebugUnitTest   # 2005 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2003 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2005 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -634,8 +634,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2003 JVM unit tests (JUnit) |
-| Strings | 1791 string resources and 49 plural groups (translation-ready) |
+| Tests | 2005 JVM unit tests (JUnit) |
+| Strings | 1792 string resources and 49 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
