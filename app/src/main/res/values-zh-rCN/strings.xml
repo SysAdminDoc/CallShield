@@ -1673,9 +1673,6 @@
     <string name="detail_phone_number">电话号码</string>
     <string name="detail_report_blocked">已在本机拦截。%1$s</string>
     <string name="detail_report_carrier">向运营商举报（7726）</string>
-    <string name="detail_report_issue_title">[垃圾] %s</string>
-    <string name="detail_report_issue_type">来自 CallShield 的举报</string>
-    <string name="detail_report_issue_unseen">已在 CallShield 中查询。此号码的通话和消息尚未出现在应用日志中。</string>
     <string name="detail_undo">撤销</string>
     <string name="emergency_number_block_refused">紧急号码和公共安全号码无法拦截。</string>
     <string name="export_log_empty">暂无导出内容。尚未拦截任何来电，也未标记任何消息。</string>
@@ -1830,77 +1827,13 @@
     <string name="stats_reason_hidden_number">隐藏号码</string>
     <string name="stats_reason_otp_floor">验证安全兜底</string>
     <string name="stats_reason_pipeline_diagnostic">防护诊断</string>
-    <plurals name="backup_restore_preview_conflicts">
-        <item quantity="one">本机有 %1$d 个项目与备份匹配。合并时，号码保留本机的允许或拦截状态，匹配的规则或设置采用备份版本。</item>
-        <item quantity="other">本机有 %1$d 个项目与备份匹配。合并时，号码保留本机的允许或拦截状态，匹配的规则和设置采用备份版本。</item>
-    </plurals>
     <plurals name="blocklist_count_active_rules">
         <item quantity="one">%1$,d 条生效规则</item>
         <item quantity="other">%1$,d 条生效规则</item>
     </plurals>
-    <plurals name="blocklist_count_saved">
-        <item quantity="one">%1$,d 个条目</item>
-        <item quantity="other">%1$,d 个条目</item>
-    </plurals>
-    <plurals name="blocklist_imported_numbers">
-        <item quantity="one">已导入 %d 个号码</item>
-        <item quantity="other">已导入 %d 个号码</item>
-    </plurals>
-    <plurals name="blocklist_reports">
-        <item quantity="one">举报：%d</item>
-        <item quantity="other">举报：%d</item>
-    </plurals>
     <plurals name="contribute_rate_limited">
         <item quantity="one">举报过于频繁。请等待 %1$d 秒后重试。</item>
         <item quantity="other">举报过于频繁。请等待 %1$d 秒后重试。</item>
-    </plurals>
-    <plurals name="dashboard_action_sync_subtitle_ready">
-        <item quantity="one">使用最新举报刷新 %1$s 条本地垃圾记录。</item>
-        <item quantity="other">使用最新举报刷新 %1$s 条本地垃圾记录。</item>
-    </plurals>
-    <plurals name="dashboard_database_ready_detail">
-        <item quantity="one">已加载垃圾号码：%1$s</item>
-        <item quantity="other">已加载垃圾号码：%1$s</item>
-    </plurals>
-    <plurals name="dashboard_scan_more">
-        <item quantity="one">更多匹配：+%1$s</item>
-        <item quantity="other">更多匹配：+%1$s</item>
-    </plurals>
-    <plurals name="dashboard_scan_spam_found">
-        <item quantity="one">发现 %1$s 条垃圾匹配</item>
-        <item quantity="other">发现 %1$s 条垃圾匹配</item>
-    </plurals>
-    <plurals name="dashboard_scan_unique_numbers_scanned">
-        <item quantity="one">扫描了 %1$s 个唯一号码</item>
-        <item quantity="other">扫描了 %1$s 个唯一号码</item>
-    </plurals>
-    <plurals name="dashboard_sms_scan_messages_scanned">
-        <item quantity="one">扫描了 %1$s 条消息</item>
-        <item quantity="other">扫描了 %1$s 条消息</item>
-    </plurals>
-    <plurals name="dashboard_spam_from_exchange">
-        <item quantity="one">两周内来自 %2$s（%3$s）的 %1$s 个号码</item>
-        <item quantity="other">两周内来自 %2$s（%3$s）的 %1$s 个号码</item>
-    </plurals>
-    <plurals name="detail_report_issue_seen">
-        <item quantity="one">已出现 %d 次</item>
-        <item quantity="other">已出现 %d 次</item>
-    </plurals>
-    <plurals name="detail_reports_count_label">
-        <item quantity="one">举报：%d</item>
-        <item quantity="other">举报：%d</item>
-    </plurals>
-    <plurals name="detail_reports_count_plural">
-        <item quantity="one">%d 条举报</item>
-        <item quantity="other">%d 条举报</item>
-    </plurals>
-    <plurals name="detail_sources_count_plural">
-        <item quantity="one">%d 个来源</item>
-        <item quantity="other">%d 个来源</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="one">%d 小时</item>
-        <item quantity="other">%d 小时</item>
     </plurals>
     <plurals name="external_blocklist_applied">
         <item quantity="one">已应用 %1$s：%2$d 个号码，+%3$d / -%4$d</item>
@@ -1909,18 +1842,6 @@
     <plurals name="external_blocklist_previewed">
         <item quantity="one">已预览 %1$s：%2$d 个号码，+%3$d / -%4$d，%5$d 个已被更强来源持有</item>
         <item quantity="other">已预览 %1$s：%2$d 个号码，+%3$d / -%4$d，%5$d 个已被更强来源持有</item>
-    </plurals>
-    <plurals name="external_blocklist_restored">
-        <item quantity="one">已将 %1$s 恢复，包含 %2$d 个号码</item>
-        <item quantity="other">已将 %1$s 恢复，包含 %2$d 个号码</item>
-    </plurals>
-    <plurals name="notif_summary_text_recent">
-        <item quantity="one">近期捕获 %d 条垃圾内容</item>
-        <item quantity="other">近期捕获 %d 条垃圾内容</item>
-    </plurals>
-    <plurals name="overlay_reports_count">
-        <item quantity="one">%1$s 条举报</item>
-        <item quantity="other">%1$s 条举报</item>
     </plurals>
     <plurals name="protection_test_hot_unavailable_age">
         <item quantity="one">热数据不可用。上次成功更新在 %1$d 小时前</item>
@@ -1934,44 +1855,8 @@
         <item quantity="one">%1$d 个生效规则冲突</item>
         <item quantity="other">%1$d 个生效规则冲突</item>
     </plurals>
-    <plurals name="search_result_type_reports">
-        <item quantity="one">%1$s · %2$d 条举报</item>
-        <item quantity="other">%1$s · %2$d 条举报</item>
-    </plurals>
-    <plurals name="search_results_count">
-        <item quantity="one">%d 个结果</item>
-        <item quantity="other">%d 个结果</item>
-    </plurals>
-    <plurals name="settings_answered_caller_threshold_value">
-        <item quantity="one">%1$d 次已接来电</item>
-        <item quantity="other">%1$d 次已接来电</item>
-    </plurals>
-    <plurals name="settings_answered_caller_window_value">
-        <item quantity="one">%1$d 天</item>
-        <item quantity="other">%1$d 天</item>
-    </plurals>
-    <plurals name="settings_contact_group_members">
-        <item quantity="one">%d 位联系人</item>
-        <item quantity="other">%d 位联系人</item>
-    </plurals>
-    <plurals name="settings_contact_groups_selected">
-        <item quantity="one">%d 个已选分组</item>
-        <item quantity="other">%d 个已选分组</item>
-    </plurals>
-    <plurals name="settings_contact_groups_unavailable">
-        <item quantity="one">%d 个已选分组不可用。请选择全部联系人以重置范围。</item>
-        <item quantity="other">%d 个已选分组不可用。请选择全部联系人以重置范围。</item>
-    </plurals>
-    <plurals name="settings_emergency_callback_window_value">
-        <item quantity="one">%1$d 分钟</item>
-        <item quantity="other">%1$d 分钟</item>
-    </plurals>
     <plurals name="settings_meeting_mode_apps_count">
         <item quantity="one">已选择 %1$d 个应用</item>
         <item quantity="other">已选择 %1$d 个应用</item>
-    </plurals>
-    <plurals name="settings_repeat_caller_threshold_value">
-        <item quantity="one">%1$d 次来电</item>
-        <item quantity="other">%1$d 次来电</item>
     </plurals>
 </resources>

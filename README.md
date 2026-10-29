@@ -611,7 +611,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 
 ## Translations
 
-CallShield ships in English and Simplified Chinese, which covers about four in five strings.
+CallShield ships in English and Simplified Chinese. The Chinese text covers nearly every string, and the newest few fall back to English.
 More translations are welcome. See
 [docs/TRANSLATING.md](docs/TRANSLATING.md) for the resource layout, the priority
 order for partial translations, and `scripts/check_translations.py`, which
