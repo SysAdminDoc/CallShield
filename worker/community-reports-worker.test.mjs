@@ -15,6 +15,7 @@ import worker, {
   clientKey,
   limiterGroupKey,
   ReportGlobalCounter,
+  takeWorkerBudget,
   getClientIp,
   checkDedup,
   deriveReporterBucket,
@@ -294,8 +295,10 @@ test("the Worker has one per-minute budget across every network", async () => {
   // One client per /24, so no group budget refuses first.
   for (let i = 1; i <= 30; i++) {
     assert.equal((await checkRateLimit(`198.51.${i}.1`, env)).allowed, true, `client ${i}`);
+    assert.equal((await takeWorkerBudget(env)).allowed, true, `report ${i}`);
   }
-  const refused = await checkRateLimit("203.0.113.200", env);
+  assert.equal((await checkRateLimit("203.0.113.200", env)).allowed, true);
+  const refused = await takeWorkerBudget(env);
   assert.equal(refused.allowed, false);
   assert.ok(refused.retryAfter > 0);
 });
@@ -355,6 +358,7 @@ test("every location asks the one Worker-wide counter", async () => {
   const env = { RATE_LIMIT: createMockKV(), REPORT_GLOBAL_COUNTER: namespace };
   for (let i = 1; i <= 30; i++) {
     assert.equal((await checkRateLimit(`198.51.${i}.1`, env)).allowed, true, `client ${i}`);
+    assert.equal((await takeWorkerBudget(env)).allowed, true, `report ${i}`);
   }
   assert.equal((await checkRateLimit("203.0.113.200", env)).allowed, false);
   assert.deepEqual(new Set(namespace.names), new Set(["all"]));
@@ -449,6 +453,156 @@ test("POST returns 429 when the /48 or the Worker-wide limiter refuses", async (
     assert.ok(Number(response.headers.get("retry-after")) > 0, refusing);
     assert.deepEqual(keys.REPORT_LIMITER, [clientKey("2001:db8:7:1::1", 64)]);
     assert.deepEqual(keys.REPORT_GROUP_LIMITER, [clientKey("2001:db8:7:1::1", 48)]);
+  }
+});
+
+test("a report refused as malformed, invalid or a duplicate doesn't spend the Worker-wide budget", async () => {
+  // Each way the Worker-wide budget can be held: the counter object, the
+  // rate-limiting binding, and the KV fallback.
+  for (const holder of ["counter", "limiter", "kv"]) {
+    const namespace = counterNamespace();
+    const globalKeys = [];
+    const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+    if (holder === "counter") env.REPORT_GLOBAL_COUNTER = namespace;
+    if (holder === "limiter") {
+      env.REPORT_GLOBAL_LIMITER = { async limit({ key }) { globalKeys.push(key); return { success: true }; } };
+    }
+    await recordDedup("203.0.113.90", "+12122340101", "spam", env);
+    const refused = [
+      ["{not json", 400],
+      [JSON.stringify({ number: "+12125550142", type: "spam" }), 400],
+      [JSON.stringify({ number: "+12122340101", type: "spam" }), 429],
+    ];
+    for (const [body, status] of refused) {
+      const response = await worker.fetch(
+        new Request("https://reports.example", {
+          method: "POST",
+          headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.90" },
+          body,
+        }),
+        env,
+      );
+      assert.equal(response.status, status, `${holder}: ${body}`);
+    }
+    const peek = await (await namespace.counter.fetch(new Request("https://global-counter/peek"))).json();
+    assert.equal(peek.remaining, 30, holder);
+    assert.deepEqual(globalKeys, [], holder);
+    assert.equal(env.RATE_LIMIT._store.has("rlall"), false, holder);
+  }
+});
+
+test("only a report that's going to be stored spends the Worker-wide budget", async () => {
+  const namespace = counterNamespace();
+  const originalFetch = globalThis.fetch;
+  let commits = 0;
+  globalThis.fetch = async () => {
+    commits += 1;
+    return new Response("{}", { status: 201 });
+  };
+  const env = {
+    RATE_LIMIT: createMockKV(),
+    REPORT_GLOBAL_COUNTER: namespace,
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  };
+  const post = (ip) =>
+    worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      env,
+    );
+  try {
+    // One client per /24, so no group budget refuses first.
+    for (let i = 1; i <= 30; i++) {
+      assert.equal((await post(`198.51.${i}.1`)).status, 200, `report ${i}`);
+    }
+    const refused = await post("203.0.113.200");
+    assert.equal(refused.status, 429);
+    assert.ok(Number(refused.headers.get("retry-after")) > 0);
+    assert.equal(commits, 30);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a Worker-wide budget that fills after the peek still refuses before the store", async () => {
+  // Another location can take the last slot between this report's peek and its take.
+  const counter = new ReportGlobalCounter();
+  const namespace = counterNamespace(counter);
+  const fetchCounter = counter.fetch.bind(counter);
+  counter.fetch = async (request) => {
+    if (new URL(request.url).pathname === "/peek") {
+      for (let i = 0; i < 30; i++) await fetchCounter(new Request("https://global-counter/take"));
+    }
+    return fetchCounter(request);
+  };
+  const originalFetch = globalThis.fetch;
+  let commits = 0;
+  globalThis.fetch = async () => {
+    commits += 1;
+    return new Response("{}", { status: 201 });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.95" },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      {
+        RATE_LIMIT: createMockKV(),
+        REPORT_GLOBAL_COUNTER: namespace,
+        GITHUB_TOKEN: "test-token",
+        REPORTER_BUCKET_SECRET: "s".repeat(32),
+      },
+    );
+    assert.equal(response.status, 429);
+    assert.ok(Number(response.headers.get("retry-after")) > 0);
+    assert.equal(commits, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a Worker-wide counter that fails at the charge answers 503, and nothing is stored", async () => {
+  const counter = new ReportGlobalCounter();
+  const namespace = counterNamespace(counter);
+  const fetchCounter = counter.fetch.bind(counter);
+  counter.fetch = async (request) => {
+    if (new URL(request.url).pathname === "/take") throw new Error("object unavailable");
+    return fetchCounter(request);
+  };
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  let commits = 0;
+  globalThis.fetch = async () => {
+    commits += 1;
+    return new Response("{}", { status: 201 });
+  };
+  console.error = () => {};
+  try {
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.96" },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      {
+        RATE_LIMIT: createMockKV(),
+        REPORT_GLOBAL_COUNTER: namespace,
+        GITHUB_TOKEN: "test-token",
+        REPORTER_BUCKET_SECRET: "s".repeat(32),
+      },
+    );
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("retry-after"), "300");
+    assert.equal(commits, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
   }
 });
 

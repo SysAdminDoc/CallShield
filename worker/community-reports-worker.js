@@ -359,25 +359,22 @@ export function limiterGroupKey(ip) {
 }
 
 /**
- * Check the Worker-wide, per-client and per-group rate limits. Returns
+ * Check the per-client and per-group rate limits. Returns
  * { allowed: boolean, remaining: number, retryAfter: number } for the first
- * budget that refuses, or for the client budget when all allow.
+ * budget that refuses, or for the client budget when both allow.
  *
- * The Worker-wide budget is the REPORT_GLOBAL_COUNTER Durable Object when it
- * is bound. A rate-limiting binding counts separately in every Cloudflare
- * location, so it can't hold one budget for the whole Worker; the single
- * object can. Its budget is checked before the client is charged, so a report
- * the Worker can't take doesn't spend the client's budget, and it is charged
- * only after the client and group budgets allow, so one client hammering its
- * own limit can't drain everyone else's.
+ * The Worker-wide budget is only peeked at here, and only when the
+ * REPORT_GLOBAL_COUNTER Durable Object is bound, so a report the Worker can't
+ * take doesn't spend the client's budget. takeWorkerBudget charges it once
+ * the report has passed validation and the duplicate checks, so a malformed,
+ * invalid or repeated report can't spend a slot everyone shares.
  *
  * When the REPORT_LIMITER rate-limiting binding is bound it is authoritative:
  * the platform evaluates its counter atomically per key, so a burst of
  * concurrent requests cannot slip past the cap the way it can between the KV
  * counter's read and write (KV is eventually consistent and non-atomic).
  * The KV counter remains as a best-effort fallback for a deployment that has
- * not provisioned the limiter binding yet. Without the Durable Object the
- * Worker-wide budget falls back the same way and is charged last.
+ * not provisioned the limiter binding yet.
  *
  * Missing bindings fail closed unless a local test explicitly sets
  * ALLOW_UNLIMITED_REPORTS=true. Production must never set that flag.
@@ -396,8 +393,6 @@ export async function checkRateLimit(ip, env) {
   if (counter) {
     const open = await askGlobalCounter(counter, "peek");
     if (!open.allowed) return open;
-  } else {
-    budgets.push({ limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS });
   }
   let first;
   for (const budget of budgets) {
@@ -405,11 +400,42 @@ export async function checkRateLimit(ip, env) {
     if (!outcome.allowed) return outcome;
     first ??= outcome;
   }
-  if (counter) {
-    const taken = await askGlobalCounter(counter, "take");
-    if (!taken.allowed) return taken;
-  }
   return first;
+}
+
+/**
+ * Charge one report to the Worker-wide budget, right before it is stored.
+ *
+ * The budget is the REPORT_GLOBAL_COUNTER Durable Object when it is bound. A
+ * rate-limiting binding counts separately in every Cloudflare location, so it
+ * can't hold one budget for the whole Worker; the single object can. Without
+ * the object, REPORT_GLOBAL_LIMITER or the KV counter hold it instead.
+ */
+export async function takeWorkerBudget(env) {
+  const counter = env?.REPORT_GLOBAL_COUNTER;
+  if (counter) return askGlobalCounter(counter, "take");
+  return consumeBudget(
+    { limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS },
+    env,
+  );
+}
+
+/** The answer for a budget that refused: 503 when its state couldn't be read, else 429. */
+function budgetRefusal(outcome, responseHeaders) {
+  if (outcome.configurationError || outcome.stateError) {
+    return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
+      status: 503,
+      headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" },
+    });
+  }
+  return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
+    status: 429,
+    headers: {
+      ...responseHeaders,
+      "Content-Type": "application/json",
+      "Retry-After": String(outcome.retryAfter),
+    },
+  });
 }
 
 /** Peek at or take from the Worker-wide budget held by the one counter object. */
@@ -754,21 +780,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
           status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
-      if (rl.configurationError || rl.stateError) {
-        return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
-          status: 503,
-          headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" },
-        });
-      }
       if (!rl.allowed) {
-        return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
-          status: 429,
-          headers: {
-            ...responseHeaders,
-            "Content-Type": "application/json",
-            "Retry-After": String(rl.retryAfter),
-          },
-        });
+        return budgetRefusal(rl, responseHeaders);
       }
 
       const bodyText = await readBoundedText(request);
@@ -824,6 +837,11 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
             "Retry-After": String(DEDUP_WINDOW_S),
           },
         });
+      }
+
+      const worldwide = await takeWorkerBudget(env);
+      if (!worldwide.allowed) {
+        return budgetRefusal(worldwide, responseHeaders);
       }
 
       // Create report file via GitHub API
