@@ -4894,8 +4894,8 @@
       "type": "robocall",
       "reports": 3,
       "first_seen": "2018-12-03",
-      "last_seen": "2026-01-27",
-      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-09-21",
+      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
       ],
@@ -4914,6 +4914,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-09-21",
+          "last_seen": "2026-09-21",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1824829390000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
         },
         {
           "source_id": "github_database",
@@ -5681,46 +5696,6 @@
   ],
   "prefixes": [
     {
-      "prefix": "+3318875",
-      "type": "telemarketer",
-      "description": "Saracroche: Nexera",
-      "evidence": [
-        {
-          "source_id": "saracroche_prefixes",
-          "evidence_type": "curated_range",
-          "license": "CC BY-NC-SA",
-          "attribution": "Saracroche French telemarketing range list",
-          "first_seen": "",
-          "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
-          "geography": "FR",
-          "confidence_tier": "curated",
-          "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
-        }
-      ]
-    },
-    {
-      "prefix": "+33345898",
-      "type": "telemarketer",
-      "description": "Saracroche: Nexera",
-      "evidence": [
-        {
-          "source_id": "saracroche_prefixes",
-          "evidence_type": "curated_range",
-          "license": "CC BY-NC-SA",
-          "attribution": "Saracroche French telemarketing range list",
-          "first_seen": "",
-          "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
-          "geography": "FR",
-          "confidence_tier": "curated",
-          "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
-        }
-      ]
-    },
-    {
       "prefix": "+33594952",
       "type": "telemarketer",
       "description": "Saracroche: Kav El International",
@@ -5732,11 +5707,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     },
@@ -5752,11 +5727,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     },
@@ -5772,11 +5747,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     }

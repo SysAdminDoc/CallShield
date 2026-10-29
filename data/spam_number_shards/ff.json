@@ -1549,7 +1549,7 @@
       "type": "robocall",
       "reports": 3,
       "first_seen": "2024-11-27",
-      "last_seen": "2026-10-02",
+      "last_seen": "2026-10-13",
       "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
@@ -1560,13 +1560,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-10-01",
-          "last_seen": "2026-10-02",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "first_seen": "2026-10-13",
+          "last_seen": "2026-10-13",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1823128921000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -6084,11 +6084,31 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    },
+    {
+      "prefix": "+33256359",
+      "type": "telemarketer",
+      "description": "Saracroche: Foliateam operateur",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     },
@@ -6104,11 +6124,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     }

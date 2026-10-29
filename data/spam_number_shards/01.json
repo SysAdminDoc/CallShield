@@ -5252,7 +5252,7 @@
       "type": "robocall",
       "reports": 7,
       "first_seen": "2018-08-10",
-      "last_seen": "2026-05-24",
+      "last_seen": "2026-09-12",
       "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
@@ -5263,13 +5263,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2023-01-11",
-          "last_seen": "2026-05-24",
-          "retrieved_at": "2026-09-26T16:53:57+00:00",
+          "first_seen": "2026-09-12",
+          "last_seen": "2026-09-12",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1821977637000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -5772,5 +5772,66 @@
       ]
     }
   ],
-  "prefixes": []
+  "prefixes": [
+    {
+      "prefix": "+33221004",
+      "type": "telemarketer",
+      "description": "Saracroche: Mobile-First",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    },
+    {
+      "prefix": "+3397069",
+      "type": "telemarketer",
+      "description": "Saracroche: Foliateam operateur",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    },
+    {
+      "prefix": "+3397517",
+      "type": "telemarketer",
+      "description": "Saracroche: Foliateam operateur",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    }
+  ]
 }

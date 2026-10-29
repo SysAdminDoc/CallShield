@@ -3605,8 +3605,8 @@
       "type": "robocall",
       "reports": 2,
       "first_seen": "2022-10-07",
-      "last_seen": "2022-10-07",
-      "description": "FCC advertiser: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-10-12",
+      "description": "FCC advertiser: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
       ],
@@ -3616,13 +3616,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2022-10-07",
-          "last_seen": "2022-10-07",
-          "retrieved_at": "2026-09-26T16:53:57+00:00",
+          "first_seen": "2026-10-12",
+          "last_seen": "2026-10-12",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1821977637000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -3644,11 +3644,12 @@
     {
       "number": "+18003360958",
       "type": "robocall",
-      "reports": 3,
+      "reports": 4,
       "first_seen": "2023-12-30",
-      "last_seen": "2024-11-13",
+      "last_seen": "2026-10-14",
       "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
+        "community",
         "legacy_import"
       ],
       "evidence": [
@@ -3784,7 +3785,7 @@
       "type": "robocall",
       "reports": 2,
       "first_seen": "2020-12-02",
-      "last_seen": "2026-09-21",
+      "last_seen": "2026-10-22",
       "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls; FCC callback_business: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
@@ -3795,13 +3796,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2022-10-27",
-          "last_seen": "2026-09-21",
-          "retrieved_at": "2026-09-26T16:53:57+00:00",
+          "first_seen": "2026-10-22",
+          "last_seen": "2026-10-22",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1821977637000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -4410,7 +4411,7 @@
       "type": "robocall",
       "reports": 4,
       "first_seen": "2026-08-03",
-      "last_seen": "2026-10-08",
+      "last_seen": "2026-10-09",
       "description": "FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
@@ -4420,13 +4421,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-08-03",
-          "last_seen": "2026-10-07",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "first_seen": "2026-10-06",
+          "last_seen": "2026-10-09",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1823128921000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -5224,7 +5225,7 @@
       "type": "robocall",
       "reports": 41,
       "first_seen": "2020-10-07",
-      "last_seen": "2026-10-08",
+      "last_seen": "2026-10-19",
       "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
@@ -5250,13 +5251,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-10-08",
-          "last_seen": "2026-10-08",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "first_seen": "2026-10-19",
+          "last_seen": "2026-10-19",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1823128921000,
+          "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
         },
@@ -5616,11 +5617,31 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    },
+    {
+      "prefix": "+3325719",
+      "type": "telemarketer",
+      "description": "Saracroche: Foliateam operateur",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     },
@@ -5636,11 +5657,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     },
@@ -5656,11 +5677,31 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
+        }
+      ]
+    },
+    {
+      "prefix": "+33745805",
+      "type": "telemarketer",
+      "description": "Saracroche: Mobile-First",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     }

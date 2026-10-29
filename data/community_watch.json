@@ -1,8 +1,37 @@
 {
   "schema_version": 1,
-  "generated": "2026-10-10T00:42:37+00:00",
-  "input_report_digest": "7ac93201fc8b02e7d3c15f8a217c2463b038bb1b69566be19d4c44768ca38ebc",
-  "count": 0,
-  "cleared": true,
-  "numbers": []
+  "generated": "2026-10-29T17:04:43+00:00",
+  "input_report_digest": "02a9c65e9525e7b6cc3cb6ab3a6f069670864d532d441900187ec87c4cefd0ca",
+  "count": 7,
+  "cleared": false,
+  "numbers": [
+    {
+      "number": "+18957465363",
+      "reporter_count": 10
+    },
+    {
+      "number": "+15017944158",
+      "reporter_count": 6
+    },
+    {
+      "number": "+18638657795",
+      "reporter_count": 6
+    },
+    {
+      "number": "+8613800138000",
+      "reporter_count": 6
+    },
+    {
+      "number": "+8613392135190",
+      "reporter_count": 4
+    },
+    {
+      "number": "+18445943307",
+      "reporter_count": 2
+    },
+    {
+      "number": "+18788797999",
+      "reporter_count": 2
+    }
+  ]
 }

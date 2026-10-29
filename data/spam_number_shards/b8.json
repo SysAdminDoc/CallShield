@@ -5051,12 +5051,27 @@
       "type": "robocall",
       "reports": 3,
       "first_seen": "2015-10-05",
-      "last_seen": "2017-05-08",
-      "description": "FCC: Telemarketing (inclu",
+      "last_seen": "2026-10-01",
+      "description": "FCC: Telemarketing (inclu; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
       ],
       "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-10-01",
+          "last_seen": "2026-10-01",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1824829390000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
         {
           "source_id": "github_database",
           "evidence_type": "aggregate_database",
@@ -6265,11 +6280,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "retrieved_at": "2026-10-29T17:03:10+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1799368921000
+          "expires_at_epoch_ms": 1801069390000
         }
       ]
     }

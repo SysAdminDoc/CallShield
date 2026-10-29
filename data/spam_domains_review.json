@@ -1,6 +1,12 @@
 {
-  "generated": "2026-10-10T00:42:34.450590+00:00",
-  "input_report_digest": "7ac93201fc8b02e7d3c15f8a217c2463b038bb1b69566be19d4c44768ca38ebc",
-  "count": 0,
-  "candidates": []
+  "generated": "2026-10-29T17:04:32.605038+00:00",
+  "input_report_digest": "02a9c65e9525e7b6cc3cb6ab3a6f069670864d532d441900187ec87c4cefd0ca",
+  "count": 1,
+  "candidates": [
+    {
+      "domain": "jamestalarico.com",
+      "distinct_numbers": 10,
+      "distinct_reporters": 2
+    }
+  ]
 }

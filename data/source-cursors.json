@@ -2,13 +2,13 @@
   "schema_version": 1,
   "sources": {
     "fcc_complaints": {
-      "timestamp": "2026-10-09T05:07:10.353Z",
-      "id": "9201673",
+      "timestamp": "2026-10-29T05:20:27.863Z",
+      "id": "9280028",
       "field": ":created_at"
     },
     "ftc_complaints": {
-      "timestamp": "2026-10-08 14:53:31",
-      "id": "498ddea71d22ec5c48e81b0577692835"
+      "timestamp": "2026-10-28 14:57:27",
+      "id": "cd6e4d80b79b27a36c3daf68752ee18c"
     }
   }
 }
