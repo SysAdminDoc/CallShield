@@ -24,7 +24,10 @@ internal class IsolatedRepositoryFixture(
     externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
     remote: SpamDataSource = GitHubDataSource(),
     wallClock: () -> Long = System::currentTimeMillis,
-    checkerDependencies: CheckerDependencies = CheckerDependencies(),
+    // Its own scorer: a test that boots CallShieldApp loads the bundled model
+    // into SpamMLScorer.shared from appScope, which can land mid-way through a
+    // later test in the same sandbox and turn its verdicts into ml_scorer blocks.
+    checkerDependencies: CheckerDependencies = CheckerDependencies(spamMLScorer = SpamMLScorer()),
 ) : AutoCloseable {
     init {
         // The repository reads the region through a process-wide cache, so a

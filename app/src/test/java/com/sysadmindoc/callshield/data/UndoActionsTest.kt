@@ -168,6 +168,29 @@ class UndoActionsTest {
         }
 
     @Test
+    fun `a model loaded into the shared scorer during this test leaves its verdicts alone`() =
+        runBlocking {
+            // CallShieldApp loads the bundled model into SpamMLScorer.shared from appScope,
+            // so in a full run it could land while the test above ran and block its caller.
+            val caller = "+14152340123"
+            val restoreSharedScorer = snapshotSharedScorer()
+            try {
+                SpamMLScorer.shared.loadWeights(context)
+                assertTrue(SpamMLScorer.shared.verdict(caller).isSpam)
+
+                assertFalse(repo.isSpam(caller, realtimeCall = false).isSpam)
+            } finally {
+                restoreSharedScorer()
+            }
+        }
+
+    private fun snapshotSharedScorer(): () -> Unit {
+        val fields = listOf("state", "_modelHealth").map { SpamMLScorer::class.java.getDeclaredField(it).apply { isAccessible = true } }
+        val saved = fields.map { it.get(SpamMLScorer.shared) }
+        return { fields.zip(saved).forEach { (field, value) -> field.set(SpamMLScorer.shared, value) } }
+    }
+
+    @Test
     fun `undoing a deleted temporary allow keeps it temporary`() =
         runBlocking {
             val expiry = later
