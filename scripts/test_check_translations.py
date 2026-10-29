@@ -226,6 +226,48 @@ class TranslationCheckerMainTest(unittest.TestCase):
             self.assertEqual(1, self.run_checker(res, floors, "--update-floors"))
             self.assertEqual("not json", floors.read_text(encoding="utf-8"))
 
+    def test_a_resource_defined_in_two_files_fails(self):
+        # PR #42 repeated plurals.xml inside strings.xml: this passed, aapt didn't.
+        with tempfile.TemporaryDirectory() as directory:
+            res = self.make_tree(directory, translated=4)
+            floors = Path(directory) / "translation_floors.json"
+            floors.write_text('{"floors": {"values-de": 50.0}}', encoding="utf-8")
+            (res / "values-de" / "extra.xml").write_text(
+                '<resources><string name="a">a-de</string></resources>', encoding="utf-8"
+            )
+
+            self.assertEqual(1, self.run_checker(res, floors))
+
+    def test_translating_english_only_text_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            res = self.make_tree(directory, translated=4)
+            floors = Path(directory) / "translation_floors.json"
+            floors.write_text('{"floors": {"values-de": 50.0}}', encoding="utf-8")
+            (res / "values" / "fixed.xml").write_text(
+                '<resources><string name="title" translatable="false">[SPAM] %s</string>'
+                '<plurals name="seen" translatable="false"><item quantity="one">Seen %d time</item>'
+                '<item quantity="other">Seen %d times</item></plurals></resources>',
+                encoding="utf-8",
+            )
+            self.assertEqual(0, self.run_checker(res, floors))
+
+            (res / "values-de" / "fixed.xml").write_text(
+                '<resources><string name="title">[SPAM] %s</string></resources>', encoding="utf-8"
+            )
+            self.assertEqual(0, self.run_checker(res, floors))
+
+            (res / "values-de" / "fixed.xml").write_text(
+                '<resources><string name="title">[WERBUNG] %s</string></resources>', encoding="utf-8"
+            )
+            self.assertEqual(1, self.run_checker(res, floors))
+
+            (res / "values-de" / "fixed.xml").write_text(
+                '<resources><plurals name="seen"><item quantity="one">%d Mal</item>'
+                '<item quantity="other">%d Mal</item></plurals></resources>',
+                encoding="utf-8",
+            )
+            self.assertEqual(1, self.run_checker(res, floors))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -197,6 +197,43 @@ def load_plurals(values_dir: Path) -> dict[str, dict[str, str]]:
     return plurals
 
 
+def untranslatable_plurals(values_dir: Path) -> set[str]:
+    """Plural names marked translatable="false"."""
+    names: set[str] = set()
+    for path in resource_files(values_dir):
+        root = parse_resource_root(path)
+        if root.tag != "resources":
+            continue
+        for node in root.findall("plurals"):
+            name = node.get("name")
+            if name and node.get("translatable") == "false":
+                names.add(name)
+    return names
+
+
+def duplicate_resources(values_dir: Path) -> list[str]:
+    """Strings and plurals a values directory defines more than once.
+
+    load_strings and load_plurals fold every file into one dict, so a second
+    copy in another file (PR #42 repeated plurals.xml inside strings.xml)
+    passed here and then failed the app build: aapt refuses duplicates.
+    """
+    seen: set[tuple[str, str]] = set()
+    duplicates: list[str] = []
+    for path in resource_files(values_dir):
+        root = parse_resource_root(path)
+        if root.tag != "resources":
+            continue
+        for node in root:
+            name = node.get("name")
+            if node.tag not in ("string", "plurals") or not name:
+                continue
+            if (node.tag, name) in seen:
+                duplicates.append(f"{node.tag} '{name}'")
+            seen.add((node.tag, name))
+    return duplicates
+
+
 def language_of(locale: str) -> str:
     return locale.split("-")[0].lower()
 
@@ -249,17 +286,24 @@ def check_locale(locale_dir: Path, base_strings, base_untranslatable, base_plura
     try:
         strings, _ = load_strings(locale_dir)
         plurals = load_plurals(locale_dir)
+        duplicates = duplicate_resources(locale_dir)
+        english_only_plurals = untranslatable_plurals(BASE_DIR)
     except ET.ParseError as e:
         return [f"{locale}: XML does not parse: {e}"], [], 0, len(base_strings)
 
+    for duplicate in duplicates:
+        errors.append(f"{locale}: {duplicate} is defined more than once (aapt refuses to build duplicate resources)")
+
     translatable_base = {k: v for k, v in base_strings.items() if k not in base_untranslatable}
 
+    # English-only text (the GitHub report form's [SPAM] title, say) must stay
+    # English on every phone, and lint's ExtraTranslation fails the release.
     for name, text in strings.items():
         if name not in base_strings:
             warnings.append(f"{locale}: '{name}' no longer exists in values/strings.xml (stale key)")
             continue
         if name in base_untranslatable and text != base_strings[name]:
-            warnings.append(f"{locale}: '{name}' is marked translatable=\"false\" upstream but was translated")
+            errors.append(f"{locale}: '{name}' is marked translatable=\"false\" upstream but was translated")
             continue
 
         want = specifiers(base_strings[name])
@@ -274,6 +318,9 @@ def check_locale(locale_dir: Path, base_strings, base_untranslatable, base_plura
     for name, items in plurals.items():
         if name not in base_plurals:
             warnings.append(f"{locale}: plural '{name}' no longer exists upstream (stale key)")
+            continue
+        if name in english_only_plurals:
+            errors.append(f"{locale}: plural '{name}' is marked translatable=\"false\" upstream but was translated")
             continue
         missing = required - set(items)
         if missing:
