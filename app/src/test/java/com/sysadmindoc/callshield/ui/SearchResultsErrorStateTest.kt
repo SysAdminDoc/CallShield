@@ -12,7 +12,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,17 +28,19 @@ class SearchResultsErrorStateTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    // The screen's search results come through cachedIn, a SharedFlow, and LazyPagingItems shows
+    // its replayed page right away. A cold flow is only presented through AndroidUiDispatcher.Main,
+    // a JVM-wide dispatcher that one earlier test's late background write can leave stuck
+    // (Robolectric empties the main looper between tests and drops its pending message), and
+    // then neither state ever showed. A StateFlow replays its page the way cachedIn does.
     private fun showEmptySearch(refresh: LoadState) {
         val done = LoadState.NotLoading(endOfPaginationReached = true)
-        val pages = flowOf(PagingData.from(emptyList<SpamNumber>(), LoadStates(refresh = refresh, prepend = done, append = done)))
+        val pages = MutableStateFlow(PagingData.from(emptyList<SpamNumber>(), LoadStates(refresh = refresh, prepend = done, append = done)))
         composeRule.setContent {
             CallShieldTheme { SearchResultsView(pages.collectAsLazyPagingItems(), total = 0, onTap = {}) }
         }
     }
 
-    // LazyPagingItems starts at refresh = Loading (Paging's InitialLoadStates) and only takes the
-    // page's load states once its LaunchedEffects collect on AndroidUiDispatcher.Main, so the
-    // first frames show neither state. Wait for the expected text before asserting on it.
     private fun awaitText(text: String) {
         composeRule.waitUntil(TIMEOUT_MS) {
             shadowOf(Looper.getMainLooper()).idle()
