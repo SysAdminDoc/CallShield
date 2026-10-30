@@ -1766,6 +1766,32 @@ def assert_fcc_lookup_failures_publish_nothing() -> None:
         urllib.request.urlopen = original_urlopen
 
 
+def assert_later_reports_outweigh_an_older_not_spam_vote(data_dir: Path) -> None:
+    """A not-spam vote sets aside the reports up to its day, not the ones after
+    it, so one vote can't keep a number off the watch list for 90 days."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    later_number, same_day_number = "+12122340501", "+12122340502"
+    day = lambda age, hour=10: (
+        datetime.now(timezone.utc) - timedelta(days=age)
+    ).replace(hour=hour, minute=0, second=0, microsecond=0).isoformat()
+
+    write_report(data_dir, "vote-later.json", later_number, BUCKETS[0], day(10), report_type="not_spam")
+    write_report(data_dir, "vote-same-day.json", same_day_number, BUCKETS[0], day(3, 8), report_type="not_spam")
+    groups = (("0000000000000010", "0000000000000101"), ("0000000000000011", "0000000000000104"))
+    for index, (group, device) in enumerate(groups, start=1):
+        write_report(data_dir, f"later-{index}.json", later_number, group, day(3, 8 + index), device=device)
+        write_report(data_dir, f"same-day-{index}.json", same_day_number, group, day(3, 8 + index), device=device)
+
+    run_drain(data_dir)
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    rows = {row["number"]: row["reporter_count"] for row in feed["numbers"]}
+    assert rows.get(later_number) == 2, f"two groups reporting after an older not-spam vote should be watched: {rows}"
+    assert same_day_number not in rows, f"reports from the vote's own day can't outweigh it: {rows}"
+
+
 def assert_pending_ledger_is_capped() -> None:
     """The pending ledger is committed on every merge, so it holds at most a
     fixed count of numbers: every published row, then the unpublished ones with
@@ -1900,6 +1926,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_community_watch_uses_90_day_device_evidence(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_later_reports_outweigh_an_older_not_spam_vote(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_a_published_number_leaves_the_watch_list(Path(tmp) / "data")

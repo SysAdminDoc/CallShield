@@ -248,12 +248,22 @@ def community_watch_reporter_count(state: dict) -> int:
 
 
 def watch_reporter_count(number: str, state: dict, existing: dict[str, dict], today: str) -> int:
-    """The reporter count the watch feed would carry for [number]; 0 when it's left out."""
+    """The reporter count the watch feed would carry for [number]; 0 when it's left out.
+
+    A not-spam vote sets aside the reports up to its day. Reports from a later
+    day are newer evidence than the vote and still count, so one vote can't keep
+    a number off the list for 90 days. Buckets rotate daily, so nothing can
+    weigh a vote against reports from its own day, and those stay set aside.
+    """
     cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
     # A maintainer approval publishes a number but keeps its ledger row
     # unpublished, so the database itself is what says it's listed.
-    if number in existing or state["published"] or any(day >= cutoff for day in state.get("not_spam_days", [])):
+    if number in existing or state["published"]:
         return 0
+    votes = [day for day in state.get("not_spam_days", []) if day >= cutoff]
+    if votes:
+        last_vote = max(votes)
+        state = {**state, "watch_events": [event for event in state.get("watch_events", []) if event["day"] > last_vote]}
     return community_watch_reporter_count(state)
 
 
@@ -1234,7 +1244,8 @@ def main(argv: list[str] | None = None):
             print(f"Maintainer approvals: {approved_added} published, {approved_updated} existing rows marked reviewed")
 
     # FCC only covers North American numbers. A not-spam vote in the last 90
-    # days keeps a number off this path, as it keeps it off the watch list.
+    # days keeps a number off this one-report path; the full quorum, which
+    # votes don't block, can still publish it.
     fcc_candidates = sorted(
         number
         for number, state in pending.items()

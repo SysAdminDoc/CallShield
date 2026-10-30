@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A single Not spam vote no longer keeps a number off the community watch list for 90 days. Reports from people on later days count again, so a number that starts getting reported after someone vouched for it can still show the warning. Reports from the day of the vote, or earlier, still don't count.
 - A Report or Not spam result that came in just as the previous message closed, in Lookup or on a number's screen, could be skipped without showing. It shows now.
 - When GitHub's rate limit stops a report, the report service now passes on how long GitHub asked it to wait, instead of always saying a minute. When GitHub refuses the service's access token, it answers that it's unavailable rather than rate limited, and the app keeps the report and tries again later. This takes effect when the report Worker is next deployed.
 - The update notice on Home can't be swapped back to an older release anymore. A mirror serving an older signed notice used to replace the newer one, which could hide an update.
