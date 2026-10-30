@@ -4,6 +4,7 @@ package com.sysadmindoc.callshield.ui.screens.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.*
 
 /** How long the log keeps entries, and exporting it. */
@@ -32,13 +34,14 @@ internal fun LogSettings(viewModel: MainViewModel) {
         SettingsToggle(stringResource(R.string.settings_auto_cleanup), stringResource(R.string.settings_auto_cleanup_desc), Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
         if (autoCleanup) {
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.settings_keep_for), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 listOf(7, 14, 30, 90).forEach { days ->
                     FilterChip(
                         selected = cleanupDays == days,
                         onClick = { viewModel.setCleanupDays(days) },
                         label = { Text(stringResource(R.string.settings_days, days)) },
+                        modifier = Modifier.singleChoiceChip(),
                         shape = RoundedCornerShape(8.dp),
                         border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                         // The tint marks the selection; green text on it fell to 4.33:1 in Light.

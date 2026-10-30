@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -32,8 +33,10 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,6 +63,7 @@ import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.copyToClipboard
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -163,7 +167,7 @@ fun BlockedLogScreen(
             }
             // Filter chips
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -171,6 +175,7 @@ fun BlockedLogScreen(
                     selected = filterMode == 0,
                     onClick = { filterMode = 0 },
                     label = { Text(stringResource(R.string.blocked_log_filter_all, logCount)) },
+                    modifier = Modifier.singleChoiceChip(),
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
@@ -185,6 +190,7 @@ fun BlockedLogScreen(
                     selected = filterMode == 1,
                     onClick = { filterMode = 1 },
                     label = { Text(stringResource(R.string.blocked_log_filter_calls)) },
+                    modifier = Modifier.singleChoiceChip(),
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
@@ -199,6 +205,7 @@ fun BlockedLogScreen(
                     selected = filterMode == 2,
                     onClick = { filterMode = 2 },
                     label = { Text(stringResource(R.string.blocked_log_filter_sms)) },
+                    modifier = Modifier.singleChoiceChip(),
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
@@ -239,6 +246,8 @@ fun BlockedLogScreen(
                                         ?: stringResource(R.string.blocked_log_filter_reason),
                                 )
                             },
+                            // It opens the reason menu, so it reads as a drop-down, not a check box.
+                            modifier = Modifier.semantics { role = Role.DropdownList },
                             shape = RoundedCornerShape(8.dp),
                             colors =
                                 FilterChipDefaults.filterChipColors(

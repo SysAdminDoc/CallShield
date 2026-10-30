@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
@@ -54,6 +55,7 @@ import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.copyToClipboard
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -329,6 +331,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 }
                 if (calls.isNotEmpty()) {
                     LazyRow(
+                        modifier = Modifier.selectableGroup(),
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -338,6 +341,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                                 selected = filterMode == option.mode,
                                 onClick = { filterMode = option.mode },
                                 label = { Text(option.label) },
+                                modifier = Modifier.singleChoiceChip(),
                                 shape = RoundedCornerShape(8.dp),
                                 border = null,
                                 colors =

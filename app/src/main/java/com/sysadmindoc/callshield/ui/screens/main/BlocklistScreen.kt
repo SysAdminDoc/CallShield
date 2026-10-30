@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -145,6 +146,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.firstPageFailed
 import com.sysadmindoc.callshield.ui.isStaleFor
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -1723,7 +1725,8 @@ private fun <T> ChoiceChipRow(
             Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(contentPadding),
+                .padding(contentPadding)
+                .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         options.forEach { option ->
@@ -1731,6 +1734,7 @@ private fun <T> ChoiceChipRow(
                 selected = option == selected,
                 onClick = { onSelect(option) },
                 label = { Text(label(option)) },
+                modifier = Modifier.singleChoiceChip(),
                 shape = RoundedCornerShape(8.dp),
                 colors =
                     FilterChipDefaults.filterChipColors(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -52,6 +53,7 @@ import com.sysadmindoc.callshield.data.PastedMessageVerdict
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.signalLabel
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatRed
@@ -78,7 +80,7 @@ internal fun LookupModeRow(
     mode: LookupMode,
     onModeChange: (LookupMode) -> Unit,
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LookupMode.entries.forEach { option ->
             FilterChip(
                 selected = mode == option,
@@ -86,6 +88,7 @@ internal fun LookupModeRow(
                 label = {
                     Text(stringResource(if (option == LookupMode.NUMBER) R.string.lookup_mode_number else R.string.lookup_mode_message))
                 },
+                modifier = Modifier.singleChoiceChip(),
                 shape = RoundedCornerShape(8.dp),
                 colors =
                     FilterChipDefaults.filterChipColors(

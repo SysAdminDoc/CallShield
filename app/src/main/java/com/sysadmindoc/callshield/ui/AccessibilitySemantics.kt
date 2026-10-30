@@ -14,9 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
@@ -32,6 +34,13 @@ internal fun Modifier.accessibleSwipeActions(actions: List<CustomAccessibilityAc
     heightIn(min = MIN_INTERACTIVE_TARGET_DP.dp).semantics {
         customActions = actions
     }
+
+/**
+ * Material's FilterChip calls itself a check box. Where only one chip in a row can
+ * be on, it's a radio button instead, and the row around it takes selectableGroup().
+ * The role set here wins because it sits outside the chip's own.
+ */
+internal fun Modifier.singleChoiceChip(): Modifier = semantics { role = Role.RadioButton }
 
 /** Adds a spoken state and native expand/collapse actions to an expandable control. */
 fun Modifier.expandableStateSemantics(

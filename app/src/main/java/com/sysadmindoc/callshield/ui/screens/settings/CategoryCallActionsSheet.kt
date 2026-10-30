@@ -35,6 +35,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -155,6 +156,7 @@ private fun CategoryActionRow(
                         modifier =
                             Modifier
                                 .weight(1f)
+                                .singleChoiceChip()
                                 .semantics { contentDescription = spokenLabel }
                                 .testTag("$CATEGORY_CALL_ACTION_TAG_PREFIX${category.storageKey}:${action.storageKey}"),
                         // The tint marks the selection; green text on the green
