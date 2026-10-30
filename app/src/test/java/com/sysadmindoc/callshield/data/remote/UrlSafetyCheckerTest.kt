@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CopyOnWriteArrayList
 
 class UrlSafetyCheckerTest {
     @After
@@ -21,6 +22,28 @@ class UrlSafetyCheckerTest {
         assertEquals(listOf(UrlThreatSource.OPENPHISH), UrlSafetyChecker.adaptersFor(all, onDeviceOnly = true).map { it.source })
         assertEquals(all, UrlSafetyChecker.adaptersFor(all, onDeviceOnly = false))
     }
+
+    @Test
+    fun `a message check sends a link to a remote feed only when it isn't on-device-only`() =
+        runBlocking {
+            val remote = RecordingAdapter(UrlThreatSource.PHISHTANK, matchesOnDevice = false)
+            val onDevice = RecordingAdapter(UrlThreatSource.OPENPHISH, matchesOnDevice = true)
+            val realAdapters = UrlSafetyChecker.enabledAdapters
+            UrlSafetyChecker.enabledAdapters = listOf(remote, onDevice)
+            try {
+                // IP links: a domain's remote form comes from the public suffix list, which unit tests don't have.
+                UrlSafetyChecker.checkSmsBody("Notes: https://198.51.100.7/today", allowRemoteLookup = true, onDeviceOnly = true)
+                assertEquals(emptyList<String>(), remote.lookups)
+                assertEquals(1, onDevice.lookups.size)
+
+                // Another address, so neither feed answers from the cache.
+                UrlSafetyChecker.checkSmsBody("Notes: https://203.0.113.9/today", allowRemoteLookup = true, onDeviceOnly = false)
+                assertEquals(1, remote.lookups.size)
+                assertEquals(2, onDevice.lookups.size)
+            } finally {
+                UrlSafetyChecker.enabledAdapters = realAdapters
+            }
+        }
 
     @Test
     fun `extractCandidateUrls normalizes duplicates and strips trailing punctuation`() {
@@ -176,5 +199,23 @@ class UrlSafetyCheckerTest {
 
         assertNotNull(result)
         assertEquals("https://login.evil.test/pay?recipient=5551234&token=secret", result?.url)
+    }
+
+    /** A feed that finds nothing and keeps every link it was asked about. */
+    private class RecordingAdapter(
+        override val source: UrlThreatSource,
+        override val matchesOnDevice: Boolean,
+    ) : UrlThreatAdapter {
+        override val sourceVersion = "recording"
+        override val isConfigured = true
+        val lookups = CopyOnWriteArrayList<String>()
+
+        override suspend fun lookup(
+            canonicalUrl: String,
+            nowMillis: Long,
+        ): UrlThreatResult {
+            lookups += canonicalUrl
+            return UrlThreatResult.unknown(source, sourceVersion, canonicalUrl, nowMillis)
+        }
     }
 }

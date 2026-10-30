@@ -43,9 +43,10 @@ object UrlSafetyChecker {
     /**
      * Keyed adapters stay disabled until their key is supplied. PhishTank's
      * low-rate endpoint and the OpenPhish public feed are available for the
-     * explicit remote-lookup setting without embedding credentials.
+     * explicit remote-lookup setting without embedding credentials. Tests
+     * replace the list to see which adapters a check reaches.
      */
-    private val enabledAdapters = UrlThreatAdapterCatalog.enabled()
+    internal var enabledAdapters = UrlThreatAdapterCatalog.enabled()
 
     /**
      * Extract URLs from an SMS body and return only malicious evidence.
