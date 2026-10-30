@@ -42,6 +42,8 @@ class UrlSafetyCheckerTest {
                 assertEquals(2, onDevice.lookups.size)
             } finally {
                 UrlSafetyChecker.enabledAdapters = realAdapters
+                // The cached lookups would answer a second run without reaching the adapters.
+                UrlSafetyChecker.clearThreatCacheForTests()
             }
         }
 
