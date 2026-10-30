@@ -132,8 +132,9 @@ class CallShieldApp :
             ProtectionHealthWorker.schedule(this)
             ProtectionHealthWorker.checkNow(this)
             appScope.launch {
-                val repository = SpamRepository.getInstance(this@CallShieldApp)
-                if (repository.appUpdateChecksEnabled.first()) AppUpdateWorker.schedule(this@CallShieldApp)
+                AppUpdateWorker.scheduleIfEnabled(this@CallShieldApp) {
+                    SpamRepository.getInstance(this@CallShieldApp).appUpdateChecksEnabled.first()
+                }
             }
 
             registerCacheInvalidationObservers()

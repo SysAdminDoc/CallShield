@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.service
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -71,6 +72,23 @@ class AppUpdateWorker
                     ExistingPeriodicWorkPolicy.UPDATE,
                     periodicRequest(),
                 )
+            }
+
+            /**
+             * Schedules the weekly check when [isEnabled] says the user turned it on.
+             * CallShieldApp calls this at startup on appScope, which has no exception
+             * handler, so an error reading the setting or scheduling is logged and the
+             * check waits for the next start instead of taking the process down.
+             */
+            suspend fun scheduleIfEnabled(
+                context: Context,
+                isEnabled: suspend () -> Boolean,
+            ) {
+                try {
+                    if (isEnabled()) schedule(context)
+                } catch (e: Exception) {
+                    Log.w("AppUpdateWorker", "Failed to schedule the app update check", e)
+                }
             }
 
             fun cancel(context: Context) {

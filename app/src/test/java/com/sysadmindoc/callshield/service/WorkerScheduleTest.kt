@@ -22,14 +22,22 @@ import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 import java.lang.reflect.Proxy
 import java.util.concurrent.TimeUnit
 
@@ -129,6 +137,39 @@ class WorkerScheduleTest {
 
         assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
         assertEquals(0L, spec.initialDelay)
+    }
+
+    @Test
+    fun `startup schedules the weekly update check only when the setting is on`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, Configuration.Builder().setExecutor(SynchronousExecutor()).build())
+        val workManager = WorkManager.getInstance(context)
+
+        runBlocking { AppUpdateWorker.scheduleIfEnabled(context) { false } }
+        assertTrue(workManager.getWorkInfosForUniqueWork(AppUpdateWorker.PERIODIC_WORK_NAME).get().isEmpty())
+
+        runBlocking { AppUpdateWorker.scheduleIfEnabled(context) { true } }
+        val scheduled =
+            workManager
+                .getWorkInfosForUniqueWork(AppUpdateWorker.PERIODIC_WORK_NAME)
+                .get()
+                .single()
+        assertEquals(WorkInfo.State.ENQUEUED, scheduled.state)
+    }
+
+    @Test
+    fun `a startup update check whose setting can't be read is logged, not thrown into the app scope`() {
+        // The first runTest turns on the coroutine test exception collector, which an
+        // earlier test may already have done. An exception escaping a scope with no
+        // handler after that is held, and the next runTest throws it as
+        // UncaughtExceptionsBeforeTest, failing whichever unrelated test runs next.
+        runTest { }
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        val launch = appScope.launch { AppUpdateWorker.scheduleIfEnabled(context) { throw IOException("settings unreadable") } }
+        runBlocking { launch.join() }
+
+        runTest { }
+        assertFalse(launch.isCancelled)
     }
 
     @Test
