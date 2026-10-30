@@ -79,7 +79,26 @@ if ($node) {
 
 # Prefer a direct interpreter over the `py` launcher: py.exe blocks when run
 # from a non-interactive shell with no console attached (CI-style invocation).
-$python = Get-Tool @('python3', 'python')
+# With several Pythons installed, the first one on PATH can lack the pipeline's
+# packages: a Python 3.10 put ahead of 3.11 failed three suites on a missing
+# cryptography and numpy. Take the first interpreter on PATH that imports
+# scripts/requirements.txt, and only fall back to the first one at all.
+function Get-PipelinePython {
+    $imports = 'import requests, urllib3, sklearn, numpy, idna, publicsuffixlist, cryptography, phonenumbers'
+    $interpreters = @(Get-Command python3, python -All -CommandType Application -ErrorAction SilentlyContinue |
+        Where-Object { $_.Source -notmatch '\\Microsoft\\WindowsApps\\' } |
+        ForEach-Object Source | Select-Object -Unique)
+    foreach ($interpreter in $interpreters) {
+        & $interpreter -c $imports 2>$null
+        if ($LASTEXITCODE -eq 0) { return $interpreter }
+    }
+    if ($interpreters.Count -gt 0) {
+        Write-Warning "No Python on PATH has the pipeline packages; using $($interpreters[0]). Run: pip install -r requirements.txt"
+        return $interpreters[0]
+    }
+    return $null
+}
+$python = Get-PipelinePython
 if ($python) {
     foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py', 'test_probe_live_sources.py', 'test_feed_signing.py', 'test_write_app_release.py', 'test_list_catalog.py', 'test_device_smoke.py')) {
         $path = Join-Path $PSScriptRoot $test

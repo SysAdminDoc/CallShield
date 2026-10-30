@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The data pipeline's test runner now uses the first Python on PATH that has the pipeline's packages installed. With an older Python ahead of it on PATH, three suites used to fail on a missing cryptography or numpy.
+
 ## v1.13.0 (2026-10-30)
 
 - Links in WhatsApp, Signal, Gmail and the other chat and email apps you screen now stay on your phone. With "Check links with PhishTank and OpenPhish" turned on, those links only go through the OpenPhish list CallShield downloads, and PhishTank never gets their domain. A flagged one now shows the same "Phishing URL detected" alert as a flagged link in a text, naming the app, in place of the general screened message alert. If a check hits a problem on one of those messages, CallShield no longer saves the message text with its note about it. Links in texting apps like Google Messages are checked the way they were before. When a flagged link there comes from a sender shown by name instead of a number, you now get the phishing alert naming the app too.
