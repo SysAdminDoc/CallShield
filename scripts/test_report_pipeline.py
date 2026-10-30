@@ -1766,6 +1766,45 @@ def assert_fcc_lookup_failures_publish_nothing() -> None:
         urllib.request.urlopen = original_urlopen
 
 
+def assert_pending_ledger_is_capped() -> None:
+    """The pending ledger is committed on every merge, so it holds at most a
+    fixed count of numbers: every published row, then the unpublished ones with
+    the most evidence, then the most recent. Checked in-process with a small cap."""
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    import merge_community_reports
+
+    def state(published, days, watch_days=(), not_spam_days=()):
+        return {
+            "published": published,
+            "entry": {},
+            "events": [{"key": f"id:{day}", "day": day, "bucket": "", "count": 1} for day in days],
+            "watch_events": [{"day": day, "bucket": BUCKETS[0], "device": BUCKETS[0]} for day in watch_days],
+            "not_spam_days": list(not_spam_days),
+        }
+
+    older = (datetime.now(timezone.utc) - timedelta(days=5)).date().isoformat()
+    pending = {
+        "+12125550101": state(True, [older]),
+        "+12125550102": state(True, [older]),
+        "+12125550103": state(False, [older, BASE_DAY], [BASE_DAY]),
+        "+12125550104": state(False, [], not_spam_days=[older]),
+        "+12125550105": state(False, [BASE_DAY]),
+        "+12125550106": state(False, [older]),
+    }
+    cap = merge_community_reports.cap_community_pending
+
+    assert cap(pending) == (pending, 0), "a ledger under the cap changed"
+    assert cap(pending, limit=6) == (pending, 0), "a ledger at the cap changed"
+    kept, dropped = cap(pending, limit=4)
+    assert dropped == 2, f"expected 2 dropped, got {dropped}"
+    assert sorted(kept) == ["+12125550101", "+12125550102", "+12125550103", "+12125550105"], (
+        f"the most evidence, then the most recent, should stay: {sorted(kept)}"
+    )
+    kept, dropped = cap(pending, limit=1)
+    assert sorted(kept) == ["+12125550101", "+12125550102"], f"a published row was dropped: {sorted(kept)}"
+    assert dropped == 4, f"expected 4 dropped, got {dropped}"
+
+
 def assert_fixed_clock_is_for_tests_only() -> None:
     """A feed stamped by CALLSHIELD_NOW and published would be refused by every
     device as a replay, or block every later feed until its time passed. So the
@@ -1800,6 +1839,7 @@ def assert_fixed_clock_is_for_tests_only() -> None:
 def main() -> None:
     assert_fixed_clock_is_for_tests_only()
     assert_fcc_lookup_failures_publish_nothing()
+    assert_pending_ledger_is_capped()
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_unknown_approval_shape_fails(Path(tmp) / "data")

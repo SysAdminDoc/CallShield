@@ -57,6 +57,9 @@ COMMUNITY_PENDING_DAYS = 30
 COMMUNITY_WATCH_DAYS = 90
 COMMUNITY_WATCH_MIN_REPORTERS = 2
 COMMUNITY_WATCH_MAX_NUMBERS = 5_000
+# The ledger is committed on every merge. At about 700 bytes a number this
+# keeps it near 7 MB; on 2026-10-30 it held 1,449 numbers.
+COMMUNITY_PENDING_MAX_NUMBERS = 10_000
 COMMUNITY_REPORTER_QUORUM = 3
 # Every promotion needs two reports this far apart, with or without buckets.
 COMMUNITY_REPORT_GAP = timedelta(hours=24)
@@ -357,6 +360,31 @@ def pending_pool_by_calling_code(pending: dict[str, dict], existing: dict[str, d
         rest = sum(len(states) for _, states in ranked[limit:])
         lines.append(f"  {len(ranked) - limit} other codes: {rest} numbers")
     return lines
+
+
+def cap_community_pending(pending: dict[str, dict], limit: int | None = None) -> tuple[dict[str, dict], int]:
+    """Keep the ledger to [limit] numbers and return it with how many were dropped.
+
+    Published rows always stay, since their events are what keeps them listed.
+    Of the rest, the ones with the most evidence stay, then the most recent, so
+    a burst of one-off numbers can't push out a number several people reported.
+    """
+    limit = COMMUNITY_PENDING_MAX_NUMBERS if limit is None else limit
+    published = {number: state for number, state in pending.items() if state["published"]}
+    rest = sorted((number, state) for number, state in pending.items() if not state["published"])
+    room = max(0, limit - len(published))
+    if len(rest) <= room:
+        return pending, 0
+
+    def evidence(item: tuple[str, dict]) -> tuple[int, str]:
+        state = item[1]
+        events, watch_events = state["events"], state.get("watch_events", [])
+        not_spam_days = state.get("not_spam_days", [])
+        days = [event["day"] for event in events + watch_events] + not_spam_days
+        return len(events) + len(watch_events) + len(not_spam_days), max(days, default="")
+
+    rest.sort(key=evidence, reverse=True)
+    return {**published, **dict(rest[:room])}, len(rest) - room
 
 
 def write_community_watch_feed(
@@ -1274,6 +1302,9 @@ def main(argv: list[str] | None = None):
         if (state["published"] and number in existing)
         or (not state["published"] and (state["events"] or state.get("watch_events") or state.get("not_spam_days")))
     }
+    pending, capped = cap_community_pending(pending)
+    if capped:
+        print(f"Pending ledger over {COMMUNITY_PENDING_MAX_NUMBERS:,} numbers: dropped {capped} with the least evidence")
 
     if review_candidates and (
         review_candidates != prior_candidates or args.apply_reviewed_corrections
