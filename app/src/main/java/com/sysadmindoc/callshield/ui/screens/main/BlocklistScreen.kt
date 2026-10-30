@@ -1794,7 +1794,9 @@ fun DatabaseItem(number: SpamNumber) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
+                    .padding(14.dp)
+                    // One TalkBack stop per entry, like the rule rows.
+                    .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.Storage, null, tint = typeColor, modifier = Modifier.size(24.dp))

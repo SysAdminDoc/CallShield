@@ -743,7 +743,7 @@ private data class RecentFilterOption(
 )
 
 @Composable
-private fun RecentCallsSummaryCard(
+internal fun RecentCallsSummaryCard(
     totalCount: Int,
     spamCount: Int,
     missedCount: Int,
@@ -779,8 +779,9 @@ private fun RecentSummaryPill(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
+    // One TalkBack stop per pill, so each count is read with its label.
     Column(
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {

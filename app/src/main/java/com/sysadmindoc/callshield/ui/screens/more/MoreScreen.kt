@@ -505,7 +505,8 @@ private fun RowScope.MoreMetric(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    // One TalkBack stop per metric, so each value is read with its label.
+    Column(modifier = modifier.semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatText)
         Text(label, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
     }

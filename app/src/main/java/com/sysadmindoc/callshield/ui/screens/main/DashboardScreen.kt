@@ -1600,9 +1600,11 @@ private fun DashboardReadinessMetric(
     modifier: Modifier = Modifier,
     horizontal: Boolean = false,
 ) {
+    // One TalkBack stop per tile. Unmerged, TalkBack read every value in the row
+    // first and then every label, so no number was paired with its label.
     if (horizontal) {
         Row(
-            modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp).semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -1625,7 +1627,7 @@ private fun DashboardReadinessMetric(
         }
     } else {
         Column(
-            modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp).semantics(mergeDescendants = true) {},
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
@@ -1822,7 +1824,7 @@ private fun DashboardOutcomeMetric(
     color: Color,
 ) {
     Row(
-        modifier = modifier.padding(horizontal = 8.dp),
+        modifier = modifier.padding(horizontal = 8.dp).semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -2169,7 +2171,7 @@ fun StatCard(
     )
 
     Column(
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 10.dp).semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
