@@ -130,6 +130,51 @@ class AppThemeModeTest {
     }
 
     @Test
+    fun `snackbars take their colors from the palette and keep AA in every theme`() {
+        val themes = listOf(AppThemeMode.Light, AppThemeMode.Graphite, AppThemeMode.Amoled)
+        val paletteColors = themes.flatMap { paletteColors(paletteFor(it, systemDark = false)) }.toSet()
+        themes.forEach { mode ->
+            // A snackbar draws its container, message and action from the
+            // scheme's inverse roles, which Material fills with its baseline
+            // lavender and purple when the scheme leaves them out.
+            val scheme = colorScheme(paletteFor(mode, systemDark = false))
+            mapOf(
+                "container" to scheme.inverseSurface,
+                "message" to scheme.inverseOnSurface,
+                "action" to scheme.inversePrimary,
+            ).forEach { (role, color) -> assertTrue("$mode snackbar $role $color", color in paletteColors) }
+            val message = contrastRatio(scheme.inverseOnSurface, scheme.inverseSurface)
+            assertTrue("$mode snackbar message: $message", message >= 4.5f)
+            val action = contrastRatio(scheme.inversePrimary, scheme.inverseSurface)
+            assertTrue("$mode snackbar action: $action", action >= 4.5f)
+        }
+    }
+
+    private fun paletteColors(palette: CallShieldPalette): List<Color> =
+        with(palette) {
+            listOf(
+                background,
+                surface,
+                surfaceVariant,
+                surfaceBright,
+                surfaceElevated,
+                primary,
+                onPrimary,
+                error,
+                blue,
+                warning,
+                mauve,
+                peach,
+                teal,
+                lavender,
+                text,
+                subtext,
+                overlay,
+                muted,
+            )
+        }
+
+    @Test
     fun `no chip draws its accent as text on its own heavy tint`() {
         // A selected chip tints itself with an accent. The same accent as its
         // label fell to 4.33:1 in Light on a 20% tint (the log-cleanup chip),

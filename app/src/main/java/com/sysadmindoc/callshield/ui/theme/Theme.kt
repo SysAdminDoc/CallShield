@@ -305,7 +305,11 @@ val DangerGradient: Brush
     @Composable get() = Brush.radialGradient(listOf(CatRed.copy(alpha = 0.06f), Color.Transparent), radius = 400f)
 
 @Suppress("LongMethod")
-private fun colorScheme(palette: CallShieldPalette): ColorScheme {
+internal fun colorScheme(palette: CallShieldPalette): ColorScheme {
+    // Snackbars and tooltips draw on the inverse roles, which Material fills
+    // with its baseline lavender and purple when they're left out. The action
+    // takes the primary of the opposite brightness, which keeps AA on text.
+    val inversePrimary = if (palette.isLight) GraphitePalette.primary else LightPalette.primary
     val common: (Boolean) -> ColorScheme = { light ->
         if (light) {
             lightColorScheme(
@@ -333,6 +337,9 @@ private fun colorScheme(palette: CallShieldPalette): ColorScheme {
                 surfaceContainer = palette.surfaceVariant,
                 surfaceContainerHigh = palette.surfaceBright,
                 surfaceContainerHighest = palette.surfaceElevated,
+                inverseSurface = palette.text,
+                inverseOnSurface = palette.surface,
+                inversePrimary = inversePrimary,
             )
         } else {
             darkColorScheme(
@@ -360,6 +367,9 @@ private fun colorScheme(palette: CallShieldPalette): ColorScheme {
                 surfaceContainer = palette.surfaceVariant,
                 surfaceContainerHigh = palette.surfaceBright,
                 surfaceContainerHighest = palette.surfaceElevated,
+                inverseSurface = palette.text,
+                inverseOnSurface = palette.surface,
+                inversePrimary = inversePrimary,
             )
         }
     }
