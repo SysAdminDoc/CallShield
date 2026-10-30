@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +39,7 @@ import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.main.rememberNowTick
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
+import com.sysadmindoc.callshield.ui.screens.settings.ThemePickerDialog
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.relativeTimeSpan
@@ -107,6 +109,7 @@ fun MoreHub(
     val appUpdateChecksEnabled by viewModel.appUpdateChecksEnabled.collectAsStateWithLifecycle()
     val appUpdateState by viewModel.appUpdateState.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     val appVersion = "v${BuildConfig.VERSION_NAME}"
     val localizedSpamCount =
         remember(spamCount) {
@@ -203,7 +206,9 @@ fun MoreHub(
             }
         }
 
-        AppearanceRow(theme = appTheme, onClick = onSettings)
+        // Opens the theme picker in place. Sending it to Settings left the user on
+        // the Protection card with the theme row out of sight.
+        AppearanceRow(theme = appTheme, onClick = { showThemeDialog = true })
 
         MoreSection(stringResource(R.string.more_section_tools)) {
             MoreNavCard(
@@ -361,6 +366,17 @@ fun MoreHub(
                 )
             }
         }
+    }
+
+    if (showThemeDialog) {
+        ThemePickerDialog(
+            current = appTheme,
+            onPick = {
+                viewModel.setAppTheme(it)
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false },
+        )
     }
 }
 

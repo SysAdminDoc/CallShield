@@ -51,44 +51,13 @@ internal fun AppearanceSettings(viewModel: MainViewModel) {
     }
 
     if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            containerColor = SurfaceBright,
-            icon = { Icon(Icons.Default.Palette, contentDescription = null, tint = CatGreen) },
-            title = { Text(stringResource(R.string.settings_theme_dialog_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    AppThemeMode.entries.forEach { option ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .selectable(
-                                        selected = option == appTheme,
-                                        role = Role.RadioButton,
-                                        onClick = {
-                                            viewModel.setAppTheme(option)
-                                            showThemeDialog = false
-                                        },
-                                    ).testTag("settings_theme_option_${option.storageValue}")
-                                    .padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = option == appTheme,
-                                onClick = null,
-                                colors = RadioButtonDefaults.colors(selectedColor = CatGreen),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(option.labelResource()),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                        }
-                    }
-                }
+        ThemePickerDialog(
+            current = appTheme,
+            onPick = {
+                viewModel.setAppTheme(it)
+                showThemeDialog = false
             },
-            confirmButton = {},
+            onDismiss = { showThemeDialog = false },
         )
     }
 
@@ -140,6 +109,51 @@ internal fun AppearanceSettings(viewModel: MainViewModel) {
             confirmButton = {},
         )
     }
+}
+
+/** Theme radio list, shared by Settings and the More tab's Appearance row. */
+@Composable
+internal fun ThemePickerDialog(
+    current: AppThemeMode,
+    onPick: (AppThemeMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceBright,
+        icon = { Icon(Icons.Default.Palette, contentDescription = null, tint = CatGreen) },
+        title = { Text(stringResource(R.string.settings_theme_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                AppThemeMode.entries.forEach { option ->
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = option == current,
+                                    role = Role.RadioButton,
+                                    onClick = { onPick(option) },
+                                ).testTag("settings_theme_option_${option.storageValue}")
+                                .padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = option == current,
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(selectedColor = CatGreen),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(option.labelResource()),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+    )
 }
 
 internal fun AppThemeMode.labelResource(): Int =
