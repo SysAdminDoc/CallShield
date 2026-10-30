@@ -141,62 +141,71 @@ class MainViewModel
         // Startup housekeeping only logs: the user didn't tap anything, so there's nothing to retry.
         private val startupFailed = CoroutineExceptionHandler { _, e -> Log.e(TAG, "Startup work failed", e) }
 
+        // Every screen's state goes through this instead of stateIn. A Room or DataStore flow
+        // that throws while a screen collects it (a dropped table, a corrupt page) ended on
+        // viewModelScope with no handler and took the app down. It logs and keeps what the
+        // screen last showed: the initial value when the first read fails, which each screen
+        // already draws before its data loads. The next visit to the screen reads again.
+        private fun <T> Flow<T>.screenState(initial: T): StateFlow<T> =
+            catch { e -> Log.e(TAG, "Screen data failed", e) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initial)
+
         val totalBlocked: StateFlow<Int> =
             repo
                 .getTotalBlockedCount()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                .screenState(0)
 
         val recentBlockedCalls: StateFlow<List<BlockedCall>> =
             repo
                 .observeRecentLog(DASHBOARD_RECENT_LOG_LIMIT)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val logCount: StateFlow<Int> =
             repo
                 .observeLogCount()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                .screenState(0)
 
         val logCallCount: StateFlow<Int> =
             repo
                 .observeLogCallCount()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                .screenState(0)
 
         val logSmsCount: StateFlow<Int> =
             repo
                 .observeLogSmsCount()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                .screenState(0)
 
         val logReasonCodes: StateFlow<List<BlockReasonCode>> =
             repo
                 .observeLogReasonCodes()
                 .map { values -> values.map(BlockReasonCode::fromStored) }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val logReasonCounts: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogReasonCounts()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val logHourCounts: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogHourCounts()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val logTopNumbers: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogNumberCounts(STATS_TOP_LIMIT)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val logAreaCodeCounts: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogAreaCodeCounts(STATS_AREA_CODE_LIMIT)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         /** Blocked North American numbers of the last 14 days, for the dashboard's exchange suggestion (slowCampaignExchanges). */
         val recentNanpSightings: StateFlow<List<NumberSighting>> =
             repo
                 .observeLogNanpSightingsSince(System.currentTimeMillis() - SLOW_CAMPAIGN_WINDOW_MS, EXCHANGE_SIGHTING_LIMIT)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         // Rolling time anchor — re-emits the current wall-clock every minute so the
         // "today / this week / last week" counts below stay accurate when the app is
@@ -215,35 +224,35 @@ class MainViewModel
                 .flatMapLatest { now ->
                     val windows = buildDashboardTimeWindows(now)
                     repo.getBlockedCountSince(windows.todayStart)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         val blockedThisWeek: StateFlow<Int> =
             timeAnchor
                 .flatMapLatest { now ->
                     val windows = buildDashboardTimeWindows(now)
                     repo.getBlockedCountSince(windows.weekStart)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         val blockedCallsThisWeek: StateFlow<Int> =
             timeAnchor
                 .flatMapLatest { now ->
                     val windows = buildDashboardTimeWindows(now)
                     repo.getBlockedCountSinceByType(windows.weekStart, isCall = true)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         val blockedSmsThisWeek: StateFlow<Int> =
             timeAnchor
                 .flatMapLatest { now ->
                     val windows = buildDashboardTimeWindows(now)
                     repo.getBlockedCountSinceByType(windows.weekStart, isCall = false)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         val blockedLastWeek: StateFlow<Int> =
             timeAnchor
                 .flatMapLatest { now ->
                     val windows = buildDashboardTimeWindows(now)
                     repo.getBlockedCountBetween(windows.lastWeekStart, windows.lastWeekEnd)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         // Each paged list keeps one pager that follows its filter (see pagedWith).
         // The chips are saved state: after process death the tab restores its
@@ -323,22 +332,22 @@ class MainViewModel
         val userBlockedNumbers: StateFlow<List<SpamNumber>> =
             repo
                 .getUserBlockedNumbers()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val wildcardRules: StateFlow<List<WildcardRule>> =
             repo
                 .getAllWildcardRules()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val hashWildcardRules: StateFlow<List<HashWildcardRule>> =
             repo
                 .getAllHashWildcardRules()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val whitelistEntries: StateFlow<List<WhitelistEntry>> =
             repo
                 .getAllWhitelist()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         private val liveRuleConflicts: Flow<List<StandingRuleConflict>> =
             combine(
@@ -361,24 +370,29 @@ class MainViewModel
             liveRuleConflicts
                 .combine(repo.dismissedRuleConflictKeys) { conflicts, dismissedKeys ->
                     conflicts.filterNot { it.key in dismissedKeys }
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                }.screenState(emptyList())
 
         val emergencyContacts: StateFlow<List<WhitelistEntry>> =
             repo
                 .getEmergencyContacts()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         val keywordRules: StateFlow<List<SmsKeywordRule>> =
             repo
                 .getAllKeywordRules()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .screenState(emptyList())
 
         // Onboarding — tri-state: null until DataStore first emits, so the shell
         // renders a neutral surface for one frame instead of flashing the main
         // UI before onboarding (new install) or onboarding before the main UI.
+        // Settings that can't be read would leave that surface up for good, and nearly
+        // everyone it happens to finished setup long ago, so it shows the app.
         val onboardingDone: StateFlow<Boolean?> =
             repo.onboardingDone
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+                .catch { e ->
+                    Log.e(TAG, "Screen data failed", e)
+                    emit(true)
+                }.screenState(null)
 
         // Search
         private val _searchQuery = MutableStateFlow("")
@@ -401,7 +415,7 @@ class MainViewModel
             debouncedSearchQuery
                 .flatMapLatest { query ->
                     if (query.length >= 2) repo.observeSearchCount(query) else flowOf(0)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                }.screenState(0)
 
         private val _logSearchQuery = MutableStateFlow("")
         val logSearchQuery: StateFlow<String> = _logSearchQuery
@@ -410,7 +424,7 @@ class MainViewModel
                 .debounce(300)
                 .flatMapLatest { query ->
                     if (query.length >= 2) repo.searchLog(query) else flowOf(emptyList())
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                }.screenState(emptyList())
 
         fun setLogSearchQuery(query: String) {
             _logSearchQuery.value = query
@@ -473,155 +487,139 @@ class MainViewModel
                 // Seed from the synchronous SharedPreferences mirror so cold starts
                 // paint the user's real theme on the first frame instead of flashing
                 // the Amoled default until DataStore emits.
-                .stateIn(
-                    viewModelScope,
-                    SharingStarted.WhileSubscribed(5000),
+                .screenState(
                     AppThemeMode.fromStorage(repo.cachedAppTheme()),
                 )
-        val blockCallsEnabled = repo.blockCallsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val blockSmsEnabled = repo.blockSmsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val blockUnknownEnabled = repo.blockUnknownEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val stirShakenEnabled = repo.stirShakenEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val stirTrustedAllowEnabled = repo.stirTrustedAllowEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val autoMuteLowConfidenceEnabled = repo.autoMuteLowConfidenceEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val neighborSpoofEnabled = repo.neighborSpoofEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val smsBurstEnabled = repo.smsBurstEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val blockCallsEnabled = repo.blockCallsEnabled.screenState(true)
+        val blockSmsEnabled = repo.blockSmsEnabled.screenState(true)
+        val blockUnknownEnabled = repo.blockUnknownEnabled.screenState(false)
+        val stirShakenEnabled = repo.stirShakenEnabled.screenState(true)
+        val stirTrustedAllowEnabled = repo.stirTrustedAllowEnabled.screenState(true)
+        val autoMuteLowConfidenceEnabled = repo.autoMuteLowConfidenceEnabled.screenState(false)
+        val neighborSpoofEnabled = repo.neighborSpoofEnabled.screenState(true)
+        val heuristicsEnabled = repo.heuristicsEnabled.screenState(true)
+        val smsContentEnabled = repo.smsContentEnabled.screenState(true)
+        val smsBurstEnabled = repo.smsBurstEnabled.screenState(true)
         val urlStripQueryEnabled =
             repo.urlStripQueryEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+                .screenState(true)
         val remoteUrlLookupEnabled =
             repo.remoteUrlLookupEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         val liveCallerEnrichmentEnabled =
             repo.liveCallerEnrichmentEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+                .screenState(false)
+        val contactWhitelistEnabled = repo.contactWhitelistEnabled.screenState(true)
         val contactsOnlyEnabled =
             repo.contactsOnlyEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         val selectedContactGroups =
             repo.selectedContactGroups
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val outgoingRiskWarningEnabled =
             repo.outgoingRiskWarningEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         val outgoingCallHoldEnabled =
             repo.outgoingCallHoldEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         private val _contactGroups = MutableStateFlow<List<ContactGroup>>(emptyList())
         val contactGroups: StateFlow<List<ContactGroup>> = _contactGroups
         private val _contactGroupsLoading = MutableStateFlow(false)
         val contactGroupsLoading: StateFlow<Boolean> = _contactGroupsLoading
         val regionBlockEnabled =
             repo.regionBlockEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         val enabledRegulatoryPrefixes =
             repo.enabledRegulatoryPrefixes
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val meetingModeEnabled =
             repo.meetingModeEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
         val meetingModeApps =
             repo.meetingModeApps
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val allowedRegions =
             repo.allowedRegions
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val cnapTrustPatterns =
             repo.cnapTrustPatterns
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val cnapBlockPatterns =
             repo.cnapBlockPatterns
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val categoryCallActions =
             repo.categoryCallActions
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+                .screenState(emptyMap())
         val dbPrefixExpansionEnabled =
             repo.dbPrefixExpansionEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val aggressiveModeEnabled = repo.aggressiveModeEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+                .screenState(false)
+        val aggressiveModeEnabled = repo.aggressiveModeEnabled.screenState(false)
         val answeredCallerTrustEnabled =
             repo.answeredCallerTrustEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+                .screenState(true)
         val answeredCallerThreshold =
-            repo.answeredCallerThreshold.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.answeredCallerThreshold.screenState(
                 CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD,
             )
         val answeredCallerWindowDays =
-            repo.answeredCallerWindowDays.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.answeredCallerWindowDays.screenState(
                 CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
             )
         val emergencyCallbackGraceEnabled =
             repo.emergencyCallbackGraceEnabled
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+                .screenState(true)
         val emergencyCallbackWindowMinutes =
-            repo.emergencyCallbackWindowMinutes.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.emergencyCallbackWindowMinutes.screenState(
                 CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES,
             )
-        val timeBlockEnabled = repo.timeBlockEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val timeBlockStart = repo.timeBlockStart.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 22)
-        val timeBlockEnd = repo.timeBlockEnd.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
-        val freqEscalationEnabled = repo.freqEscalationEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val freqThreshold = repo.freqThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
-        val autoCleanupEnabled = repo.autoCleanupEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val cleanupDays = repo.cleanupDays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 30)
+        val timeBlockEnabled = repo.timeBlockEnabled.screenState(false)
+        val timeBlockStart = repo.timeBlockStart.screenState(22)
+        val timeBlockEnd = repo.timeBlockEnd.screenState(7)
+        val freqEscalationEnabled = repo.freqEscalationEnabled.screenState(true)
+        val freqThreshold = repo.freqThreshold.screenState(3)
+        val autoCleanupEnabled = repo.autoCleanupEnabled.screenState(false)
+        val cleanupDays = repo.cleanupDays.screenState(30)
 
-        val lastSyncTimestamp = repo.lastSyncTimestamp.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-        val lastSyncSource = repo.lastSyncSource.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        val lastSyncTimestamp = repo.lastSyncTimestamp.screenState(0L)
+        val lastSyncSource = repo.lastSyncSource.screenState("")
         val appUpdateChecksEnabled =
-            repo.appUpdateChecksEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+            repo.appUpdateChecksEnabled.screenState(false)
         val appUpdateState =
-            repo.appUpdateState.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppUpdateState())
+            repo.appUpdateState.screenState(AppUpdateState())
 
-        val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val mlScorerEnabled = repo.mlScorerEnabled.screenState(true)
+        val rcsFilterEnabled = repo.rcsFilterEnabled.screenState(true)
         internal val smsMessageCapabilityStatus =
-            repo.smsMessageCapabilityStatus.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.smsMessageCapabilityStatus.screenState(
                 MessageCapabilityStatus.notObserved(MessageCapabilitySource.SMS_BROADCAST, Build.VERSION.SDK_INT),
             )
         internal val notificationMessageCapabilityStatus =
-            repo.notificationMessageCapabilityStatus.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.notificationMessageCapabilityStatus.screenState(
                 MessageCapabilityStatus.notObserved(MessageCapabilitySource.NOTIFICATION_LISTENER, Build.VERSION.SDK_INT),
             )
         val postCallScreenEnabled =
-            repo.postCallScreenEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+            repo.postCallScreenEnabled.screenState(false)
         val notificationScreeningPackages =
-            repo.notificationScreeningPackages.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.notificationScreeningPackages.screenState(
                 com.sysadmindoc.callshield.data.NotificationScreeningSources.defaultEnabledPackages,
             )
-        val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-        val answerHangUpEnabled = repo.answerHangUpEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val silentVoicemailEnabled = repo.silentVoicemailEnabled.screenState(false)
+        val answerHangUpEnabled = repo.answerHangUpEnabled.screenState(false)
         val hangUpDelaySeconds =
-            repo.hangUpDelaySeconds.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
+            repo.hangUpDelaySeconds.screenState(
                 AnswerHangUpController.DEFAULT_DELAY_SECONDS,
             )
-        val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-        val expectingCallUntil = repo.expectingCallUntil.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-        val appReleaseNotice = repo.appReleaseNotice.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        val pushAlertEnabled = repo.pushAlertEnabled.screenState(true)
+        val expectingCallUntil = repo.expectingCallUntil.screenState(0L)
+        val appReleaseNotice = repo.appReleaseNotice.screenState(null)
         val pushAlertDisabledPackages =
             repo.pushAlertDisabledPackages
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+                .screenState(emptySet())
         val externalBlocklistSubscriptions =
             repo.externalBlocklistSubscriptions
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-        val listCatalog = repo.listCatalog.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-        val feedMirrorUrl = repo.feedMirrorUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+                .screenState(emptyList())
+        val listCatalog = repo.listCatalog.screenState(emptyList())
+        val feedMirrorUrl = repo.feedMirrorUrl.screenState(null)
 
         private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
         val syncState: StateFlow<SyncState> = _syncState
@@ -632,7 +630,7 @@ class MainViewModel
         val spamCount: StateFlow<Int> =
             repo
                 .observeSpamCount()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+                .screenState(0)
 
         private val _scanResult = MutableStateFlow<CallLogScanner.ScanResult?>(null)
         val scanResult: StateFlow<CallLogScanner.ScanResult?> = _scanResult
@@ -1564,7 +1562,7 @@ class MainViewModel
         val activeProfile: StateFlow<BlockingProfiles.Profile?> =
             repo.activeProfileName
                 .map { name -> name?.let { runCatching { BlockingProfiles.Profile.valueOf(it) }.getOrNull() } }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+                .screenState(null)
 
         suspend fun applyProfile(profile: BlockingProfiles.Profile): BlockingProfiles.Snapshot = BlockingProfiles.apply(appContext, profile)
 
@@ -1718,7 +1716,7 @@ class MainViewModel
 
         /** This device's reports from the last 90 days, for My reports. */
         internal val communityReports =
-            repo.communityReports.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            repo.communityReports.screenState(emptyList())
 
         /**
          * Sends not spam for a number this device reported as spam by mistake.

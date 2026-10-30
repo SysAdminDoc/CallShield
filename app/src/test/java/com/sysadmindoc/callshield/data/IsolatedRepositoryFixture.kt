@@ -28,6 +28,7 @@ internal class IsolatedRepositoryFixture(
     // into SpamMLScorer.shared from appScope, which can land mid-way through a
     // later test in the same sandbox and turn its verdicts into ml_scorer blocks.
     checkerDependencies: CheckerDependencies = CheckerDependencies(spamMLScorer = SpamMLScorer()),
+    unreadableSettings: Boolean = false,
 ) : AutoCloseable {
     init {
         // The repository reads the region through a process-wide cache, so a
@@ -38,6 +39,13 @@ internal class IsolatedRepositoryFixture(
     private val storeJob = SupervisorJob()
     private val storeScope = CoroutineScope(storeJob + Dispatchers.IO)
     private val storeDirectory = Files.createTempDirectory("callshield-test-datastore-").toFile()
+
+    init {
+        // A folder where the settings file goes fails every settings read with an
+        // IOException, which the corruption handler doesn't replace.
+        if (unreadableSettings) check(File(storeDirectory, "settings.preferences_pb").mkdir())
+    }
+
     private val database =
         Room
             .inMemoryDatabaseBuilder(context, AppDatabase::class.java)

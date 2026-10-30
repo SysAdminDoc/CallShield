@@ -51,6 +51,7 @@ All notable changes to CallShield will be documented in this file.
 - Spam on the post-call screen now records the block and the report itself, and the home screen widget redraws itself when your lists change. Both used to hand the job to the app's own receiver with a broadcast, which Android 17 QPR2 no longer delivers once the app has left the screen, so the block could have been lost.
 - Block area code no longer offers China's +86 410 or +86 413. The newest phone numbering data the offer is built from (libphonenumber 9.0.42) doesn't list them as area codes anymore.
 - The app no longer closes as it starts when it can't read whether update checks are on. It skips setting up the weekly check that time and tries again on the next start.
+- A database error while a screen is open no longer closes the app either. The screen keeps what it was showing, or its empty state if nothing had loaded yet, and the error is logged. If the app's settings can't be read at all, it opens to the main screen instead of a blank one.
 
 ## v1.12.0 (2026-10-09)
 
