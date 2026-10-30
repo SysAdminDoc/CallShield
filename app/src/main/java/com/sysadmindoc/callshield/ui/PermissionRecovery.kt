@@ -17,10 +17,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -29,8 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.util.startActivitySafely
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 /**
  * Where [rememberPermissionRequest] and [rememberRoleRequest] show their App
@@ -38,7 +39,56 @@ import kotlinx.coroutines.launch
  * used to show stops at two lines on Android 12 and later, and the settings
  * page it opened covered the rest. With no host the page opens straight away.
  */
-val LocalPermissionHints = staticCompositionLocalOf<SnackbarHostState?> { null }
+val LocalPermissionHints = staticCompositionLocalOf<PermissionHints?> { null }
+
+/** The settings page a hint's action opens. */
+internal enum class SettingsPage(
+    @param:StringRes val actionLabel: Int,
+) {
+    AppInfo(R.string.permission_hint_app_info),
+    DefaultApps(R.string.permission_hint_default_apps),
+    ;
+
+    fun intent(context: Context): Intent =
+        when (this) {
+            AppInfo -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+            DefaultApps -> Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+        }
+}
+
+/** A hint showing or waiting to show. Not a data class, so asking again shows it again. */
+internal class SettingsHint(
+    @param:StringRes val message: Int,
+    val page: SettingsPage,
+)
+
+/**
+ * The hint [PermissionHintsHost] shows, and the [snackbars] it shows it in.
+ * The host holds it, not the screen that asked, so changing tabs doesn't
+ * cancel the hint, and it's saved, so a rotation brings it back.
+ */
+@Stable
+class PermissionHints internal constructor(
+    val snackbars: SnackbarHostState,
+) {
+    internal var pending by mutableStateOf<SettingsHint?>(null)
+}
+
+/** Hints for a [PermissionHintsHost], shown in [snackbars] alongside the screen's own messages. */
+@Composable
+fun rememberPermissionHints(snackbars: SnackbarHostState = remember { SnackbarHostState() }): PermissionHints =
+    rememberSaveable(
+        snackbars,
+        saver =
+            Saver(
+                save = { hints -> hints.pending?.let { intArrayOf(it.message, it.page.ordinal) } },
+                restore = { saved ->
+                    PermissionHints(snackbars).apply {
+                        pending = SettingsPage.entries.getOrNull(saved[1])?.let { SettingsHint(saved[0], it) }
+                    }
+                },
+            ),
+    ) { PermissionHints(snackbars) }
 
 private class SettingsHintVisuals(
     override val message: String,
@@ -49,37 +99,37 @@ private class SettingsHintVisuals(
 }
 
 /**
- * Shows [hints], putting a settings hint's action on its own line so a large
- * font can't squeeze the hint into a narrow column beside it.
+ * Shows [hints], replacing any message already there with a new settings
+ * hint and opening its page from the action. The hint's action sits on its
+ * own line so a large font can't squeeze the hint into a narrow column.
  */
 @Composable
 fun PermissionHintsHost(
-    hints: SnackbarHostState,
+    hints: PermissionHints,
     modifier: Modifier = Modifier,
 ) {
-    SnackbarHost(hints, modifier) { Snackbar(it, actionOnNewLine = it.visuals is SettingsHintVisuals) }
+    val context = LocalContext.current
+    hints.pending?.let { hint ->
+        val message = stringResource(hint.message)
+        val actionLabel = stringResource(hint.page.actionLabel)
+        LaunchedEffect(hint) {
+            hints.snackbars.currentSnackbarData?.dismiss()
+            val result = hints.snackbars.showSnackbar(SettingsHintVisuals(message, actionLabel))
+            if (result == SnackbarResult.ActionPerformed) context.startActivitySafely(hint.page.intent(context))
+            hints.pending = null
+        }
+    }
+    SnackbarHost(hints.snackbars, modifier) { Snackbar(it, actionOnNewLine = it.visuals is SettingsHintVisuals) }
 }
 
-/**
- * Shows [hint] in [hints] with an [actionLabel] action that opens [intent],
- * replacing any message already there. Without [hints] it opens [intent] now.
- */
-private fun CoroutineScope.showSettingsHint(
-    hints: SnackbarHostState?,
-    hint: String,
-    actionLabel: String,
+/** Shows [message] in [hints] with an action that opens [page]. Without [hints] it opens [page] now. */
+private fun showSettingsHint(
+    hints: PermissionHints?,
+    @StringRes message: Int,
+    page: SettingsPage,
     context: Context,
-    intent: Intent,
 ) {
-    if (hints == null) {
-        context.startActivitySafely(intent)
-        return
-    }
-    launch {
-        hints.currentSnackbarData?.dismiss()
-        val result = hints.showSnackbar(SettingsHintVisuals(hint, actionLabel))
-        if (result == SnackbarResult.ActionPerformed) context.startActivitySafely(intent)
-    }
+    if (hints == null) context.startActivitySafely(page.intent(context)) else hints.pending = SettingsHint(message, page)
 }
 
 /**
@@ -126,14 +176,11 @@ internal fun refusalsThatCount(
 fun rememberPermissionRequest(
     @StringRes appInfoHint: Int,
     appInfoFor: Collection<String>? = null,
-    hints: SnackbarHostState? = LocalPermissionHints.current,
+    hints: PermissionHints? = LocalPermissionHints.current,
     onAppInfoHint: () -> Unit = {},
     onResult: (Map<String, Boolean>) -> Unit = {},
 ): (List<String>) -> Unit {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val hint = stringResource(appInfoHint)
-    val actionLabel = stringResource(R.string.permission_hint_app_info)
     // Saved, since the prompt can outlive the activity (a rotation or a
     // reclaimed process), and the answer is read against them.
     var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
@@ -146,13 +193,7 @@ fun rememberPermissionRequest(
             val promptShown = SystemClock.elapsedRealtime() - launchedAt >= PROMPT_MIN_MILLIS
             if (opensAppInfoAfterRequest(stillDenied, promptShown, refusedBefore, activity::shouldShowRequestPermissionRationale)) {
                 onAppInfoHint()
-                scope.showSettingsHint(
-                    hints,
-                    hint,
-                    actionLabel,
-                    context,
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-                )
+                showSettingsHint(hints, appInfoHint, SettingsPage.AppInfo, context)
             }
         }
     return { permissions ->
@@ -191,22 +232,17 @@ data class RoleRequestResult(
 fun rememberRoleRequest(
     @StringRes defaultAppsHint: Int,
     roleHeld: () -> Boolean,
-    hints: SnackbarHostState? = LocalPermissionHints.current,
+    hints: PermissionHints? = LocalPermissionHints.current,
     onResult: (RoleRequestResult) -> Unit = {},
 ): (Intent) -> Unit {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val hint = stringResource(defaultAppsHint)
-    val actionLabel = stringResource(R.string.permission_hint_default_apps)
     var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val held = roleHeld()
             val hintShown = opensDefaultAppsAfterRoleRequest(held, SystemClock.elapsedRealtime() - launchedAt)
             onResult(RoleRequestResult(held, hintShown))
-            if (hintShown) {
-                scope.showSettingsHint(hints, hint, actionLabel, context, Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
-            }
+            if (hintShown) showSettingsHint(hints, defaultAppsHint, SettingsPage.DefaultApps, context)
         }
     return { intent ->
         launchedAt = SystemClock.elapsedRealtime()

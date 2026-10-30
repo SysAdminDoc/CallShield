@@ -15,15 +15,18 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -60,8 +63,7 @@ import org.robolectric.shadows.ShadowToast
 class PermissionHintTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
-
-    private val hints = SnackbarHostState()
+    private val restoration = StateRestorationTester(composeRule)
 
     // Answers every request at once with everything refused, the way Android
     // does once it has stopped showing its dialog.
@@ -86,12 +88,15 @@ class PermissionHintTest {
                 }
         }
 
+    // The host holds the hints the way MainActivity does, outside the content
+    // that asks, so the content can leave while a hint shows.
     private fun show(
         withHost: Boolean = true,
         content: @Composable () -> Unit,
     ) {
-        composeRule.setContent {
+        restoration.setContent {
             CallShieldTheme {
+                val hints = rememberPermissionHints()
                 CompositionLocalProvider(
                     LocalActivityResultRegistryOwner provides refusesWithoutAsking,
                     LocalDensity provides Density(LocalDensity.current.density, fontScale = LARGEST_FONT_SCALE),
@@ -177,6 +182,54 @@ class PermissionHintTest {
         assertShownInFull(hint)
         assertEquals(0, ShadowToast.shownToastCount())
         assertNull(shadowOf(composeRule.activity).peekNextStartedActivity())
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.permission_hint_default_apps)).performClick()
+        assertEquals(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, awaitStartedActivity().action)
+    }
+
+    @Test
+    fun `the App info hint and its action outlast a tab change and a rotation`() {
+        var tab by mutableIntStateOf(0)
+        show {
+            if (tab == 0) {
+                val request = rememberPermissionRequest(R.string.permission_core_in_app_info)
+                Button(onClick = { request(listOf(Manifest.permission.READ_CALL_LOG)) }) { Text("Ask") }
+            } else {
+                Text("Another tab")
+            }
+        }
+        val hint = composeRule.activity.getString(R.string.permission_core_in_app_info)
+        composeRule.onNodeWithText("Ask").performClick()
+        awaitText(hint)
+
+        tab = 1
+        awaitText("Another tab")
+        composeRule.onNodeWithText(hint).assertIsDisplayed()
+
+        restoration.emulateSavedInstanceStateRestore()
+        awaitText(hint)
+        composeRule.onNodeWithText("Another tab").assertIsDisplayed()
+        assertNull(shadowOf(composeRule.activity).peekNextStartedActivity())
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.permission_hint_app_info)).performClick()
+        val opened = awaitStartedActivity()
+        assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, opened.action)
+        assertEquals("package:${composeRule.activity.packageName}", opened.dataString)
+    }
+
+    @Test
+    fun `the Default apps hint and its action outlast a rotation`() {
+        show {
+            val request = rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { false })
+            Button(onClick = { request(Intent("test.REQUEST_ROLE")) }) { Text("Ask") }
+        }
+        val hint = composeRule.activity.getString(R.string.role_call_screening_in_default_apps)
+        composeRule.onNodeWithText("Ask").performClick()
+        awaitText(hint)
+
+        restoration.emulateSavedInstanceStateRestore()
+        awaitText(hint)
+        assertShownInFull(hint)
 
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.permission_hint_default_apps)).performClick()
         assertEquals(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, awaitStartedActivity().action)

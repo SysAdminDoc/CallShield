@@ -183,8 +183,9 @@ fun CallShieldRoot(
             else -> {
                 rootStateHolder.SaveableStateProvider(ROOT_STATE_APP) {
                     // Every tab's App info and Default apps hints show here,
-                    // above the navigation bar (CallShieldApp's snackbar slot).
-                    val permissionHints = remember { SnackbarHostState() }
+                    // above the navigation bar (CallShieldApp's snackbar slot),
+                    // so a tab change or a rotation doesn't drop them.
+                    val permissionHints = rememberPermissionHints()
                     CompositionLocalProvider(LocalPermissionHints provides permissionHints) {
                         CallShieldApp(
                             viewModel = viewModel,

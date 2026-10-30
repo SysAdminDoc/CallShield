@@ -50,7 +50,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -94,7 +93,9 @@ import com.sysadmindoc.callshield.permissions.InstallSource
 import com.sysadmindoc.callshield.permissions.InstallSourceKind
 import com.sysadmindoc.callshield.service.FeedTrustNotice
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.PermissionHints
 import com.sysadmindoc.callshield.ui.PermissionHintsHost
+import com.sysadmindoc.callshield.ui.rememberPermissionHints
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -160,7 +161,8 @@ fun OnboardingScreen(
     val installSource = remember(context) { InstallSource.evaluate(context) }
     val installerLabel = remember(context) { InstallSource.installerLabel(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val permissionHints = rememberPermissionHints()
+    val snackbarHostState = permissionHints.snackbars
     val scope = rememberCoroutineScope()
 
     fun refreshReadiness() {
@@ -178,14 +180,14 @@ fun OnboardingScreen(
         rememberPermissionRequest(
             R.string.permission_core_in_app_info,
             appInfoFor = CallShieldPermissions.corePermissions,
-            hints = snackbarHostState,
+            hints = permissionHints,
             onAppInfoHint = { runtimePermissionsBlocked = true },
         ) {
             refreshReadiness()
             runtimePermissionsBlocked = false
         }
     val notificationPermissionRequest =
-        rememberPermissionRequest(R.string.permission_notifications_in_app_info, hints = snackbarHostState) {
+        rememberPermissionRequest(R.string.permission_notifications_in_app_info, hints = permissionHints) {
             refreshReadiness()
         }
     // Points to Default apps with a hint once Android has stopped showing the
@@ -194,7 +196,7 @@ fun OnboardingScreen(
         rememberRoleRequest(
             R.string.role_call_screening_in_default_apps,
             roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) },
-            hints = snackbarHostState,
+            hints = permissionHints,
         ) {
             refreshReadiness()
         }
@@ -225,7 +227,7 @@ fun OnboardingScreen(
                 screenerSupported = screenerSupported,
             ),
         runtimePermissionsBlocked = runtimePermissionsBlocked,
-        snackbarHostState = snackbarHostState,
+        permissionHints = permissionHints,
         onRequestRuntimePermissions = {
             if (runtimePermissionsBlocked) {
                 context.startActivitySafely(
@@ -311,7 +313,7 @@ internal fun OnboardingScreenContent(
     onApplyProfile: suspend (BlockingProfiles.Profile) -> BlockingProfiles.Snapshot? = { null },
     onUndoProfile: suspend (BlockingProfiles.Snapshot) -> Unit = {},
     runtimePermissionsBlocked: Boolean = false,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    permissionHints: PermissionHints = rememberPermissionHints(),
     onOpenAppInfo: () -> Unit = {},
     // A "Run setup again" review can finish without picking a new level.
     reviewing: Boolean = false,
@@ -319,6 +321,7 @@ internal fun OnboardingScreenContent(
     installerLabel: String? = null,
     onOpenReleases: () -> Unit = {},
 ) {
+    val snackbarHostState = permissionHints.snackbars
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
     var selectedProfile by rememberSaveable { mutableStateOf<BlockingProfiles.Profile?>(null) }
@@ -495,7 +498,7 @@ internal fun OnboardingScreenContent(
             SetupHint.ReinstallOverThisCopy -> ReinstallHint(installerLabel = installerLabel.orEmpty(), onOpenReleases = onOpenReleases)
             null -> Unit
         }
-        PermissionHintsHost(snackbarHostState)
+        PermissionHintsHost(permissionHints)
         Spacer(Modifier.height(8.dp))
         if (currentPage > 0) {
             TextButton(
