@@ -119,6 +119,40 @@ class ReportSpamTest {
     }
 
     @Test
+    fun `Undo after reporting a number the user allowed puts the allow back as it was`() {
+        // Lookup offers Report on a trusted number too, and the block replaces
+        // the allow, so Undo has to bring the allow back, not just lift the block.
+        runBlocking { fixture.repository.addToWhitelist(number, "Clinic", isEmergency = true, rangeDigits = 2) }
+        val allowed = requireNotNull(runBlocking { fixture.dao.findWhitelistEntry(number) })
+        assertEquals(true, allowed.isEmergency)
+        assertEquals(2, allowed.rangeDigits)
+
+        viewModel.reportSpam(number, "spam", blockHere = true)
+        val undo = requireNotNull(awaitOutcome().blockUndo)
+        assertNull(runBlocking { fixture.dao.findWhitelistEntry(number) })
+
+        runBlocking { fixture.repository.undoBlock(undo) }
+
+        assertEquals(allowed, runBlocking { fixture.dao.findWhitelistEntry(number) })
+        assertNull(runBlocking { fixture.dao.findByNumber(number) }?.takeIf { it.isUserBlocked })
+        assertEquals(1, sent.size)
+    }
+
+    @Test
+    fun `Undo after reporting a number allowed for a while keeps the allow's end`() {
+        val until = System.currentTimeMillis() + 3_600_000
+        runBlocking { fixture.repository.temporaryAllowNumber(number, until, "Delivery") }
+        val allowed = requireNotNull(runBlocking { fixture.dao.findWhitelistEntry(number) })
+
+        viewModel.reportSpam(number, "spam", blockHere = true)
+        runBlocking { fixture.repository.undoBlock(requireNotNull(awaitOutcome().blockUndo)) }
+
+        assertEquals(allowed, runBlocking { fixture.dao.findWhitelistEntry(number) })
+        assertEquals(until, allowed.expiresAt)
+        assertNull(runBlocking { fixture.dao.findByNumber(number) }?.takeIf { it.isUserBlocked })
+    }
+
+    @Test
     fun `a number nothing flagged is blocked and reported as spam, not with a blank type`() {
         viewModel.reportSpam(number, "", blockHere = true)
         awaitOutcome()
