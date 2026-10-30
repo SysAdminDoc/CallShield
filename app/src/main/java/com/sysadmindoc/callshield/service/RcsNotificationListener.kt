@@ -326,12 +326,7 @@ class RcsNotificationListener : NotificationListenerService() {
             // Best-effort, as in SmsReceiver. This scope has no exception
             // handler, so a throw here would take the whole app down.
             try {
-                val malicious =
-                    UrlSafetyChecker.checkSmsBody(
-                        body,
-                        stripQuery = stripQuery,
-                        allowRemoteLookup = allowRemoteLookup,
-                    )
+                val malicious = urlCheck(body, stripQuery, allowRemoteLookup)
                 if (malicious.isNotEmpty()) {
                     val threats = urlThreatLabels(applicationContext, malicious)
                     if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
@@ -411,6 +406,10 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
+        /** The link check behind the URL warning. Tests replace it to make it throw. */
+        internal var urlCheck: suspend (body: String, stripQuery: Boolean, allowRemoteLookup: Boolean) -> List<UrlSafetyChecker.UrlCheckResult> =
+            { body, stripQuery, allowRemoteLookup -> UrlSafetyChecker.checkSmsBody(body, stripQuery, allowRemoteLookup) }
+
         /**
          * Logs a message this listener flagged. The SMS receiver has usually
          * logged an SMS already, and [SpamRepository.logFlaggedText] logs only

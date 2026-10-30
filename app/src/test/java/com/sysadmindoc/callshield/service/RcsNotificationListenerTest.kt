@@ -30,6 +30,8 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 
 /** Texts that only reach CallShield as a messaging app's notification, as RCS chats do. */
 @RunWith(RobolectricTestRunner::class)
@@ -78,6 +80,28 @@ class RcsNotificationListenerTest {
 
         postUntil(chatNotification(scam, sender = "Prize Center")) {
             fixture.repository.lastFlaggedTextSighting("+18003451234", System.currentTimeMillis()) != null
+        }
+    }
+
+    @Test
+    fun `a link check that throws doesn't take the app down`() {
+        val crashes = CopyOnWriteArrayList<Throwable>()
+        val checked = CountDownLatch(1)
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+        val realCheck = RcsNotificationListener.urlCheck
+        Thread.setDefaultUncaughtExceptionHandler { _, e -> crashes += e }
+        RcsNotificationListener.urlCheck = { _, _, _ ->
+            checked.countDown()
+            error("threat feed unreadable")
+        }
+        try {
+            postUntil(chatNotification("Here are the notes from today https://example.com/notes", sender = "Dana")) { checked.count == 0L }
+            // An escaped throw reaches the handler right after the check, on the listener's thread.
+            Thread.sleep(500L)
+            assertEquals(emptyList<Throwable>(), crashes.toList())
+        } finally {
+            RcsNotificationListener.urlCheck = realCheck
+            Thread.setDefaultUncaughtExceptionHandler(previousHandler)
         }
     }
 
