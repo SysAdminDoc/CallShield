@@ -6,13 +6,13 @@
 
 <p align="center">
   <strong>Open-source spam call blocker and text screener for Android</strong><br>
-  30+ detection layers with an on-device ML model | 51,403 spam numbers | Real-time caller ID | RCS filter | No API keys
+  30+ detection layers with an on-device ML model | 51,407 spam numbers | Real-time caller ID | RCS filter | No API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C403-f38ba8?style=flat-square" alt="51,403 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2129-94e2d5?style=flat-square" alt="2129 JVM unit tests">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C407-f38ba8?style=flat-square" alt="51,407 Numbers">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2134-94e2d5?style=flat-square" alt="2134 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and flags spam texts with an on-device engine of more than **30 detection layers**. They include a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity signals, an RCS notification filter and real-time caller ID. Its 51,403-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts and no tracking.
+CallShield blocks spam calls and flags spam texts with an on-device engine of more than **30 detection layers**. They include a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity signals, an RCS notification filter and real-time caller ID. Its 51,407-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts and no tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -71,12 +71,23 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## How It Works
 
-1. **51,403 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call complaints, numbers the maintainer reviewed by hand, and community reports that several people confirmed or that a recent FCC complaint backs up.
+1. **51,407 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call complaints, numbers the maintainer reviewed by hand, and community reports that several people confirmed or that a recent FCC complaint backs up.
 2. **30+ detection layers and ML.** The database, heuristics, bounded campaign and churn detection, an on-device gradient-boosted tree, SMS content and burst analysis, the RCS filter, STIR/SHAKEN and more.
 3. **Real-time caller ID overlay.** The local verdict appears as the phone rings. An optional SkipCalls check covers locally suspicious calls, and a SIT tone tells autodialers the line is dead.
 4. **Trending feeds.** The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports.
 5. **Callback-aware.** It won't block a number you recently called or keep answering, a callback after a local emergency call, or a caller who tries twice in five minutes.
 6. **Community-driven.** One-tap anonymous reports go through a Cloudflare Worker, and the maintainer merges them into the database.
+
+## v1.13.0 Highlights
+
+Report now blocks the number for you, the Rules screen handles many rows at once, and links in chat apps stay on your phone.
+
+- **Report blocks too.** Report on a number's screen or in Lookup sends the anonymous report and blocks the number on your phone, with Undo to take the block back off. Lookup offers Report on every number now, and Report spam number on the More tab opens it ready to type.
+- **Rules that sort.** The Blocked list sorts by newest, by number or by how often each number was blocked. Long-press a row on any Rules tab to pick several, then unblock or delete them together. One Undo brings them all back.
+- **Links in chat apps.** With link checks on, links in WhatsApp, Signal, Gmail and the other chat and email apps you screen only go through the OpenPhish list CallShield downloads. A flagged one gets the same phishing alert as a text.
+- **Hidden codes on Android 15.** Android now hides one-time codes from apps like CallShield. It leaves those notifications alone and still warns you when one arrives during or just after a call from an unknown number.
+- **Two SIMs.** The caller ID popup stays up for a call on the second SIM, and Answer and hang up rejects instead of answering when either SIM is roaming.
+- **Around the app.** The post-call screen has a Call back button, and the Recent tab shows how each call was handled when it came in. Setup spots a copy from an installer that won't let Android allow SMS and call logs, and the Chinese translation covers nearly every screen. TalkBack reads each count tile with its label, and a database error no longer closes the app.
 
 ## v1.12.0 Highlights
 
@@ -110,19 +121,9 @@ Let unknown callers ring when you're waiting for a call, and a fix that keeps th
 - **Easier to use.** The caller ID popup works with TalkBack, the Blocked log and Blocklist fit small screens with large text, and a blocked-call alert offers Not spam for a day.
 - **Texts and hang-ups.** Texts sent under a carrier's scam label are flagged, and Answer and hang up handles national-format numbers and rejects instead of answering while roaming.
 
-## v1.9.0 Highlights
-
-A new look for every screen, protection levels you can switch in one tap, and a round of fixes from a full review.
-
-- **A darker, calmer design.** Every page uses the AMOLED palette with outlined cards, page headings and real tabs. Light, Graphite and System themes are still in Settings.
-- **Protection levels.** Setup ends with Recommended, Strict or Contacts only, and Home and Settings switch levels with an Undo.
-- **Settings in two parts.** Basic holds the everyday switches, and Advanced keeps detection, lists and backup.
-- **Fixes from the review.** Light can be chosen again. Protection test's ML check passes on a healthy phone. Calls from abroad no longer show US place names, and Region rules block area codes that can't exist. Contacts only mode pauses, and says so, instead of blocking everyone when Contacts permission is off.
-- **Fresher data.** The FCC import picks up back-dated complaint batches it used to skip, the trending lists no longer look like an outage to phones, and community reports that three people confirmed stay published.
-
 Earlier releases are in [CHANGELOG.md](CHANGELOG.md).
 
-## Detection Pipeline (v1.12.0)
+## Detection Pipeline (v1.13.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order through `CheckerPipeline.run`. The first layer with a verdict wins, and each layer is tested on its own. Priorities are stable numbers, and the ladder below is the live order.
 
@@ -144,7 +145,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
 |  5250 | **Regulatory Allow** | Allow | Opt-in protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices, per TRAI) |
-|  5200 | **Spam Database** | Block | 51,403 imported spam numbers plus the trending-numbers feed |
+|  5200 | **Spam Database** | Block | 51,407 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -314,7 +315,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 
 ## Data Sources
 
-### Database (51,403 numbers + 652 range prefixes, locally maintained)
+### Database (51,407 numbers + 668 range prefixes, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
@@ -597,12 +598,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2129 tests
+./gradlew testDebugUnitTest   # 2134 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2129 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2134 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -639,7 +640,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2129 JVM unit tests (JUnit) |
+| Tests | 2134 JVM unit tests (JUnit) |
 | Strings | 1805 string resources and 52 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

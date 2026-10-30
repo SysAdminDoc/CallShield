@@ -331,6 +331,7 @@ class ExportedSchemaMigrationTest {
                 18 to "a9364c0dbb096a12da7e79a74149f6f3",
                 19 to "25a4fd853fd6a0bc2d9da1ee52bc4e51",
                 20 to "1bec3d5a7db5168099a811da0a063511",
+                21 to "cf6f34ae44b5dc7da641b257e09d930f",
             )
     }
 }

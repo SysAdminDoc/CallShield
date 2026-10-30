@@ -55,18 +55,18 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
-            "1.12.0",
-            "Community labels and reports that count",
+            "1.13.0",
+            "Reports that block, and a Rules screen that sorts",
             isLatest = true,
-            date = "October 9, 2026",
-            summary = "Numbers other users reported get a label before they're confirmed, and Report on a number's screen now goes straight to the database.",
+            date = "October 30, 2026",
+            summary = "Report blocks the number on your phone too, the Rules screen sorts and acts on many rows at once, and links in chat apps stay on your phone.",
             changes =
                 listOf(
-                    "A number two users on different networks reported gets a \"not confirmed\" label, and it never blocks by itself",
-                    "Real calls from support lines scammers fake, like the IRS or your bank, ring when your carrier verified them",
-                    "Report on a number's screen sends the anonymous report, and My reports lists what you sent",
-                    "Lookup can check a pasted text with the same rules as an incoming one",
-                    "Home suggests blocking an exchange a slow campaign keeps calling from, and area code blocks work outside North America",
+                    "Report on a number's screen or in Lookup blocks the number on your phone too, with Undo",
+                    "The Blocked list sorts by newest, number or most blocked, and a long press picks several rows to unblock or delete at once",
+                    "With link checks on, links in WhatsApp, Signal, Gmail and other chat apps are checked only against the OpenPhish list on your phone",
+                    "On Android 15 and later, a one-time code Android hides is left alone, and a code during a call from an unknown number still warns you",
+                    "Dual SIM phones keep the caller ID popup up on the second SIM, and the post-call screen has a Call back button",
                 ),
         )
         Spacer(Modifier.height(14.dp))
@@ -108,6 +108,20 @@ fun ChangelogScreen() {
         }
         AnimatedVisibility(visible = showHistory) {
             Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.12.0",
+                    "Community labels and reports that count",
+                    date = "October 9, 2026",
+                    summary = "Numbers other users reported get a label before they're confirmed, and Report on a number's screen now goes straight to the database.",
+                    changes =
+                        listOf(
+                            "A number two users on different networks reported gets a \"not confirmed\" label, and it never blocks by itself",
+                            "Real calls from support lines scammers fake, like the IRS or your bank, ring when your carrier verified them",
+                            "Report on a number's screen sends the anonymous report, and My reports lists what you sent",
+                            "Lookup can check a pasted text with the same rules as an incoming one",
+                            "Home suggests blocking an exchange a slow campaign keeps calling from, and area code blocks work outside North America",
+                        ),
+                )
                 VersionEntry(
                     "1.11.0",
                     "Scam callbacks, codes during calls and safer lists",
