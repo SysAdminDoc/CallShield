@@ -1239,6 +1239,29 @@ def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> Non
     assert pending[aged_out]["watch_events"] and not pending[aged_out]["events"], pending.get(aged_out)
 
 
+def assert_bare_digit_misreadings_stay_off_the_hot_list(data_dir: Path) -> None:
+    """The hot list sets aside the same misread +1 numbers the merge does: one
+    whose +86 reading the database lists, and one in a dead area code that no
+    app sent. A number in a live area code reported the same way still trends."""
+    twin_listed, dead_area_code, ordinary = "+15017944158", "+18957465363", "+12122340803"
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["fcc_complaints"], "prefixes": [],
+         "numbers": [{"number": "+8615017944158", "type": "spam", "reports": 1, "first_seen": BASE_DAY,
+                      "last_seen": BASE_DAY, "description": "FCC complaint", "sources": ["fcc_complaints"]}]},
+    )
+    # Four reporters over six hours on BASE_DAY, before the pinned fix day, are
+    # enough to trend, and each number gets the same four.
+    for number in (twin_listed, dead_area_code, ordinary):
+        for index, reported_at in enumerate(TIMES[:4], start=1):
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, f"0000000000a1{index:04x}", reported_at,
+                         device=f"0000000000a2{index:04x}")
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    hot = {entry["number"] for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
+    if hot != {ordinary}:
+        raise AssertionError(f"only the live area code's number should trend: {sorted(hot)}")
+
+
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
     """Issue #27: one report of a Munich number waits for corroboration no
     imported source can give. The maintainer's review publishes it, and later
@@ -2010,6 +2033,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_bare_digit_misreadings_stay_off_the_watch_list(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_bare_digit_misreadings_stay_off_the_hot_list(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")
