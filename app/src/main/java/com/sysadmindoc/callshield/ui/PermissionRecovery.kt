@@ -116,7 +116,8 @@ fun PermissionHintsHost(
             hints.snackbars.currentSnackbarData?.dismiss()
             val result = hints.snackbars.showSnackbar(SettingsHintVisuals(message, actionLabel))
             if (result == SnackbarResult.ActionPerformed) context.startActivitySafely(hint.page.intent(context))
-            hints.pending = null
+            // A newer hint asked for as this one closed is still waiting to show.
+            if (hints.pending === hint) hints.pending = null
         }
     }
     SnackbarHost(hints.snackbars, modifier) { Snackbar(it, actionOnNewLine = it.visuals is SettingsHintVisuals) }

@@ -236,6 +236,30 @@ class PermissionHintTest {
     }
 
     @Test
+    fun `a hint asked for just as the last one closes still shows`() {
+        var hints: PermissionHints? = null
+        var askForRole: () -> Unit = {}
+        show {
+            hints = LocalPermissionHints.current
+            val appInfo = rememberPermissionRequest(R.string.permission_core_in_app_info)
+            val role = rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { false })
+            askForRole = { role(Intent("test.REQUEST_ROLE")) }
+            Button(onClick = { appInfo(listOf(Manifest.permission.READ_CALL_LOG)) }) { Text("Ask") }
+        }
+        composeRule.onNodeWithText("Ask").performClick()
+        awaitText(composeRule.activity.getString(R.string.permission_core_in_app_info))
+
+        // The first snackbar closes, and the second hint is asked for before
+        // the first one's effect gets to run again.
+        composeRule.runOnUiThread {
+            hints!!.snackbars.currentSnackbarData!!.dismiss()
+            askForRole()
+        }
+
+        awaitText(composeRule.activity.getString(R.string.role_call_screening_in_default_apps))
+    }
+
+    @Test
     fun `with no hint host App info opens straight away`() {
         show(withHost = false) {
             val request = rememberPermissionRequest(R.string.permission_sms_in_app_info)
