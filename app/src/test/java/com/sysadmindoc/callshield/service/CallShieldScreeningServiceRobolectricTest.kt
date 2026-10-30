@@ -486,7 +486,7 @@ class CallShieldScreeningServiceRobolectricTest {
 
     @Test
     fun `answer and hang up takes a blocked call when no SIM roams`() {
-        val (response, phase) = answerHangUpResponse(secondSimRoaming = false)
+        val (response, phase) = answerHangUpResponse(roamingSim = null)
         assertTrue(response.silenceCall)
         assertFalse(response.rejectCall)
         assertTrue(phase != AnswerHangUpController.Phase.NONE)
@@ -495,7 +495,15 @@ class CallShieldScreeningServiceRobolectricTest {
     @Test
     fun `answer and hang up rejects instead while the second SIM roams`() {
         // Screening gets no account handle, so the call may be on either SIM.
-        val (response, phase) = answerHangUpResponse(secondSimRoaming = true)
+        val (response, phase) = answerHangUpResponse(roamingSim = 2)
+        assertTrue(response.rejectCall)
+        assertEquals(AnswerHangUpController.Phase.NONE, phase)
+    }
+
+    @Test
+    fun `answer and hang up rejects instead while the first SIM roams`() {
+        // Either SIM counts, not only the last one listed.
+        val (response, phase) = answerHangUpResponse(roamingSim = 1)
         assertTrue(response.rejectCall)
         assertEquals(AnswerHangUpController.Phase.NONE, phase)
     }
@@ -961,7 +969,7 @@ class CallShieldScreeningServiceRobolectricTest {
             }
         }
 
-    private fun answerHangUpResponse(secondSimRoaming: Boolean): Pair<CallScreeningService.CallResponse, AnswerHangUpController.Phase> {
+    private fun answerHangUpResponse(roamingSim: Int?): Pair<CallScreeningService.CallResponse, AnswerHangUpController.Phase> {
         val number = "+12125550185"
         runBlocking {
             repository.blockNumber(number, type = "test")
@@ -973,10 +981,11 @@ class CallShieldScreeningServiceRobolectricTest {
             Manifest.permission.READ_CALL_LOG,
         )
         val phone = context.getSystemService(TelephonyManager::class.java)
-        val secondSim: TelephonyManager = Shadow.newInstanceOf(TelephonyManager::class.java)
-        shadowOf(secondSim).setIsNetworkRoaming(secondSimRoaming)
-        shadowOf(phone).setTelephonyManagerForSubscriptionId(1, Shadow.newInstanceOf(TelephonyManager::class.java))
-        shadowOf(phone).setTelephonyManagerForSubscriptionId(2, secondSim)
+        (1..2).forEach { id ->
+            val sim: TelephonyManager = Shadow.newInstanceOf(TelephonyManager::class.java)
+            shadowOf(sim).setIsNetworkRoaming(id == roamingSim)
+            shadowOf(phone).setTelephonyManagerForSubscriptionId(id, sim)
+        }
         val sims =
             (1..2).map {
                 ShadowSubscriptionManager.SubscriptionInfoBuilder
