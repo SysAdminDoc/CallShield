@@ -128,6 +128,33 @@ class RcsNotificationListenerTest {
     }
 
     @Test
+    fun `an RCS text whose screening hits an error keeps a diagnostic row`() {
+        withKeywordCheckFailing()
+
+        postUntil(chatNotification(NOTES, sender = caller)) { callLogTypes().isNotEmpty() }
+
+        assertEquals(setOf("screening_diagnostic"), callLogTypes().toSet())
+    }
+
+    @Test
+    fun `a WhatsApp message whose screening hits an error writes no diagnostic row`() {
+        runBlocking { fixture.repository.setNotificationScreeningPackages(setOf(GOOGLE_MESSAGES, WHATSAPP)) }
+        // The RCS test above shows this failure writes a row for a text.
+        withKeywordCheckFailing()
+        withFlaggingLinkCheck()
+        try {
+            // The link check runs only once no row was written, so either one ends the wait.
+            postUntil(chatNotification(NOTES, sender = caller, packageName = WHATSAPP)) {
+                phishingAlerts().isNotEmpty() || callLogTypes().isNotEmpty()
+            }
+
+            assertEquals(emptyList<String>(), callLogTypes())
+        } finally {
+            RcsNotificationListener.urlCheck = realUrlCheck
+        }
+    }
+
+    @Test
     fun `an RCS link check still uses the lookups the user turned on`() {
         val onDeviceOnlyAsked = withFlaggingLinkCheck()
         try {
@@ -200,6 +227,18 @@ class RcsNotificationListenerTest {
         fixture.sqlite.query("SELECT COUNT(*) FROM call_log").use {
             it.moveToFirst()
             it.getInt(0)
+        }
+
+    /** Makes [caller]'s screening come back clean but with the keyword check failed, so it carries a diagnostic. */
+    private fun withKeywordCheckFailing() {
+        // The scorer flags the number on its own, which would end screening before the keyword check.
+        runBlocking { fixture.repository.setMlScorer(false) }
+        fixture.damageTable("sms_keyword_rules")
+    }
+
+    private fun callLogTypes() =
+        fixture.sqlite.query("SELECT type FROM call_log").use { rows ->
+            buildList { while (rows.moveToNext()) add(rows.getString(0)) }
         }
 
     private val realUrlCheck = RcsNotificationListener.urlCheck
