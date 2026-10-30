@@ -31,6 +31,9 @@ class SmsReceiver : BroadcastReceiver() {
     companion object {
         internal const val CARRIER_REPORT_SHORT_CODE = "7726"
 
+        /** True only for the carrier's spam-report short code, never for a full number that ends in its digits. */
+        internal fun isCarrierReportShortCode(sender: String): Boolean = sender.filter(Char::isDigit) == CARRIER_REPORT_SHORT_CODE
+
         /**
          * Logs a text this receiver flagged. For Google and Samsung Messages the
          * notification listener sees the same text, and
@@ -125,7 +128,7 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 sender = messages[0].originatingAddress?.takeIf { it.isNotBlank() } ?: return@launch
-                if (sender == CARRIER_REPORT_SHORT_CODE || sender.endsWith(CARRIER_REPORT_SHORT_CODE)) {
+                if (isCarrierReportShortCode(sender)) {
                     return@launch
                 }
                 body = reassembleBody(messages.map { it.messageBody })
@@ -179,8 +182,9 @@ class SmsReceiver : BroadcastReceiver() {
                     // the CallShield log + notification, and we leave the
                     // inbox alone.
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Don't crash the receiver — allow SMS through on error
+                android.util.Log.w("SmsReceiver", "SMS screening failed, letting the text through", e)
             } finally {
                 pendingResult.finish()
             }

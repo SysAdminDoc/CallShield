@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -69,11 +70,7 @@ class SmsReceiverRobolectricTest {
 
     @Test
     fun `onReceive warns about phishing URLs even when SMS blocking is disabled`() {
-        val receiver =
-            SmsReceiver().apply {
-                repo = repository
-                applicationScope = scope
-            }
+        val receiver = receiver()
         val body = "Review your account at https://evil.test/login"
         SmsContentAnalyzer.updateSpamDomains(setOf("evil.test"))
         assertTrue(runBlocking { UrlSafetyChecker.checkSmsBody(body).isNotEmpty() })
@@ -87,11 +84,6 @@ class SmsReceiverRobolectricTest {
         assertEquals(1, messages.size)
         assertEquals(body, messages.single().messageBody)
 
-        val pendingResult =
-            ReflectionHelpers.callConstructor(
-                android.content.BroadcastReceiver.PendingResult::class.java,
-            )
-        ReflectionHelpers.setField(receiver, "mPendingResult", pendingResult)
         receiver.onReceive(context, intent)
 
         val notification = awaitPhishingNotification()
@@ -107,27 +99,59 @@ class SmsReceiverRobolectricTest {
 
     @Test
     fun `a code texted during an unknown call warns even when SMS blocking is disabled`() {
-        val receiver =
-            SmsReceiver().apply {
-                repo = repository
-                applicationScope = scope
-            }
+        val receiver = receiver()
         UnknownCallWindow.shared.callStarted("+12025550143")
         val intent =
             Intent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION).apply {
                 putExtra("format", "3gpp")
                 putExtra("pdus", arrayOf(buildDeliverPdu("15551234567", "Your Chase verification code is 482913")))
             }
-        val pendingResult =
-            ReflectionHelpers.callConstructor(
-                android.content.BroadcastReceiver.PendingResult::class.java,
-            )
-        ReflectionHelpers.setField(receiver, "mPendingResult", pendingResult)
 
         receiver.onReceive(context, intent)
 
         val warning = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_code_during_call_title))
         assertEquals(NotificationHelper.CHANNEL_CODE_DURING_CALL, warning.channelId)
+    }
+
+    @Test
+    fun `a blocked number ending in 7726 is still screened and logged`() {
+        val receiver = receiver()
+        runBlocking {
+            repository.setBlockSms(true)
+            repository.blockNumber("+12123457726", type = "scam")
+        }
+        val intent =
+            Intent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION).apply {
+                putExtra("format", "3gpp")
+                putExtra("pdus", arrayOf(buildDeliverPdu("12123457726", "Your package is held, pay the fee today")))
+            }
+
+        receiver.onReceive(context, intent)
+
+        val logged =
+            runBlocking {
+                withTimeout(5_000L) {
+                    var rows = repository.getBlockedCalls().first()
+                    while (rows.isEmpty()) {
+                        coroutineFailure.get()?.let { throw AssertionError("SMS receiver coroutine failed", it) }
+                        delay(10L)
+                        rows = repository.getBlockedCalls().first()
+                    }
+                    rows
+                }
+            }
+        assertEquals(1, logged.size)
+        assertTrue(logged.single().number, logged.single().number.endsWith("2123457726"))
+        assertFalse(logged.single().isCall)
+    }
+
+    @Test
+    fun `only the 7726 short code itself skips screening`() {
+        assertTrue(SmsReceiver.isCarrierReportShortCode("7726"))
+        assertTrue(SmsReceiver.isCarrierReportShortCode("+7726"))
+        assertFalse(SmsReceiver.isCarrierReportShortCode("+12123457726"))
+        assertFalse(SmsReceiver.isCarrierReportShortCode("12123457726"))
+        assertFalse(SmsReceiver.isCarrierReportShortCode("77726"))
     }
 
     @Test
@@ -139,6 +163,23 @@ class SmsReceiverRobolectricTest {
         assertNull(received { putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, SubscriptionManager.INVALID_SUBSCRIPTION_ID) })
         assertNull(received {})
     }
+
+    /**
+     * A receiver that runs on this test's repository and scope. Hilt's generated onReceive
+     * injects the app's own singletons over both unless the receiver already counts as injected,
+     * and those outlive the test, so it would screen against the wrong database.
+     */
+    private fun receiver(): SmsReceiver =
+        SmsReceiver().apply {
+            ReflectionHelpers.setField(this, "injected", true)
+            repo = repository
+            applicationScope = scope
+            ReflectionHelpers.setField(
+                this,
+                "mPendingResult",
+                ReflectionHelpers.callConstructor(android.content.BroadcastReceiver.PendingResult::class.java),
+            )
+        }
 
     private fun awaitPhishingNotification(): Notification = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title))
 

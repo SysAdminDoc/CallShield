@@ -25,6 +25,8 @@ All notable changes to CallShield will be documented in this file.
 - Regex rules shaped like a long run of optional digits, or a repeated group that ends in an optional part, are now turned down when you add them, since they could hold up call screening. One saved earlier in such a shape no longer runs.
 - Turning the phone while Not spam waits out its Undo, or while Report is still going out, no longer loses the message that follows. Report's Undo for the block stays too.
 - A number you block, unblock or report while the spam database is updating keeps that change when the update finishes. A change made just before the update wrote its rows could be put back the way it was.
+- Texts from a regular phone number that ends in 7726 get screened again. CallShield leaves the 7726 carrier spam report short code alone, but it also skipped every full number ending in those four digits, so a blocked or known spam number like that was never checked, logged or flagged.
+- If checking a text runs into an error, CallShield still lets the text through and now leaves a warning in the system log. Before, nothing recorded that the check had failed.
 - The spam report form on GitHub now says up front that it files a public
   note, and that Report on a number's screen in the app is what sends the
   anonymous report that counts. It used to say a report there could go in
