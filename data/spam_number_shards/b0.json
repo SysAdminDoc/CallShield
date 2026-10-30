@@ -3158,6 +3158,17 @@
       ]
     },
     {
+      "number": "+17372590275",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-04",
+      "last_seen": "2026-10-04",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+17409546769",
       "type": "robocall",
       "reports": 4,
@@ -3974,6 +3985,17 @@
           "parser_version": "legacy-v1",
           "expires_at_epoch_ms": 2105481600000
         }
+      ]
+    },
+    {
+      "number": "+18436129268",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-22",
+      "last_seen": "2026-10-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     },
     {

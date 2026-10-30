@@ -1,23 +1,11 @@
 {
-  "generated": "2026-10-29T17:04:02.739587+00:00",
+  "generated": "2026-10-30T02:17:13.651665+00:00",
   "window_hours": 24,
   "min_reports": 4,
   "min_distinct_reporters": 3,
   "min_report_span_minutes": 120,
-  "count": 1,
-  "numbers": [
-    {
-      "number": "+8615017944158",
-      "type": "spam",
-      "reports": 4,
-      "total_reports": 0,
-      "first_seen": "2026-10-28T17:36:41.928Z",
-      "last_seen": "2026-10-28T20:04:10.087Z",
-      "description": "Trending community report",
-      "distinct_reporters": 4,
-      "report_span_minutes": 147
-    }
-  ],
-  "input_report_digest": "02a9c65e9525e7b6cc3cb6ab3a6f069670864d532d441900187ec87c4cefd0ca",
-  "cleared": false
+  "count": 0,
+  "numbers": [],
+  "input_report_digest": "0d57971c947a3b7a57c75b6e9cca607d4428f889e5835514593987a603f74a37",
+  "cleared": true
 }

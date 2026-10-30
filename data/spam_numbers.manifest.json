@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "version": 57,
-  "updated": "2026-10-29",
+  "version": 58,
+  "updated": "2026-10-30",
   "legacy_path": "data/spam_numbers.json",
   "shard_directory": "data/spam_number_shards",
   "shard_count": 256,
@@ -121,9 +121,9 @@
     {
       "id": "0e",
       "path": "data/spam_number_shards/0e.json",
-      "sha256": "7bce6b0b1dc5fe7450b8084e818149570f7f5da7e3a7afbf7a89a460221c1078",
-      "bytes": 186646,
-      "numbers": 197,
+      "sha256": "ab4b057441d73c199a600f005a75ce99e4c2817781e43b3508ad7b3e0e8f6b63",
+      "bytes": 186894,
+      "numbers": 198,
       "prefixes": 2
     },
     {
@@ -137,17 +137,17 @@
     {
       "id": "10",
       "path": "data/spam_number_shards/10.json",
-      "sha256": "bbe94fe239c6b61165b9b4f620c1cd9d0cb369edda022608fa43b5774ae73170",
-      "bytes": 199211,
-      "numbers": 189,
+      "sha256": "27bb3858b5d80568772a383f09a38a9b9ca863b6035b0b0ee01421696b657de7",
+      "bytes": 199703,
+      "numbers": 191,
       "prefixes": 6
     },
     {
       "id": "11",
       "path": "data/spam_number_shards/11.json",
-      "sha256": "8aa416d3fc43a1eda85b9c20aac29f95a8d27576ee77afcf5e7f188a72fabf4a",
-      "bytes": 189081,
-      "numbers": 199,
+      "sha256": "5267e2fef4d01a3489bf0d4339787abf3e7ce6c5916a362b172f4a90fee4690e",
+      "bytes": 189329,
+      "numbers": 200,
       "prefixes": 1
     },
     {
@@ -465,17 +465,17 @@
     {
       "id": "39",
       "path": "data/spam_number_shards/39.json",
-      "sha256": "bbe8c144f411a04d45624ff348cbb87b15cf6f7f16ae28a68dfe0ea389a332bb",
-      "bytes": 162452,
-      "numbers": 170,
+      "sha256": "629e742a4a9826d8448b671dce04af51e66b0d82aa8594de05762d1fa69c9edf",
+      "bytes": 162700,
+      "numbers": 171,
       "prefixes": 1
     },
     {
       "id": "3a",
       "path": "data/spam_number_shards/3a.json",
-      "sha256": "8c89f5721489237af56c0948533d199e2a76812af611348640605ad285eb91fb",
-      "bytes": 214104,
-      "numbers": 211,
+      "sha256": "3d304e42d1d7fc524beb1b3b2ff8a39ae955fdfa80582125fd50e4e43e032089",
+      "bytes": 214600,
+      "numbers": 213,
       "prefixes": 5
     },
     {
@@ -553,9 +553,9 @@
     {
       "id": "44",
       "path": "data/spam_number_shards/44.json",
-      "sha256": "c89ea601659230a2f45e66851aff4c051a9fb4d0d5572e874f203f3235a1b27c",
-      "bytes": 196454,
-      "numbers": 203,
+      "sha256": "f74f938be0acff51d8deec8e94051b58b9bf15d3603c040bf6e6cddb6c375c65",
+      "bytes": 196702,
+      "numbers": 204,
       "prefixes": 2
     },
     {
@@ -641,9 +641,9 @@
     {
       "id": "4f",
       "path": "data/spam_number_shards/4f.json",
-      "sha256": "85c2adda9f0a91588794a1528cdf835861ea1ff611cc2e4c07680bbc5c3deb8f",
-      "bytes": 172235,
-      "numbers": 177,
+      "sha256": "75070081d9a9a515887f7ac27afb8922d64ba6775467c451946aec33440dc8a0",
+      "bytes": 172479,
+      "numbers": 178,
       "prefixes": 1
     },
     {
@@ -713,9 +713,9 @@
     {
       "id": "58",
       "path": "data/spam_number_shards/58.json",
-      "sha256": "6ebbd4790958e31d5f21d05fabb0a38797f028a288eb8f3a3384e3900aa5ce82",
-      "bytes": 212814,
-      "numbers": 206,
+      "sha256": "9231b90e08dfc12d0d66ef227857b8502612a89609244336cd170d64121c046f",
+      "bytes": 213058,
+      "numbers": 207,
       "prefixes": 4
     },
     {
@@ -729,9 +729,9 @@
     {
       "id": "5a",
       "path": "data/spam_number_shards/5a.json",
-      "sha256": "44e97a676c9ccf5888418f549e59a13259a795df880b64fb65634de5be32106a",
-      "bytes": 208855,
-      "numbers": 212,
+      "sha256": "6978adeabca73553561607852bd88dd768086267f45e2398e32c3711dad97a89",
+      "bytes": 209103,
+      "numbers": 213,
       "prefixes": 1
     },
     {
@@ -745,9 +745,9 @@
     {
       "id": "5c",
       "path": "data/spam_number_shards/5c.json",
-      "sha256": "31df56f888a3170e361569583e2b250374cd73f8b8824020e1ae8f48dfe07324",
-      "bytes": 222489,
-      "numbers": 198,
+      "sha256": "bf91030a5183c7ca435b6adce204500af7ed1c9e6d10bd45e13478a6a3be00cb",
+      "bytes": 222737,
+      "numbers": 199,
       "prefixes": 0
     },
     {
@@ -761,9 +761,9 @@
     {
       "id": "5e",
       "path": "data/spam_number_shards/5e.json",
-      "sha256": "f3c237fe6854969ef0d1e4bb36783555791cfc663ac2c698bf7a19c114951af9",
-      "bytes": 198012,
-      "numbers": 197,
+      "sha256": "59f9d03fb386845b849e1ae9d39283a4ac8e46afae9127d4747ac1cdb9c32290",
+      "bytes": 198256,
+      "numbers": 198,
       "prefixes": 6
     },
     {
@@ -985,9 +985,9 @@
     {
       "id": "7a",
       "path": "data/spam_number_shards/7a.json",
-      "sha256": "62da522b4cd2fda13c502dbb4fb08764d2a6e64bc7a1659356cfe3438ce635b8",
-      "bytes": 213681,
-      "numbers": 223,
+      "sha256": "4655cb54f04bdec0a95e3043a324af9b858502523d0b25ef3bdf93029a4f3e3c",
+      "bytes": 213928,
+      "numbers": 224,
       "prefixes": 2
     },
     {
@@ -1105,17 +1105,17 @@
     {
       "id": "89",
       "path": "data/spam_number_shards/89.json",
-      "sha256": "2cc28b045ced1f2e717eaa4221c1f94b13e71beac00f9559c62d2fac44edd56d",
-      "bytes": 224990,
-      "numbers": 230,
+      "sha256": "75d8099f90a6fe4ac0e430c562286bc7bf0d11dd90dff1b418bd53625602569d",
+      "bytes": 225234,
+      "numbers": 231,
       "prefixes": 5
     },
     {
       "id": "8a",
       "path": "data/spam_number_shards/8a.json",
-      "sha256": "f28259742a73ae9a2105992f9ecdaabbebbf0e55dd7f7df572a278e8bfece9ec",
-      "bytes": 189509,
-      "numbers": 186,
+      "sha256": "690cf1514c6dc7fb6812372d6f0b12d136c91a919c50b48ba0ac9cb0b16ca0da",
+      "bytes": 189757,
+      "numbers": 187,
       "prefixes": 5
     },
     {
@@ -1153,7 +1153,7 @@
     {
       "id": "8f",
       "path": "data/spam_number_shards/8f.json",
-      "sha256": "c964708bf18cb2855c6a0457550f46aa5071aed7534ddfb8957e8b056b542a75",
+      "sha256": "aad059518e6a5a6dbcf69afff5a19e1fb6b9c50aa34a6c301541b812aceb9d39",
       "bytes": 200231,
       "numbers": 196,
       "prefixes": 4
@@ -1305,9 +1305,9 @@
     {
       "id": "a2",
       "path": "data/spam_number_shards/a2.json",
-      "sha256": "97dc9a668be7acfe10f403bc5d55966a0add14364edc28474f1473dca766bea5",
-      "bytes": 215193,
-      "numbers": 214,
+      "sha256": "a22fffb287df10bb1b39ea261d1183de7910b49cf22fee00c70d2c0ef3384c4c",
+      "bytes": 215441,
+      "numbers": 215,
       "prefixes": 3
     },
     {
@@ -1329,9 +1329,9 @@
     {
       "id": "a5",
       "path": "data/spam_number_shards/a5.json",
-      "sha256": "ecfd0cc23791c71193bc14a4e6cdc630597515639cbe919fc23ed84976fe65e5",
-      "bytes": 187171,
-      "numbers": 188,
+      "sha256": "6121eb4308d488decd57f2ef3cfbeae0c4c183d3fffed71c9b9ea8f4e157a6cc",
+      "bytes": 187419,
+      "numbers": 189,
       "prefixes": 2
     },
     {
@@ -1417,9 +1417,9 @@
     {
       "id": "b0",
       "path": "data/spam_number_shards/b0.json",
-      "sha256": "84302b5bf88317a64981fa5aedf1c2f139015247b8c6b9ded81a36d241ac5c1c",
-      "bytes": 175764,
-      "numbers": 176,
+      "sha256": "5b3511c2fd6070cb3d4d48c7f9b71de47d403136b71f01f3f1b6d46be1ee3842",
+      "bytes": 176260,
+      "numbers": 178,
       "prefixes": 3
     },
     {
@@ -1609,9 +1609,9 @@
     {
       "id": "c8",
       "path": "data/spam_number_shards/c8.json",
-      "sha256": "839f8468de79343f9627ab1e6bb3906e40105cfa2bfb39b4bdc2215e84623658",
-      "bytes": 191964,
-      "numbers": 191,
+      "sha256": "398e2713ff3844b6d333ad3a6cce5e68593d5f4a10f495d70a9ec69250078f08",
+      "bytes": 192212,
+      "numbers": 192,
       "prefixes": 2
     },
     {
@@ -1769,9 +1769,9 @@
     {
       "id": "dc",
       "path": "data/spam_number_shards/dc.json",
-      "sha256": "e41cd74dccfbe5f7feaa6ba4cdf53cbab84a938e71fe3e40e432a600fca9940b",
-      "bytes": 184553,
-      "numbers": 192,
+      "sha256": "1e71a5264c4293a8d660bfb246858c8444db333c6955869188c43558a4c872cd",
+      "bytes": 184801,
+      "numbers": 193,
       "prefixes": 2
     },
     {
@@ -1865,9 +1865,9 @@
     {
       "id": "e8",
       "path": "data/spam_number_shards/e8.json",
-      "sha256": "5e905568a3f4859763ff8fbf71371ac78babae5c688cc87e2a0c9f8a51f3b216",
-      "bytes": 216012,
-      "numbers": 204,
+      "sha256": "52b64165da9836051d4f6a1e23401533e4add06119ff3318e4e5f6d3e8c102a5",
+      "bytes": 216256,
+      "numbers": 205,
       "prefixes": 7
     },
     {
@@ -1953,9 +1953,9 @@
     {
       "id": "f3",
       "path": "data/spam_number_shards/f3.json",
-      "sha256": "2ce3390c18b693016f9c6587cf12cf4e88abfcc1f5add6fb883c86eef6de8ce2",
-      "bytes": 194314,
-      "numbers": 206,
+      "sha256": "e8f82663c4b89c7ee5103607180e972f7b24412368a78bfc7fdafef36ca14486",
+      "bytes": 194562,
+      "numbers": 207,
       "prefixes": 3
     },
     {

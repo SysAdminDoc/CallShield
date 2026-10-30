@@ -65,6 +65,37 @@
       ],
       "not_spam_days": []
     },
+    "+12024284078": {
+      "published": false,
+      "entry": {
+        "number": "+12024284078",
+        "type": "sms_spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:12024284078_1793313320864_33034998.json",
+          "day": "2026-10-29",
+          "bucket": "518733bde677565b",
+          "count": 1,
+          "at": "2026-10-29T22:35:20+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "518733bde677565b",
+          "device": "e37bf18faa94a64e"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+12026494296": {
       "published": false,
       "entry": {
@@ -800,11 +831,11 @@
       "not_spam_days": []
     },
     "+12158678874": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+12158678874",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-05",
         "last_seen": "2026-10-05",
         "description": "Community reported",
@@ -828,7 +859,9 @@
           "device": "ff4b658169995458"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-08-27"
     },
     "+12158829010": {
       "published": false,
@@ -1377,11 +1410,11 @@
       "not_spam_days": []
     },
     "+12347024931": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+12347024931",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-10",
         "last_seen": "2026-10-10",
         "description": "Community reported",
@@ -1405,7 +1438,9 @@
           "device": "49c9421f8b1bb23d"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-02"
     },
     "+12347024933": {
       "published": false,
@@ -1589,6 +1624,37 @@
           "day": "2026-10-28",
           "bucket": "29483ef70ae6170f",
           "device": "431f23df35f6fd43"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+12367079162": {
+      "published": false,
+      "entry": {
+        "number": "+12367079162",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:153ec03f-7130-42de-8a01-4042ee249e58",
+          "day": "2026-10-29",
+          "bucket": "01e528df0d7ab172",
+          "count": 1,
+          "at": "2026-10-29T21:53:35+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "01e528df0d7ab172",
+          "device": "e09b7567f7700dcb"
         }
       ],
       "not_spam_days": []
@@ -2600,11 +2666,11 @@
       "not_spam_days": []
     },
     "+13013377922": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+13013377922",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-23",
         "last_seen": "2026-10-23",
         "description": "Community reported",
@@ -2628,7 +2694,9 @@
           "device": "c83962e6ae61887d"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-23"
     },
     "+13013386576": {
       "published": false,
@@ -2891,15 +2959,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "file:13029278945_1790723215548_ea9bb66e.json",
-          "day": "2026-09-29",
-          "bucket": "9f5e0d2f8f467ddc",
-          "count": 1,
-          "at": "2026-09-29T23:06:55+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -2940,6 +3000,37 @@
       ],
       "not_spam_days": []
     },
+    "+13033430778": {
+      "published": false,
+      "entry": {
+        "number": "+13033430778",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:e819ee9c-8f20-43cc-b686-41f50f6a90d0",
+          "day": "2026-10-29",
+          "bucket": "215487487581a286",
+          "count": 1,
+          "at": "2026-10-29T23:47:15+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "215487487581a286",
+          "device": "04923116e9eab893"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+13042629400": {
       "published": false,
       "entry": {
@@ -2976,6 +3067,25 @@
       "watch_events": [],
       "not_spam_days": [
         "2026-10-27"
+      ]
+    },
+    "+13052562044": {
+      "published": false,
+      "entry": {
+        "number": "+13052562044",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
       ]
     },
     "+13052634442": {
@@ -3028,6 +3138,25 @@
       ],
       "not_spam_days": [
         "2026-10-28"
+      ]
+    },
+    "+13066642936": {
+      "published": false,
+      "entry": {
+        "number": "+13066642936",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
       ]
     },
     "+13093223117": {
@@ -3310,11 +3439,11 @@
       "not_spam_days": []
     },
     "+13182171148": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+13182171148",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-07",
         "last_seen": "2026-10-07",
         "description": "Community reported",
@@ -3336,6 +3465,39 @@
           "day": "2026-10-07",
           "bucket": "6cf4493bea28b523",
           "device": "117141d38b19b3a1"
+        }
+      ],
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-08-21"
+    },
+    "+13182171149": {
+      "published": false,
+      "entry": {
+        "number": "+13182171149",
+        "type": "sms_spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:13182171149_1793318279694_0a7358fa.json",
+          "day": "2026-10-29",
+          "bucket": "937559cbf5e3de57",
+          "count": 1,
+          "at": "2026-10-29T23:57:59+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "937559cbf5e3de57",
+          "device": "ca0aac4e9e5b09df"
         }
       ],
       "not_spam_days": []
@@ -3988,6 +4150,37 @@
       ],
       "not_spam_days": []
     },
+    "+13369996879": {
+      "published": false,
+      "entry": {
+        "number": "+13369996879",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:eb27df4f-9b9e-4cb4-8975-7e9df3889552",
+          "day": "2026-10-29",
+          "bucket": "e040205f7b5b0556",
+          "count": 1,
+          "at": "2026-10-29T19:21:10+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "e040205f7b5b0556",
+          "device": "1a79138a5e8f45bd"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+13372598342": {
       "published": false,
       "entry": {
@@ -4136,11 +4329,11 @@
       "not_spam_days": []
     },
     "+13392192132": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+13392192132",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-20",
         "last_seen": "2026-10-20",
         "description": "Community reported",
@@ -4164,7 +4357,9 @@
           "device": "b4ddbb047c335679"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-19"
     },
     "+13392299022": {
       "published": false,
@@ -4541,6 +4736,37 @@
           "day": "2026-10-25",
           "bucket": "21b20d7e6aaa0a34",
           "device": "8b93a0c959b1b1e6"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+13658264042": {
+      "published": false,
+      "entry": {
+        "number": "+13658264042",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:a3b7717c-0d13-405b-af23-05435868272d",
+          "day": "2026-10-29",
+          "bucket": "d60ca2623663a9bc",
+          "count": 1,
+          "at": "2026-10-29T19:59:27+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "d60ca2623663a9bc",
+          "device": "82b2f8b05544dce1"
         }
       ],
       "not_spam_days": []
@@ -4944,11 +5170,11 @@
       "not_spam_days": []
     },
     "+14026209508": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+14026209508",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-13",
         "last_seen": "2026-10-13",
         "description": "Community reported",
@@ -4972,7 +5198,9 @@
           "device": "4056bb3780f74c90"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-09-17"
     },
     "+14026209825": {
       "published": false,
@@ -6481,6 +6709,25 @@
         "2026-10-14"
       ]
     },
+    "+14373240490": {
+      "published": false,
+      "entry": {
+        "number": "+14373240490",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
+      ]
+    },
     "+14387030913": {
       "published": false,
       "entry": {
@@ -6864,6 +7111,37 @@
         "2026-10-03"
       ]
     },
+    "+14698706608": {
+      "published": false,
+      "entry": {
+        "number": "+14698706608",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:fad3cfbf-2cb0-43a3-a4b2-9571fce878b8",
+          "day": "2026-10-29",
+          "bucket": "caaf2e9ca5908209",
+          "count": 1,
+          "at": "2026-10-29T20:24:04+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "caaf2e9ca5908209",
+          "device": "9536d2236617c894"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+14754228617": {
       "published": false,
       "entry": {
@@ -7125,6 +7403,37 @@
           "day": "2026-10-29",
           "bucket": "9a6c6ddaeab969f3",
           "device": "71e061f8c6dcf194"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+15022143745": {
+      "published": false,
+      "entry": {
+        "number": "+15022143745",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:15022143745_1793309807352_8c3534a5.json",
+          "day": "2026-10-29",
+          "bucket": "7201a8ff2f3d689e",
+          "count": 1,
+          "at": "2026-10-29T21:36:47+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "7201a8ff2f3d689e",
+          "device": "5806b5d9f7c91da6"
         }
       ],
       "not_spam_days": []
@@ -8138,13 +8447,13 @@
       "not_spam_days": []
     },
     "+15122223128": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+15122223128",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 2,
         "first_seen": "2026-10-19",
-        "last_seen": "2026-10-19",
+        "last_seen": "2026-10-26",
         "description": "Community reported",
         "sources": [
           "community"
@@ -8178,7 +8487,9 @@
           "device": "43febf323aea9f13"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-24"
     },
     "+15125663799": {
       "published": false,
@@ -8420,7 +8731,8 @@
       "events": [],
       "watch_events": [],
       "not_spam_days": [
-        "2026-10-28"
+        "2026-10-28",
+        "2026-10-29"
       ]
     },
     "+15156009402": {
@@ -8733,6 +9045,37 @@
       ],
       "not_spam_days": []
     },
+    "+15404560348": {
+      "published": false,
+      "entry": {
+        "number": "+15404560348",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:cbffaa40-269f-44c1-80f1-e23d72a7f89c",
+          "day": "2026-10-29",
+          "bucket": "3217c0595adac42e",
+          "count": 1,
+          "at": "2026-10-29T17:21:48+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "3217c0595adac42e",
+          "device": "40bf1bf6d5d5a7a2"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+15406288997": {
       "published": false,
       "entry": {
@@ -8870,15 +9213,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "file:15513680026_1790651636091_0a046ae1.json",
-          "day": "2026-09-29",
-          "bucket": "d3889a1cd29e9316",
-          "count": 1,
-          "at": "2026-09-29T03:13:56+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -9299,11 +9634,11 @@
       "not_spam_days": []
     },
     "+15715776547": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+15715776547",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-28",
         "last_seen": "2026-10-28",
         "description": "Community reported",
@@ -9327,7 +9662,9 @@
           "device": "851e4645a2efa2f9"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-16"
     },
     "+15715778252": {
       "published": false,
@@ -9356,6 +9693,37 @@
           "day": "2026-10-24",
           "bucket": "be6b67229a7cd197",
           "device": "8b49c95fd0f16d3e"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+15716989024": {
+      "published": false,
+      "entry": {
+        "number": "+15716989024",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-30",
+        "last_seen": "2026-10-30",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:08fe48de-57ed-4f2f-977a-8c7002bb34fb",
+          "day": "2026-10-30",
+          "bucket": "423209848b8967fe",
+          "count": 1,
+          "at": "2026-10-30T00:02:23+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-30",
+          "bucket": "423209848b8967fe",
+          "device": "0ec49542e082db39"
         }
       ],
       "not_spam_days": []
@@ -9879,6 +10247,39 @@
       ],
       "not_spam_days": []
     },
+    "+15862509913": {
+      "published": false,
+      "entry": {
+        "number": "+15862509913",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:91286629-41bf-4ca4-ba6e-b37061760f5b",
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "count": 1,
+          "at": "2026-10-29T17:47:50+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "device": "06d590abdd8b4ec5"
+        }
+      ],
+      "not_spam_days": [
+        "2026-10-29"
+      ]
+    },
     "+15862802073": {
       "published": false,
       "entry": {
@@ -9942,11 +10343,11 @@
       "not_spam_days": []
     },
     "+15865253024": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+15865253024",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-08",
         "last_seen": "2026-10-08",
         "description": "Community reported",
@@ -9970,7 +10371,9 @@
           "device": "dd0b7a10a42760d8"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-09-24"
     },
     "+15865334726": {
       "published": false,
@@ -10035,11 +10438,11 @@
       "not_spam_days": []
     },
     "+15865334738": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+15865334738",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-21",
         "last_seen": "2026-10-21",
         "description": "Community reported",
@@ -10063,7 +10466,9 @@
           "device": "661013602747384f"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-20"
     },
     "+15873164227": {
       "published": false,
@@ -10625,6 +11030,56 @@
       ],
       "not_spam_days": []
     },
+    "+16093000324": {
+      "published": false,
+      "entry": {
+        "number": "+16093000324",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:b6a4e2ee-d1c9-44ad-98be-45e127fc297b",
+          "day": "2026-10-29",
+          "bucket": "284108f549fa45c9",
+          "count": 1,
+          "at": "2026-10-29T21:22:59+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "284108f549fa45c9",
+          "device": "bcf8e3c10fd686d3"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+16093656200": {
+      "published": false,
+      "entry": {
+        "number": "+16093656200",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
+      ]
+    },
     "+16094349299": {
       "published": false,
       "entry": {
@@ -10655,6 +11110,25 @@
         }
       ],
       "not_spam_days": []
+    },
+    "+16096460444": {
+      "published": false,
+      "entry": {
+        "number": "+16096460444",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
+      ]
     },
     "+16096767704": {
       "published": false,
@@ -10807,6 +11281,37 @@
           "day": "2026-10-12",
           "bucket": "3f269fe4de040ff4",
           "device": "6f60d036df421bfd"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+16128080468": {
+      "published": false,
+      "entry": {
+        "number": "+16128080468",
+        "type": "sms_spam",
+        "reports": 0,
+        "first_seen": "2026-10-30",
+        "last_seen": "2026-10-30",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:16128080468_1793319380063_29fb925a.json",
+          "day": "2026-10-30",
+          "bucket": "9fe177d1baf51a42",
+          "count": 1,
+          "at": "2026-10-30T00:16:20+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-30",
+          "bucket": "9fe177d1baf51a42",
+          "device": "02b23c15bf0f31cb"
         }
       ],
       "not_spam_days": []
@@ -11945,11 +12450,11 @@
       "not_spam_days": []
     },
     "+16514012268": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+16514012268",
         "type": "unknown",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-09",
         "last_seen": "2026-10-09",
         "description": "Community reported",
@@ -11973,7 +12478,9 @@
           "device": "15d591f74be3c1dc"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-26"
     },
     "+16514275567": {
       "published": false,
@@ -12455,6 +12962,37 @@
           "day": "2026-10-06",
           "bucket": "c5641bcac67ce7bd",
           "device": "57dacad2d189b2cc"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+17013949655": {
+      "published": false,
+      "entry": {
+        "number": "+17013949655",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:2aab9bba-b72d-4986-8524-e4231fdfef15",
+          "day": "2026-10-29",
+          "bucket": "3cf96a16f6991eb4",
+          "count": 1,
+          "at": "2026-10-29T22:47:05+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "3cf96a16f6991eb4",
+          "device": "d52bf301cdf83b17"
         }
       ],
       "not_spam_days": []
@@ -13402,6 +13940,37 @@
       ],
       "not_spam_days": []
     },
+    "+17173542086": {
+      "published": false,
+      "entry": {
+        "number": "+17173542086",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:8df16d2b-f212-4cbb-b82d-d5933908553c",
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "count": 1,
+          "at": "2026-10-29T21:19:17+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "device": "06d590abdd8b4ec5"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+17173842319": {
       "published": false,
       "entry": {
@@ -13429,6 +13998,37 @@
           "day": "2026-10-26",
           "bucket": "b691ab183182a6d9",
           "device": "4900a08616a96170"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+17173845929": {
+      "published": false,
+      "entry": {
+        "number": "+17173845929",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:b74bbd08-aa8b-4bd8-ba9b-8841ccfbf732",
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "count": 1,
+          "at": "2026-10-29T17:48:29+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "0d3c95be87151263",
+          "device": "06d590abdd8b4ec5"
         }
       ],
       "not_spam_days": []
@@ -13725,15 +14325,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:b6c59f43-6bb8-47ea-8645-e09cc3c60e24",
-          "day": "2026-09-29",
-          "bucket": "2cb66ec26e27a0b8",
-          "count": 1,
-          "at": "2026-09-29T20:09:05+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -13950,15 +14542,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:c67bba58-525a-4b90-9ce4-48b342ba69e2",
-          "day": "2026-09-29",
-          "bucket": "2cb66ec26e27a0b8",
-          "count": 1,
-          "at": "2026-09-29T19:49:09+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -14291,15 +14875,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:83703e3c-b9e8-4e12-aed9-8e0f2be5fedf",
-          "day": "2026-09-29",
-          "bucket": "2cb66ec26e27a0b8",
-          "count": 1,
-          "at": "2026-09-29T17:35:06+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -15533,11 +16109,11 @@
       "not_spam_days": []
     },
     "+17372362120": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372362120",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-23",
         "last_seen": "2026-10-23",
         "description": "Community reported",
@@ -15561,7 +16137,9 @@
           "device": "c83962e6ae61887d"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-26"
     },
     "+17372382440": {
       "published": false,
@@ -15657,11 +16235,11 @@
       "not_spam_days": []
     },
     "+17372590215": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372590215",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-15",
         "last_seen": "2026-10-15",
         "description": "Community reported",
@@ -15685,7 +16263,9 @@
           "device": "ac238a7575990d86"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-03"
     },
     "+17372590219": {
       "published": false,
@@ -15719,11 +16299,11 @@
       "not_spam_days": []
     },
     "+17372590275": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372590275",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-04",
         "last_seen": "2026-10-04",
         "description": "Community reported",
@@ -15747,7 +16327,9 @@
           "device": "af780704d5fdc288"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-08"
     },
     "+17372590297": {
       "published": false,
@@ -15812,11 +16394,11 @@
       "not_spam_days": []
     },
     "+17372590379": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372590379",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-05",
         "last_seen": "2026-10-05",
         "description": "Community reported",
@@ -15840,7 +16422,9 @@
           "device": "ff4b658169995458"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-05"
     },
     "+17372590477": {
       "published": false,
@@ -15936,11 +16520,11 @@
       "not_spam_days": []
     },
     "+17372590597": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372590597",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-09-30",
         "last_seen": "2026-09-30",
         "description": "Community reported",
@@ -15964,14 +16548,16 @@
           "device": "d3d86538e2d1857f"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-09-29"
     },
     "+17372590673": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+17372590673",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-09",
         "last_seen": "2026-10-09",
         "description": "Community reported",
@@ -15995,7 +16581,9 @@
           "device": "70e8a9a92d9f506d"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-08"
     },
     "+17372590834": {
       "published": false,
@@ -18253,6 +18841,25 @@
         "2026-10-09"
       ]
     },
+    "+18172627249": {
+      "published": false,
+      "entry": {
+        "number": "+18172627249",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
+      ]
+    },
     "+18175671811": {
       "published": false,
       "entry": {
@@ -19439,11 +20046,11 @@
       "not_spam_days": []
     },
     "+18335997917": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18335997917",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-15",
         "last_seen": "2026-10-15",
         "description": "Community reported",
@@ -19467,7 +20074,9 @@
           "device": "ac238a7575990d86"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-27"
     },
     "+18336403679": {
       "published": false,
@@ -19837,11 +20446,11 @@
       "not_spam_days": []
     },
     "+18436129268": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18436129268",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-22",
         "last_seen": "2026-10-22",
         "description": "Community reported",
@@ -19865,7 +20474,9 @@
           "device": "20199e0cc0e96ef2"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-18"
     },
     "+18436129279": {
       "published": false,
@@ -20604,11 +21215,11 @@
       ]
     },
     "+18447642714": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18447642714",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-13",
         "last_seen": "2026-10-13",
         "description": "Community reported",
@@ -20632,7 +21243,9 @@
           "device": "3ebaa578b4c9537e"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-13"
     },
     "+18449501698": {
       "published": false,
@@ -20749,11 +21362,11 @@
       ]
     },
     "+18552072889": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18552072889",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-09",
         "last_seen": "2026-10-09",
         "description": "Community reported",
@@ -20777,7 +21390,9 @@
           "device": "86b7281278ac1336"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-09-15"
     },
     "+18552516944": {
       "published": false,
@@ -21363,6 +21978,37 @@
         "2026-10-25"
       ]
     },
+    "+18562495451": {
+      "published": false,
+      "entry": {
+        "number": "+18562495451",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:aa8339e8-b78d-4392-bd14-a77bbcb55f59",
+          "day": "2026-10-29",
+          "bucket": "284108f549fa45c9",
+          "count": 1,
+          "at": "2026-10-29T20:30:36+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "284108f549fa45c9",
+          "device": "bcf8e3c10fd686d3"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+18566358413": {
       "published": false,
       "entry": {
@@ -21648,11 +22294,11 @@
       ]
     },
     "+18663717499": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18663717499",
         "type": "sms_spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-28",
         "last_seen": "2026-10-28",
         "description": "Community reported",
@@ -21676,7 +22322,9 @@
           "device": "e1b1bf65f082c426"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-08-01"
     },
     "+18664772957": {
       "published": false,
@@ -21696,6 +22344,37 @@
       "not_spam_days": [
         "2026-10-20"
       ]
+    },
+    "+18664801961": {
+      "published": false,
+      "entry": {
+        "number": "+18664801961",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:4b059b5d-1363-4c99-afb9-bbb4dd2ba5fe",
+          "day": "2026-10-29",
+          "bucket": "df235ec37875c4fd",
+          "count": 1,
+          "at": "2026-10-29T19:31:50+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "df235ec37875c4fd",
+          "device": "dc60d64c1914f0e7"
+        }
+      ],
+      "not_spam_days": []
     },
     "+18664805231": {
       "published": false,
@@ -21864,6 +22543,25 @@
       "watch_events": [],
       "not_spam_days": [
         "2026-10-27"
+      ]
+    },
+    "+18668273427": {
+      "published": false,
+      "entry": {
+        "number": "+18668273427",
+        "type": "unknown",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [],
+      "watch_events": [],
+      "not_spam_days": [
+        "2026-10-29"
       ]
     },
     "+18668650176": {
@@ -22072,11 +22770,11 @@
       "not_spam_days": []
     },
     "+18774700050": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18774700050",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-09",
         "last_seen": "2026-10-09",
         "description": "Community reported",
@@ -22100,7 +22798,9 @@
           "device": "a40d17f643392b57"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-09"
     },
     "+18774701402": {
       "published": false,
@@ -22265,11 +22965,11 @@
       ]
     },
     "+18776811325": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+18776811325",
         "type": "spam",
-        "reports": 0,
+        "reports": 1,
         "first_seen": "2026-10-13",
         "last_seen": "2026-10-13",
         "description": "Community reported",
@@ -22293,7 +22993,9 @@
           "device": "3ebaa578b4c9537e"
         }
       ],
-      "not_spam_days": []
+      "not_spam_days": [],
+      "bucket_quorum": false,
+      "fcc_complaint_day": "2026-10-14"
     },
     "+18777103615": {
       "published": false,
@@ -22861,6 +23563,68 @@
           "day": "2026-10-07",
           "bucket": "1daeb088121134c3",
           "device": "4584015f6882242a"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+18886635407": {
+      "published": false,
+      "entry": {
+        "number": "+18886635407",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:18886635407_1793309809666_5b10aa29.json",
+          "day": "2026-10-29",
+          "bucket": "7201a8ff2f3d689e",
+          "count": 1,
+          "at": "2026-10-29T21:36:49+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "7201a8ff2f3d689e",
+          "device": "5806b5d9f7c91da6"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+18886692615": {
+      "published": false,
+      "entry": {
+        "number": "+18886692615",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-30",
+        "last_seen": "2026-10-30",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:18886692615_1793325589509_669fb442.json",
+          "day": "2026-10-30",
+          "bucket": "429f04214ec1fe4d",
+          "count": 1,
+          "at": "2026-10-30T01:59:49+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-30",
+          "bucket": "429f04214ec1fe4d",
+          "device": "cfb81460cc59d45e"
         }
       ],
       "not_spam_days": []
@@ -24176,6 +24940,37 @@
       ],
       "not_spam_days": []
     },
+    "+19206680023": {
+      "published": false,
+      "entry": {
+        "number": "+19206680023",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:04ea010d-f9c9-4f46-91d8-ea982033ff19",
+          "day": "2026-10-29",
+          "bucket": "245c2ba753d31c70",
+          "count": 1,
+          "at": "2026-10-29T17:25:07+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "245c2ba753d31c70",
+          "device": "2961c03171214050"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+19207804503": {
       "published": false,
       "entry": {
@@ -24854,15 +25649,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:96ca36f9-3588-40dc-af13-ec089cc42331",
-          "day": "2026-09-29",
-          "bucket": "30b5f1567a4199e3",
-          "count": 1,
-          "at": "2026-09-29T13:23:07+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -25116,6 +25903,37 @@
           "day": "2026-10-16",
           "bucket": "9c2da3cbcb4f037c",
           "device": "c5e40616701372d4"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+19832042503": {
+      "published": false,
+      "entry": {
+        "number": "+19832042503",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:5bbacd1a-05cf-4542-ae2c-bcaf41909d8a",
+          "day": "2026-10-29",
+          "bucket": "04a19fe6d3196b48",
+          "count": 1,
+          "at": "2026-10-29T22:11:36+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "04a19fe6d3196b48",
+          "device": "9482823a4f2c1a87"
         }
       ],
       "not_spam_days": []
@@ -26119,15 +26937,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:2fa16e8f-3e13-49fb-9d8a-71d912049bb5",
-          "day": "2026-09-29",
-          "bucket": "ff44395e3b5b09e7",
-          "count": 1,
-          "at": "2026-09-29T08:23:03+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -26226,6 +27036,37 @@
           "day": "2026-10-02",
           "bucket": "fa4e660c8a4547c5",
           "device": "74bc58c0080ea311"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+34975570442": {
+      "published": false,
+      "entry": {
+        "number": "+34975570442",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:d4151ce2-2de0-476f-910d-1884de183a61",
+          "day": "2026-10-29",
+          "bucket": "99e1c3ca417cb1e9",
+          "count": 1,
+          "at": "2026-10-29T17:31:13+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "99e1c3ca417cb1e9",
+          "device": "6c1316f0561f805b"
         }
       ],
       "not_spam_days": []
@@ -26478,15 +27319,7 @@
           }
         ]
       },
-      "events": [
-        {
-          "key": "id:cdf88e96-0589-4ead-8d66-2f2c55b08733",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:33:09+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27234,15 +28067,7 @@
           }
         ]
       },
-      "events": [
-        {
-          "key": "id:9f3dd0ed-af34-42da-91d5-537a520286c6",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:36:12+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27280,15 +28105,7 @@
           }
         ]
       },
-      "events": [
-        {
-          "key": "id:1586ddd3-5e7e-422e-a489-0220f0cc0e01",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:33:54+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27311,15 +28128,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:12603bed-8da4-4337-b379-324dbf488388",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:34:00+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27342,15 +28151,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:d072286b-0c8e-4775-8ee1-1271e698b73e",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:33:37+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27373,15 +28174,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:2eb2d1a5-8f58-458e-8ede-58a880e445e4",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:33:19+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27419,15 +28212,7 @@
           }
         ]
       },
-      "events": [
-        {
-          "key": "id:3474ea88-2fb6-46c2-98b8-c9c80b1ddf19",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:33:48+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27450,15 +28235,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:45067513-f928-4bcb-b5d7-20107b0848bb",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:32:52+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27481,15 +28258,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:539554c4-8dfa-4a7a-a097-4d55bb3a7210",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:32:29+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27512,15 +28281,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:a8a95d8d-601f-4444-b8ea-53ba7990c76f",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:31:59+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27543,15 +28304,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:5ea7adac-ea82-4929-bc0d-125b7e1ca83c",
-          "day": "2026-09-29",
-          "bucket": "194984af90f499d8",
-          "count": 1,
-          "at": "2026-09-29T07:32:36+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -27960,15 +28713,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "file:447742991261_1790702505516_b71d3f52.json",
-          "day": "2026-09-29",
-          "bucket": "e0659acfa15c5b44",
-          "count": 1,
-          "at": "2026-09-29T17:21:45+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -28948,15 +29693,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:d4defdfd-7307-47b7-a301-1d8b570d9767",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:24:04+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -28979,15 +29716,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:f5f1878c-608b-4a4f-8fec-893f156d22d7",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T17:55:32+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29289,15 +30018,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:13f3243a-90e8-41dd-93d1-65d3140f6353",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T21:46:47+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29467,15 +30188,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:cc545e2a-4f6f-493a-b0be-8b313edfb985",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T17:55:39+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29498,15 +30211,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:659661fb-b85a-4fea-b9c5-205ea89e3a7e",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:02:53+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29591,15 +30296,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:3eb0b5d1-6bb4-400f-aa47-6916536bb919",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T18:04:44+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29653,15 +30350,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:1bc7fd5d-320d-452e-bb6b-c7f2b497bded",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T21:35:34+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29684,15 +30373,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:30e51a38-fe36-42c6-9809-85559306070f",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T17:55:35+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29777,15 +30458,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:a683dd42-3371-4ac0-a417-2a09d4084513",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:18:21+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29870,15 +30543,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:a6af3e66-3653-498c-967c-9a74fabbddce",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T18:19:31+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29901,15 +30566,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:9a3e85d4-8c73-44fc-b57c-cc0c8aea4fc3",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:16:06+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -29932,15 +30589,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:7e539f67-98cc-4cf5-a6e8-42d6d03725b2",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:18:12+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30056,15 +30705,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:f798a14e-6b8f-4442-bbcf-ad536a448eb2",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:38:42+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30149,15 +30790,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:b4ef0f31-150f-4464-8fbe-b63394e283c5",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:18:18+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30273,15 +30906,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:4ca34094-5257-4056-94bd-9dd3d8527d73",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T16:46:58+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30459,15 +31084,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:2a269981-5c3c-4a14-b6b8-8208931b89b2",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:34:58+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30707,15 +31324,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:f37fbe1c-d3d3-4a91-a9ef-3809ea543155",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T21:24:04+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30738,15 +31347,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:222fd277-f947-4deb-957f-c568fc6d321a",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T16:36:16+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30800,15 +31401,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:9f0f2a36-95e2-465b-8010-45b8ca2aa941",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:18:15+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -30893,15 +31486,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:d8a1479c-246c-4db2-9c45-c6a1a343ac22",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T21:58:57+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -31726,15 +32311,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:97caa66f-03db-4153-82dc-353220e9f1d9",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T22:43:19+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -31757,15 +32334,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:776f1927-7ab7-4baa-8126-8dfeedb3d1a9",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T16:08:21+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32005,15 +32574,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:299bf9e9-2ef0-410a-84d9-6bc18ec167b2",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T16:39:21+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32036,15 +32597,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:d08adcb4-fa4c-48f8-82c1-f32b20c29cdf",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T17:25:51+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32152,15 +32705,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:b63f222f-4874-4cc6-86e4-22233753b1af",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T16:36:29+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32276,15 +32821,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:9e928bee-7849-4f76-a71f-23b35c7994fa",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T15:18:24+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32369,15 +32906,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:05e42501-3d16-4526-995f-3caa02e7acc0",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:09:21+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32431,15 +32960,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:c4a0bc8d-6a2a-445a-a506-57bb73817e29",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T23:31:58+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32462,15 +32983,7 @@
           "community"
         ]
       },
-      "events": [
-        {
-          "key": "id:ab1aa21d-12ca-4f8b-aeaa-54c13ab8a460",
-          "day": "2026-09-29",
-          "bucket": "8409c4e1c7b2acff",
-          "count": 1,
-          "at": "2026-09-29T22:36:29+00:00"
-        }
-      ],
+      "events": [],
       "watch_events": [
         {
           "day": "2026-09-29",
@@ -32720,6 +33233,13 @@
           "bucket": "445063a259f004a3",
           "count": 1,
           "at": "2026-10-10T08:33:11+00:00"
+        },
+        {
+          "key": "id:88065de4-63f5-4c45-b5c2-7d802e508a48",
+          "day": "2026-10-29",
+          "bucket": "c44fde20cf525d44",
+          "count": 1,
+          "at": "2026-10-29T17:22:20+00:00"
         }
       ],
       "watch_events": [
@@ -32727,6 +33247,11 @@
           "day": "2026-10-10",
           "bucket": "445063a259f004a3",
           "device": "d04ff73c0fee0e72"
+        },
+        {
+          "day": "2026-10-29",
+          "bucket": "c44fde20cf525d44",
+          "device": "450430ffd44b257d"
         }
       ],
       "not_spam_days": []
@@ -36899,6 +37424,68 @@
       ],
       "not_spam_days": []
     },
+    "+573214336764": {
+      "published": false,
+      "entry": {
+        "number": "+573214336764",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:573214336764_1793301290640_b4d3a124.json",
+          "day": "2026-10-29",
+          "bucket": "6df9e616a9b32239",
+          "count": 1,
+          "at": "2026-10-29T19:14:50+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "6df9e616a9b32239",
+          "device": "27210cac4ffdca9d"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+573214337840": {
+      "published": false,
+      "entry": {
+        "number": "+573214337840",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-29",
+        "last_seen": "2026-10-29",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "file:573214337840_1793299377846_add37c10.json",
+          "day": "2026-10-29",
+          "bucket": "6df9e616a9b32239",
+          "count": 1,
+          "at": "2026-10-29T18:42:57+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-29",
+          "bucket": "6df9e616a9b32239",
+          "device": "27210cac4ffdca9d"
+        }
+      ],
+      "not_spam_days": []
+    },
     "+573219045004": {
       "published": false,
       "entry": {
@@ -38672,9 +39259,9 @@
       "entry": {
         "number": "+8615017944158",
         "type": "scam",
-        "reports": 13,
+        "reports": 14,
         "first_seen": "2026-10-27",
-        "last_seen": "2026-10-28",
+        "last_seen": "2026-10-29",
         "description": "Community reported",
         "sources": [
           "community"
@@ -38771,6 +39358,13 @@
           "bucket": "4684a5b0bb1f2f9d",
           "count": 1,
           "at": "2026-10-28T20:04:10+00:00"
+        },
+        {
+          "key": "file:8615017944158_1793306227388_3d48608c.json",
+          "day": "2026-10-29",
+          "bucket": "3266aafcbf84fff7",
+          "count": 1,
+          "at": "2026-10-29T20:37:07+00:00"
         }
       ],
       "watch_events": [
@@ -38838,6 +39432,11 @@
           "day": "2026-10-28",
           "bucket": "4684a5b0bb1f2f9d",
           "device": "7ff9a4e764193bf1"
+        },
+        {
+          "day": "2026-10-29",
+          "bucket": "3266aafcbf84fff7",
+          "device": "f7f360690e813ef2"
         }
       ],
       "not_spam_days": [],
@@ -38994,7 +39593,8 @@
       ],
       "not_spam_days": [
         "2026-10-27",
-        "2026-10-28"
+        "2026-10-28",
+        "2026-10-29"
       ],
       "bucket_quorum": true
     },
@@ -39918,6 +40518,37 @@
           "day": "2026-10-02",
           "bucket": "15bb4c03b189eaeb",
           "device": "c51b7cd839692d4b"
+        }
+      ],
+      "not_spam_days": []
+    },
+    "+917969650641": {
+      "published": false,
+      "entry": {
+        "number": "+917969650641",
+        "type": "spam",
+        "reports": 0,
+        "first_seen": "2026-10-30",
+        "last_seen": "2026-10-30",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ]
+      },
+      "events": [
+        {
+          "key": "id:c5e10524-1b60-469b-aec3-4544d0382dcf",
+          "day": "2026-10-30",
+          "bucket": "f18b225552743372",
+          "count": 1,
+          "at": "2026-10-30T01:24:21+00:00"
+        }
+      ],
+      "watch_events": [
+        {
+          "day": "2026-10-30",
+          "bucket": "f18b225552743372",
+          "device": "5ec51d7aa0965811"
         }
       ],
       "not_spam_days": []

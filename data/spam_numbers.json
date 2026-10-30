@@ -1,6 +1,6 @@
 {
-  "version": 57,
-  "updated": "2026-10-29",
+  "version": 58,
+  "updated": "2026-10-30",
   "description": "CallShield community spam number database",
   "sources": [
     "community_reports",
@@ -88194,6 +88194,17 @@
       ]
     },
     {
+      "number": "+8615017944158",
+      "type": "scam",
+      "reports": 14,
+      "first_seen": "2026-10-27",
+      "last_seen": "2026-10-29",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+14053477421",
       "type": "robocall",
       "reports": 13,
@@ -97508,17 +97519,6 @@
           "parser_version": "legacy-v1",
           "expires_at_epoch_ms": 2105481600000
         }
-      ]
-    },
-    {
-      "number": "+8615017944158",
-      "type": "scam",
-      "reports": 13,
-      "first_seen": "2026-10-27",
-      "last_seen": "2026-10-28",
-      "description": "Community reported",
-      "sources": [
-        "community"
       ]
     },
     {
@@ -1524710,6 +1524710,17 @@
       ]
     },
     {
+      "number": "+15122223128",
+      "type": "sms_spam",
+      "reports": 2,
+      "first_seen": "2026-10-19",
+      "last_seen": "2026-10-26",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+18884247828",
       "type": "spam",
       "reports": 1,
@@ -1524927,6 +1524938,259 @@
           "parser_version": "maintainer-review-v1",
           "expires_at_epoch_ms": 1853625600000
         }
+      ]
+    },
+    {
+      "number": "+12158678874",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-05",
+      "last_seen": "2026-10-05",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+12347024931",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-10",
+      "last_seen": "2026-10-10",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+13013377922",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-23",
+      "last_seen": "2026-10-23",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+13182171148",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-07",
+      "last_seen": "2026-10-07",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+13392192132",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-20",
+      "last_seen": "2026-10-20",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+14026209508",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-13",
+      "last_seen": "2026-10-13",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+15715776547",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-28",
+      "last_seen": "2026-10-28",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+15865253024",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-08",
+      "last_seen": "2026-10-08",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+15865334738",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-21",
+      "last_seen": "2026-10-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+16514012268",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-10-09",
+      "last_seen": "2026-10-09",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372362120",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-23",
+      "last_seen": "2026-10-23",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372590215",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-15",
+      "last_seen": "2026-10-15",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372590275",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-04",
+      "last_seen": "2026-10-04",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372590379",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-05",
+      "last_seen": "2026-10-05",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372590597",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+17372590673",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-09",
+      "last_seen": "2026-10-09",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18335997917",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-15",
+      "last_seen": "2026-10-15",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18436129268",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-22",
+      "last_seen": "2026-10-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18447642714",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-13",
+      "last_seen": "2026-10-13",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18552072889",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-09",
+      "last_seen": "2026-10-09",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18663717499",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-28",
+      "last_seen": "2026-10-28",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18774700050",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-09",
+      "last_seen": "2026-10-09",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+18776811325",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-10-13",
+      "last_seen": "2026-10-13",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     }
   ],

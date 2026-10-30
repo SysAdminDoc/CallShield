@@ -2326,6 +2326,17 @@
       ]
     },
     {
+      "number": "+15122223128",
+      "type": "sms_spam",
+      "reports": 2,
+      "first_seen": "2026-10-19",
+      "last_seen": "2026-10-26",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+15129201432",
       "type": "robocall",
       "reports": 4,

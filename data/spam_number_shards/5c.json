@@ -1037,6 +1037,17 @@
       ]
     },
     {
+      "number": "+13013377922",
+      "type": "sms_spam",
+      "reports": 1,
+      "first_seen": "2026-10-23",
+      "last_seen": "2026-10-23",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13022025568",
       "type": "robocall",
       "reports": 5,
