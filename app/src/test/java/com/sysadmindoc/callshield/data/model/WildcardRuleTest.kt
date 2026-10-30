@@ -147,6 +147,57 @@ class WildcardRuleTest {
         assertFalse(rule.matches("123456789012345"))
     }
 
+    @Test fun `isSafeRegexPattern rejects many optional atoms and a repeat around an optional one`() {
+        // No group, or a group whose body ends in `?`, so the shape checks
+        // above let both through.
+        assertFalse(WildcardRule.isSafeRegexPattern("\\d?".repeat(40) + "\\d{10}"))
+        assertFalse(WildcardRule.isSafeRegexPattern("(?:[A-Z]+\\s?)+$"))
+    }
+
+    @Test(timeout = 1_000)
+    fun `regex with forty optional digits does not hang`() {
+        val rule = wildcard(pattern = "\\d?".repeat(40) + "\\d{10}x", isRegex = true)
+        assertFalse(rule.matches("+12125551234"))
+    }
+
+    @Test fun `isSafeRegexPattern still passes the phone patterns people write`() {
+        listOf(
+            "^\\d{3}-?\\d{3}-?\\d{4}$",
+            ".*555.*",
+            "^1?(800|888|877|866)\\d{7}$",
+            "^\\+?1?\\s?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$",
+            "(\\d{3}-?){2}\\d{4}",
+            "^(\\+?1)?(800|888)\\d{7}$",
+            "^(?i)[a-z]{2,11}$",
+        ).forEach { assertTrue(it, WildcardRule.isSafeRegexPattern(it)) }
+    }
+
+    @Test fun `a regex that is quick on a phone number is not run on a long input`() {
+        // Each extra digit doubles the ways `(?:\d\d?)+` can split the input,
+        // so it passes for a phone number and not at 64 characters. The JVM's
+        // engine remembers failed loop positions, so no stall shows here; the
+        // long input matches and is still not run.
+        val pattern = "^(?:\\d\\d?)+$"
+        assertTrue(WildcardRule.isSafeRegexPattern(pattern, inputLength = 16))
+        assertFalse(WildcardRule.isSafeRegexPattern(pattern, inputLength = 64))
+
+        val rule = wildcard(pattern = pattern, isRegex = true)
+        assertTrue(rule.matches("2125551234"))
+        assertFalse(rule.matches("1".repeat(60)))
+    }
+
+    @Test fun `isSafeRegexPattern counts every pass of a counted repeat`() {
+        // `\d?` can match nothing, so all thirty passes run even on a
+        // 16-character input.
+        assertFalse(WildcardRule.isSafeRegexPattern("^(?:\\d?){30}x", inputLength = 16))
+    }
+
+    @Test fun `isSafeRegexPattern refuses quoted text`() {
+        // A quoted `[` would otherwise read as a class that swallows the
+        // forty `\d?` after it.
+        assertFalse(WildcardRule.isSafeRegexPattern("\\Q[\\E" + "\\d?".repeat(40)))
+    }
+
     // ── Empty/blank handling ────────────────────────────────────────
 
     @Test fun `blank pattern matches nothing`() {
