@@ -1142,6 +1142,7 @@ test("a token GitHub refuses is answered as unavailable, and a GitHub rate limit
   const originalFetch = globalThis.fetch;
   const answers = [
     () => new Response('{"message":"Resource not accessible by personal access token"}', { status: 403 }),
+    () => new Response('{"message":"Bad credentials"}', { status: 401 }),
     () => new Response('{"message":"API rate limit exceeded"}', { status: 403, headers: { "retry-after": "120" } }),
   ];
   let call = 0;
@@ -1158,13 +1159,16 @@ test("a token GitHub refuses is answered as unavailable, and a GitHub rate limit
     );
   try {
     const refused = await send("203.0.113.90", "+12122340101");
+    const revoked = await send("192.0.2.90", "+12122340103");
     const limited = await send("198.51.100.90", "+12122340102");
 
     assert.equal(refused.status, 503);
     assert.equal(refused.headers.get("Retry-After"), "300");
+    assert.equal(revoked.status, 503);
+    assert.equal(revoked.headers.get("Retry-After"), "300");
     assert.equal(limited.status, 429);
     assert.equal(limited.headers.get("Retry-After"), "120");
-    assert.equal(call, 2);
+    assert.equal(call, 3);
   } finally {
     globalThis.fetch = originalFetch;
   }
