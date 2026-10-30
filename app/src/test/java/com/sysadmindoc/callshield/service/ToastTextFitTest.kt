@@ -7,7 +7,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.DisplayMetrics
 import android.util.TypedValue
-import androidx.annotation.StringRes
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import org.junit.Assert.assertEquals
@@ -31,21 +30,24 @@ class ToastTextFitTest {
     private val base: Context = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun `the Not spam and crash log toasts fit two lines at the largest font`() {
+    fun `every toast fits two lines at the largest font`() {
+        val cut = mutableListOf<String>()
         for (locale in LOCALES) {
             val context = largestFont(locale)
-            for (message in listOf(R.string.notif_not_spam_allowed, R.string.notif_not_spam_refused, R.string.more_no_crash_logs)) {
+            for (message in TOASTS) {
                 val text = context.getString(message)
-                assertTrue("$locale: $text", toastLines(context, message) <= 2)
+                if (toastLines(context, text) > 2) cut += "$locale: $text"
             }
         }
+        assertEquals(emptyList<String>(), cut)
     }
 
     /** The reason moved into a notification because it can't fit, which also shows the measure rejects long text. */
     @Test
     fun `the refusal's full reason would be cut off in a toast`() {
         for (locale in LOCALES) {
-            assertTrue(locale.toString(), toastLines(largestFont(locale), R.string.notif_not_spam_refused_text) > 2)
+            val context = largestFont(locale)
+            assertTrue(locale.toString(), toastLines(context, context.getString(R.string.notif_not_spam_refused_text)) > 2)
         }
     }
 
@@ -66,9 +68,8 @@ class ToastTextFitTest {
 
     private fun toastLines(
         context: Context,
-        @StringRes message: Int,
+        text: String,
     ): Int {
-        val text = context.getString(message)
         val metrics = context.resources.displayMetrics
         val paint =
             TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
@@ -86,6 +87,36 @@ class ToastTextFitTest {
 
     private companion object {
         val LOCALES = listOf(Locale.US, Locale.SIMPLIFIED_CHINESE)
+
+        // Every string the app shows in a toast. None names a number: a stored
+        // one can be 15 digits, which formats as one word too wide for a line.
+        val TOASTS =
+            listOf(
+                R.string.notif_not_spam_allowed,
+                R.string.notif_not_spam_refused,
+                R.string.more_no_crash_logs,
+                R.string.action_failed,
+                R.string.undo_failed,
+                R.string.blocked_log_undo_failed,
+                R.string.export_share_failed,
+                R.string.export_log_empty,
+                R.string.export_redress_empty,
+                R.string.emergency_number_block_refused,
+                R.string.link_no_browser,
+                R.string.link_no_activity,
+                R.string.ftc_report_toast,
+                R.string.ftc_report_no_browser,
+                R.string.settings_outgoing_call_hold_not_granted,
+                R.string.post_call_contact_unavailable,
+                R.string.feedback_whitelisted,
+                R.string.feedback_blocked,
+                R.string.notification_action_failed,
+                R.string.recent_copied,
+                R.string.detail_copied,
+                R.string.blocked_log_copied_short,
+                R.string.detail_number_blocked,
+                R.string.detail_number_unblocked,
+            )
 
         // Android 14's top Font size step; earlier versions stop at 1.3.
         const val LARGEST_FONT_SCALE = 2.0f

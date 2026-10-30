@@ -195,10 +195,9 @@
     <string name="blocked_log_show_all">Show all activity</string>
     <string name="blocked_log_deleted">Deleted</string>
     <string name="blocked_log_undo">Undo</string>
-    <string name="blocked_log_undo_failed">Couldn\'t undo that block. You can remove it from the Rules tab.</string>
+    <string name="blocked_log_undo_failed">Couldn\'t undo. Unblock it in Rules.</string>
     <string name="blocked_log_number_blocked">%s blocked</string>
     <string name="blocked_log_log_cleared">Log cleared</string>
-    <string name="blocked_log_copied">Copied %s</string>
     <string name="blocked_log_blocked_call">Blocked call</string>
     <string name="blocked_log_blocked_sms">Flagged text</string>
     <string name="blocked_log_safety_exempted">Allowed by a safety floor</string>
@@ -210,7 +209,7 @@
     <string name="blocked_log_detail">Detail</string>
     <string name="blocked_log_temporary_allow_reason">Allowed from blocked log</string>
     <string name="blocked_log_temporary_block_reason">Blocked from blocked log</string>
-    <string name="emergency_number_block_refused">Emergency and public-safety numbers cannot be blocked.</string>
+    <string name="emergency_number_block_refused">Emergency lines can\'t be blocked.</string>
     <string name="blocked_log_call">Call</string>
     <string name="blocked_log_sms">SMS</string>
 
@@ -687,7 +686,7 @@
     <string name="settings_outgoing_call_hold_desc">Holds calls to blocked, spam or premium numbers until you tap Call anyway.</string>
     <string name="settings_outgoing_call_hold_unavailable">This phone doesn\'t let apps hold outgoing calls.</string>
     <string name="settings_outgoing_call_hold_role_missing">Set CallShield as the call redirection app to use this.</string>
-    <string name="settings_outgoing_call_hold_not_granted">Call redirection wasn\'t allowed, so calls won\'t be held.</string>
+    <string name="settings_outgoing_call_hold_not_granted">Call redirection wasn\'t allowed.</string>
     <string name="settings_db_prefix_expansion">Database prefix expansion</string>
     <string name="settings_db_prefix_expansion_desc">Block campaign numbers sharing a known spam prefix</string>
     <string name="settings_detection_engines">Detection engines</string>
@@ -1020,9 +1019,9 @@
     <string name="more_share_crash_log_subtitle">Export the latest redacted log</string>
     <string name="more_appearance">Appearance</string>
     <!-- FTC one-tap report (Feature C) -->
-    <string name="ftc_report_toast">%1$s copied. Paste it into the form\'s phone-number field.</string>
-    <string name="ftc_report_no_browser">No browser available to open the report form.</string>
-    <string name="link_no_browser">No browser available to open this link.</string>
+    <string name="ftc_report_toast">Number copied. Paste it in the form.</string>
+    <string name="ftc_report_no_browser">No browser to open the form.</string>
+    <string name="link_no_browser">No browser to open this link.</string>
     <string name="link_no_activity">This device can\'t open that screen.</string>
     <!-- Emergency contacts (Feature E) -->
     <string name="emergency_contacts_subtitle">They always ring, even past your blocklist, quiet hours and aggressive mode.</string>
@@ -1340,7 +1339,7 @@
     <string name="temporary_decision_unchanged">Nothing changed. %1$s has a permanent rule or is an emergency number.</string>
     <string name="temporary_decision_failed">Couldn\'t change %1$s. Try again.</string>
     <string name="undo_failed">Couldn\'t undo that.</string>
-    <string name="action_failed">Something went wrong, so that didn\'t go through. Try again.</string>
+    <string name="action_failed">That didn\'t go through. Try again.</string>
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>
@@ -1641,9 +1640,9 @@
     <string name="feedback_blocked">Number blocked and reported</string>
     <string name="feedback_whitelisted">Number marked as safe</string>
     <string name="notification_action_failed">That didn\'t work. Try again from the app.</string>
-    <string name="export_share_failed">Couldn\'t create the export file. Storage may be full.</string>
-    <string name="export_log_empty">Nothing to export yet. No calls have been blocked and no texts flagged.</string>
-    <string name="export_redress_empty">Nothing to export yet. No calls have been blocked.</string>
+    <string name="export_share_failed">Export failed. Storage may be full.</string>
+    <string name="export_log_empty">Nothing blocked or flagged yet.</string>
+    <string name="export_redress_empty">No blocked calls to export yet.</string>
     <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
     <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam, call-back and save-contact actions. Off by default; rating notifications stay enabled.</string>

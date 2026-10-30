@@ -598,7 +598,6 @@ fun BlockedCallItem(
     val location = rememberCallerPlace(call.number, homeRegion, call.isCall)
     var expanded by rememberSaveable(call.id) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
-    val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
     val clipLabelPhoneNumber = stringResource(R.string.clip_label_phone_number)
@@ -613,12 +612,7 @@ fun BlockedCallItem(
                 onLongClick = {
                     val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)
                     (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-                    Toast
-                        .makeText(
-                            context,
-                            copiedMessage,
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                    Toast.makeText(context, copiedShortMessage, Toast.LENGTH_SHORT).show()
                 },
             ),
     ) {

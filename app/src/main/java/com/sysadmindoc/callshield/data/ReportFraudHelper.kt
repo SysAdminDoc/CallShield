@@ -56,12 +56,7 @@ object ReportFraudHelper {
             }
         return try {
             context.startActivity(intent)
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.ftc_report_toast, PhoneFormatter.formatIsolated(number)),
-                    Toast.LENGTH_LONG,
-                ).show()
+            Toast.makeText(context, R.string.ftc_report_toast, Toast.LENGTH_LONG).show()
             true
         } catch (_: Exception) {
             Toast.makeText(context, R.string.ftc_report_no_browser, Toast.LENGTH_LONG).show()
