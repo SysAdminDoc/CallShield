@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
+import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.ExternalBlocklistParser
@@ -73,6 +74,7 @@ class ExternalBlocklistSubscriptionIntegrationTest {
                 settingsRepository = settings,
                 normalizeNumber = ::digitsOnly,
                 invalidateAllCaches = { invalidations++ },
+                runInTransaction = { block -> db.withTransaction { block() } },
                 externalBlocklistDataSource = feed,
             )
     }

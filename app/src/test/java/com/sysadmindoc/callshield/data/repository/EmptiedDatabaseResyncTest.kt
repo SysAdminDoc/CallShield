@@ -103,6 +103,27 @@ class EmptiedDatabaseResyncTest {
         assertEquals(false, rows.getValue(unblocked).isUserBlocked)
     }
 
+    /** The kept rows used to come from a read before the downloads, so an edit made meanwhile was written back stale. */
+    @Test
+    fun `an edit made while shards download survives on a row the sync keeps`() {
+        sync()
+        remote.fetched.clear()
+        val (lostShard, lostNumbers) = SHARDS.entries.first()
+        val kept = runBlocking { fixture.dao.getNumbersBySource("github") }.filter { it.number !in lostNumbers }
+        runBlocking { fixture.dao.replaceGithubData(kept, emptyList()) }
+        val edited = kept.first()
+        remote.headCommit = "c2"
+        remote.duringFetch = {
+            fixture.dao.insertNumbers(listOf(edited.copy(type = "scam", description = "Edited while syncing")))
+        }
+
+        sync()
+
+        assertEquals(listOf(pathOf(lostShard)), remote.fetched)
+        val row = runBlocking { fixture.dao.getNumbersBySource("github") }.single { it.number == edited.number }
+        assertEquals("scam" to "Edited while syncing", row.type to row.description)
+    }
+
     private fun sync() = runBlocking { fixture.repository.syncFromGitHub(force = false) }
 
     private fun storedNumbers() = runBlocking { fixture.dao.getNumbersBySource("github") }.mapTo(HashSet()) { it.number }

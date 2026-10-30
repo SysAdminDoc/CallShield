@@ -61,6 +61,7 @@ class SyncRepository(
     private val settingsRepository: SettingsRepository,
     private val normalizeNumber: (String) -> String,
     private val invalidateAllCaches: () -> Unit,
+    private val runInTransaction: suspend (suspend () -> Unit) -> Unit,
     private val externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -541,11 +542,11 @@ class SyncRepository(
                 } else {
                     settingsRepository.readLastDataShardHashes().orEmpty()
                 }
-            val storedNumbers = dao.getNumbersBySource(GITHUB_SOURCE)
-            val storedPrefixes = dao.getAllPrefixesForSync()
+            // Only picks which shards to fetch. A shard that empties during the
+            // downloads is fetched again at the next sync.
             val storedShardIds =
-                storedNumbers.mapTo(HashSet()) { spamShardIdFor(it.number) }.also { ids ->
-                    storedPrefixes.mapTo(ids) { spamShardIdFor(it.prefix) }
+                dao.getNumbersBySource(GITHUB_SOURCE).mapTo(HashSet()) { spamShardIdFor(it.number) }.also { ids ->
+                    dao.getAllPrefixesForSync().mapTo(ids) { spamShardIdFor(it.prefix) }
                 }
             val descriptorsById = manifest.shards.associateBy { it.id }
             // A shard whose hash matches but whose rows are all gone lost them
@@ -561,41 +562,48 @@ class SyncRepository(
                     descriptor.id to fetchAndValidateShard(descriptor)
                 }
 
-            val preservedUserBlocks = readPreservedUserBlocks()
-            // These rows were read before the downloads, so a block or unblock
-            // made while they ran is taken from the fresh read instead of
-            // being written back stale.
-            val retainedNumbers =
-                storedNumbers
-                    .filter { number ->
-                        val shardId = spamShardIdFor(number.number)
-                        shardId in descriptorsById && shardId !in changedIds
-                    }.map { row ->
-                        row.copy(isUserBlocked = row.number in preservedUserBlocks, expiresAt = preservedUserBlocks[row.number])
-                    }
-            val importedNumbers =
-                fetchedShards.values.flatMap { shard ->
-                    sanitizeDatabaseNumbers(
-                        databaseNumbers = shard.numbers,
-                        normalizeNumber = normalizeNumber,
-                        preservedUserBlockedNumbers = preservedUserBlocks,
-                    )
-                }
-            val numbers = mergeNumbers(retainedNumbers, importedNumbers)
-
-            val retainedPrefixes =
-                storedPrefixes.filter { prefix ->
-                    val shardId = spamShardIdFor(prefix.prefix)
-                    shardId in descriptorsById && shardId !in changedIds
-                }
             val importedPrefixes = fetchedShards.values.flatMap { shard -> sanitizeDatabasePrefixes(shard.prefixes) }
-            val prefixes = mergePrefixes(retainedPrefixes, importedPrefixes)
+            val changed = changedIds.isNotEmpty() || removedIds.isNotEmpty()
+            var numberCount = 0
+            var prefixCount = 0
+            // All shard bodies and hashes have been verified before this single
+            // Room transaction, so a failed or interrupted shard set never exposes
+            // a half-applied database. The kept rows and the user's blocks are read
+            // inside it, so a block, unblock or edit made before the write lands
+            // is kept instead of being written back stale.
+            runInTransaction {
+                val preservedUserBlocks = readPreservedUserBlocks()
+                val retainedNumbers =
+                    dao
+                        .getNumbersBySource(GITHUB_SOURCE)
+                        .filter { number ->
+                            val shardId = spamShardIdFor(number.number)
+                            shardId in descriptorsById && shardId !in changedIds
+                        }.map { row ->
+                            row.copy(isUserBlocked = row.number in preservedUserBlocks, expiresAt = preservedUserBlocks[row.number])
+                        }
+                val importedNumbers =
+                    fetchedShards.values.flatMap { shard ->
+                        sanitizeDatabaseNumbers(
+                            databaseNumbers = shard.numbers,
+                            normalizeNumber = normalizeNumber,
+                            preservedUserBlockedNumbers = preservedUserBlocks,
+                        )
+                    }
+                val numbers = mergeNumbers(retainedNumbers, importedNumbers)
 
-            if (changedIds.isNotEmpty() || removedIds.isNotEmpty()) {
-                // All shard bodies and hashes have been verified before this
-                // single Room transaction. A failed/interrupted shard set can
-                // therefore never expose a half-applied database.
-                dao.replaceGithubData(numbers, prefixes)
+                val retainedPrefixes =
+                    dao.getAllPrefixesForSync().filter { prefix ->
+                        val shardId = spamShardIdFor(prefix.prefix)
+                        shardId in descriptorsById && shardId !in changedIds
+                    }
+                val prefixes = mergePrefixes(retainedPrefixes, importedPrefixes)
+
+                if (changed) dao.replaceGithubData(numbers, prefixes)
+                numberCount = numbers.size
+                prefixCount = prefixes.size
+            }
+            if (changed) {
                 invalidateAllCaches()
                 CallShieldWidget.refreshAll(context)
             }
@@ -608,7 +616,7 @@ class SyncRepository(
                 databaseUpdated = manifest.updated,
                 manifestDigest = manifestDigest,
             )
-            numbers.size to prefixes.size
+            numberCount to prefixCount
         }
 
     private suspend fun fetchAndValidateShard(descriptor: SpamShardDescriptor): SpamDatabaseShard {

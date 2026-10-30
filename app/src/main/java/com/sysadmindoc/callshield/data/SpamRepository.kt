@@ -129,6 +129,7 @@ class SpamRepository(
             settingsRepository = settingsRepository,
             normalizeNumber = { canonicalizer().canonicalizePhone(it) },
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
+            runInTransaction = { block -> db.withTransaction { block() } },
             externalBlocklistDataSource = externalBlocklistDataSource,
             clock = wallClock,
         )
