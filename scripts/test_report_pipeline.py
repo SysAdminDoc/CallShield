@@ -1046,6 +1046,65 @@ def assert_spam_issues_listed_with_pool_state(data_dir: Path) -> None:
     assert plain.returncode == 0 and "[SPAM] issues" not in plain.stdout, plain.stdout
 
 
+def assert_pending_pool_listed_by_calling_code(data_dir: Path) -> None:
+    """The summary ranks the waiting numbers by calling code, with single-report share and reporter groups."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    # +1: two reporters on one number and a third on another, all on one day.
+    write_report(data_dir, "us-1a.json", "+12122340601", BUCKETS[0], TIMES[0], device=BUCKETS[0])
+    write_report(data_dir, "us-1b.json", "+12122340601", BUCKETS[1], TIMES[1], device=BUCKETS[1])
+    write_report(data_dir, "us-2.json", "+12122340602", BUCKETS[0], TIMES[2], device=BUCKETS[0])
+    write_report(data_dir, "us-3.json", "+12122340603", BUCKETS[2], TIMES[3], device=BUCKETS[2])
+    # +51: one reporter filing two numbers is one group.
+    write_report(data_dir, "pe-1.json", "+51912345601", BUCKETS[3], TIMES[0], device=BUCKETS[3])
+    write_report(data_dir, "pe-2.json", "+51912345602", BUCKETS[3], TIMES[1], device=BUCKETS[3])
+    singles = ["+2348031234501", "+33612345601", "+393123456701", "+447912345601",
+               "+525512345601", "+5511987654301", "+639171234501", "+919812345601"]
+    for index, number in enumerate(singles):
+        write_report(data_dir, f"single-{index}.json", number, BUCKETS[4], TIMES[2], device=BUCKETS[4])
+    # None of these waits to publish: a not-spam vote alone, a number that
+    # publishes this run on two reports a day apart, and one the maintainer
+    # approved, whose ledger row stays unpublished.
+    write_report(data_dir, "vote.json", "+74951234567", BUCKETS[5], TIMES[0], report_type="not_spam", device=BUCKETS[5])
+    published = "+12122340609"
+    write_report(data_dir, "published-1.json", published, None, TIMES[0])
+    write_report(data_dir, "published-2.json", published, None, f"{TODAY}T04:00:00+00:00")
+    approved = "+498943780835"
+    write_report(data_dir, "approved.json", approved, BUCKETS[5], TIMES[1], device=BUCKETS[5])
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [{"number": approved, "type": "telemarketer", "reviewed_at": BASE_DAY,
+                       "reference": "https://github.com/SysAdminDoc/CallShield/issues/27"}]},
+    )
+
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    result = run_script_result("merge_community_reports.py", data_dir)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert reports_for(data_dir, published) == 2, "the fixture's published number did not publish"
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert pending["+74951234567"]["events"] == [], pending["+74951234567"]
+    assert row_for(data_dir, approved) is not None and not pending[approved]["published"], pending[approved]
+
+    lines = result.stdout.splitlines()
+    start = next(index for index, line in enumerate(lines) if line.startswith("Pending pool by calling code"))
+    assert lines[start - 2].startswith("Total database:"), lines[start - 2 : start]
+    assert lines[start : start + 10] == [
+        "Pending pool by calling code (13 numbers waiting, 92% on a single report):",
+        "  +1: 3 numbers, 67% on a single report, 3 reporter groups on its busiest day",
+        "  +51: 2 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +234: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +33: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +39: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +44: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +52: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  +55: 1 numbers, 100% on a single report, 1 reporter groups on its busiest day",
+        "  2 other codes: 2 numbers",
+    ], lines[start : start + 10]
+
+
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish without being told, and an empty feed has to be
@@ -1800,6 +1859,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_pending_pool_listed_by_calling_code(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from phone_normalization import is_plausible_number, validated_report_number
+from phone_normalization import is_plausible_number, split_country_code, validated_report_number
 from pipeline_io import (
     atomic_write_json,
     report_queue_digest,
@@ -318,6 +318,45 @@ def spam_issue_rows(issues: list[dict], existing: dict[str, dict], pending: dict
             where = "not in the database or the pending pool"
         rows.append(f"{label} {number}: {where}")
     return rows
+
+
+def pending_pool_by_calling_code(pending: dict[str, dict], existing: dict[str, dict], limit: int = 8) -> list[str]:
+    """Summary lines for the numbers still waiting to publish, by calling code.
+
+    Says which regions the waiting reports come from, and whether a region's
+    share rests on a few reporters: groups are counted the way the gate counts
+    them, so one reporter filing many numbers on one day is one group. A
+    maintainer approval publishes a number without marking its ledger row, so
+    the database decides what is still waiting.
+    """
+    by_code: dict[str, list[dict]] = {}
+    for number, state in pending.items():
+        if state["published"] or not state["events"] or number in existing:
+            continue
+        split = split_country_code(number.lstrip("+"))
+        by_code.setdefault(f"+{split[0]}" if split else number, []).append(state)
+    if not by_code:
+        return []
+
+    def single_report(states: list[dict]) -> int:
+        return sum(1 for state in states if sum(int(event.get("count", 1)) for event in state["events"]) == 1)
+
+    total = sum(len(states) for states in by_code.values())
+    ranked = sorted(by_code.items(), key=lambda item: (-len(item[1]), item[0]))
+    lines = [
+        f"Pending pool by calling code ({total} numbers waiting, "
+        f"{single_report([state for _, states in ranked for state in states]) / total:.0%} on a single report):"
+    ]
+    for code, states in ranked[:limit]:
+        groups = same_day_reporters([event for state in states for event in state["events"]])
+        lines.append(
+            f"  {code}: {len(states)} numbers, {single_report(states) / len(states):.0%} on a single report, "
+            f"{groups} reporter groups on its busiest day"
+        )
+    if len(ranked) > limit:
+        rest = sum(len(states) for _, states in ranked[limit:])
+        lines.append(f"  {len(ranked) - limit} other codes: {rest} numbers")
+    return lines
 
 
 def write_community_watch_feed(
@@ -1324,6 +1363,10 @@ def main(argv: list[str] | None = None):
         f"{decayed} corrections decayed, {removed} rows removed"
     )
     print(f"Total database: {len(db['numbers'])} numbers")
+    pool_lines = pending_pool_by_calling_code(pending, existing)
+    if pool_lines:
+        print()
+        print("\n".join(pool_lines))
 
     if args.github_issues:
         try:
