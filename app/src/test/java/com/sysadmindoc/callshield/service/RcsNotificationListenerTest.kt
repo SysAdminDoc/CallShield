@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
+import com.sysadmindoc.callshield.data.MessageCapabilityState
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -27,6 +28,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,6 +79,41 @@ class RcsNotificationListenerTest {
             context.getString(R.string.notif_code_during_call_text, PhoneFormatter.formatIsolated(caller)),
             codeWarnings().single().extras.getString(Notification.EXTRA_TEXT),
         )
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `a code Android hid during an unknown call still warns`() {
+        UnknownCallWindow.shared.callStarted(caller)
+
+        postUntil(hiddenCodeNotification()) { codeWarnings().isNotEmpty() }
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `a hidden code from a blocked number isn't screened as spam`() {
+        runBlocking { fixture.repository.blockNumber(caller, type = "test") }
+        // The same number's readable text is logged, so the block applies to it.
+        postUntil(chatNotification(NOTES, sender = caller), COLD_SCREEN_TIMEOUT) { callLogRows() > 0 }
+        val rowsBefore = callLogRows()
+
+        // A phone that keeps the sender as the title is the case a block could reach.
+        postUntil(hiddenCodeNotification(title = caller)) { notificationCapability() == MessageCapabilityState.BODY_REDACTED.name }
+        // Screening logged a block within milliseconds of recording the capability.
+        Thread.sleep(1_000L)
+
+        assertEquals(rowsBefore, callLogRows())
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `the hidden code placeholder is the phone's own string, from Android 15 on`() {
+        val system = RcsNotificationListener.systemHiddenCodePlaceholder()
+
+        assertEquals(RcsNotificationListener.HIDDEN_CODE_PLACEHOLDER, system)
+        assertTrue(RcsNotificationListener.isHiddenCodePlaceholder("Contenu sensible masqué", 35, "Contenu sensible masqué"))
+        assertFalse(RcsNotificationListener.isHiddenCodePlaceholder(RcsNotificationListener.HIDDEN_CODE_PLACEHOLDER, 34, system))
+        assertFalse(RcsNotificationListener.isHiddenCodePlaceholder("Your code is 482913", 35, system))
     }
 
     @Test
@@ -222,6 +260,8 @@ class RcsNotificationListenerTest {
 
     private fun codeWarnings() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_CODE_DURING_CALL }
 
+    private suspend fun notificationCapability() = fixture.repository.readPrefsSnapshot()[SpamRepository.KEY_NOTIFICATION_CAPABILITY_STATE]
+
     private fun phishingAlerts() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_PHISHING }
 
     private fun callLogRows() =
@@ -276,6 +316,41 @@ class RcsNotificationListenerTest {
         Process.myUserHandle(),
         System.currentTimeMillis(),
     )
+
+    /**
+     * A code notification as Android 15 and later hand it to a listener they
+     * don't trust with one (NotificationManagerService.redactStatusBarNotification):
+     * the app's name for a title and the placeholder for every text.
+     */
+    @Suppress("DEPRECATION")
+    private fun hiddenCodeNotification(title: String = "Messages") =
+        StatusBarNotification(
+            GOOGLE_MESSAGES,
+            GOOGLE_MESSAGES,
+            2,
+            null,
+            Process.myUid(),
+            0,
+            0,
+            Notification
+                .Builder(context, "chats")
+                .setSmallIcon(android.R.drawable.sym_def_app_icon)
+                .setContentTitle(title)
+                .setContentText(RcsNotificationListener.HIDDEN_CODE_PLACEHOLDER)
+                .setStyle(
+                    Notification
+                        .MessagingStyle(Person.Builder().setName("").build())
+                        .addMessage(
+                            Notification.MessagingStyle.Message(
+                                RcsNotificationListener.HIDDEN_CODE_PLACEHOLDER,
+                                System.currentTimeMillis(),
+                                Person.Builder().setName(title).build(),
+                            ),
+                        ),
+                ).build(),
+            Process.myUserHandle(),
+            System.currentTimeMillis(),
+        )
 
     private companion object {
         const val GOOGLE_MESSAGES = "com.google.android.apps.messaging"

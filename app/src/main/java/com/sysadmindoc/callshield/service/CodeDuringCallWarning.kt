@@ -49,18 +49,19 @@ internal object CodeDuringCallWarning {
         }
     }
 
-    /** Returns whether a warning was posted for [body]. */
+    /** Returns whether a warning was posted for [body]. [isCode] when Android hid it as a one-time code. */
     fun onMessage(
         context: Context,
         body: String,
         window: UnknownCallWindow = UnknownCallWindow.shared,
         isContact: (String) -> Boolean = { SpamHeuristics.isInContacts(context, it) },
         notify: (Context, String) -> Boolean = NotificationHelper::notifyCodeDuringCall,
+        isCode: Boolean = false,
     ): Boolean {
         // The text may have started this process after the call's ended.
         restore(context, window)
         val caller = window.openCaller() ?: return false
-        if (!UnknownCallWindow.looksLikeOneTimeCode(body)) return false
+        if (!isCode && !UnknownCallWindow.looksLikeOneTimeCode(body)) return false
         // Checked again here: the user may have saved the caller during the call.
         if (caller.isNotEmpty() && isContact(caller)) return false
         if (!window.claimWarning(caller)) return false

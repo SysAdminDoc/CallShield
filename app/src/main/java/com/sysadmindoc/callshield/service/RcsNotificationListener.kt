@@ -1,9 +1,11 @@
 package com.sysadmindoc.callshield.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.Person
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
@@ -179,6 +181,8 @@ class RcsNotificationListener : NotificationListenerService() {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (title.isBlank() && body.isBlank()) return
+        // A hidden code's title is only the app's name, so it says nothing about a caller.
+        if (isHiddenCodePlaceholder(body, Build.VERSION.SDK_INT, systemHiddenCodePlaceholder())) return
         PushAlertRegistry.record(
             PushAlertRegistry.Alert(
                 packageName = sbn.packageName,
@@ -230,7 +234,8 @@ class RcsNotificationListener : NotificationListenerService() {
 
         val sender = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        val effectiveBody = bodyForAnalysis(body)
+        val hiddenCode = isHiddenCodePlaceholder(body, Build.VERSION.SDK_INT, systemHiddenCodePlaceholder())
+        val effectiveBody = bodyForAnalysis(body).takeUnless { hiddenCode }
         val bodyAvailable = effectiveBody != null
         repo.recordMessageCapability(
             MessageCapabilityDetector.classifyNotification(
@@ -247,6 +252,13 @@ class RcsNotificationListener : NotificationListenerService() {
                 observedAtMillis = observedAtMillis,
             ),
         )
+
+        if (hiddenCode) {
+            // Android judged it a one-time code. There's nothing to screen, and
+            // removing the notification could take a real code away.
+            CodeDuringCallWarning.onMessage(applicationContext, body, isCode = true)
+            return
+        }
 
         // The same text also reaches the SMS receiver; the call window warns once.
         effectiveBody?.let { CodeDuringCallWarning.onMessage(applicationContext, it) }
@@ -519,6 +531,31 @@ class RcsNotificationListener : NotificationListenerService() {
 
         /** Return real content only; encrypted/empty placeholders stay sender-only. */
         internal fun bodyForAnalysis(body: String): String? = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
+
+        /** The framework's English text, for a build whose own string can't be read. */
+        internal const val HIDDEN_CODE_PLACEHOLDER = "Sensitive notification content hidden"
+
+        /**
+         * Android 15 and later hide a one-time code from a listener it doesn't
+         * trust with one: the text becomes this placeholder and the title the
+         * app's name. Read from the phone itself, so it matches in any language.
+         */
+        @SuppressLint("DiscouragedApi")
+        internal fun systemHiddenCodePlaceholder(): String? {
+            val resources = Resources.getSystem()
+            val id = resources.getIdentifier("redacted_notification_message", "string", "android")
+            return if (id == 0) null else resources.getString(id)
+        }
+
+        internal fun isHiddenCodePlaceholder(
+            body: String,
+            apiLevel: Int,
+            systemPlaceholder: String?,
+        ): Boolean {
+            if (apiLevel < MessageCapabilityDetector.ANDROID_15_API) return false
+            val text = body.trim()
+            return text.isNotEmpty() && (text == systemPlaceholder?.trim() || text.equals(HIDDEN_CODE_PLACEHOLDER, ignoreCase = true))
+        }
 
         /** Longest body still treated as a possible encryption placeholder. */
         private const val MAX_PLACEHOLDER_LEN = 48
