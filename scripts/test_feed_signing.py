@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -165,6 +167,20 @@ class AppContractTest(unittest.TestCase):
     def test_the_published_feeds_verify_under_the_app_keys(self):
         # The positive control for the whole scheme: what devices download today verifies.
         self.assertEqual([], feed_signing.verify_feeds(feed_signing.ROOT / "data", feed_signing.trusted_public_keys()))
+
+    @unittest.skipUnless(shutil.which("git") and (feed_signing.ROOT / ".git").exists(), "needs a git checkout")
+    def test_git_never_converts_line_endings_in_data(self):
+        # Signing reads the working copy and devices get the blob, so the two must be the same bytes.
+        root = str(feed_signing.ROOT)
+        listed = subprocess.run(["git", "-C", root, "ls-files", "data"], capture_output=True, text=True, check=True).stdout
+        for name in feed_signing.SIGNED_FEEDS + feed_signing.CONSUMER_FEEDS:
+            self.assertIn(f"data/{name}{feed_signing.SIGNATURE_SUFFIX}\n", listed)
+        checked = subprocess.run(
+            ["git", "-C", root, "check-attr", "--stdin", "text"], input=listed, capture_output=True, text=True, check=True
+        ).stdout.splitlines()
+
+        self.assertEqual(len(listed.splitlines()), len(checked))
+        self.assertEqual([], [line for line in checked if not line.endswith(": text: unset")])
 
 
 if __name__ == "__main__":

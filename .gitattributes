@@ -1,0 +1,4 @@
+# Feed signatures cover each file's exact bytes, and devices download the
+# committed blob. A checkout that converts line endings (core.autocrlf=true,
+# Git for Windows' default) would sign CRLF bytes no device ever receives.
+data/** -text
