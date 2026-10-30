@@ -5,10 +5,12 @@ import android.content.res.Configuration
 import android.graphics.Typeface
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.DisplayMetrics
 import android.util.TypedValue
 import androidx.annotation.StringRes
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +49,13 @@ class ToastTextFitTest {
         }
     }
 
+    /** Without the font scale the text would measure at 14dp, and short lines would pass anything. */
+    @Test
+    fun `the measure sizes toast text the way Android 14 does at the largest font`() {
+        val metrics = largestFont(Locale.US).resources.displayMetrics
+        assertEquals(LARGEST_TOAST_TEXT_DP, toastTextSizePx(metrics) / metrics.density, 0.01f)
+    }
+
     private fun largestFont(locale: Locale): Context =
         base.createConfigurationContext(
             Configuration(base.resources.configuration).apply {
@@ -63,7 +72,7 @@ class ToastTextFitTest {
         val metrics = context.resources.displayMetrics
         val paint =
             TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
-                textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, TOAST_TEXT_SP, metrics)
+                textSize = toastTextSizePx(metrics)
                 typeface = Typeface.create("sans-serif", Typeface.NORMAL)
             }
         val width = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, TOAST_TEXT_WIDTH_DP, metrics).toInt()
@@ -73,12 +82,18 @@ class ToastTextFitTest {
             .lineCount
     }
 
+    private fun toastTextSizePx(metrics: DisplayMetrics): Float = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, TOAST_TEXT_SP, metrics)
+
     private companion object {
         val LOCALES = listOf(Locale.US, Locale.SIMPLIFIED_CHINESE)
 
         // Android 14's top Font size step; earlier versions stop at 1.3.
         const val LARGEST_FONT_SCALE = 2.0f
         const val TOAST_TEXT_SP = 14f
+
+        // Android 14 scales large text less than small text: at 2.0 its
+        // FontScaleConverter table turns 14sp into 26dp, not 28.
+        const val LARGEST_TOAST_TEXT_DP = 26f
 
         // The toast's 300dp maxWidth less 16dp padding on each side and the
         // 24dp app icon with its 10dp gap. A 360dp screen leaves 262dp
