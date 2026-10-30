@@ -27,6 +27,8 @@ import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -74,7 +76,9 @@ class NumberDetailRotationTest {
         CommunityContributor.transport = { report ->
             val outcome = if (report.type == "not_spam") ContributeOutcome.REPORTED_NOT_SPAM else ContributeOutcome.REPORTED_SPAM
             // A spam report waits for the test, so the screen can be recreated while it's out.
-            if (outcome == ContributeOutcome.REPORTED_SPAM) release.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            // The wait is on IO like the real send: the caller is the main thread, which is
+            // the test's own, and blocking it there let the report finish before the rotation.
+            if (outcome == ContributeOutcome.REPORTED_SPAM) withContext(Dispatchers.IO) { release.await(TIMEOUT_MS, TimeUnit.MILLISECONDS) }
             synchronized(sent) { sent += report }
             ContributeResult(true, outcome.name, outcome)
         }
@@ -89,6 +93,10 @@ class NumberDetailRotationTest {
             )
         shadowOf(Looper.getMainLooper()).idle()
         restoration.setContent { CallShieldTheme { NumberDetailScreen(number, viewModel, onBack = {}) } }
+        // The live check's verdict card loads off the main thread and pushes the
+        // buttons down. Arriving between the scroll and the tap, it left the
+        // button below the window and the tap landed on nothing.
+        awaitText("No risk detected")
     }
 
     @After
@@ -119,6 +127,7 @@ class NumberDetailRotationTest {
     fun `Report's result and its Undo still show after a rotation while it goes out`() {
         composeRule.onNode(hasText("Report") and hasClickAction()).performScrollTo().performClick()
         restoration.emulateSavedInstanceStateRestore()
+        assertEquals(emptyList<CommunityReport>(), synchronized(sent) { sent.toList() })
         release.countDown()
         awaitText("Blocked on this phone.", substring = true)
 
