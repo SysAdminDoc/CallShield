@@ -256,12 +256,61 @@ class SpamActionReceiverRobolectricTest {
             shadowOf(Looper.getMainLooper()).idle()
 
             assertEquals(context.getString(R.string.notif_not_spam_refused), ShadowToast.getTextOfLatestToast())
-            val reason = shadowOf(nm).getNotification(id) ?: error("nothing took the alert's place")
+            assertNull("the alert stays cancelled", shadowOf(nm).getNotification(id))
+            val reason = shadowOf(nm).getNotification(NotificationHelper.notSpamRefusedNotificationId(number)) ?: error("nothing took the alert's place")
             assertEquals(context.getString(R.string.notif_not_spam_refused_text), reason.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString())
             assertEquals(number, shadowOf(reason.contentIntent).savedIntent.getStringExtra("open_number"))
         } finally {
             runBlocking { repository.unblockByNumber(number) }
         }
+    }
+
+    @Test
+    fun `a refused Not spam stays in the blocked-call group under its summary`() {
+        shadowOf(context as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        NotificationHelper.createChannels(context)
+        NotificationHelper.clearBlockedSummaryCount()
+        NotificationHelper.resetRateLimitForTest()
+        nm.cancelAll()
+        val number = "+15554440003"
+        val repository = SpamRepository.getInstance(context)
+        runBlocking { repository.blockNumber(number, "spam", "blocked in test") }
+        try {
+            NotificationHelper.notifyBlocked(context, number, "database", isCall = true)
+            val alert = shadowOf(nm).allNotifications.single { it.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+            val notSpam = shadowOf(alert.actions.single { it.title.toString() == "Not spam" }.actionIntent).savedIntent
+
+            receiveAndAwait(notSpam)
+
+            val summary = shadowOf(nm).allNotifications.single { it.flags and Notification.FLAG_GROUP_SUMMARY != 0 }
+            assertEquals(
+                context.resources.getQuantityString(R.plurals.notif_summary_text_recent, 1, 1),
+                summary.extras.getCharSequence(Notification.EXTRA_TEXT).toString(),
+            )
+            val refusal = shadowOf(nm).getNotification(NotificationHelper.notSpamRefusedNotificationId(number)) ?: error("no refusal posted")
+            assertEquals(summary.group, refusal.group)
+            assertEquals(0, refusal.flags and Notification.FLAG_GROUP_SUMMARY)
+            assertEquals(Notification.GROUP_ALERT_SUMMARY, refusal.groupAlertBehavior)
+        } finally {
+            runBlocking { repository.unblockByNumber(number) }
+            NotificationHelper.clearBlockedSummaryCount()
+            nm.cancelAll()
+        }
+    }
+
+    /** Delivers [intent] and idles the main looper until the work it launched on the app scope ends. */
+    private fun receiveAndAwait(intent: Intent) {
+        val appJob = CallShieldApp.appScope.coroutineContext.job
+        val before = appJob.children.toSet()
+        SpamActionReceiver().onReceive(context, intent)
+        val launched = appJob.children.toSet() - before
+        assertEquals(1, launched.size)
+        val deadline = System.currentTimeMillis() + 10_000
+        while (launched.any { it.isActive } && System.currentTimeMillis() < deadline) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(20)
+        }
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     @Test

@@ -20,6 +20,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.normalizePhoneNumber
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ACTION_OPEN_BLOCKED_LOG
@@ -85,6 +86,7 @@ object NotificationHelper {
     private const val SUMMARY_ID = 1
     private const val STATUS_ID = 2
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
+    private const val NOT_SPAM_REFUSED_ID_SALT = 3
     private const val SMS_SAFE_ACTION_SALT = 30
     private const val FEEDBACK_ID_SALT = 62
     private const val AFTER_CALL_OPEN_SALT = 63
@@ -106,6 +108,12 @@ object NotificationHelper {
      * (which must cancel it after the user taps Spam/Not-Spam) always agree.
      */
     fun feedbackNotificationId(number: String): Int = stableId(number, FEEDBACK_ID_SALT)
+
+    /**
+     * The Not spam refusal's own ID. Reusing the alert's let it overwrite a
+     * newer alert for the same caller, posted while the allow was checked.
+     */
+    internal fun notSpamRefusedNotificationId(number: String): Int = stableId(number, NOT_SPAM_REFUSED_ID_SALT)
 
     private var lastNotifTime = 0L
     private var blockedSinceLastNotif = 0
@@ -582,11 +590,12 @@ object NotificationHelper {
      * Takes the place of a blocked-call alert whose Not spam the user's own
      * block refused. Android 12 and later cut a toast at two lines, so the
      * toast only says the block stands and this says why and where to undo it.
+     * It stays in the blocked-call group, under the summary that counted the
+     * call, and like the alerts it leaves any alerting to that summary.
      */
     fun notifyNotSpamRefused(
         context: Context,
         number: String,
-        notifId: Int,
     ): Boolean {
         val text = context.getString(R.string.notif_not_spam_refused_text)
         val builder =
@@ -598,7 +607,9 @@ object NotificationHelper {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(openNumberIntent(context, number))
                 .setAutoCancel(true)
-        return safeNotify(context, notifId.takeIf { it >= 0 } ?: stableId(number, 1), builder)
+                .setGroup(GROUP_BLOCKED)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+        return safeNotify(context, notSpamRefusedNotificationId(number), builder)
     }
 
     private fun openNumberIntent(
@@ -646,13 +657,14 @@ object NotificationHelper {
      * Whether Not spam can make this caller ring. The 24-hour allow runs at
      * [com.sysadmindoc.callshield.data.checker.CheckerPriority.TEMPORARY_ALLOW],
      * below contacts-only, a failed STIR/SHAKEN check and the user's own
-     * blocklist, system list and wildcard rules, and a hidden caller has no
-     * number to allow.
+     * blocklist, system list and wildcard rules. A hidden caller has no
+     * number to allow, and neither does one too long to normalize, which the
+     * allow refuses like a block of the user's own.
      */
     fun notSpamCanAllow(
         number: String,
         reasonCode: BlockReasonCode,
-    ): Boolean = number.isNotBlank() && reasonCode !in reasonsAboveTemporaryAllow
+    ): Boolean = normalizePhoneNumber(number).isNotBlank() && reasonCode !in reasonsAboveTemporaryAllow
 
     private val reasonsAboveTemporaryAllow =
         setOf(

@@ -208,4 +208,31 @@ class BlockedAlertActionsTest {
 
         assertEquals(listOf("Report"), postedAlert().actions.map { it.title.toString() })
     }
+
+    /**
+     * More digits than E.164 holds normalize to nothing, so the allow is
+     * refused and the receiver used to blame a block the user never made.
+     */
+    @Test
+    fun `a caller whose number can't be normalized gets Report only`() {
+        val tooLong = "+1212555011912345"
+        assertFalse(NotificationHelper.notSpamCanAllow(tooLong, BlockReasonCode.DATABASE))
+
+        NotificationHelper.notifyBlocked(context, tooLong, "database", isCall = true)
+
+        assertEquals(listOf("Report"), postedAlert().actions.map { it.title.toString() })
+    }
+
+    @Test
+    fun `a Not spam refusal leaves a newer alert for the same caller in place`() {
+        val number = "+12125550115"
+        NotificationHelper.notifyBlocked(context, number, "database", isCall = true)
+
+        NotificationHelper.notifyNotSpamRefused(context, number)
+
+        val children = shadowOf(notificationManager).allNotifications.filter { it.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+        assertEquals(2, children.size)
+        assertTrue(children.any { alert -> alert.actions?.any { it.title.toString() == "Not spam" } == true })
+        assertTrue(shadowOf(notificationManager).getNotification(NotificationHelper.notSpamRefusedNotificationId(number)) != null)
+    }
 }

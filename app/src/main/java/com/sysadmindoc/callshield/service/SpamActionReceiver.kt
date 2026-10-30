@@ -140,7 +140,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                 Toast.makeText(appContext, appContext.getString(message), Toast.LENGTH_SHORT).show()
             }
             if (!allowed) {
-                NotificationHelper.notifyNotSpamRefused(appContext, number, notifId)
+                NotificationHelper.notifyNotSpamRefused(appContext, number)
             }
             if (allowed && NotificationHelper.notSpamReachesCommunity(reasonCode, rowSource)) {
                 CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
