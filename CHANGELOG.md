@@ -49,6 +49,7 @@ All notable changes to CallShield will be documented in this file.
 - The Simplified Chinese translation now covers nearly every screen, with 311 more strings and every plural, from aixtin (#42). Only the two newest strings still show in English.
 - The Android post-call screen has a Call back button (#43). It opens your dialer with the number filled in, so a call that dropped is one tap from a redial and CallShield still needs no permission to place calls.
 - Spam on the post-call screen now records the block and the report itself, and the home screen widget redraws itself when your lists change. Both used to hand the job to the app's own receiver with a broadcast, which Android 17 QPR2 no longer delivers once the app has left the screen, so the block could have been lost.
+- Block area code no longer offers China's 0410 or 0413. The newest phone numbering data the offer is built from (libphonenumber 9.0.42) doesn't list them as area codes anymore.
 
 ## v1.12.0 (2026-10-09)
 

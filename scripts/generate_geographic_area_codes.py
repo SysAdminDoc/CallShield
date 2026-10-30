@@ -31,7 +31,7 @@ OUTPUT = (
     ROOT
     / "app/src/main/java/com/sysadmindoc/callshield/data/areacodes/GeographicAreaCodes.kt"
 )
-PHONENUMBERS_VERSION = "9.0.41"
+PHONENUMBERS_VERSION = "9.0.42"
 NANP = 1
 GEOGRAPHIC = {PhoneNumberType.FIXED_LINE, PhoneNumberType.FIXED_LINE_OR_MOBILE}
 SEEDS = ("2345678901234567", "9876543210987654")
