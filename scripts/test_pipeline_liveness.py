@@ -233,6 +233,12 @@ def scheduled_checks() -> None:
         "newest_record_date": {"ftc_complaints": BASE.date().isoformat(), "fcc_complaints": BASE.date().isoformat()},
     }
     assert evaluate_source_freshness(real_manifest, default_import, BASE) == []
+    # The merge never stamps community reports, and that's fine: the real
+    # manifest gives them a continuous cadence, so this check doesn't age them
+    # however old the stamp is. A stalled report queue is evaluate_queue_health's.
+    default_import["last_success"]["community_reports"] = (BASE - timedelta(days=120)).isoformat()
+    assert evaluate_source_freshness(real_manifest, default_import, BASE) == []
+    assert warn_source_staleness(real_manifest, default_import, BASE) == []
     default_import["newest_record_date"]["fcc_complaints"] = "2026-08-01"
     problems = evaluate_source_freshness(real_manifest, default_import, BASE)
     assert len(problems) == 1 and problems[0].startswith("fcc_complaints newest record is from 2026-08-01"), problems
