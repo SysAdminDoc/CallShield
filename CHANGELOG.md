@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- When Android stops asking for a permission or a default app role, CallShield's note about where to turn it on now shows in full at the bottom of the screen, with an Open App info or Open Default apps button. It used to be a toast that Android 12 and later cut off after two lines, and the settings page opened on top of it before you could read the rest.
 - A single Not spam vote no longer keeps a number off the community watch list for 90 days. Reports from people on later days count again, so a number that starts getting reported after someone vouched for it can still show the warning. Reports from the day of the vote, or earlier, still don't count.
 - A Report or Not spam result that came in just as the previous message closed, in Lookup or on a number's screen, could be skipped without showing. It shows now.
 - When GitHub's rate limit stops a report, the report service now passes on how long GitHub asked it to wait, instead of always saying a minute. When GitHub refuses the service's access token, it answers that it's unavailable rather than rate limited, and the app keeps the report and tries again later. This takes effect when the report Worker is next deployed.

@@ -168,7 +168,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val setupProgress = requiredSetupProgress(corePermissionsGranted, screenerReadyForCurrentMode)
     val setupReadyCount = setupProgress.done
     val setupTotal = setupProgress.total
-    // Both open App info with a hint once Android has stopped showing its
+    // Both point to App info with a hint once Android has stopped showing its
     // dialog, since the request then returns at once with nothing on screen.
     val corePermissionRequest =
         rememberPermissionRequest(R.string.permission_core_in_app_info) {
@@ -183,7 +183,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
             notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
         }
-    // Both open Default apps with a hint once Android has stopped showing the
+    // Both point to Default apps with a hint once Android has stopped showing the
     // role prompt, since the request then comes back at once with nothing on screen.
     val screeningRequest =
         rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) }) {
@@ -194,7 +194,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             redirectionRoleHeld = it.held
             if (it.held) {
                 viewModel.setOutgoingCallHold(true)
-            } else if (!it.opensDefaultApps) {
+            } else if (!it.defaultAppsHintShown) {
                 Toast.makeText(context, callHoldNotGranted, Toast.LENGTH_SHORT).show()
             }
         }

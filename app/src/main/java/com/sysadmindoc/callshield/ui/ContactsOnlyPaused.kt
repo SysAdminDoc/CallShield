@@ -28,7 +28,7 @@ import com.sysadmindoc.callshield.ui.theme.ShapeMd
 /**
  * Asks for Contacts access and calls [onResult] once Android answers. Android
  * stops showing its dialog after two refusals, so a refusal that leaves no
- * dialog for next time opens App info instead, where the permission lives.
+ * dialog for next time points to App info instead, where the permission lives.
  */
 @Composable
 fun rememberAllowContacts(onResult: () -> Unit = {}): () -> Unit {

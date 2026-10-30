@@ -50,7 +50,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -95,6 +94,7 @@ import com.sysadmindoc.callshield.permissions.InstallSource
 import com.sysadmindoc.callshield.permissions.InstallSourceKind
 import com.sysadmindoc.callshield.service.FeedTrustNotice
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.PermissionHintsHost
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
 import com.sysadmindoc.callshield.ui.rememberRoleRequest
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -172,25 +172,30 @@ fun OnboardingScreen(
     }
 
     // Android answers a request it won't show again at once, with nothing on
-    // screen, so even the first tap after two refusals in an earlier run opens
-    // App info, and the button keeps pointing there.
+    // screen, so even the first tap after two refusals in an earlier run gets
+    // the App info hint, and the button points there from then on.
     val runtimePermissionRequest =
         rememberPermissionRequest(
             R.string.permission_core_in_app_info,
             appInfoFor = CallShieldPermissions.corePermissions,
-            onOpensAppInfo = { runtimePermissionsBlocked = true },
+            hints = snackbarHostState,
+            onAppInfoHint = { runtimePermissionsBlocked = true },
         ) {
             refreshReadiness()
             runtimePermissionsBlocked = false
         }
     val notificationPermissionRequest =
-        rememberPermissionRequest(R.string.permission_notifications_in_app_info) {
+        rememberPermissionRequest(R.string.permission_notifications_in_app_info, hints = snackbarHostState) {
             refreshReadiness()
         }
-    // Opens Default apps with a hint once Android has stopped showing the role
-    // prompt, since the request then comes back at once with nothing on screen.
+    // Points to Default apps with a hint once Android has stopped showing the
+    // role prompt, since the request then comes back at once with nothing on screen.
     val screeningRequest =
-        rememberRoleRequest(R.string.role_call_screening_in_default_apps, roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) }) {
+        rememberRoleRequest(
+            R.string.role_call_screening_in_default_apps,
+            roleHeld = { CallShieldPermissions.hasCallScreeningRole(roleManager) },
+            hints = snackbarHostState,
+        ) {
             refreshReadiness()
         }
 
@@ -490,7 +495,7 @@ internal fun OnboardingScreenContent(
             SetupHint.ReinstallOverThisCopy -> ReinstallHint(installerLabel = installerLabel.orEmpty(), onOpenReleases = onOpenReleases)
             null -> Unit
         }
-        SnackbarHost(snackbarHostState)
+        PermissionHintsHost(snackbarHostState)
         Spacer(Modifier.height(8.dp))
         if (currentPage > 0) {
             TextButton(

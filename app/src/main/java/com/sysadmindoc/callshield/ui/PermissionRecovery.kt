@@ -7,18 +7,80 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.util.startActivitySafely
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+
+/**
+ * Where [rememberPermissionRequest] and [rememberRoleRequest] show their App
+ * info and Default apps hints. A snackbar holds the whole hint; the toast they
+ * used to show stops at two lines on Android 12 and later, and the settings
+ * page it opened covered the rest. With no host the page opens straight away.
+ */
+val LocalPermissionHints = staticCompositionLocalOf<SnackbarHostState?> { null }
+
+private class SettingsHintVisuals(
+    override val message: String,
+    override val actionLabel: String,
+) : SnackbarVisuals {
+    override val withDismissAction get() = false
+    override val duration get() = SnackbarDuration.Long
+}
+
+/**
+ * Shows [hints], putting a settings hint's action on its own line so a large
+ * font can't squeeze the hint into a narrow column beside it.
+ */
+@Composable
+fun PermissionHintsHost(
+    hints: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
+    SnackbarHost(hints, modifier) { Snackbar(it, actionOnNewLine = it.visuals is SettingsHintVisuals) }
+}
+
+/**
+ * Shows [hint] in [hints] with an [actionLabel] action that opens [intent],
+ * replacing any message already there. Without [hints] it opens [intent] now.
+ */
+private fun CoroutineScope.showSettingsHint(
+    hints: SnackbarHostState?,
+    hint: String,
+    actionLabel: String,
+    context: Context,
+    intent: Intent,
+) {
+    if (hints == null) {
+        context.startActivitySafely(intent)
+        return
+    }
+    launch {
+        hints.currentSnackbarData?.dismiss()
+        val result = hints.showSnackbar(SettingsHintVisuals(hint, actionLabel))
+        if (result == SnackbarResult.ActionPerformed) context.startActivitySafely(intent)
+    }
+}
 
 /**
  * True when a permission request came back with something still refused and
@@ -56,18 +118,22 @@ internal fun refusalsThatCount(
 /**
  * Returns a function that asks for the permissions it's given and calls
  * [onResult] with Android's answer. When the answer leaves no dialog for next
- * time, it calls [onOpensAppInfo], shows [appInfoHint] and opens App info,
- * where the permission lives. Only refusals of [appInfoFor] count when it's
- * given.
+ * time, it calls [onAppInfoHint] and shows [appInfoHint] in [hints] with an
+ * App info action, since App info is where the permission lives now. Only
+ * refusals of [appInfoFor] count when it's given.
  */
 @Composable
 fun rememberPermissionRequest(
     @StringRes appInfoHint: Int,
     appInfoFor: Collection<String>? = null,
-    onOpensAppInfo: () -> Unit = {},
+    hints: SnackbarHostState? = LocalPermissionHints.current,
+    onAppInfoHint: () -> Unit = {},
     onResult: (Map<String, Boolean>) -> Unit = {},
 ): (List<String>) -> Unit {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val hint = stringResource(appInfoHint)
+    val actionLabel = stringResource(R.string.permission_hint_app_info)
     // Saved, since the prompt can outlive the activity (a rotation or a
     // reclaimed process), and the answer is read against them.
     var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
@@ -79,9 +145,12 @@ fun rememberPermissionRequest(
             val stillDenied = refusalsThatCount(grants, appInfoFor)
             val promptShown = SystemClock.elapsedRealtime() - launchedAt >= PROMPT_MIN_MILLIS
             if (opensAppInfoAfterRequest(stillDenied, promptShown, refusedBefore, activity::shouldShowRequestPermissionRationale)) {
-                onOpensAppInfo()
-                Toast.makeText(context, appInfoHint, Toast.LENGTH_LONG).show()
-                context.startActivitySafely(
+                onAppInfoHint()
+                scope.showSettingsHint(
+                    hints,
+                    hint,
+                    actionLabel,
+                    context,
                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
                 )
             }
@@ -108,31 +177,35 @@ internal fun opensDefaultAppsAfterRoleRequest(
 /** What a role request came back with. */
 data class RoleRequestResult(
     val held: Boolean,
-    /** Android showed no prompt, so the hint was shown and Default apps opened. */
-    val opensDefaultApps: Boolean,
+    /** Android showed no prompt, so the Default apps hint was shown. */
+    val defaultAppsHintShown: Boolean,
 )
 
 /**
  * Returns a function that starts the role request intent it's given and calls
  * [onResult] with the answer. When the request comes straight back refused,
- * it shows [defaultAppsHint] and opens Default apps, where the role lives.
+ * it shows [defaultAppsHint] in [hints] with a Default apps action, since
+ * Default apps is where the role lives now.
  */
 @Composable
 fun rememberRoleRequest(
     @StringRes defaultAppsHint: Int,
     roleHeld: () -> Boolean,
+    hints: SnackbarHostState? = LocalPermissionHints.current,
     onResult: (RoleRequestResult) -> Unit = {},
 ): (Intent) -> Unit {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val hint = stringResource(defaultAppsHint)
+    val actionLabel = stringResource(R.string.permission_hint_default_apps)
     var launchedAt by rememberSaveable { mutableLongStateOf(0L) }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val held = roleHeld()
-            val opensDefaultApps = opensDefaultAppsAfterRoleRequest(held, SystemClock.elapsedRealtime() - launchedAt)
-            onResult(RoleRequestResult(held, opensDefaultApps))
-            if (opensDefaultApps) {
-                Toast.makeText(context, defaultAppsHint, Toast.LENGTH_LONG).show()
-                context.startActivitySafely(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            val hintShown = opensDefaultAppsAfterRoleRequest(held, SystemClock.elapsedRealtime() - launchedAt)
+            onResult(RoleRequestResult(held, hintShown))
+            if (hintShown) {
+                scope.showSettingsHint(hints, hint, actionLabel, context, Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
             }
         }
     return { intent ->

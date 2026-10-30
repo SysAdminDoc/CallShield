@@ -485,6 +485,8 @@
     <string name="permission_sms_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“短信”。</string>
     <string name="permission_phone_in_app_info">Android 不会再询问。请在应用信息的“权限”中开启“电话”和“通话记录”。</string>
     <string name="permission_notifications_in_app_info">Android 不会再询问。请在应用信息中开启“通知”。</string>
+    <string name="permission_hint_app_info">打开应用信息</string>
+    <string name="permission_hint_default_apps">打开默认应用</string>
     <string name="settings_outgoing_risk_warning">拨出高风险电话前提醒</string>
     <string name="settings_outgoing_risk_warning_desc">对垃圾号码库中精确匹配的号码显示本地警告</string>
     <string name="settings_outgoing_risk_warning_overlay_required">允许悬浮窗权限以查看拨出提醒。</string>

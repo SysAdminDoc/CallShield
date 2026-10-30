@@ -182,12 +182,17 @@ fun CallShieldRoot(
 
             else -> {
                 rootStateHolder.SaveableStateProvider(ROOT_STATE_APP) {
-                    CallShieldApp(
-                        viewModel = viewModel,
-                        startTab = initialTab,
-                        tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
-                        blockedLogRequestId = launchRequest.blockedLogRequestId(),
-                    )
+                    // Every tab's App info and Default apps hints show here,
+                    // above the navigation bar (CallShieldApp's snackbar slot).
+                    val permissionHints = remember { SnackbarHostState() }
+                    CompositionLocalProvider(LocalPermissionHints provides permissionHints) {
+                        CallShieldApp(
+                            viewModel = viewModel,
+                            startTab = initialTab,
+                            tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+                            blockedLogRequestId = launchRequest.blockedLogRequestId(),
+                        )
+                    }
                 }
             }
         }
@@ -353,6 +358,7 @@ fun CallShieldApp(
                 }
             }
         },
+        snackbarHost = { LocalPermissionHints.current?.let { PermissionHintsHost(it) } },
         containerColor = Black,
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {

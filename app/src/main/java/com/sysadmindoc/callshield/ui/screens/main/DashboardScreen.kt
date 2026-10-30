@@ -339,7 +339,7 @@ fun DashboardScreen(
     // Settings, which lands on Basic, and Basic has no overlay control at all.
     // Review permissions still opens Settings, where each missing item has a
     // Grant or Enable button.
-    // These open App info, or Default apps for the role, with a hint once
+    // These point to App info, or Default apps for the role, with a hint once
     // Android has stopped showing its dialog, since the request then comes
     // back at once with nothing on screen.
     val screeningRoleRequest =
