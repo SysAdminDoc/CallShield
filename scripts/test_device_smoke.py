@@ -37,6 +37,16 @@ class DeviceSmokeTest(unittest.TestCase):
         self.assertEqual((539, 2113), (tab.x, tab.y))
         self.assertIsNone(device_smoke.bottom_most(device_smoke.parse_nodes(DUMP), "Rules"))
 
+    def test_a_dump_deletes_the_last_one_first(self):
+        # A dump that fails leaves the old file, which would read as the current screen.
+        calls = []
+        phone = device_smoke.Phone.__new__(device_smoke.Phone)
+        phone.shell = lambda *args: calls.append(args) or (DUMP if args[0] == "cat" else "")
+
+        self.assertEqual(4, len(phone.nodes()))
+        self.assertEqual(("rm", "-f", device_smoke.DUMP), calls[0])
+        self.assertEqual("uiautomator", calls[1][0])
+
     def test_the_expected_version_and_lists_come_from_the_repo(self):
         self.assertRegex(device_smoke.app_version(), r"^\d+\.\d+\.\d+$")
         self.assertIn("Lista Hũ", device_smoke.catalog_names())

@@ -86,6 +86,9 @@ class Phone:
         return out.stdout.decode("utf-8", "replace")
 
     def nodes(self) -> list[Node]:
+        # A dump that fails leaves the old file behind, and its labels would
+        # read as the current screen.
+        self.shell("rm", "-f", DUMP)
         self.shell("uiautomator", "dump", DUMP)
         return parse_nodes(self.shell("cat", DUMP))
 

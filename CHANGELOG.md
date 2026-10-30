@@ -5,6 +5,7 @@ All notable changes to CallShield will be documented in this file.
 ## Unreleased
 
 - The data pipeline's test runner now uses the first Python on PATH that has the pipeline's packages installed. With an older Python ahead of it on PATH, three suites used to fail on a missing cryptography or numpy.
+- `scripts/device_smoke.py` deletes its last screen dump before taking a new one. A dump that failed used to leave the old file in place, so a step could act on labels from the screen before.
 
 ## v1.13.0 (2026-10-30)
 
