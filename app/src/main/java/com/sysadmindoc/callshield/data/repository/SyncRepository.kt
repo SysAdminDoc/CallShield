@@ -293,13 +293,13 @@ class SyncRepository(
 
     /**
      * Fetches the signed release notice and keeps it for Home. A missing,
-     * unsigned or refused file changes nothing, so the last good notice stays.
+     * unsigned or refused file changes nothing, so the last good notice stays,
+     * and so does a stored notice for a later release than the one served.
      */
     suspend fun refreshAppReleaseNotice(): Boolean =
         withContext(Dispatchers.IO) {
             val notice = remote.fetchAppReleaseNotice().getOrNull() ?: return@withContext false
             settingsRepository.saveAppReleaseNotice(notice)
-            true
         }
 
     private val bundledListCatalog: ParsedListCatalog? by lazy {

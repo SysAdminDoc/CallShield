@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The update notice on Home can't be swapped back to an older release anymore. A mirror serving an older signed notice used to replace the newer one, which could hide an update.
 - Regex rules shaped like a long run of optional digits, or a repeated group that ends in an optional part, are now turned down when you add them, since they could hold up call screening. One saved earlier in such a shape no longer runs.
 - Turning the phone while Not spam waits out its Undo, or while Report is still going out, no longer loses the message that follows. Report's Undo for the block stays too.
 - A number you block, unblock or report while the spam database is updating keeps that change when the update finishes. A change made just before the update wrote its rows could be put back the way it was.

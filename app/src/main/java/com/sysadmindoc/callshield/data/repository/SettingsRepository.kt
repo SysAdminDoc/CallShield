@@ -276,13 +276,22 @@ class SettingsRepository(
                 notice.takeIf { it.shouldShow(installedCode, prefs[SpamRepository.KEY_RELEASE_NOTICE_DISMISSED] ?: 0) }
             }.distinctUntilChanged()
 
-    suspend fun saveAppReleaseNotice(notice: AppReleaseNotice) {
+    /**
+     * Keeps [notice] unless the stored one is for a later release, so a mirror
+     * serving an older signed file can't hide a newer release. Returns whether
+     * it was kept.
+     */
+    suspend fun saveAppReleaseNotice(notice: AppReleaseNotice): Boolean {
+        var kept = false
         dataStore.edit {
+            if ((it[SpamRepository.KEY_RELEASE_NOTICE_CODE] ?: 0) > notice.versionCode) return@edit
             it[SpamRepository.KEY_RELEASE_NOTICE_CODE] = notice.versionCode
             it[SpamRepository.KEY_RELEASE_NOTICE_NAME] = notice.versionName
             it[SpamRepository.KEY_RELEASE_NOTICE_URL] = notice.releaseUrl
             it[SpamRepository.KEY_RELEASE_NOTICE_SHA256] = notice.apkSha256
+            kept = true
         }
+        return kept
     }
 
     suspend fun dismissAppReleaseNotice(versionCode: Int) {

@@ -67,6 +67,10 @@ class AppReleaseNoticeRepositoryTest {
     fun `a refused or missing file keeps the last good notice, and a current build shows none`() =
         runBlocking {
             val repo = fixture.repository
+            served = Result.success(notice(BuildConfig.VERSION_CODE))
+            repo.refreshAppReleaseNotice()
+            assertNull(repo.appReleaseNotice.first())
+
             val newer = notice(BuildConfig.VERSION_CODE + 1)
             served = Result.success(newer)
             repo.refreshAppReleaseNotice()
@@ -74,10 +78,24 @@ class AppReleaseNoticeRepositoryTest {
             served = Result.failure(IOException("signature doesn't verify"))
             assertFalse(repo.refreshAppReleaseNotice())
             assertEquals(newer, repo.appReleaseNotice.first())
+        }
 
-            served = Result.success(notice(BuildConfig.VERSION_CODE))
-            repo.refreshAppReleaseNotice()
-            assertNull(repo.appReleaseNotice.first())
+    @Test
+    fun `an older notice than the stored one is refused, and the same release can be republished`() =
+        runBlocking {
+            val repo = fixture.repository
+            val newer = notice(BuildConfig.VERSION_CODE + 2)
+            served = Result.success(newer)
+            assertTrue(repo.refreshAppReleaseNotice())
+
+            served = Result.success(notice(BuildConfig.VERSION_CODE + 1))
+            assertFalse(repo.refreshAppReleaseNotice())
+            assertEquals(newer, repo.appReleaseNotice.first())
+
+            val republished = newer.copy(apkSha256 = "cd".repeat(32))
+            served = Result.success(republished)
+            assertTrue(repo.refreshAppReleaseNotice())
+            assertEquals(republished, repo.appReleaseNotice.first())
         }
 
     private fun notice(code: Int) =
