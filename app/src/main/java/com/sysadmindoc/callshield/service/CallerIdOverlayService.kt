@@ -217,6 +217,49 @@ class CallerIdOverlayService : Service() {
         /** The report waits past the window, so Undo can't lose a race with it. */
         private const val REPORT_DELAY_MS = UNDO_WINDOW_MS + 1_000L
         private const val UNDONE_LINGER_MS = 1_500L
+        internal const val ACTION_WITHDRAW = "com.sysadmindoc.callshield.action.WITHDRAW_OVERLAY"
+
+        // The caller the last incoming overlay was started for, so a call that
+        // screening rejects afterwards can take that overlay back.
+        @Volatile private var incomingStartedFor: String? = null
+
+        internal fun startIncoming(
+            context: Context,
+            number: String,
+            confidence: Int,
+            reason: String,
+            liveEnrichment: Boolean = false,
+        ) {
+            context.startService(
+                Intent(context, CallerIdOverlayService::class.java).apply {
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_CONFIDENCE, confidence)
+                    putExtra(EXTRA_REASON, reason)
+                    putExtra(EXTRA_LIVE_ENRICHMENT, liveEnrichment)
+                },
+            )
+            incomingStartedFor = number
+        }
+
+        /**
+         * Takes back the incoming overlay started for [number] when screening
+         * rejects the call after all. Telecom never adds a rejected call, so no
+         * call-state change follows and the overlay would stay up until its
+         * 20 s backstop. Service starts arrive in order, so this always lands
+         * after the start it withdraws.
+         */
+        internal fun withdrawIncoming(
+            context: Context,
+            number: String,
+        ) {
+            if (number.isEmpty() || incomingStartedFor != number) return
+            incomingStartedFor = null
+            context.startService(
+                Intent(context, CallerIdOverlayService::class.java)
+                    .setAction(ACTION_WITHDRAW)
+                    .putExtra(EXTRA_NUMBER, number),
+            )
+        }
 
         internal fun outgoingRiskIntent(
             context: Context,
@@ -294,6 +337,15 @@ class CallerIdOverlayService : Service() {
 
         if (number.isEmpty()) {
             stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (intent?.action == ACTION_WITHDRAW) {
+            if (!isOverlayActive) {
+                stopSelf(startId)
+            } else if (number == activeNumber) {
+                dismiss(activeSessionId)
+            }
             return START_NOT_STICKY
         }
 
@@ -669,8 +721,9 @@ class CallerIdOverlayService : Service() {
         }
 
         // Auto-dismiss after 20 seconds (backstop). The call-state watcher below
-        // dismisses sooner, right when the call ends, so a 2-3 s blocked/rejected
-        // call's overlay doesn't hover over unrelated UI for the full 20 s.
+        // dismisses sooner, right when the call ends, so a 2-3 s silenced call's
+        // overlay doesn't hover over unrelated UI for the full 20 s. A call that
+        // screening rejects never rings, so it's closed by withdrawIncoming().
         scheduleDismiss(sessionId, AUTO_DISMISS_MS)
         registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId

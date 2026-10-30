@@ -73,14 +73,12 @@ class CallShieldScreeningService : CallScreeningService() {
     /** Kept injectable so the RTT contract can prove that no overlay is launched. */
     internal var incomingOverlayLauncher: (android.content.Context, String, Int, String) -> Unit =
         { context, number, confidence, reason ->
-            val intent =
-                android.content.Intent(context, CallerIdOverlayService::class.java).apply {
-                    putExtra("number", number)
-                    putExtra("confidence", confidence)
-                    putExtra("reason", reason)
-                }
-            context.startService(intent)
+            CallerIdOverlayService.startIncoming(context, number, confidence, reason)
         }
+
+    /** Kept injectable so a test can see which calls take their overlay back. */
+    internal var incomingOverlayWithdrawer: (android.content.Context, String) -> Unit =
+        { context, number -> CallerIdOverlayService.withdrawIncoming(context, number) }
 
     override fun onScreenCall(callDetails: Call.Details) {
         val responseGate =
@@ -819,7 +817,9 @@ class CallShieldScreeningService : CallScreeningService() {
 
     /**
      * Sends a block [response]. A silenced call still reaches the phone and can
-     * be answered, so it's watched for one-time codes like an allowed one.
+     * be answered, so it's watched for one-time codes like an allowed one. A
+     * rejected call never rings, so an overlay a checker opened for it while
+     * screening ran is taken back.
      */
     private fun respondRinging(
         responseGate: ScreeningResponseGate<CallResponse>,
@@ -831,6 +831,12 @@ class CallShieldScreeningService : CallScreeningService() {
         responseGate.respond(response)
         if (unanswered && response.silenceCall) {
             CodeDuringCallWarning.onCallAllowed(applicationScope, applicationContext, number, reason)
+        }
+        if (unanswered && response.disallowCall) {
+            try {
+                incomingOverlayWithdrawer(applicationContext, number)
+            } catch (_: Exception) {
+            }
         }
     }
 

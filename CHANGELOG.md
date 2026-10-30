@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The caller ID popup no longer stays up for 20 seconds after CallShield rejects a call it first showed as possible spam. A rejected call never rings, so nothing told the popup the call was over, and it kept offering Block for a call that was already gone. It closes as soon as the call is rejected now.
 - When Android stops asking for a permission or a default app role, CallShield's note about where to turn it on now shows in full at the bottom of the screen, with an Open App info or Open Default apps button. It used to be a toast that Android 12 and later cut off after two lines, and the settings page opened on top of it before you could read the rest.
 - A single Not spam vote no longer keeps a number off the community watch list for 90 days. Reports from people on later days count again, so a number that starts getting reported after someone vouched for it can still show the warning. Reports from the day of the vote, or earlier, still don't count.
 - A Report or Not spam result that came in just as the previous message closed, in Lookup or on a number's screen, could be skipped without showing. It shows now.

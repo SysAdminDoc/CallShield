@@ -65,6 +65,7 @@ class CallShieldScreeningServiceRobolectricTest {
     private lateinit var shadowService: ShadowCallScreeningService
     private val outgoingWarnings = mutableListOf<OutgoingRiskWarning>()
     private val incomingOverlays = mutableListOf<Triple<String, Int, String>>()
+    private val withdrawnOverlays = mutableListOf<String>()
 
     @Before
     fun setUp() {
@@ -105,6 +106,8 @@ class CallShieldScreeningServiceRobolectricTest {
         service.incomingOverlayLauncher = { _, number, confidence, reason ->
             incomingOverlays += Triple(number, confidence, reason)
         }
+        withdrawnOverlays.clear()
+        service.incomingOverlayWithdrawer = { _, number -> withdrawnOverlays += number }
         shadowService = Shadow.extract(service)
     }
 
@@ -545,6 +548,33 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(awaitResponse().rejectCall)
         awaitScopeIdle()
         assertNull(UnknownCallWindow.shared.openCaller())
+    }
+
+    @Test
+    fun `a rejected call takes back any overlay screening opened for it`() {
+        val number = "+12125550195"
+        runBlocking { repository.blockNumber(number, type = "test") }
+
+        service.onScreenCall(callDetails(number))
+
+        assertTrue(awaitResponse().rejectCall)
+        awaitScopeIdle()
+        assertEquals(listOf(number), withdrawnOverlays)
+    }
+
+    @Test
+    fun `a silenced call keeps its overlay, since it still rings`() {
+        val number = "+12125550196"
+        runBlocking {
+            repository.blockNumber(number, type = "test")
+            repository.setSilentVoicemail(true)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        assertTrue(awaitResponse().silenceCall)
+        awaitScopeIdle()
+        assertTrue(withdrawnOverlays.isEmpty())
     }
 
     @Test

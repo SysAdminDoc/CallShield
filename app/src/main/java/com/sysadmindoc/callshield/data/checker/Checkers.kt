@@ -2,7 +2,6 @@ package com.sysadmindoc.callshield.data.checker
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import androidx.datastore.preferences.core.Preferences
@@ -1092,14 +1091,7 @@ internal class HeuristicChecker(
         liveEnrichmentEnabled: Boolean,
     ) {
         try {
-            val intent =
-                Intent(ctx, CallerIdOverlayService::class.java).apply {
-                    putExtra("number", number)
-                    putExtra("confidence", confidence)
-                    putExtra("reason", reason)
-                    putExtra(CallerIdOverlayService.EXTRA_LIVE_ENRICHMENT, liveEnrichmentEnabled)
-                }
-            ctx.startService(intent)
+            CallerIdOverlayService.startIncoming(ctx, number, confidence, reason, liveEnrichmentEnabled)
         } catch (_: Exception) {
             // overlay is best-effort
         }
