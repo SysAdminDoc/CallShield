@@ -137,6 +137,7 @@ class BlocklistRepository(
                     )
             if (!permanentAllowExists && !keptHere) {
                 existingWhitelist.forEach { dao.deleteWhitelistEntry(it) }
+                val now = System.currentTimeMillis()
                 when (val existing = dao.findByNumber(normalized)) {
                     null -> {
                         dao.insertNumber(
@@ -147,6 +148,7 @@ class BlocklistRepository(
                                 source = "user",
                                 isUserBlocked = true,
                                 expiresAt = expiresAt,
+                                blockedAt = now,
                             ),
                         )
                     }
@@ -160,6 +162,8 @@ class BlocklistRepository(
                                     description = description.trim().ifBlank { existing.description },
                                     isUserBlocked = true,
                                     expiresAt = expiresAt,
+                                    // Changing a block's length or label keeps its place in the newest-first sort.
+                                    blockedAt = existing.blockedAt.takeIf { existing.isUserBlocked } ?: now,
                                 ),
                             )
                         }
@@ -189,7 +193,7 @@ class BlocklistRepository(
         if (number.source == "user") {
             dao.deleteNumber(number)
         } else {
-            dao.insertNumber(number.copy(isUserBlocked = false, expiresAt = null))
+            dao.insertNumber(number.copy(isUserBlocked = false, expiresAt = null, blockedAt = null))
         }
     }
 
@@ -836,6 +840,8 @@ class BlocklistRepository(
             val now = System.currentTimeMillis()
             rows.mapNotNull { it.activeDecision(now) }.filter { it.isUserBlocked }
         }
+
+    fun observeUserBlockedHitCounts(): Flow<Map<String, Int>> = dao.observeUserBlockedHitCounts().map { counts -> counts.associate { it.number to it.cnt } }
 
     suspend fun getSpamCount(): Int = dao.getSpamCount()
 

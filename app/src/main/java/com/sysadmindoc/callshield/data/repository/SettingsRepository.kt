@@ -33,6 +33,7 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.remote.FeedMirror
+import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -260,6 +261,7 @@ class SettingsRepository(
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
     val appTheme: Flow<String> = dataStore.data.map { sanitizeAppTheme(it[SpamRepository.KEY_APP_THEME]) }
+    val blocklistSort: Flow<BlocklistSort> = dataStore.data.map { BlocklistSort.fromStored(it[SpamRepository.KEY_BLOCKLIST_SORT]) }
     val appUpdateChecksEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false }
 
     /** The stored release notice while [installedCode] is older and the user hasn't dismissed that release. */
@@ -416,6 +418,11 @@ class SettingsRepository(
     suspend fun setAppTheme(theme: String) =
         dataStore.edit { preferences ->
             preferences[SpamRepository.KEY_APP_THEME] = sanitizeAppTheme(theme)
+        }
+
+    suspend fun setBlocklistSort(sort: BlocklistSort) =
+        dataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_BLOCKLIST_SORT] = sort.storedValue
         }
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) =

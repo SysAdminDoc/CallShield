@@ -1864,4 +1864,22 @@
         <item quantity="one">已选择 %1$d 个应用</item>
         <item quantity="other">已选择 %1$d 个应用</item>
     </plurals>
+    <string name="blocklist_sort_newest">最新优先</string>
+    <string name="blocklist_sort_number">按号码</string>
+    <string name="blocklist_sort_most_blocked">拦截最多</string>
+    <string name="blocklist_select_action">选择</string>
+    <string name="blocklist_selection_unblock">取消拦截</string>
+    <string name="blocklist_selection_delete">删除</string>
+    <plurals name="blocklist_selection_count">
+        <item quantity="one">已选择 %d 项</item>
+        <item quantity="other">已选择 %d 项</item>
+    </plurals>
+    <plurals name="blocklist_selection_unblocked">
+        <item quantity="one">已取消拦截 %d 个号码</item>
+        <item quantity="other">已取消拦截 %d 个号码</item>
+    </plurals>
+    <plurals name="blocklist_selection_removed">
+        <item quantity="one">已移除 %d 条规则</item>
+        <item quantity="other">已移除 %d 条规则</item>
+    </plurals>
 </resources>

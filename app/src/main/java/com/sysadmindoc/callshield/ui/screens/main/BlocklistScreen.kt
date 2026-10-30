@@ -1,11 +1,13 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -96,15 +99,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -132,6 +140,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.firstPageFailed
@@ -175,6 +184,8 @@ internal const val BLOCKLIST_SWIPE_ITEM_TAG = "blocklist_swipe_item"
 internal const val BLOCKLIST_REGEX_CHECKBOX_TAG = "blocklist_regex_checkbox"
 internal const val BLOCKLIST_SNACKBAR_HOST_TAG = "blocklist_snackbar_host"
 internal const val WHITELIST_RANGE_TAG = "whitelist_range"
+internal const val BLOCKLIST_SELECTABLE_ROW_TAG = "blocklist_selectable_row"
+internal const val BLOCKLIST_SELECTION_BAR_TAG = "blocklist_selection_bar"
 
 private data class BlocklistWorkspaceModel(
     val title: String,
@@ -194,6 +205,7 @@ private data class BlocklistWorkspaceModel(
 fun BlocklistScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
+    val blocklistSort by viewModel.blocklistSort.collectAsStateWithLifecycle()
     // Header count only — cheap Room COUNT, always observed. The full spam table
     // is collected lazily inside the Database tab (see DatabaseTabContent) so
     // opening Blocklist never materializes a ~100k-row list.
@@ -210,8 +222,28 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     var showWhitelistDialog by rememberSaveable { mutableStateOf(false) }
     var showKeywordDialog by rememberSaveable { mutableStateOf(false) }
     var tabIndex by rememberSaveable { mutableStateOf(BLOCKLIST_TAB_BLOCKED) }
+    // Rows picked with a long press; switching tabs drops the selection.
+    var selectedIds by rememberSaveable(tabIndex) { mutableStateOf(emptySet<Long>()) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val tabIds =
+        when (tabIndex) {
+            BLOCKLIST_TAB_BLOCKED -> userBlocked.map { it.id }
+            BLOCKLIST_TAB_WILDCARDS -> wildcardRules.map { it.id }
+            BLOCKLIST_TAB_RANGES -> hashWildcardRules.map { it.id }
+            BLOCKLIST_TAB_KEYWORDS -> keywordRules.map { it.id }
+            BLOCKLIST_TAB_WHITELIST -> whitelistEntries.map { it.id }
+            else -> emptyList()
+        }
+    // A selected row that left the list (another screen unblocked it) no longer counts.
+    val selectedCount = tabIds.count { it in selectedIds }
+    val selecting = selectedCount > 0
+    BackHandler(enabled = selecting) { selectedIds = emptySet() }
+
+    fun toggleSelected(id: Long) {
+        selectedIds = if (id in selectedIds) selectedIds - id else selectedIds.intersect(tabIds.toSet()) + id
+    }
 
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -239,6 +271,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     fun deleteWithUndo(
         delete: () -> Unit,
         restore: () -> Unit,
+        message: String = ruleRemovedMessage,
     ) {
         delete()
         hapticTick(context)
@@ -246,7 +279,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             snackbarHost.currentSnackbarData?.dismiss()
             val result =
                 snackbarHost.showSnackbar(
-                    message = ruleRemovedMessage,
+                    message = message,
                     actionLabel = undoLabel,
                     duration = SnackbarDuration.Short,
                 )
@@ -269,6 +302,51 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 // Re-insert the exact row so a temporary block keeps its expiry
                 // instead of coming back as a permanent block.
                 viewModel.restoreBlockedNumber(number)
+            }
+        }
+    }
+
+    /** Unblocks or deletes every selected row with one Undo that brings them all back. */
+    fun removeSelected() {
+        val ids = selectedIds
+        selectedIds = emptySet()
+        val resources = context.resources
+
+        fun <T> removeRules(
+            rows: List<T>,
+            delete: (T) -> Unit,
+            restore: (T) -> Unit,
+        ) = deleteWithUndo(
+            delete = { rows.forEach(delete) },
+            restore = { rows.forEach(restore) },
+            message = resources.getQuantityString(R.plurals.blocklist_selection_removed, rows.size, rows.size),
+        )
+
+        when (tabIndex) {
+            BLOCKLIST_TAB_BLOCKED -> {
+                val rows = userBlocked.filter { it.id in ids }
+                deleteWithUndo(
+                    delete = { rows.forEach { viewModel.unblockNumber(it) } },
+                    // The exact rows come back, so temporary blocks keep their expiry.
+                    restore = { rows.forEach { viewModel.restoreBlockedNumber(it) } },
+                    message = resources.getQuantityString(R.plurals.blocklist_selection_unblocked, rows.size, rows.size),
+                )
+            }
+
+            BLOCKLIST_TAB_WILDCARDS -> {
+                removeRules(wildcardRules.filter { it.id in ids }, { viewModel.deleteWildcardRule(it) }, { viewModel.restoreWildcardRule(it) })
+            }
+
+            BLOCKLIST_TAB_RANGES -> {
+                removeRules(hashWildcardRules.filter { it.id in ids }, { viewModel.deleteHashWildcardRule(it) }, { viewModel.restoreHashWildcardRule(it) })
+            }
+
+            BLOCKLIST_TAB_KEYWORDS -> {
+                removeRules(keywordRules.filter { it.id in ids }, { viewModel.deleteKeywordRule(it) }, { viewModel.restoreKeywordRule(it) })
+            }
+
+            BLOCKLIST_TAB_WHITELIST -> {
+                removeRules(whitelistEntries.filter { it.id in ids }, { viewModel.removeFromWhitelist(it) }, { viewModel.restoreWhitelistEntry(it) })
             }
         }
     }
@@ -503,15 +581,39 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 accentColor = CatRed,
                             )
                         } else {
+                            // A new sort starts at the top of its list.
+                            val blockedListState = rememberSaveable(blocklistSort, saver = LazyListState.Saver) { LazyListState() }
                             LazyColumn(
+                                state = blockedListState,
                                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 104.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
+                                // The chips scroll away with the list, so a short screen
+                                // keeps its rows clear of the Add button. One row has
+                                // nothing to sort.
+                                if (userBlocked.size > 1) {
+                                    item(key = "sort") {
+                                        ChoiceChipRow(
+                                            options = BlocklistSort.entries,
+                                            selected = blocklistSort,
+                                            label = { blocklistSortLabel(it) },
+                                            onSelect = { viewModel.setBlocklistSort(it) },
+                                            contentPadding = PaddingValues(0.dp),
+                                        )
+                                    }
+                                }
                                 items(userBlocked, key = { it.id }) { number ->
-                                    SwipeToRemoveBlocklistItem(
-                                        number = number,
-                                        onRemove = { removeBlockedNumberWithUndo(number) },
-                                    )
+                                    SelectableRuleRow(
+                                        label = PhoneFormatter.formatIsolated(number.number),
+                                        selecting = selecting,
+                                        selected = number.id in selectedIds,
+                                        onSelect = { toggleSelected(number.id) },
+                                    ) {
+                                        SwipeToRemoveBlocklistItem(
+                                            number = number,
+                                            onRemove = { removeBlockedNumberWithUndo(number) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -533,16 +635,23 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(wildcardRules, key = { it.id }) { rule ->
-                                    WildcardRuleItem(
-                                        rule = rule,
-                                        onToggle = { viewModel.toggleWildcardRule(rule.id, it) },
-                                        onDelete = {
-                                            deleteWithUndo(
-                                                delete = { viewModel.deleteWildcardRule(rule) },
-                                                restore = { viewModel.restoreWildcardRule(rule) },
-                                            )
-                                        },
-                                    )
+                                    SelectableRuleRow(
+                                        label = rule.pattern,
+                                        selecting = selecting,
+                                        selected = rule.id in selectedIds,
+                                        onSelect = { toggleSelected(rule.id) },
+                                    ) {
+                                        WildcardRuleItem(
+                                            rule = rule,
+                                            onToggle = { viewModel.toggleWildcardRule(rule.id, it) },
+                                            onDelete = {
+                                                deleteWithUndo(
+                                                    delete = { viewModel.deleteWildcardRule(rule) },
+                                                    restore = { viewModel.restoreWildcardRule(rule) },
+                                                )
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -564,16 +673,23 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(hashWildcardRules, key = { it.id }) { rule ->
-                                    HashWildcardRuleItem(
-                                        rule = rule,
-                                        onToggle = { viewModel.toggleHashWildcardRule(rule.id, it) },
-                                        onDelete = {
-                                            deleteWithUndo(
-                                                delete = { viewModel.deleteHashWildcardRule(rule) },
-                                                restore = { viewModel.restoreHashWildcardRule(rule) },
-                                            )
-                                        },
-                                    )
+                                    SelectableRuleRow(
+                                        label = rule.pattern,
+                                        selecting = selecting,
+                                        selected = rule.id in selectedIds,
+                                        onSelect = { toggleSelected(rule.id) },
+                                    ) {
+                                        HashWildcardRuleItem(
+                                            rule = rule,
+                                            onToggle = { viewModel.toggleHashWildcardRule(rule.id, it) },
+                                            onDelete = {
+                                                deleteWithUndo(
+                                                    delete = { viewModel.deleteHashWildcardRule(rule) },
+                                                    restore = { viewModel.restoreHashWildcardRule(rule) },
+                                                )
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -595,16 +711,23 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(keywordRules, key = { it.id }) { rule ->
-                                    KeywordRuleItem(
-                                        rule = rule,
-                                        onToggle = { viewModel.toggleKeywordRule(rule.id, it) },
-                                        onDelete = {
-                                            deleteWithUndo(
-                                                delete = { viewModel.deleteKeywordRule(rule) },
-                                                restore = { viewModel.restoreKeywordRule(rule) },
-                                            )
-                                        },
-                                    )
+                                    SelectableRuleRow(
+                                        label = rule.keyword,
+                                        selecting = selecting,
+                                        selected = rule.id in selectedIds,
+                                        onSelect = { toggleSelected(rule.id) },
+                                    ) {
+                                        KeywordRuleItem(
+                                            rule = rule,
+                                            onToggle = { viewModel.toggleKeywordRule(rule.id, it) },
+                                            onDelete = {
+                                                deleteWithUndo(
+                                                    delete = { viewModel.deleteKeywordRule(rule) },
+                                                    restore = { viewModel.restoreKeywordRule(rule) },
+                                                )
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -626,17 +749,24 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(whitelistEntries, key = { it.id }) { entry ->
-                                    WhitelistItem(
-                                        entry = entry,
-                                        onRemove = {
-                                            deleteWithUndo(
-                                                delete = { viewModel.removeFromWhitelist(entry) },
-                                                restore = { viewModel.restoreWhitelistEntry(entry) },
-                                            )
-                                        },
-                                        onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) },
-                                        onSetRange = { digits -> viewModel.setWhitelistRange(entry.id, digits) },
-                                    )
+                                    SelectableRuleRow(
+                                        label = PhoneFormatter.formatIsolated(entry.number),
+                                        selecting = selecting,
+                                        selected = entry.id in selectedIds,
+                                        onSelect = { toggleSelected(entry.id) },
+                                    ) {
+                                        WhitelistItem(
+                                            entry = entry,
+                                            onRemove = {
+                                                deleteWithUndo(
+                                                    delete = { viewModel.removeFromWhitelist(entry) },
+                                                    restore = { viewModel.restoreWhitelistEntry(entry) },
+                                                )
+                                            },
+                                            onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) },
+                                            onSetRange = { digits -> viewModel.setWhitelistRange(entry.id, digits) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -649,27 +779,44 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     }
                 }
 
-                workspace.addActionLabel?.let { addLabel ->
-                    PremiumActionButton(
-                        label = addLabel,
-                        icon = Icons.Default.Add,
-                        color = CatGreen,
-                        onClick = {
-                            when (tabIndex) {
-                                BLOCKLIST_TAB_BLOCKED -> showAddDialog = true
-                                BLOCKLIST_TAB_WILDCARDS -> showWildcardDialog = true
-                                BLOCKLIST_TAB_RANGES -> showRangeDialog = true
-                                BLOCKLIST_TAB_KEYWORDS -> showKeywordDialog = true
-                                BLOCKLIST_TAB_WHITELIST -> showWhitelistDialog = true
-                            }
-                        },
+                if (selecting) {
+                    val unblocking = tabIndex == BLOCKLIST_TAB_BLOCKED
+                    SelectionActionBar(
+                        count = selectedCount,
+                        actionLabel = stringResource(if (unblocking) R.string.blocklist_selection_unblock else R.string.blocklist_selection_delete),
+                        actionIcon = if (unblocking) Icons.Default.RemoveCircleOutline else Icons.Default.Delete,
+                        onCancel = { selectedIds = emptySet() },
+                        onAction = { removeSelected() },
+                        // Same place and size as the Add button it stands in for.
                         modifier =
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 16.dp)
-                                .height(54.dp),
+                                .padding(horizontal = 20.dp, vertical = 16.dp),
                     )
+                } else {
+                    workspace.addActionLabel?.let { addLabel ->
+                        PremiumActionButton(
+                            label = addLabel,
+                            icon = Icons.Default.Add,
+                            color = CatGreen,
+                            onClick = {
+                                when (tabIndex) {
+                                    BLOCKLIST_TAB_BLOCKED -> showAddDialog = true
+                                    BLOCKLIST_TAB_WILDCARDS -> showWildcardDialog = true
+                                    BLOCKLIST_TAB_RANGES -> showRangeDialog = true
+                                    BLOCKLIST_TAB_KEYWORDS -> showKeywordDialog = true
+                                    BLOCKLIST_TAB_WHITELIST -> showWhitelistDialog = true
+                                }
+                            },
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                                    .height(54.dp),
+                        )
+                    }
                 }
             }
         }
@@ -679,13 +826,14 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    // The Add button is 54dp tall with 16dp below it, so the bar
-                    // rises 8dp above it instead of covering it.
+                    // The Add button (or the selection bar in its place) is 54dp
+                    // tall with 16dp below it, so the bar rises 8dp above it
+                    // instead of covering it.
                     .padding(
                         start = 16.dp,
                         top = 12.dp,
                         end = 16.dp,
-                        bottom = if (workspace.addActionLabel != null) 78.dp else 12.dp,
+                        bottom = if (workspace.addActionLabel != null || selecting) 78.dp else 12.dp,
                     ).testTag(BLOCKLIST_SNACKBAR_HOST_TAG),
         )
     }
@@ -971,6 +1119,150 @@ private fun EmptyStateCard(
                 }
             },
     )
+}
+
+/**
+ * A rule row a long press selects. While any row is selected, a tap toggles
+ * the row, and its own buttons, switch and swipe are out of reach.
+ */
+@Composable
+private fun SelectableRuleRow(
+    label: String,
+    selecting: Boolean,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    val currentOnSelect by rememberUpdatedState(onSelect)
+    val selectLabel = stringResource(R.string.blocklist_select_action)
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier =
+            Modifier
+                .testTag(BLOCKLIST_SELECTABLE_ROW_TAG)
+                .then(
+                    if (selecting) {
+                        Modifier
+                    } else {
+                        Modifier
+                            // The row's buttons and switch take their own presses,
+                            // so only the card itself starts a selection.
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        hapticTick(context)
+                                        currentOnSelect()
+                                    },
+                                )
+                            }
+                            // One TalkBack stop per row; the swipe's Unblock action
+                            // merges up because this node sets no actions of its own.
+                            .semantics(mergeDescendants = true) {
+                                onLongClick(label = selectLabel) {
+                                    currentOnSelect()
+                                    true
+                                }
+                            }
+                    },
+                ),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (selecting) {
+                SelectionMark(selected)
+                Spacer(Modifier.width(10.dp))
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .then(
+                            when {
+                                !selecting -> Modifier
+                                selected -> Modifier.border(2.dp, CatGreen, shape).clearAndSetSemantics {}
+                                else -> Modifier.clearAndSetSemantics {}
+                            },
+                        ),
+            ) {
+                content()
+            }
+        }
+        if (selecting) {
+            // Drawn over the row so a tap selects instead of reaching its controls.
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(shape)
+                        .toggleable(value = selected, role = Role.Checkbox, onValueChange = { currentOnSelect() })
+                        .semantics { contentDescription = label },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectionMark(selected: Boolean) {
+    Box(
+        modifier =
+            Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .then(if (selected) Modifier.background(CatGreen) else Modifier.border(2.dp, CatSubtext, CircleShape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+/** Stands in for the Add button while rows are selected. */
+@Composable
+private fun SelectionActionBar(
+    count: Int,
+    actionLabel: String,
+    actionIcon: ImageVector,
+    onCancel: () -> Unit,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.testTag(BLOCKLIST_SELECTION_BAR_TAG),
+        shape = RoundedCornerShape(ShapeLg),
+        color = SurfaceBright,
+        border = BorderStroke(1.dp, CatRed.copy(alpha = 0.35f)),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .heightIn(min = 54.dp)
+                    .padding(start = 4.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.dialog_cancel), color = CatSubtext, fontWeight = FontWeight.SemiBold)
+            }
+            Text(
+                pluralStringResource(R.plurals.blocklist_selection_count, count, count),
+                // TalkBack reads the new count as rows are picked.
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                color = CatText,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            PremiumActionButton(
+                label = actionLabel,
+                icon = actionIcon,
+                color = CatRed,
+                onClick = onAction,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1347,13 +1639,13 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
     val listState = rememberSaveable(filter, saver = LazyListState.Saver) { LazyListState() }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        DatabaseFilterRow(
+        ChoiceChipRow(
             options = DatabaseTypeFilter.entries,
             selected = typeFilter,
             label = { databaseTypeLabel(it) },
             onSelect = { viewModel.setDatabaseFilter(it, sourceFilter) },
         )
-        DatabaseFilterRow(
+        ChoiceChipRow(
             options = DatabaseSourceFilter.entries,
             selected = sourceFilter,
             label = { databaseSourceLabel(it) },
@@ -1419,18 +1711,19 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
 
 /** A row of chips that scrolls sideways, with exactly one selected. */
 @Composable
-private fun <T> DatabaseFilterRow(
+private fun <T> ChoiceChipRow(
     options: List<T>,
     selected: T,
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         options.forEach { option ->
@@ -1451,6 +1744,16 @@ private fun <T> DatabaseFilterRow(
         }
     }
 }
+
+@Composable
+private fun blocklistSortLabel(sort: BlocklistSort): String =
+    stringResource(
+        when (sort) {
+            BlocklistSort.NEWEST -> R.string.blocklist_sort_newest
+            BlocklistSort.NUMBER -> R.string.blocklist_sort_number
+            BlocklistSort.MOST_BLOCKED -> R.string.blocklist_sort_most_blocked
+        },
+    )
 
 @Composable
 private fun databaseTypeLabel(filter: DatabaseTypeFilter): String =

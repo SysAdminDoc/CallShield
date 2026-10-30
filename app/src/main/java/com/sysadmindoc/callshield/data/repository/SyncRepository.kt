@@ -580,14 +580,16 @@ class SyncRepository(
                             val shardId = spamShardIdFor(number.number)
                             shardId in descriptorsById && shardId !in changedIds
                         }.map { row ->
-                            row.copy(isUserBlocked = row.number in preservedUserBlocks, expiresAt = preservedUserBlocks[row.number])
+                            val block = preservedUserBlocks[row.number]
+                            row.copy(isUserBlocked = block != null, expiresAt = block?.expiresAt, blockedAt = block?.blockedAt)
                         }
                 val importedNumbers =
                     fetchedShards.values.flatMap { shard ->
                         sanitizeDatabaseNumbers(
                             databaseNumbers = shard.numbers,
                             normalizeNumber = normalizeNumber,
-                            preservedUserBlockedNumbers = preservedUserBlocks,
+                            preservedUserBlockedNumbers = preservedUserBlocks.mapValues { it.value.expiresAt },
+                            blockedAtByNumber = preservedUserBlocks.blockTimes(),
                         )
                     }
                 val numbers = mergeNumbers(retainedNumbers, importedNumbers)
@@ -703,7 +705,8 @@ class SyncRepository(
             sanitizeDatabaseNumbers(
                 databaseNumbers = database.numbers,
                 normalizeNumber = normalizeNumber,
-                preservedUserBlockedNumbers = preservedUserBlocks,
+                preservedUserBlockedNumbers = preservedUserBlocks.mapValues { it.value.expiresAt },
+                blockedAtByNumber = preservedUserBlocks.blockTimes(),
             )
         val prefixes = sanitizeDatabasePrefixes(database.prefixes)
 
@@ -731,13 +734,15 @@ class SyncRepository(
         )
     }
 
-    private suspend fun readPreservedUserBlocks(now: Long = System.currentTimeMillis()): Map<String, Long?> =
+    private suspend fun readPreservedUserBlocks(now: Long = System.currentTimeMillis()): Map<String, SpamNumber> =
         dao
             .getUserBlockedNumbersSync()
             .mapNotNull { row ->
                 val activeRow = row.activeDecision(now)
-                if (activeRow?.isUserBlocked == true) activeRow.number to activeRow.expiresAt else null
+                if (activeRow?.isUserBlocked == true) activeRow.number to activeRow else null
             }.toMap()
+
+    private fun Map<String, SpamNumber>.blockTimes(): Map<String, Long> = mapNotNull { (number, row) -> row.blockedAt?.let { number to it } }.toMap()
 
     private fun sanitizeDatabasePrefixes(databasePrefixes: Collection<SpamPrefixJson>): List<SpamPrefix> =
         databasePrefixes.mapNotNull { json ->
@@ -944,6 +949,7 @@ class SyncRepository(
                             // it would silently convert a "block for N hours" into
                             // a permanent block on the next feed refresh.
                             expiresAt = existing.expiresAt,
+                            blockedAt = existing.blockedAt,
                         )
                     }
 

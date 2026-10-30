@@ -57,6 +57,7 @@ import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
@@ -330,10 +331,19 @@ class MainViewModel
         /** Every stored spelling of [number], the way screening matches it. */
         fun lookupForms(number: String): List<String> = repo.lookupForms(number)
 
+        val blocklistSort: StateFlow<BlocklistSort> = repo.blocklistSort.screenState(BlocklistSort.NUMBER)
+
+        /** The user's blocks in the chosen [blocklistSort]; blocked-call counts are only read for the most-blocked sort. */
         val userBlockedNumbers: StateFlow<List<SpamNumber>> =
-            repo
-                .getUserBlockedNumbers()
-                .screenState(emptyList())
+            repo.blocklistSort
+                .flatMapLatest { sort ->
+                    val hitCounts = if (sort == BlocklistSort.MOST_BLOCKED) repo.observeUserBlockedHitCounts() else flowOf(emptyMap())
+                    combine(repo.getUserBlockedNumbers(), hitCounts) { numbers, counts -> sort.sort(numbers, counts) }
+                }.screenState(emptyList())
+
+        fun setBlocklistSort(sort: BlocklistSort) {
+            viewModelScope.launch(actionFailed) { repo.setBlocklistSort(sort) }
+        }
 
         val wildcardRules: StateFlow<List<WildcardRule>> =
             repo

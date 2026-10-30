@@ -124,7 +124,38 @@ class EmptiedDatabaseResyncTest {
         assertEquals("scam" to "Edited while syncing", row.type to row.description)
     }
 
+    /** Rules > Blocked sorts newest first by block time, so the rows a sync rebuilds keep it. */
+    @Test
+    fun `a block keeps its time through a sync, on kept and refetched rows`() {
+        sync()
+        val (_, lostNumbers) = SHARDS.entries.first()
+        val blocked = NUMBERS.filter { it !in lostNumbers }.take(2)
+        runBlocking { blocked.forEach { fixture.repository.blockNumber(it) } }
+        val times = blockTimes()
+        assertEquals(blocked.toSet(), times.keys)
+        assertTrue(times.values.all { it != null })
+
+        // One shard lost its rows, so it's fetched again while the blocked rows are kept.
+        val kept = runBlocking { fixture.dao.getNumbersBySource("github") }.filter { it.number !in lostNumbers }
+        runBlocking { fixture.dao.replaceGithubData(kept, emptyList()) }
+        remote.headCommit = "c2"
+        sync()
+        assertEquals(times, blockTimes())
+
+        // A forced sync fetches every shard, so the blocked rows are rebuilt from the download.
+        remote.fetched.clear()
+        remote.headCommit = "c3"
+        runBlocking { fixture.repository.syncFromGitHub(force = true) }
+        assertEquals(SHARD_PATHS, remote.fetched.toSet())
+        assertEquals(times, blockTimes())
+    }
+
     private fun sync() = runBlocking { fixture.repository.syncFromGitHub(force = false) }
+
+    private fun blockTimes() =
+        runBlocking { fixture.dao.getNumbersBySource("github") }
+            .filter { it.isUserBlocked }
+            .associate { it.number to it.blockedAt }
 
     private fun storedNumbers() = runBlocking { fixture.dao.getNumbersBySource("github") }.mapTo(HashSet()) { it.number }
 

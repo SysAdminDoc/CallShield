@@ -73,6 +73,13 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1 ORDER BY number")
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>>
 
+    /** Blocked calls and texts logged for each number the user blocked, for the blocklist's most-blocked sort. */
+    @Query(
+        "SELECT number, COUNT(*) AS cnt FROM call_log WHERE wasBlocked = 1 " +
+            "AND number IN (SELECT number FROM spam_numbers WHERE isUserBlocked = 1) GROUP BY number",
+    )
+    fun observeUserBlockedHitCounts(): Flow<List<NumberCount>>
+
     @Query("SELECT COUNT(*) FROM spam_numbers")
     suspend fun getSpamCount(): Int
 
@@ -131,7 +138,7 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers WHERE number IN (:numbers)")
     suspend fun getNumbersByNumbers(numbers: List<String>): List<SpamNumber>
 
-    @Query("UPDATE spam_numbers SET isUserBlocked = 0, expiresAt = NULL WHERE isUserBlocked = 1 AND source != 'user'")
+    @Query("UPDATE spam_numbers SET isUserBlocked = 0, expiresAt = NULL, blockedAt = NULL WHERE isUserBlocked = 1 AND source != 'user'")
     suspend fun clearUserBlockFlagsOnSyncedNumbers()
 
     @Query("DELETE FROM spam_numbers WHERE isUserBlocked = 1 AND source = 'user'")
@@ -148,7 +155,7 @@ interface SpamDao {
     @Query(
         """
         UPDATE spam_numbers
-        SET isUserBlocked = 0, expiresAt = NULL
+        SET isUserBlocked = 0, expiresAt = NULL, blockedAt = NULL
         WHERE isUserBlocked = 1 AND source != 'user' AND expiresAt IS NOT NULL AND expiresAt <= :now
         """,
     )

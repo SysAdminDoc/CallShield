@@ -32,6 +32,7 @@ import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
@@ -299,6 +300,9 @@ class SpamRepository(
         val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
         internal val KEY_APP_THEME = stringPreferencesKey("app_theme")
 
+        /** Rules > Blocked's sort; see [com.sysadmindoc.callshield.domain.model.BlocklistSort]. */
+        internal val KEY_BLOCKLIST_SORT = stringPreferencesKey("blocklist_sort")
+
         /** Set once [com.sysadmindoc.callshield.data.repository.KeepShownThemeOnUpgrade] has run. */
         internal val KEY_THEME_DEFAULT_SETTLED = booleanPreferencesKey("theme_default_settled")
 
@@ -480,6 +484,7 @@ class SpamRepository(
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
     val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
     val appTheme: Flow<String> = settingsRepository.appTheme
+    val blocklistSort: Flow<BlocklistSort> = settingsRepository.blocklistSort
     val appUpdateChecksEnabled: Flow<Boolean> = settingsRepository.appUpdateChecksEnabled
     val appUpdateState: Flow<AppUpdateState> = settingsRepository.appUpdateState
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
@@ -497,6 +502,8 @@ class SpamRepository(
     suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave = syncRepository.saveFeedMirrorUrl(url)
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) = settingsRepository.setAppUpdateChecksEnabled(enabled)
+
+    suspend fun setBlocklistSort(sort: BlocklistSort) = settingsRepository.setBlocklistSort(sort)
 
     suspend fun recordAppUpdateState(state: AppUpdateState) = settingsRepository.recordAppUpdateState(state)
 
@@ -1130,6 +1137,8 @@ class SpamRepository(
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
 
+    fun observeUserBlockedHitCounts(): Flow<Map<String, Int>> = blocklistRepository.observeUserBlockedHitCounts()
+
     suspend fun getSpamCount(): Int = blocklistRepository.getSpamCount()
 
     fun observeSpamCount(): Flow<Int> = blocklistRepository.observeSpamCount()
@@ -1341,6 +1350,7 @@ internal fun sanitizeDatabaseNumbers(
     databaseNumbers: Collection<SpamNumberJson>,
     normalizeNumber: (String) -> String,
     preservedUserBlockedNumbers: Map<String, Long?>,
+    blockedAtByNumber: Map<String, Long> = emptyMap(),
 ): List<SpamNumber> =
     databaseNumbers.mapNotNull { json ->
         val normalizedNumber = normalizeNumber(json.number)
@@ -1360,6 +1370,7 @@ internal fun sanitizeDatabaseNumbers(
                 evidenceExpiresAt = SourceEvidenceCodec.rowExpiry(evidence),
                 isUserBlocked = normalizedNumber in preservedUserBlockedNumbers,
                 expiresAt = preservedUserBlockedNumbers[normalizedNumber],
+                blockedAt = blockedAtByNumber[normalizedNumber]?.takeIf { normalizedNumber in preservedUserBlockedNumbers },
             )
         }
     }
@@ -1423,6 +1434,7 @@ internal fun mergeHotListNumbers(
                         id = existing.id,
                         isUserBlocked = existing.isUserBlocked,
                         expiresAt = existing.expiresAt,
+                        blockedAt = existing.blockedAt,
                     )
                 } else if (existing.source != "hot_list") {
                     null
@@ -1431,6 +1443,7 @@ internal fun mergeHotListNumbers(
                         id = existing.id,
                         isUserBlocked = existing.isUserBlocked,
                         expiresAt = existing.expiresAt,
+                        blockedAt = existing.blockedAt,
                         evidenceJson = hotNumber.evidenceJson,
                         evidenceExpiresAt = hotNumber.evidenceExpiresAt,
                     )
@@ -1459,6 +1472,6 @@ internal fun resolveSpamNumberForWhitelist(existing: SpamNumber?): SpamNumberWhi
     return if (existing.source == "user") {
         SpamNumberWhitelistResolution.Delete(existing)
     } else {
-        SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false, expiresAt = null))
+        SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false, expiresAt = null, blockedAt = null))
     }
 }

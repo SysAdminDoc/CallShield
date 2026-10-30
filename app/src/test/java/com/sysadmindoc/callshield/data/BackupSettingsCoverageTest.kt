@@ -18,6 +18,7 @@ class BackupSettingsCoverageTest {
     private val excluded =
         mapOf(
             "KEY_ABSTRACT_API_KEY" to "a retired API key the app deletes on start",
+            "KEY_BLOCKLIST_SORT" to "how this phone's Rules list is sorted, a view choice and not protection",
             "KEY_APP_UPDATE_CHECKED_AT" to "the last update check's result, not a setting",
             "KEY_APP_UPDATE_CHECKSUM_URL" to "the last update check's result, not a setting",
             "KEY_APP_UPDATE_RELEASE_URL" to "the last update check's result, not a setting",

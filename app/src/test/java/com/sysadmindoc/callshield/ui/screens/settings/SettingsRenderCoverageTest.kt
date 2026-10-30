@@ -120,6 +120,7 @@ class SettingsRenderCoverageTest {
         mapOf(
             "KEY_APP_UPDATE_CHECKS" to "More, next to the update check it turns on",
             "KEY_EXPECTING_CALL_UNTIL" to "Home and the Quick Settings tile open and end the window",
+            "KEY_BLOCKLIST_SORT" to "Rules > Blocked, the sort chips above the list",
             "KEY_URL_STRIP_QUERY" to
                 "no control since remote link checks became domain-only; it only decides whether a logged link keeps its query",
             "KEY_ABSTRACT_API_KEY" to "a retired API key the app deletes on start",

@@ -28,6 +28,8 @@ data class SpamNumber(
     val evidenceExpiresAt: Long? = null,
     val isUserBlocked: Boolean = false,
     val expiresAt: Long? = null,
+    /** When the user blocked the number, for the blocklist's newest-first sort; null for blocks made before v21. */
+    val blockedAt: Long? = null,
 ) {
     fun activeDecision(now: Long = System.currentTimeMillis()): SpamNumber? {
         val evidenceActive = evidenceExpiresAt == null || evidenceExpiresAt > now

@@ -2066,4 +2066,22 @@
     <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, the number is sent to SkipCalls to check it against their spam reports</string>
     <string name="overlay_score_local_clear">Local checks clear</string>
     <string name="overlay_status_local_only">Based on on-device checks; live enrichment is off</string>
+    <string name="blocklist_sort_newest">Newest first</string>
+    <string name="blocklist_sort_number">By number</string>
+    <string name="blocklist_sort_most_blocked">Most blocked</string>
+    <string name="blocklist_select_action">Select</string>
+    <string name="blocklist_selection_unblock">Unblock</string>
+    <string name="blocklist_selection_delete">Delete</string>
+    <plurals name="blocklist_selection_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="blocklist_selection_unblocked">
+        <item quantity="one">%d number unblocked</item>
+        <item quantity="other">%d numbers unblocked</item>
+    </plurals>
+    <plurals name="blocklist_selection_removed">
+        <item quantity="one">%d rule removed</item>
+        <item quantity="other">%d rules removed</item>
+    </plurals>
 </resources>

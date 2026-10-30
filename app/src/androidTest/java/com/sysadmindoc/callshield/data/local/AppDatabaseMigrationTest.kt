@@ -61,6 +61,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -108,6 +109,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -137,6 +139,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt(
@@ -171,6 +174,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -203,6 +207,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
@@ -266,6 +271,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_17_18,
                 MIGRATION_18_19,
                 MIGRATION_19_20,
+                MIGRATION_20_21,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)

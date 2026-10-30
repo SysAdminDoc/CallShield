@@ -13,7 +13,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 20
+const val DB_VERSION = 21
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -26,6 +26,7 @@ private const val DB_VERSION_17 = 17
 private const val DB_VERSION_18 = 18
 private const val DB_VERSION_19 = 19
 private const val DB_VERSION_20 = 20
+private const val DB_VERSION_21 = 21
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -298,6 +299,14 @@ val MIGRATION_19_20 =
         }
     }
 
+/** v20 -> v21: when the user blocked each number, so the blocklist can sort newest first. */
+val MIGRATION_20_21 =
+    object : Migration(DB_VERSION_20, DB_VERSION_21) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE spam_numbers ADD COLUMN blockedAt INTEGER")
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -408,6 +417,7 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_17_18,
                     MIGRATION_18_19,
                     MIGRATION_19_20,
+                    MIGRATION_20_21,
                 )
 
         /** SQLite corruption messages that a rebuild can recover from. */

@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The Blocked list on the Rules screen can be sorted now. Once you've blocked two or more numbers, chips above the list let you pick Newest first, By number or Most blocked, and CallShield remembers your pick. Most blocked counts the calls and texts it blocked from each number. Numbers blocked before this update have no block time, so they sort last under Newest first.
+- Long-press any row on the Rules screen to pick it, tap others to add them, then Unblock or Delete them all at once. One Undo brings them all back. This works on the Wildcards, Ranges, Keywords and Trusted tabs too, and TalkBack reads how many rows you've picked.
 - On Android 13 and later, copying a number no longer pops a "Copied" message on top of the preview Android shows for everything you copy. The two used to pile up at the bottom of the screen. The FTC complaint button doesn't pop one either now, and the reminder to paste the number into the form sits right under the button. Android 12 and older still show the messages, since nothing else tells you the copy worked there.
 - On the Rules screen, the "Removed from blocklist" bar with its Undo used to cover the Add button, so you couldn't add anything until the bar went away. It now shows just above the button. On the Database tab, which has no Add button, it stays at the bottom.
 - The bar that slides up with Undo and other short messages now uses CallShield's own colors. It's off-white with a green Undo in the dark themes and navy with a mint Undo in Light, instead of Android's stock lavender and purple.
