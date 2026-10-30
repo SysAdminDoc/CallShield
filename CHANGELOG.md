@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- When GitHub's rate limit stops a report, the report service now passes on how long GitHub asked it to wait, instead of always saying a minute. When GitHub refuses the service's access token, it answers that it's unavailable rather than rate limited, and the app keeps the report and tries again later. This takes effect when the report Worker is next deployed.
 - The update notice on Home can't be swapped back to an older release anymore. A mirror serving an older signed notice used to replace the newer one, which could hide an update.
 - Regex rules shaped like a long run of optional digits, or a repeated group that ends in an optional part, are now turned down when you add them, since they could hold up call screening. One saved earlier in such a shape no longer runs.
 - Turning the phone while Not spam waits out its Undo, or while Report is still going out, no longer loses the message that follows. Report's Undo for the block stays too.

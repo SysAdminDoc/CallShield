@@ -23,6 +23,7 @@ import worker, {
   recordDedup,
   validateReportEnvironment,
   validatedReportId,
+  githubRetryAfter,
 } from "./community-reports-worker.js";
 
 const FIXTURES = JSON.parse(
@@ -1113,6 +1114,57 @@ test("a stored report keeps its id, and its resend is answered as already stored
     assert.equal(resend.status, 429);
     assert.equal((await resend.json()).already_stored, true);
     assert.equal(payloads.length, 1, "the resend is not stored again");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("githubRetryAfter reads GitHub's rate limit signals and nothing else", () => {
+  const github = (status, headers = {}) => new Response("", { status, headers });
+  const now = 1_700_000_000_000;
+
+  assert.equal(githubRetryAfter(github(403, { "retry-after": "120" }), ""), 120);
+  assert.equal(githubRetryAfter(github(429, { "retry-after": "7200" }), ""), 3600, "capped at an hour");
+  assert.equal(
+    githubRetryAfter(github(403, { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(now / 1000 + 30) }), "", now),
+    30,
+  );
+  assert.equal(githubRetryAfter(github(403), '{"message":"You have exceeded a secondary rate limit."}'), 60);
+  assert.equal(githubRetryAfter(github(429), ""), 60);
+  assert.equal(githubRetryAfter(github(403), '{"message":"Resource not accessible by personal access token"}'), null);
+  assert.equal(githubRetryAfter(github(403, { "x-ratelimit-remaining": "4999" }), ""), null);
+  assert.equal(githubRetryAfter(github(500, { "retry-after": "60" }), ""), null);
+});
+
+test("a token GitHub refuses is answered as unavailable, and a GitHub rate limit passes its wait on", async () => {
+  // A refused token stays refused until it's replaced, so a quick retry
+  // only spends the phone's attempts. A rate limit tells the app how long to wait.
+  const originalFetch = globalThis.fetch;
+  const answers = [
+    () => new Response('{"message":"Resource not accessible by personal access token"}', { status: 403 }),
+    () => new Response('{"message":"API rate limit exceeded"}', { status: 403, headers: { "retry-after": "120" } }),
+  ];
+  let call = 0;
+  globalThis.fetch = async () => answers[call++]();
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  const send = (ip, number) =>
+    worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ number, type: "spam" }),
+      }),
+      env,
+    );
+  try {
+    const refused = await send("203.0.113.90", "+12122340101");
+    const limited = await send("198.51.100.90", "+12122340102");
+
+    assert.equal(refused.status, 503);
+    assert.equal(refused.headers.get("Retry-After"), "300");
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get("Retry-After"), "120");
+    assert.equal(call, 2);
   } finally {
     globalThis.fetch = originalFetch;
   }

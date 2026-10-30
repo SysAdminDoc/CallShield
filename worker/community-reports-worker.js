@@ -180,6 +180,9 @@ const RATE_LIMIT_MAX_REQUESTS = 5;
 // GitHub commits.
 const GROUP_RATE_LIMIT_MAX_REQUESTS = 20;
 const GLOBAL_RATE_LIMIT_MAX_REQUESTS = 30;
+// GitHub's primary limit resets within the hour.
+const GITHUB_DEFAULT_RETRY_AFTER_S = 60;
+const GITHUB_MAX_RETRY_AFTER_S = 3600;
 
 // Reports are a phone number, a type and a few redacted SMS indicators.
 const MAX_BODY_BYTES = 10000;
@@ -418,6 +421,28 @@ export async function takeWorkerBudget(env) {
     { limiter: env?.REPORT_GLOBAL_LIMITER, key: "all", kvKey: "rlall", max: GLOBAL_RATE_LIMIT_MAX_REQUESTS },
     env,
   );
+}
+
+/**
+ * Seconds to wait when GitHub refused a commit for a rate limit, or null when
+ * it refused for another reason. GitHub answers its primary and secondary
+ * limits with 403 or 429 and marks them with `retry-after`, a zero
+ * `x-ratelimit-remaining`, or a message naming the limit. Any other 403 means
+ * the token can't write the repository, which waiting won't fix.
+ */
+export function githubRetryAfter(response, body, now = Date.now()) {
+  if (response.status !== 403 && response.status !== 429) return null;
+  const retryAfter = Number(response.headers.get("retry-after"));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.min(Math.ceil(retryAfter), GITHUB_MAX_RETRY_AFTER_S);
+  }
+  if (response.headers.get("x-ratelimit-remaining") === "0") {
+    const reset = Number(response.headers.get("x-ratelimit-reset"));
+    const wait = reset > 0 ? Math.ceil(reset - now / 1000) : GITHUB_DEFAULT_RETRY_AFTER_S;
+    return Math.min(Math.max(wait, 1), GITHUB_MAX_RETRY_AFTER_S);
+  }
+  if (response.status === 429 || /rate limit/i.test(body)) return GITHUB_DEFAULT_RETRY_AFTER_S;
+  return null;
 }
 
 /** The answer for a budget that refused: 503 when its state couldn't be read, else 429. */
@@ -896,11 +921,19 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 
       if (!githubResponse.ok) {
         const err = await githubResponse.text();
-        console.error("GitHub API error:", err);
+        console.error("GitHub API error:", githubResponse.status, err);
         // Surface rate limiting to the client so it can back off
-        if (githubResponse.status === 403 || githubResponse.status === 429) {
+        const retryAfter = githubRetryAfter(githubResponse, err);
+        if (retryAfter !== null) {
           return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
-            status: 429, headers: { ...responseHeaders, "Content-Type": "application/json", "Retry-After": "60" }
+            status: 429, headers: { ...responseHeaders, "Content-Type": "application/json", "Retry-After": String(retryAfter) }
+          });
+        }
+        // A token GitHub won't accept stays refused until the maintainer
+        // replaces it, so the client backs off as it does for a missing binding.
+        if (githubResponse.status === 401 || githubResponse.status === 403) {
+          return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
+            status: 503, headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" }
           });
         }
         return new Response(JSON.stringify({ error: "Failed to submit report" }), {
