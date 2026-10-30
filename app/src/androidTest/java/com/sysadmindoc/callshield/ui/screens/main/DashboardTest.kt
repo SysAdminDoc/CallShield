@@ -141,7 +141,7 @@ class DashboardTest {
         composeRule.onNodeWithText("1,234").assertIsDisplayed()
         composeRule.onNodeWithText("56").assertIsDisplayed()
         composeRule.onNodeWithText("Calls blocked").assertIsDisplayed()
-        composeRule.onNodeWithText("Texts blocked").assertIsDisplayed()
+        composeRule.onNodeWithText("Texts flagged").assertIsDisplayed()
     }
 
     @Test

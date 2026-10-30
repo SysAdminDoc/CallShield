@@ -113,6 +113,7 @@ class CallShieldApp :
                 Log.e("CallShieldApp", "Failed to put back the rows saved from a corrupt database", e)
             }
             val restoreCheckMillis = SystemClock.elapsedRealtime() - restoreCheckStartedAt
+            val restoreProofLeft = !lookedForRestore || RestoreSentinel.isClean(this)
             // After the restore check, so the caches hold the restored rules.
             // Boot and app updates start the process here too, so the first
             // screened call no longer loads them inside its five-second budget.
@@ -213,6 +214,7 @@ class CallShieldApp :
                     restoreCheckMillis = restoreCheckMillis,
                     readyAtElapsedRealtime = SystemClock.elapsedRealtime(),
                     lookedForRestore = lookedForRestore,
+                    restoreProofLeft = restoreProofLeft,
                 ).also { Log.i("CallShieldApp", "Startup held the main thread ${it.initMillis}ms (restore check ${it.restoreCheckMillis}ms)") }
         }
     }
@@ -298,10 +300,13 @@ class CallShieldApp :
  * check is part of [initMillis]; [readyAtElapsedRealtime] is when it finished.
  * [lookedForRestore] is true on the one start after an install, an update or a
  * restore that had to open Room because [RestoreSentinel] had no proof yet.
+ * [restoreProofLeft] is whether the proof was there right after that check,
+ * before a restore later in the process could take it away again.
  */
 internal data class StartupTimings(
     val initMillis: Long,
     val restoreCheckMillis: Long,
     val readyAtElapsedRealtime: Long,
     val lookedForRestore: Boolean,
+    val restoreProofLeft: Boolean,
 )

@@ -68,7 +68,8 @@ class ColdStartVerdictTest {
             if (timings.lookedForRestore) {
                 // The one start after an install, an update or a restore opens Room to
                 // look for a journal; it must leave proof behind so the next start doesn't.
-                assertTrue(report, RestoreSentinel.isClean(context))
+                // Read at startup: a restore test earlier in this process takes it away.
+                assertTrue(report, timings.restoreProofLeft)
             } else {
                 assertTrue(report, timings.restoreCheckMillis < TENTH_OF_BUDGET_MILLIS)
             }

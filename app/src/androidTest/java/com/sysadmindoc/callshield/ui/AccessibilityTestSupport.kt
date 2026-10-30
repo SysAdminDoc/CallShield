@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,6 +27,10 @@ const val THEMED_TEST_ROOT_TAG = "callshield_themed_test_root"
  * on the theme background. Outside the theme the palette falls back to the
  * AMOLED tokens while the test activity paints a light window, so contrast
  * checks measure color pairs no user ever sees.
+ *
+ * The content also stays clear of the system bars, as MainActivity's Scaffold
+ * keeps it. The test activity draws edge to edge, and on a phone with the
+ * three-button bar a long screen's last lines read through the bar's scrim.
  */
 fun ComposeContentTestRule.setThemedContent(content: @Composable () -> Unit) {
     setContent {
@@ -35,8 +41,9 @@ fun ComposeContentTestRule.setThemedContent(content: @Composable () -> Unit) {
             Surface(
                 modifier = Modifier.fillMaxSize().testTag(THEMED_TEST_ROOT_TAG),
                 color = Black,
-                content = content,
-            )
+            ) {
+                Box(Modifier.fillMaxSize().safeDrawingPadding(), propagateMinConstraints = true) { content() }
+            }
         }
     }
 }
