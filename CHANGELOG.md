@@ -76,6 +76,7 @@ All notable changes to CallShield will be documented in this file.
 - With TalkBack on, the count tiles on Home, More and Activity now read each number with its label, like "7, Today". TalkBack used to read every number in the row first and every label after, so you couldn't tell which count was which. Each entry on the Rules screen's Database tab is one stop now too, with its number, type and report count read together.
 - Appearance on the More tab opens the theme picker right there. It used to open Settings at the top, with the Theme row further down and out of sight.
 - Restoring a backup keeps when each number was blocked, so the Blocked list's Newest sort comes back in the same order. Backups made before this restore those blocks with the time of the restore.
+- The Recent tab shows how CallShield handled each call when it came in. It used to check every number again when the list loaded, so a call you answered from a number you blocked later showed up as Spam and counted toward the Spam total. Now only calls CallShield actually blocked count as Spam, and an earlier call from a number flagged since says "Flagged after this call" along with the reason.
 
 ## v1.12.0 (2026-10-09)
 

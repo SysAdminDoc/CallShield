@@ -73,10 +73,66 @@ data class RecentCall(
     val type: Int, // CallLog.Calls.INCOMING_TYPE, etc.
     val date: Long,
     val duration: Int,
+    /** CallShield blocked this call as spam when it came in. */
     val isSpam: Boolean = false,
     val spamReason: String = "",
     val contactName: String? = null,
+    /** The reason the number is flagged now, though this call wasn't blocked. */
+    val flaggedSinceReason: String? = null,
 )
+
+/** A row from the phone's call log, before CallShield's verdict is added. */
+internal data class CallLogEntry(
+    val number: String,
+    val type: Int,
+    val date: Long,
+    val duration: Int,
+)
+
+/**
+ * Gives each call the verdict CallShield logged when it came in: a block of
+ * the same number within [LOGGED_BLOCK_MATCH_MS] of the call. A call with no
+ * such block whose number is flagged now keeps that reason apart, so the Spam
+ * filter and count hold only calls that were spam at the time.
+ */
+internal suspend fun recentCallsWithVerdicts(
+    repo: SpamRepository,
+    entries: List<CallLogEntry>,
+    contactNames: Map<String, String?> = emptyMap(),
+): List<RecentCall> {
+    val oldest = entries.minOfOrNull { it.date } ?: return emptyList()
+    val blocks = repo.recentSpamBlocks(oldest - LOGGED_BLOCK_MATCH_MS).filter { it.isCall }
+    val formsByNumber = entries.map { it.number }.distinct().associateWith { repo.lookupForms(repo.normalizeNumber(it)).toSet() }
+    val loggedBlocks =
+        entries.map { entry ->
+            val digits = filterAsciiDigits(entry.number)
+            blocks.firstOrNull { block ->
+                (block.number in formsByNumber.getValue(entry.number) || filterAsciiDigits(block.number) == digits) &&
+                    kotlin.math.abs(block.timestamp - entry.date) <= LOGGED_BLOCK_MATCH_MS
+            }
+        }
+    val flaggedNow =
+        entries
+            .filterIndexed { index, _ -> loggedBlocks[index] == null }
+            .map { it.number }
+            .distinct()
+            .associateWith { repo.isSpam(it, realtimeCall = false).takeIf { result -> result.isSpam }?.matchSource }
+    return entries.zip(loggedBlocks) { entry, block ->
+        RecentCall(
+            number = entry.number,
+            type = entry.type,
+            date = entry.date,
+            duration = entry.duration,
+            isSpam = block != null,
+            spamReason = block?.matchReason.orEmpty(),
+            contactName = contactNames[entry.number],
+            flaggedSinceReason = if (block == null) flaggedNow[entry.number] else null,
+        )
+    }
+}
+
+/** How far apart a logged block and the phone's row for the same call can be, as the call-frequency check matches them. */
+private const val LOGGED_BLOCK_MATCH_MS = 10_000L
 
 @Composable
 fun RecentCallsScreen(viewModel: MainViewModel) {
@@ -466,6 +522,7 @@ fun RecentCallItem(
         when {
             call.contactName != null -> stringResource(R.string.recent_summary_known)
             call.isSpam -> stringResource(R.string.recent_summary_spam)
+            call.flaggedSinceReason != null -> stringResource(R.string.recent_summary_flagged_since)
             else -> stringResource(R.string.stats_unknown_caller)
         }
 
@@ -493,6 +550,7 @@ fun RecentCallItem(
                         when {
                             call.contactName != null -> CatGreen
                             call.isSpam -> CatRed
+                            call.flaggedSinceReason != null -> CatPeach
                             else -> CatYellow
                         }
                     Box(
@@ -552,6 +610,12 @@ fun RecentCallItem(
                                 friendlyMatchReasonLabel(call.spamReason),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CatRed,
+                            )
+                        } else if (call.flaggedSinceReason != null) {
+                            Text(
+                                stringResource(R.string.recent_flagged_since, friendlyMatchReasonLabel(call.flaggedSinceReason)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CatPeach,
                             )
                         }
                     }
@@ -650,7 +714,6 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
             throw SecurityException("Call log access disabled by the system")
         }
         val repo = SpamRepository.getInstance(context)
-        val calls = mutableListOf<RecentCall>()
         val cursor =
             context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
@@ -667,19 +730,13 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
             if (numIdx < 0) error("Call log provider did not return numbers")
 
             // First pass: collect raw call log entries
-            data class RawCall(
-                val number: String,
-                val type: Int,
-                val date: Long,
-                val duration: Int,
-            )
-            val rawCalls = mutableListOf<RawCall>()
+            val rawCalls = mutableListOf<CallLogEntry>()
             while (c.moveToNext() && rawCalls.size < 100) {
                 val number = c.getString(numIdx) ?: continue
                 val clean = normalizePhoneNumberInput(number)
                 if (!hasMinAsciiDigits(clean)) continue
                 rawCalls.add(
-                    RawCall(
+                    CallLogEntry(
                         number = clean,
                         type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
                         date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
@@ -688,9 +745,7 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
                 )
             }
 
-            // Batch spam check: only check unique numbers once
             val uniqueNumbers = rawCalls.map { it.number }.distinct()
-            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
 
             // Batch contact lookup
             val contactCache = mutableMapOf<String, String?>()
@@ -717,23 +772,8 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
                     }
             }
 
-            // Build final list
-            for (raw in rawCalls) {
-                val spamResult = spamCache[raw.number]
-                calls.add(
-                    RecentCall(
-                        number = raw.number,
-                        type = raw.type,
-                        date = raw.date,
-                        duration = raw.duration,
-                        isSpam = spamResult?.isSpam ?: false,
-                        spamReason = spamResult?.matchSource ?: "",
-                        contactName = contactCache[raw.number],
-                    ),
-                )
-            }
+            recentCallsWithVerdicts(repo, rawCalls, contactCache)
         }
-        calls
     }
 
 private data class RecentFilterOption(

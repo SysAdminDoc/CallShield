@@ -959,6 +959,8 @@
     <string name="recent_summary_spam">垃圾</string>
     <string name="recent_summary_missed">未接</string>
     <string name="recent_summary_known">已知</string>
+    <string name="recent_summary_flagged_since">此次通话后被标记</string>
+    <string name="recent_flagged_since">此次通话后被标记：%1$s</string>
     <string name="recent_permission_title">需要通话记录访问权限</string>
     <string name="recent_permission_body">授予通话记录权限，CallShield 才能审计最近通话、呈现垃圾匹配，并从历史记录打开详情视图。</string>
     <string name="recent_permission_cta">打开应用设置</string>

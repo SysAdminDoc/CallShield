@@ -1312,6 +1312,8 @@
     <string name="recent_summary_spam">Spam</string>
     <string name="recent_summary_missed">Missed</string>
     <string name="recent_summary_known">Known</string>
+    <string name="recent_summary_flagged_since">Flagged after this call</string>
+    <string name="recent_flagged_since">Flagged after this call: %1$s</string>
     <string name="recent_permission_title">Recent calls need access</string>
     <string name="recent_permission_body">Allow call log access to review recent calls and spam matches.</string>
     <string name="recent_permission_cta">Open settings</string>

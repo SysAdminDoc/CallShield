@@ -718,6 +718,9 @@ class SpamRepository(
         now: Long = System.currentTimeMillis(),
     ): Long? = blocklistRepository.lastFlaggedTextSighting(lookupForms(normalized), now)
 
+    /** CallShield's blocks since [since], without the meeting and schedule silences that say nothing about the caller. */
+    internal suspend fun recentSpamBlocks(since: Long): List<BlockedCall> = spamRepositoryImpl.getRecentBlockedNumbersInternal(since)
+
     internal suspend fun warmScreeningCaches() = spamRepositoryImpl.warmScreeningCaches()
 
     internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =
