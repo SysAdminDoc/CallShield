@@ -29,26 +29,11 @@ All notable changes to CallShield will be documented in this file.
 - If checking a text runs into an error, CallShield still lets the text through and now leaves a warning in the system log. Before, nothing recorded that the check had failed.
 - Community reports that arrive without the app's report id now count as one reporter between them, per number and day. The app has sent that id with every report since v1.10.0. On 2026-10-30 a script that sent none reported the same few numbers from a new network each time, and each one counted as a different person. The rule covers the watch list, promotion into the database, the trending list, spam link domains and Not spam votes. Reports from older builds still count, just together.
 - On Android 15 and later, Android hides a one-time code from apps like CallShield and puts "Sensitive notification content hidden" where the message was. CallShield screened that placeholder as if it were the text. It now leaves those notifications alone, so it never removes or logs one, and it warns you when a hidden code arrives during or just after a call from an unknown number, the way it already did for a code it could read. The placeholder is matched in your phone's language.
-- The spam report form on GitHub now says up front that it files a public
-  note, and that Report on a number's screen in the app is what sends the
-  anonymous report that counts. It used to say a report there could go in
-  the database, but issues were never read into it.
-- Report on a number's screen now blocks the number on your phone too, and
-  the message after it says so, with Undo to take the block back off. The
-  report itself stays sent. One report rarely blocks a number for everyone,
-  so you kept getting the calls unless you also tapped Block. A number you'd
-  blocked already keeps its block exactly as it was.
-- Lookup's result card now offers to block the number's whole area code,
-  with Undo, the same way a number's own screen does. Before, you had to
-  scroll down and open the full detail to find it.
-- Report spam number on the More tab now opens Lookup on an empty number
-  field, ready to type, where Report sends the anonymous report that counts.
-  It used to open the GitHub form, which files a public issue instead.
-- New `scripts/device_smoke.py` runs the release's phone checks over adb
-  and prints PASS or FAIL for each: sync, What's new, the recommended
-  lists, both area code offers with Undo, a number with no offer, Not
-  spam's Undo and More's Report spam number. `--report` adds Report's block
-  and Undo, and it sends a real report.
+- The spam report form on GitHub now says up front that it files a public note, and that Report on a number's screen in the app is what sends the anonymous report that counts. It used to say a report there could go in the database, but issues were never read into it.
+- Report on a number's screen now blocks the number on your phone too, and the message after it says so, with Undo to take the block back off. The report itself stays sent. One report rarely blocks a number for everyone, so you kept getting the calls unless you also tapped Block. A number you'd blocked already keeps its block exactly as it was.
+- Lookup's result card now offers to block the number's whole area code, with Undo, the same way a number's own screen does. Before, you had to scroll down and open the full detail to find it.
+- Report spam number on the More tab now opens Lookup on an empty number field, ready to type, where Report sends the anonymous report that counts. It used to open the GitHub form, which files a public issue instead.
+- New `scripts/device_smoke.py` runs the release's phone checks over adb and prints PASS or FAIL for each: sync, What's new, the recommended lists, both area code offers with Undo, a number with no offer, Not spam's Undo and More's Report spam number. `--report` adds Report's block and Undo, and it sends a real report.
 - Lookup now offers Report on every number you check. It only showed for a number something had already flagged, so the new number you came from More to report left you with Block and Mark trusted. Report in Lookup works like Report on a number's screen: it blocks the number on your phone too, with Undo.
 - Reporting a number nothing had flagged sent the report with a blank type. It goes as spam now, and the block it adds on your phone says spam too, not Other.
 - Undo after deleting a rule puts back exactly what was there. A rule you'd switched off came back switched on, and a temporary allow came back for good.
