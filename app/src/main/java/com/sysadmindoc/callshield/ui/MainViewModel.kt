@@ -54,6 +54,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
+import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
@@ -70,9 +71,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -102,12 +105,19 @@ class MainViewModel
         private val manageBlocklist: ManageBlocklistUseCase,
         private val exportLogs: ExportLogsUseCase,
         private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
+        // Outlives this ViewModel: a Not spam still held when the screen goes
+        // away finishes here. Tests take the default, since CallShieldApp's
+        // scope is only set by the real Application.
+        @param:ApplicationScope private val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     ) : ViewModel() {
         private companion object {
             const val TAG = "MainViewModel"
 
             /** How long a Replace restore can be undone. */
             const val RESTORE_UNDO_WINDOW_MS = 30_000L
+
+            /** How long Not spam waits before it goes out, so its snackbar's Undo can take it back. */
+            const val NOT_SPAM_UNDO_WINDOW_MS = 5_000L
             const val KEY_DATABASE_TYPE = "database_type_filter"
             const val KEY_DATABASE_SOURCE = "database_source_filter"
             const val DATABASE_PAGE_SIZE = 50
@@ -1624,28 +1634,86 @@ class MainViewModel
             _reportOutcome.value = null
         }
 
-        private var notSpamUndoJob: Job? = null
+        /**
+         * What a held Not spam did once it went out. [requestId] is what
+         * [scheduleNotSpam] returned, so a screen shows only its own taps'
+         * outcomes and not one another screen asked for.
+         */
+        data class NotSpamOutcome(
+            val requestId: Long,
+            val result: CommunityContributor.ContributeResult,
+        )
 
-        fun scheduleNotSpam(number: String) {
-            notSpamUndoJob?.cancel()
-            notSpamUndoJob =
+        private val _notSpamOutcome = MutableStateFlow<NotSpamOutcome?>(null)
+        val notSpamOutcome: StateFlow<NotSpamOutcome?> = _notSpamOutcome
+        private var notSpamRequests = 0L
+
+        /** A Not spam tap waiting out its Undo window. */
+        private data class HeldNotSpam(
+            val requestId: Long,
+            val number: String,
+            val description: String,
+            val job: Job,
+        )
+
+        // Held taps keyed by the normalized number, so the same number in two
+        // spellings is one hold. A second tap on a number restarts its wait. One
+        // shared job used to mean a tap on another number dropped the first,
+        // unsent, behind a snackbar saying done.
+        private val pendingNotSpam = mutableMapOf<String, HeldNotSpam>()
+
+        /**
+         * Not spam on a number's screen or in Lookup. After
+         * [NOT_SPAM_UNDO_WINDOW_MS] the number goes on the allow list with
+         * [description] and the not-spam report is sent, unless [undoNotSpam]
+         * took it back first. Returns the request's id.
+         */
+        fun scheduleNotSpam(
+            number: String,
+            description: String = appContext.getString(R.string.desc_reported_not_spam),
+        ): Long {
+            val requestId = ++notSpamRequests
+            val key = repo.normalizeNumber(number)
+            pendingNotSpam.remove(key)?.job?.cancel()
+            val job =
                 viewModelScope.launch(actionFailed) {
-                    delay(5000L)
-                    reportNotSpam(number)
+                    delay(NOT_SPAM_UNDO_WINDOW_MS)
+                    // Going out now, so a late Undo can't stop it halfway.
+                    if (pendingNotSpam[key]?.requestId == requestId) pendingNotSpam.remove(key)
+                    manageBlocklist.addToWhitelist(number, description)
+                    val result = CommunityContributor.reportNotSpam(appContext, key)
+                    _notSpamOutcome.value = NotSpamOutcome(requestId, result)
                 }
+            pendingNotSpam[key] = HeldNotSpam(requestId, number, description, job)
+            return requestId
         }
 
-        fun undoNotSpam() {
-            notSpamUndoJob?.cancel()
-            notSpamUndoJob = null
+        fun undoNotSpam(requestId: Long) {
+            val held = pendingNotSpam.entries.firstOrNull { it.value.requestId == requestId } ?: return
+            held.value.job.cancel()
+            pendingNotSpam.remove(held.key)
         }
 
-        fun reportNotSpam(number: String) {
-            viewModelScope.launch(actionFailed) {
-                manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
-                val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
-                _contributeResult.value = result.toStatusMessage()
+        /**
+         * The screen's Undo is gone with the screen, so a tap still waiting goes
+         * out now rather than being dropped unsent with this ViewModel's scope.
+         * Lookup used to write the moment it was tapped; this keeps that promise.
+         */
+        override fun onCleared() {
+            val held = pendingNotSpam.values.toList()
+            pendingNotSpam.clear()
+            for (hold in held) {
+                hold.job.cancel()
+                appScope.launch(Dispatchers.Main + actionFailed) {
+                    manageBlocklist.addToWhitelist(hold.number, hold.description)
+                    CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(hold.number))
+                }
             }
+            super.onCleared()
+        }
+
+        fun clearNotSpamOutcome() {
+            _notSpamOutcome.value = null
         }
 
         /** This device's reports from the last 90 days, for My reports. */

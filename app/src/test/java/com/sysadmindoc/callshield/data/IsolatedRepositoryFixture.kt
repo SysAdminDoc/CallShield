@@ -13,10 +13,10 @@ import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.runBlocking
+import org.robolectric.shadows.ShadowLooper
 import java.io.File
 import java.nio.file.Files
+import java.time.Duration
 
 /** Owns every persistent resource used by one Robolectric test sandbox. */
 internal class IsolatedRepositoryFixture(
@@ -78,11 +78,27 @@ internal class IsolatedRepositoryFixture(
 
     override fun close() {
         database.close()
-        runBlocking {
-            storeJob.cancelAndJoin()
+        // DataStore runs each edit's transform on the caller's dispatcher, and a
+        // ViewModel's caller is the main one. Under Robolectric the main thread is
+        // this thread, so blocking it with runBlocking { cancelAndJoin() } hung a
+        // test for hours when an edit was mid-flight at tear-down (NotSpamUndoTest,
+        // 2026-10-29). Cancel, then keep the main looper moving until every child
+        // of the store scope has stopped.
+        storeJob.cancel()
+        val deadline = System.nanoTime() + STORE_STOP_TIMEOUT.toNanos()
+        while (!storeJob.isCompleted && System.nanoTime() < deadline) {
+            ShadowLooper.idleMainLooper()
+            Thread.sleep(5)
+        }
+        check(storeJob.isCompleted) {
+            "The fixture's store scope didn't stop within ${STORE_STOP_TIMEOUT.seconds} s"
         }
         check(storeDirectory.deleteRecursively()) {
             "Could not remove isolated repository fixture at ${storeDirectory.absolutePath}"
         }
+    }
+
+    private companion object {
+        val STORE_STOP_TIMEOUT: Duration = Duration.ofSeconds(10)
     }
 }

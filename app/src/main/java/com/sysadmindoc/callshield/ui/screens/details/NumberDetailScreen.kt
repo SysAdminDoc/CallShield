@@ -151,6 +151,8 @@ fun NumberDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.detail_undo)
     var reportRequestId by remember(number) { mutableStateOf<Long?>(null) }
+    // A second Not spam here restarts the first one's wait, so the last tap is the only one to show.
+    var notSpamRequestId by remember(number) { mutableStateOf<Long?>(null) }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
@@ -626,19 +628,20 @@ fun NumberDetailScreen(
             // The spam report is the Report button up top. Its result, and this
             // one's, shows as a snackbar, which stays in view wherever the
             // screen is scrolled.
-            val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
+            val notSpamOutcome by viewModel.notSpamOutcome.collectAsStateWithLifecycle()
             PremiumActionButton(
                 label = stringResource(R.string.detail_not_spam),
                 icon = Icons.Default.ThumbUp,
                 color = CatGreen,
                 onClick = {
                     hapticTick(context)
-                    viewModel.scheduleNotSpam(number)
+                    val requestId = viewModel.scheduleNotSpam(number)
+                    notSpamRequestId = requestId
                     // Snackbars queue, and the not-spam report goes out five
                     // seconds after this tap, so Undo can't wait behind a
                     // report result. Clearing the result cancels one still
                     // waiting for its turn; dismissing ends the one showing.
-                    viewModel.clearContributeResult()
+                    viewModel.clearNotSpamOutcome()
                     viewModel.clearReportOutcome()
                     snackbarHostState.currentSnackbarData?.dismiss()
                     coroutineScope.launch {
@@ -649,17 +652,22 @@ fun NumberDetailScreen(
                                 duration = SnackbarDuration.Short,
                             )
                         if (result == SnackbarResult.ActionPerformed) {
-                            viewModel.undoNotSpam()
+                            viewModel.undoNotSpam(requestId)
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 outlined = true,
             )
-            LaunchedEffect(contributeResult) {
-                contributeResult?.let {
-                    snackbarHostState.showSnackbar(it.text)
-                    viewModel.clearContributeResult()
+            LaunchedEffect(notSpamOutcome, notSpamRequestId) {
+                notSpamOutcome?.let { outcome ->
+                    if (outcome.requestId == notSpamRequestId) {
+                        // A long accessibility timeout can keep the Undo snackbar up
+                        // past the wait. The tap has gone out, so end it first.
+                        snackbarHostState.currentSnackbarData?.takeIf { it.visuals.message == notSpamPending }?.dismiss()
+                        snackbarHostState.showSnackbar(viewModel.contributeMessage(outcome.result))
+                    }
+                    viewModel.clearNotSpamOutcome()
                 }
             }
             // Report's result, with Undo for the block it added on this phone.

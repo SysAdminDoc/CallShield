@@ -53,8 +53,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -235,6 +237,41 @@ fun LookupScreen(viewModel: MainViewModel) {
         reportOutcome?.let { outcome ->
             if (outcome.requestId == reportRequestId) showReportOutcome(viewModel, snackbarHostState, resources, outcome)
             viewModel.clearReportOutcome()
+        }
+    }
+
+    // Not spam and Mark trusted wait five seconds before the allow and the
+    // report go out, as on a number's screen, so Undo can take them back. Each
+    // checked number is held on its own, so every tap made here gets its result.
+    val notSpamRequests = remember { mutableSetOf<Long>() }
+    val notSpamPending = stringResource(R.string.detail_not_spam_pending)
+    val undoLabel = stringResource(R.string.detail_undo)
+
+    fun markNotSpam(number: String) {
+        hapticTick(context)
+        val requestId = viewModel.scheduleNotSpam(number, markedSafeDescription)
+        notSpamRequests += requestId
+        // Clearing the outcomes cancels a result still waiting for its turn, so
+        // Undo doesn't queue behind it; dismissing ends the one showing.
+        viewModel.clearNotSpamOutcome()
+        viewModel.clearReportOutcome()
+        snackbarHostState.currentSnackbarData?.dismiss()
+        scope.launch {
+            val choice = snackbarHostState.showSnackbar(notSpamPending, actionLabel = undoLabel, duration = SnackbarDuration.Short)
+            if (choice == SnackbarResult.ActionPerformed) viewModel.undoNotSpam(requestId)
+        }
+    }
+
+    val notSpamOutcome by viewModel.notSpamOutcome.collectAsStateWithLifecycle()
+    LaunchedEffect(notSpamOutcome) {
+        notSpamOutcome?.let { outcome ->
+            if (outcome.requestId in notSpamRequests) {
+                // A long accessibility timeout can keep the Undo snackbar up past
+                // the wait. The tap has gone out, so end it before its result shows.
+                snackbarHostState.currentSnackbarData?.takeIf { it.visuals.message == notSpamPending }?.dismiss()
+                snackbarHostState.showSnackbar(markedSafeMessage(outcome.result))
+            }
+            viewModel.clearNotSpamOutcome()
         }
     }
 
@@ -540,22 +577,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         }
 
                                         lookupResult.isSpam -> {
-                                            scope.launch {
-                                                val message =
-                                                    try {
-                                                        val repo = SpamRepository.getInstance(context)
-                                                        withContext(Dispatchers.IO) {
-                                                            repo.addToWhitelist(resultNumber, markedSafeDescription)
-                                                            markedSafeMessage(
-                                                                CommunityContributor.reportNotSpam(context, repo.normalizeNumber(resultNumber)),
-                                                            )
-                                                        }
-                                                    } catch (_: Exception) {
-                                                        resources.getString(R.string.lookup_report_failed)
-                                                    }
-                                                hapticTick(context)
-                                                snackbarHostState.showSnackbar(message)
-                                            }
+                                            markNotSpam(resultNumber)
                                         }
 
                                         else -> {
@@ -654,27 +676,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 label = stringResource(R.string.lookup_mark_trusted),
                                 icon = Icons.Default.VerifiedUser,
                                 color = CatGreen,
-                                onClick = {
-                                    scope.launch {
-                                        val message =
-                                            try {
-                                                val repo = SpamRepository.getInstance(context)
-                                                withContext(Dispatchers.IO) {
-                                                    repo.addToWhitelist(resultNumber, markedSafeDescription)
-                                                    markedSafeMessage(
-                                                        CommunityContributor.reportNotSpam(
-                                                            context,
-                                                            repo.normalizeNumber(resultNumber),
-                                                        ),
-                                                    )
-                                                }
-                                            } catch (_: Exception) {
-                                                resources.getString(R.string.lookup_report_failed)
-                                            }
-                                        hapticTick(context)
-                                        snackbarHostState.showSnackbar(message)
-                                    }
-                                },
+                                onClick = { markNotSpam(resultNumber) },
                                 modifier = Modifier.weight(1f),
                                 outlined = true,
                             )
