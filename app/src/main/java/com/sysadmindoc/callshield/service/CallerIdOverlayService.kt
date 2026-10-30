@@ -302,6 +302,12 @@ class CallerIdOverlayService : Service() {
 
     @Volatile private var activeConfidence = 0
 
+    // The newest start delivered. Closing an overlay stops the service only
+    // for this start, so a start queued behind it (the next caller's overlay
+    // right after a withdrawal) keeps the service running instead of being
+    // torn down as soon as it shows.
+    private var latestStartId = 0
+
     // UI elements we need to update
     private var headerText: TextView? = null
     private var scoreText: TextView? = null
@@ -323,6 +329,7 @@ class CallerIdOverlayService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
+        latestStartId = startId
         val number = intent?.getStringExtra(EXTRA_NUMBER) ?: ""
         val confidence = intent?.getIntExtra(EXTRA_CONFIDENCE, 0) ?: 0
         val reason = intent?.getStringExtra(EXTRA_REASON) ?: ""
@@ -1311,7 +1318,7 @@ class CallerIdOverlayService : Service() {
         handler.removeCallbacksAndMessages(null)
         deactivateOverlaySession()
         removeOverlay()
-        stopSelf()
+        stopSelf(latestStartId)
     }
 
     private fun isCurrentSession(sessionId: Long): Boolean = isOverlayActive && activeSessionId == sessionId && overlayView != null

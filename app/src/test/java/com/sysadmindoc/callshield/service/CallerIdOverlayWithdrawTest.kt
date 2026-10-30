@@ -80,6 +80,19 @@ class CallerIdOverlayWithdrawTest {
     }
 
     @Test
+    fun `closing an overlay stops the service only for the newest start`() {
+        CallerIdOverlayService.startIncoming(application, CALLER, 40, "invalid_format")
+        deliverNextStart()
+        CallerIdOverlayService.withdrawIncoming(application, CALLER)
+        deliverNextStart()
+
+        // Android ignores stopSelf(id) when a start newer than id is queued,
+        // so the next caller's overlay can't be torn down as it shows.
+        assertEquals(startId, shadowOf(controller.get()).stopSelfId)
+        assertTrue(overlayViews().isEmpty())
+    }
+
+    @Test
     fun `a withdrawal with nothing shown stops the service`() {
         controller.get().onStartCommand(withdrawIntent(CALLER), 0, ++startId)
 
