@@ -14,7 +14,7 @@ Shards need no signature of their own: the signed manifest carries each
 shard's SHA-256, and the app checks every shard against it.
 
     python scripts/feed_signing.py sign     # after the pipeline, before committing
-    python scripts/feed_signing.py verify   # CI and release: every feed must verify
+    python scripts/feed_signing.py verify   # CI and release: every feed must be there and verify
     python scripts/feed_signing.py generate-key PATH   # once, then add the key to the app
 
 The signing key is read from CALLSHIELD_FEED_SIGNING_KEY, or from
@@ -200,6 +200,11 @@ def sign_feeds(data_dir: Path, key: ec.EllipticCurvePrivateKey, trusted: list[ec
     return written
 
 
+def missing_feeds(data_dir: Path) -> list[str]:
+    """Published feeds absent from data_dir. verify_feeds skips these, so the CLI checks them."""
+    return [name for name in SIGNED_FEEDS + CONSUMER_FEEDS if not (Path(data_dir) / name).is_file()]
+
+
 def verify_feeds(data_dir: Path, trusted: list[ec.EllipticCurvePublicKey]) -> list[str]:
     """One message per published feed that a device would refuse."""
     if not trusted:
@@ -237,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sign or verify the published protection feeds.")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("sign", help="sign every feed whose signature doesn't verify")
-    commands.add_parser("verify", help="fail when any feed lacks a signature the app accepts")
+    commands.add_parser("verify", help="fail when any feed is missing or lacks a signature the app accepts")
     generate = commands.add_parser("generate-key", help="create a new P-256 signing key")
     generate.add_argument("path", type=Path)
     args = parser.parse_args(argv)
@@ -253,9 +258,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Signed {len(written)} feed(s): {', '.join(written) if written else 'all signatures already current'}")
         return 0
 
-    problems = verify_feeds(DATA_DIR, trusted)
+    problems = [f"{name} is missing from {DATA_DIR}" for name in missing_feeds(DATA_DIR)]
+    problems += verify_feeds(DATA_DIR, trusted)
     if problems:
-        print("Published feeds a device would refuse:", file=sys.stderr)
+        print("Published feeds that are missing or that a device would refuse:", file=sys.stderr)
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         return 1

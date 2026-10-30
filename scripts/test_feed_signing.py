@@ -3,12 +3,15 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import re
 import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -84,6 +87,26 @@ class SigningTest(unittest.TestCase):
 
         self.assertFalse(feed_signing.verifies(feed.read_bytes(), feed_signing.signature_path(feed).read_text(), self.trusted))
         self.assertFalse(feed_signing.verifies(feed.read_bytes(), "not base64!", self.trusted))
+
+    def test_verify_fails_when_a_published_feed_is_missing(self):
+        # verify_feeds skips an absent file, so a feed the pipeline lost would pass unnoticed.
+        for name in feed_signing.SIGNED_FEEDS + feed_signing.CONSUMER_FEEDS:
+            (self.data / name).write_bytes(b"{}\n")
+        feed_signing.sign_feeds(self.data, self.key, self.trusted)
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            mock.patch.object(feed_signing, "DATA_DIR", self.data),
+            mock.patch.object(feed_signing, "trusted_public_keys", return_value=self.trusted),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            self.assertEqual(0, feed_signing.main(["verify"]))
+            (self.data / "community_watch.json").unlink()
+            (self.data / "community_watch.json.sig").unlink()
+            self.assertEqual(1, feed_signing.main(["verify"]))
+
+        self.assertEqual(["community_watch.json"], feed_signing.missing_feeds(self.data))
+        self.assertIn("community_watch.json is missing", err.getvalue())
 
 
 class AppContractTest(unittest.TestCase):
