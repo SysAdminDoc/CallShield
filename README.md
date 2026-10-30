@@ -446,6 +446,11 @@ so export them before you do:
 A fresh install is unaffected, and upgrades between v1.7.37 and later releases
 work normally.
 
+Still on v1.7.37 or v1.7.38? Those builds can't download protection data
+anymore, because the server certificates they trust were replaced in August
+2026. Install the latest release over them. It's signed with the same key, so
+your settings stay.
+
 Verify an APK before installing it:
 
 ```bash
