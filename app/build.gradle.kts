@@ -301,6 +301,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.serialization.json)
+    // Declared, not borrowed from the Compose test library: tests reproduce
+    // exceptions escaping the app scope with its exception collector.
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.work.testing)
