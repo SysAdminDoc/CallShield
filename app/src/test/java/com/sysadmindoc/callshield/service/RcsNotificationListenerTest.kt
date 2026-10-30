@@ -131,7 +131,7 @@ class RcsNotificationListenerTest {
     fun `an RCS text whose screening hits an error keeps a diagnostic row`() {
         withKeywordCheckFailing()
 
-        postUntil(chatNotification(NOTES, sender = caller)) { callLogTypes().isNotEmpty() }
+        postUntil(chatNotification(NOTES, sender = caller), COLD_SCREEN_TIMEOUT) { callLogTypes().isNotEmpty() }
 
         assertEquals(setOf("screening_diagnostic"), callLogTypes().toSet())
     }
@@ -144,7 +144,7 @@ class RcsNotificationListenerTest {
         withFlaggingLinkCheck()
         try {
             // The link check runs only once no row was written, so either one ends the wait.
-            postUntil(chatNotification(NOTES, sender = caller, packageName = WHATSAPP)) {
+            postUntil(chatNotification(NOTES, sender = caller, packageName = WHATSAPP), COLD_SCREEN_TIMEOUT) {
                 phishingAlerts().isNotEmpty() || callLogTypes().isNotEmpty()
             }
 
@@ -209,9 +209,10 @@ class RcsNotificationListenerTest {
     /** The listener reads nothing until the user's chosen apps have loaded, so it's posted until [done]. */
     private fun postUntil(
         chat: StatusBarNotification,
+        timeoutMillis: Long = 5_000L,
         done: suspend () -> Boolean,
     ) = runBlocking {
-        withTimeout(5_000L) {
+        withTimeout(timeoutMillis) {
             while (!done()) {
                 listener.onNotificationPosted(chat)
                 delay(50L)
@@ -281,6 +282,9 @@ class RcsNotificationListenerTest {
         const val WHATSAPP = "com.whatsapp"
         const val TEAMS = "com.microsoft.teams"
         const val NOTES = "Here are the notes from today https://example.com/notes"
+
+        /** A sandbox's first number screen loads for several seconds on a busy machine (5.2 s seen). */
+        const val COLD_SCREEN_TIMEOUT = 30_000L
         val PHISHING_LINK =
             UrlSafetyChecker.UrlCheckResult(
                 url = "https://example.com",
