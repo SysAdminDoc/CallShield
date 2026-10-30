@@ -2,8 +2,6 @@ package com.sysadmindoc.callshield.ui.screens.recent
 
 import android.Manifest
 import android.app.AppOpsManager
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,7 +9,6 @@ import android.os.Process
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -58,6 +55,7 @@ import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.copyToClipboard
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
 import com.sysadmindoc.callshield.util.launchViewUrlSafely
@@ -605,14 +603,7 @@ fun RecentCallItem(
                             label = stringResource(R.string.recent_copy),
                             color = CatSubtext,
                         ) {
-                            (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                                .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, call.number))
-                            Toast
-                                .makeText(
-                                    context,
-                                    copiedMessage,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                            context.copyToClipboard(clipLabelPhone, call.number, copiedMessage)
                         }
                         RecentActionButton(
                             icon = Icons.Default.Info,

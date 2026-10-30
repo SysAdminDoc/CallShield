@@ -1,12 +1,12 @@
 package com.sysadmindoc.callshield.data
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.util.copyToClipboard
+import com.sysadmindoc.callshield.util.systemConfirmsCopies
 
 /**
  * Launches a pre-seeded FTC fraud-report flow for a given number.
@@ -16,7 +16,8 @@ import com.sysadmindoc.callshield.R
  * field directly. The honest UX is:
  *   1. Copy the number to the clipboard.
  *   2. Open the FTC form in the user's browser.
- *   3. Show a Toast telling them to paste into the form's phone-number field.
+ *   3. Tell them to paste into the form's phone-number field (a Toast before
+ *      Android 13, the line under the button from 13 on).
  *
  * This turns a tedious multi-minute task into a ~10-second one while
  * being truthful about the mechanics. Aligns with the project's
@@ -42,7 +43,7 @@ object ReportFraudHelper {
         number: String,
         authority: Authority = Authority.FTC,
     ): Boolean {
-        copyToClipboard(context, number)
+        context.copyToClipboard(context.getString(R.string.clip_label_spam_number), number)
 
         val url =
             when (authority) {
@@ -56,19 +57,14 @@ object ReportFraudHelper {
             }
         return try {
             context.startActivity(intent)
-            Toast.makeText(context, R.string.ftc_report_toast, Toast.LENGTH_LONG).show()
+            // From Android 13 the system's clipboard card shows the number,
+            // and the paste instruction sits under the button on the number's
+            // screen instead, since a toast here landed on top of that card.
+            if (!systemConfirmsCopies()) Toast.makeText(context, R.string.ftc_report_toast, Toast.LENGTH_LONG).show()
             true
         } catch (_: Exception) {
             Toast.makeText(context, R.string.ftc_report_no_browser, Toast.LENGTH_LONG).show()
             false
         }
-    }
-
-    private fun copyToClipboard(
-        context: Context,
-        number: String,
-    ) {
-        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        cm.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_label_spam_number), number))
     }
 }

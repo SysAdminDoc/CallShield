@@ -1,10 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -65,6 +61,7 @@ import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.copyToClipboard
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
@@ -610,9 +607,7 @@ fun BlockedCallItem(
             modifier.combinedClickable(
                 onClick = onTap,
                 onLongClick = {
-                    val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)
-                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-                    Toast.makeText(context, copiedShortMessage, Toast.LENGTH_SHORT).show()
+                    context.copyToClipboard(clipLabelPhoneNumber, call.number, copiedShortMessage)
                 },
             ),
     ) {
@@ -771,9 +766,7 @@ fun BlockedCallItem(
                     SmallActionButton(Icons.Default.Storage, stringResource(R.string.blocked_log_databases), CatGreen) { onTap() }
                     // Copy
                     SmallActionButton(Icons.Default.ContentCopy, stringResource(R.string.blocked_log_copy), CatSubtext) {
-                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                            .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, call.number))
-                        Toast.makeText(context, copiedShortMessage, Toast.LENGTH_SHORT).show()
+                        context.copyToClipboard(clipLabelPhone, call.number, copiedShortMessage)
                     }
                     // Detail
                     SmallActionButton(Icons.Default.Info, stringResource(R.string.blocked_log_detail), CatMauve) { onTap() }

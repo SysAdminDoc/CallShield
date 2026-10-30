@@ -1,7 +1,5 @@
 package com.sysadmindoc.callshield.ui.screens.details
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -53,6 +51,7 @@ import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.showReportOutcome
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.copyToClipboard
 import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -182,9 +181,7 @@ fun NumberDetailScreen(
                 )
                 // Copy button
                 IconButton(onClick = {
-                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                        .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, number))
-                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                    context.copyToClipboard(clipLabelPhone, number, copiedMessage)
                 }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
             }
             SectionHeader(stringResource(R.string.detail_phone_number), CatSubtext)
@@ -708,18 +705,28 @@ fun NumberDetailScreen(
                 )
             }
 
-            PremiumActionButton(
-                label = stringResource(R.string.detail_ftc_complaint),
-                icon = Icons.Default.Gavel,
-                color = CatPeach,
-                onClick = {
-                    hapticTick(context)
-                    com.sysadmindoc.callshield.data.ReportFraudHelper
-                        .report(context, number)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_ftc_complaint),
+                    icon = Icons.Default.Gavel,
+                    color = CatPeach,
+                    onClick = {
+                        hapticTick(context)
+                        com.sysadmindoc.callshield.data.ReportFraudHelper
+                            .report(context, number)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+                // Android 13 and later confirm the copy with their own card, and a
+                // toast with this over the FTC page landed on top of it.
+                Text(
+                    stringResource(R.string.detail_ftc_complaint_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
 
             // Whitelist and share actions
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

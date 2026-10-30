@@ -1387,6 +1387,7 @@
     <string name="detail_undo">Undo</string>
     <string name="detail_report_carrier">Report to carrier (7726)</string>
     <string name="detail_ftc_complaint">File an FTC Do Not Call complaint</string>
+    <string name="detail_ftc_complaint_hint">Copies the number and opens the FTC form. Paste the number in the form.</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
     <string name="detail_share_false_alarm">Share a false-alarm report</string>

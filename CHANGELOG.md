@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- On Android 13 and later, copying a number no longer pops a "Copied" message on top of the preview Android shows for everything you copy. The two used to pile up at the bottom of the screen. The FTC complaint button doesn't pop one either now, and the reminder to paste the number into the form sits right under the button. Android 12 and older still show the messages, since nothing else tells you the copy worked there.
 - On the Rules screen, the "Removed from blocklist" bar with its Undo used to cover the Add button, so you couldn't add anything until the bar went away. It now shows just above the button. On the Database tab, which has no Add button, it stays at the bottom.
 - The bar that slides up with Undo and other short messages now uses CallShield's own colors. It's off-white with a green Undo in the dark themes and navy with a mint Undo in Light, instead of Android's stock lavender and purple.
 - More of CallShield's short messages now fit at the largest font size. Android 12 and later cut a toast off after two lines, so the endings of the error, undo, export and "no browser" messages never showed, and neither did most of the one about emergency numbers. They're shorter now in English and Chinese. The copy messages on the blocked list and the FTC report no longer repeat the number, since a long number alone could fill a line. The FTC one still tells you to paste it in the form. "That didn't go through. Try again." has a Chinese translation now too.
