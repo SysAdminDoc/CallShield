@@ -1009,7 +1009,7 @@
     <string name="more_star_github">Star on GitHub</string>
     <string name="more_report_spam_number">Report spam number</string>
     <string name="more_share_crash_log">Share crash log</string>
-    <string name="more_no_crash_logs">No crashes logged. CallShield hasn\'t recorded an uncaught exception.</string>
+    <string name="more_no_crash_logs">No crashes logged.</string>
     <string name="more_section_tools">Protection tools</string>
     <string name="more_section_release">Release &amp; diagnostics</string>
     <string name="more_section_support">Project &amp; support</string>
@@ -1591,8 +1591,10 @@
     <string name="notif_type_sms">SMS</string>
     <string name="notif_action_block_forever">Block forever</string>
     <string name="desc_allowed_from_notification">Allowed from a blocked-call alert</string>
-    <string name="notif_not_spam_allowed">Calls from this number will ring for the next 24 hours.</string>
-    <string name="notif_not_spam_refused">Your own block on this number still applies, so it won\'t ring. You can remove it in CallShield.</string>
+    <string name="notif_not_spam_allowed">This number can ring for 24 hours.</string>
+    <string name="notif_not_spam_refused">Your own block still applies.</string>
+    <string name="notif_not_spam_refused_title">%1$s is still blocked</string>
+    <string name="notif_not_spam_refused_text">Your own block on this number still applies, so it won\'t ring. Tap to open it in CallShield, where you can remove the block.</string>
     <string name="notif_action_not_spam">Not spam</string>
     <string name="notif_action_report">Report</string>
     <!-- Kinds of unsafe link; each fills "contains a %s link" and "flagged as %s". -->

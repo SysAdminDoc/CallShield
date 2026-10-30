@@ -139,6 +139,9 @@ class SpamActionReceiver : BroadcastReceiver() {
                 val message = if (allowed) R.string.notif_not_spam_allowed else R.string.notif_not_spam_refused
                 Toast.makeText(appContext, appContext.getString(message), Toast.LENGTH_SHORT).show()
             }
+            if (!allowed) {
+                NotificationHelper.notifyNotSpamRefused(appContext, number, notifId)
+            }
             if (allowed && NotificationHelper.notSpamReachesCommunity(reasonCode, rowSource)) {
                 CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
             }

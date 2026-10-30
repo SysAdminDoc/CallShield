@@ -507,16 +507,7 @@ object NotificationHelper {
                 )
             } ?: context.getString(reasonLabelRes(BlockReasonCode.fromMatchSource(reason)))
 
-        val openIntent =
-            PendingIntent.getActivity(
-                context,
-                stableId(number, 40),
-                Intent(context, MainActivity::class.java).apply {
-                    putExtra("open_number", number)
-                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-                },
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
+        val openIntent = openNumberIntent(context, number)
 
         // Fold isCall into the action request-code salts so a blocked-call and a
         // blocked-SMS from the same number get DISTINCT Block/Report PendingIntents.
@@ -586,6 +577,43 @@ object NotificationHelper {
         safeNotify(context, nid, builder)
         updateSummary(context)
     }
+
+    /**
+     * Takes the place of a blocked-call alert whose Not spam the user's own
+     * block refused. Android 12 and later cut a toast at two lines, so the
+     * toast only says the block stands and this says why and where to undo it.
+     */
+    fun notifyNotSpamRefused(
+        context: Context,
+        number: String,
+        notifId: Int,
+    ): Boolean {
+        val text = context.getString(R.string.notif_not_spam_refused_text)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_BLOCKED)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_not_spam_refused_title, PhoneFormatter.formatIsolated(number)))
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setContentIntent(openNumberIntent(context, number))
+                .setAutoCancel(true)
+        return safeNotify(context, notifId.takeIf { it >= 0 } ?: stableId(number, 1), builder)
+    }
+
+    private fun openNumberIntent(
+        context: Context,
+        number: String,
+    ): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            stableId(number, 40),
+            Intent(context, MainActivity::class.java).apply {
+                putExtra("open_number", number)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
     /**
      * The detection a Not spam answers. A category policy only changes how a

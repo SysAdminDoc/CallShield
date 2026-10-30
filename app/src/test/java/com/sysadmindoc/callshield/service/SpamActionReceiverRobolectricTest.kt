@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.service
 
+import android.Manifest
 import android.app.Application
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -218,6 +220,48 @@ class SpamActionReceiverRobolectricTest {
         )
 
         assertFalse(shadowOf(nm).getNotification(id) != null)
+    }
+
+    /**
+     * A toast holds two lines on Android 12 and later, too few to say why a
+     * refused Not spam changed nothing, so the reason takes the alert's place
+     * and opens the number, where the block can be removed.
+     */
+    @Test
+    fun `a Not spam the user's own block refuses leaves the reason where the alert was`() {
+        shadowOf(context as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        ShadowToast.reset()
+        val number = "+15554440002"
+        val repository = SpamRepository.getInstance(context)
+        runBlocking { repository.blockNumber(number, "spam", "blocked in test") }
+        val id = postFeedbackNotification(number)
+        val appJob = CallShieldApp.appScope.coroutineContext.job
+        val before = appJob.children.toSet()
+        try {
+            SpamActionReceiver().onReceive(
+                context,
+                Intent(NotificationHelper.ACTION_NOT_SPAM)
+                    .putExtra(NotificationHelper.EXTRA_NUMBER, number)
+                    .putExtra(NotificationHelper.EXTRA_NOTIF_ID, id)
+                    .putExtra(NotificationHelper.EXTRA_REASON_CODE, "database"),
+            )
+            val launched = appJob.children.toSet() - before
+            assertEquals(1, launched.size)
+            // The work posts its toast to this thread, so it's idled until the work ends.
+            val deadline = System.currentTimeMillis() + 10_000
+            while (launched.any { it.isActive } && System.currentTimeMillis() < deadline) {
+                shadowOf(Looper.getMainLooper()).idle()
+                Thread.sleep(20)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(context.getString(R.string.notif_not_spam_refused), ShadowToast.getTextOfLatestToast())
+            val reason = shadowOf(nm).getNotification(id) ?: error("nothing took the alert's place")
+            assertEquals(context.getString(R.string.notif_not_spam_refused_text), reason.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString())
+            assertEquals(number, shadowOf(reason.contentIntent).savedIntent.getStringExtra("open_number"))
+        } finally {
+            runBlocking { repository.unblockByNumber(number) }
+        }
     }
 
     @Test
