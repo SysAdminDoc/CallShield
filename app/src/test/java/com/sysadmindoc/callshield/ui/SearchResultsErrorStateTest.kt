@@ -1,8 +1,10 @@
 package com.sysadmindoc.callshield.ui
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
@@ -15,6 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.IOException
 
@@ -33,10 +36,21 @@ class SearchResultsErrorStateTest {
         }
     }
 
+    // LazyPagingItems starts at refresh = Loading (Paging's InitialLoadStates) and only takes the
+    // page's load states once its LaunchedEffects collect on AndroidUiDispatcher.Main, so the
+    // first frames show neither state. Wait for the expected text before asserting on it.
+    private fun awaitText(text: String) {
+        composeRule.waitUntil(TIMEOUT_MS) {
+            shadowOf(Looper.getMainLooper()).idle()
+            composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test
     fun `a failed search shows the load error and Retry`() {
         showEmptySearch(LoadState.Error(IOException("database is locked")))
 
+        awaitText("Couldn't load the database")
         composeRule.onNodeWithText("Couldn't load the database").assertIsDisplayed()
         composeRule.onNodeWithText("Retry").assertIsDisplayed()
         composeRule.onNodeWithText("No results found").assertDoesNotExist()
@@ -46,7 +60,12 @@ class SearchResultsErrorStateTest {
     fun `a search that ran and matched nothing still says no results`() {
         showEmptySearch(LoadState.NotLoading(endOfPaginationReached = true))
 
+        awaitText("No results found")
         composeRule.onNodeWithText("No results found").assertIsDisplayed()
         composeRule.onNodeWithText("Couldn't load the database").assertDoesNotExist()
+    }
+
+    private companion object {
+        const val TIMEOUT_MS = 10_000L
     }
 }
