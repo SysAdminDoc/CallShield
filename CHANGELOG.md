@@ -4,6 +4,7 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- With TalkBack on and a large font size, the bottom tabs other than the open one had no name for TalkBack to read. At 150% and up the bar shows just the open tab's label, and the others now read their names from their icons. At normal sizes each tab still reads its name once.
 - Tapping Not spam on a blocked call alert for a number you blocked yourself now shows a short "Your own block still applies." and turns the alert into a notification that explains why. Tap it and the number opens in CallShield, where you can remove the block. The old message was a toast, and Android 12 and later cut it off after two lines, so the part about where to remove the block never showed. The Not spam and empty crash log messages are shorter too, so they fit at the largest font size.
 - The caller ID popup no longer stays up for 20 seconds after CallShield rejects a call it first showed as possible spam. A rejected call never rings, so nothing told the popup the call was over, and it kept offering Block for a call that was already gone. It closes as soon as the call is rejected now.
 - When Android stops asking for a permission or a default app role, CallShield's note about where to turn it on now shows in full at the bottom of the screen, with an Open App info or Open Default apps button. It used to be a toast that Android 12 and later cut off after two lines, and the settings page opened on top of it before you could read the rest.

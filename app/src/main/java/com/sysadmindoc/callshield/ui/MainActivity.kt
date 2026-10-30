@@ -834,9 +834,9 @@ fun RowScope.NavItem(
     NavigationBarItem(
         selected = selected,
         onClick = onClick,
-        // Icon is decorative — the label names the tab for accessibility, so
-        // a matching icon contentDescription makes TalkBack announce it twice.
-        icon = { Icon(icon, contentDescription = null, tint = if (selected) iconTint else LocalContentColor.current) },
+        // Material clears the icon's semantics while the label shows, so the
+        // label is read once; with the label hidden the icon names the tab.
+        icon = { Icon(icon, contentDescription = label, tint = if (selected) iconTint else LocalContentColor.current) },
         label = {
             Text(
                 label,
@@ -852,9 +852,8 @@ fun RowScope.NavItem(
                 unselectedIconColor = CatSubtext,
                 unselectedTextColor = CatSubtext,
             ),
-        // Five 200%-scaled labels cannot fit a compact phone navigation bar.
-        // Material still exposes every label to accessibility services while
-        // showing only the selected label at large font scales.
+        // Five 200%-scaled labels cannot fit a compact phone navigation bar,
+        // so large font scales show only the selected tab's label.
         alwaysShowLabel = LocalDensity.current.fontScale < 1.5f,
     )
 }
