@@ -240,7 +240,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     LaunchedEffect(reportOutcome, reportRequestId) {
         reportOutcome?.let { outcome ->
             if (outcome.requestId == reportRequestId) showReportOutcome(viewModel, snackbarHostState, resources, outcome)
-            viewModel.clearReportOutcome()
+            viewModel.clearReportOutcome(outcome)
         }
     }
 
@@ -275,7 +275,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                 snackbarHostState.currentSnackbarData?.takeIf { it.visuals.message == notSpamPending }?.dismiss()
                 snackbarHostState.showSnackbar(markedSafeMessage(outcome.result))
             }
-            viewModel.clearNotSpamOutcome()
+            viewModel.clearNotSpamOutcome(outcome)
         }
     }
 

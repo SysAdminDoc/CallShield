@@ -231,6 +231,23 @@ class NotSpamUndoTest {
         assertEquals(listOf(first), sentNumbers())
     }
 
+    @Test
+    fun `clearing the outcome a screen showed keeps one that landed meanwhile`() {
+        viewModel.scheduleNotSpam(first)
+        advance(5_100)
+        val shown = awaitOutcome()
+        val next = viewModel.scheduleNotSpam(second)
+        advance(5_100)
+        awaitUntil("the second outcome") { viewModel.notSpamOutcome.value?.requestId == next }
+        val newer = requireNotNull(viewModel.notSpamOutcome.value)
+
+        viewModel.clearNotSpamOutcome(shown)
+
+        assertEquals(newer, viewModel.notSpamOutcome.value)
+        viewModel.clearNotSpamOutcome(newer)
+        assertNull(viewModel.notSpamOutcome.value)
+    }
+
     private fun sentNumbers(): List<String> = synchronized(sent) { sent.map { it.number } }
 
     private fun allowed(number: String): String? = runBlocking { fixture.dao.findWhitelistEntry(number) }?.description

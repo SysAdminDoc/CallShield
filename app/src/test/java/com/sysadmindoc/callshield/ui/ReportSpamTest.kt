@@ -170,13 +170,30 @@ class ReportSpamTest {
         assertNotEquals(first, second)
     }
 
-    private fun awaitOutcome(): MainViewModel.ReportOutcome {
+    @Test
+    fun `clearing the outcome a screen showed keeps one that landed meanwhile`() {
+        // A screen clears its outcome once the snackbar is gone. Clearing
+        // whatever was there by then dropped a newer outcome unseen.
+        viewModel.reportSpam(number, "spam", blockHere = true)
+        val shown = awaitOutcome()
+        val second = viewModel.reportSpam("+12125550178", "spam", blockHere = true)
+        val newer = awaitOutcome(after = shown)
+
+        viewModel.clearReportOutcome(shown)
+
+        assertEquals(second, newer.requestId)
+        assertEquals(newer, viewModel.reportOutcome.value)
+        viewModel.clearReportOutcome(newer)
+        assertNull(viewModel.reportOutcome.value)
+    }
+
+    private fun awaitOutcome(after: MainViewModel.ReportOutcome? = null): MainViewModel.ReportOutcome {
         // The block and the report run on the view model's scope; wait for both.
         val deadline = System.currentTimeMillis() + 5_000
-        while (viewModel.reportOutcome.value == null && System.currentTimeMillis() < deadline) {
+        while (viewModel.reportOutcome.value.let { it == null || it == after } && System.currentTimeMillis() < deadline) {
             shadowOf(Looper.getMainLooper()).idle()
             Thread.sleep(20)
         }
-        return requireNotNull(viewModel.reportOutcome.value) { "Report never finished" }
+        return requireNotNull(viewModel.reportOutcome.value?.takeIf { it != after }) { "Report never finished" }
     }
 }

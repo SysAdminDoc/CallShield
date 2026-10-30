@@ -668,7 +668,7 @@ fun NumberDetailScreen(
                         snackbarHostState.currentSnackbarData?.takeIf { it.visuals.message == notSpamPending }?.dismiss()
                         snackbarHostState.showSnackbar(viewModel.contributeMessage(outcome.result))
                     }
-                    viewModel.clearNotSpamOutcome()
+                    viewModel.clearNotSpamOutcome(outcome)
                 }
             }
             // Report's result, with Undo for the block it added on this phone.
@@ -678,7 +678,7 @@ fun NumberDetailScreen(
             LaunchedEffect(reportOutcome, reportRequestId) {
                 reportOutcome?.let { outcome ->
                     if (outcome.requestId == reportRequestId) showReportOutcome(viewModel, snackbarHostState, context.resources, outcome)
-                    viewModel.clearReportOutcome()
+                    viewModel.clearReportOutcome(outcome)
                 }
             }
 

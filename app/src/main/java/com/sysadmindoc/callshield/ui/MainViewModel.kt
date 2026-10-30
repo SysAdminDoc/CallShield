@@ -1637,6 +1637,15 @@ class MainViewModel
         }
 
         /**
+         * Clear [shown] once its screen is done showing it. An outcome that
+         * landed while it showed stays for the screen to show next; clearing
+         * whatever was there dropped it unseen.
+         */
+        fun clearReportOutcome(shown: ReportOutcome) {
+            _reportOutcome.compareAndSet(shown, null)
+        }
+
+        /**
          * What a held Not spam did once it went out. [requestId] is what
          * [scheduleNotSpam] returned, so a screen shows only its own taps'
          * outcomes and not one another screen asked for.
@@ -1716,6 +1725,11 @@ class MainViewModel
 
         fun clearNotSpamOutcome() {
             _notSpamOutcome.value = null
+        }
+
+        /** Clear [shown] once its screen is done showing it, keeping one that landed meanwhile. */
+        fun clearNotSpamOutcome(shown: NotSpamOutcome) {
+            _notSpamOutcome.compareAndSet(shown, null)
         }
 
         /** This device's reports from the last 90 days, for My reports. */
