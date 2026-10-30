@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C403-f38ba8?style=flat-square" alt="51,403 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2095-94e2d5?style=flat-square" alt="2095 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2098-94e2d5?style=flat-square" alt="2098 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -178,7 +178,7 @@ SMS-specific layers run after the shared chain, in their own priority order: **S
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
 - **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority. Area codes absent from the pinned NANP table pass through this regional rule
 - **Message notification screening**. Once Notification Access is on, Google Messages and Samsung Messages are screened by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook and Thunderbird can each be turned on. A match in a private messenger or an email app shows a separate warning and leaves the original notification alone.
-- **URL Safety**. Local spam-domain checks stay on-device. Optional link checks use PhishTank and a six-hour OpenPhish feed. PhishTank receives only the site's base domain
+- **URL Safety**. Local spam-domain checks stay on-device. Optional link checks use PhishTank and a six-hour OpenPhish feed. PhishTank receives only the site's base domain, and never sees links from chat or email apps, which are matched on the phone only
 - **Codes during unknown calls**. When a one-time code arrives during a call from someone who isn't in your contacts, or in the 10 minutes after it, CallShield warns you not to read it out. Bank imposters ask for exactly that code. It warns once per call and never for a contact or a number you've allowed. Silenced calls and calls that rang without a check count too, because you can still pick them up.
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. So is a number that showed up in a text CallShield flagged as spam in the last 30 days. The notification names the day that text came in, since "call us back" scams pair a fake text with the number to call. Marking the sender Not spam lets those numbers ring again. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
@@ -411,7 +411,7 @@ Call and message decisions run on the phone. No personal data is collected. Call
 - The spam database, trending feeds, the new-release notice and the recommended-list catalog, from this public repository on GitHub, or from the feed mirror if you set one
 - Live caller enrichment, which is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
 - Community reports to the Cloudflare Worker. Each report is committed as a public JSON file to this repository's `data/reports` folder, and the next merge folds it into the database. It holds the reported number, the report type and time, the report's random id, and two reporter IDs that change every day (keyed HMACs of your network's /48 and /64, so the same network can't be linked across days or turned back into an address). An SMS report adds the linked domains and link labels, never message text. The report never holds your IP address. To stop floods and repeat reports, the Worker's short-lived store keys a duplicate check on your IPv4 address or IPv6 /64 for five minutes, and when Cloudflare's rate limiter is unavailable its fallback counter does the same for one minute. Both expire on their own
-- Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain, and the OpenPhish feed is downloaded for local matching. Neither receives message text
+- Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain of SMS and RCS links, never chat or email ones, and the OpenPhish feed is downloaded for local matching. Neither receives message text
 - External blocklists you subscribe to, fetched from the addresses you entered or from the recommended lists you added
 - The update check, which is off by default. When it's on, it asks GitHub Releases once a week
 
@@ -592,7 +592,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2095 tests
+./gradlew testDebugUnitTest   # 2098 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
@@ -634,7 +634,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2095 JVM unit tests (JUnit) |
+| Tests | 2098 JVM unit tests (JUnit) |
 | Strings | 1796 string resources and 49 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

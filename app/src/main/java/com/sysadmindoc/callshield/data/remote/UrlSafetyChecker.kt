@@ -51,12 +51,14 @@ object UrlSafetyChecker {
      * Extract URLs from an SMS body and return only malicious evidence.
      * Local spam-domain evidence is checked first and does not require network
      * access. Remote adapters receive only a canonical registrable-domain
-     * origin, never the raw message or URL path/query.
+     * origin, never the raw message or URL path/query. [onDeviceOnly] keeps
+     * even that on the phone: only lists downloaded to it are matched.
      */
     suspend fun checkSmsBody(
         body: String,
         stripQuery: Boolean = true,
         allowRemoteLookup: Boolean = false,
+        onDeviceOnly: Boolean = false,
     ): List<UrlCheckResult> {
         val urls = extractCandidateUrls(body)
         if (urls.isEmpty()) return emptyList()
@@ -64,7 +66,7 @@ object UrlSafetyChecker {
         return urls.mapNotNull { url ->
             localSpamDomainResult(url, stripQuery)
                 ?: if (allowRemoteLookup) {
-                    checkUrlMatches(url).firstOrNull()
+                    checkUrlMatches(url, onDeviceOnly).firstOrNull()
                 } else {
                     null
                 }
@@ -98,26 +100,36 @@ object UrlSafetyChecker {
         }
 
     /** Return all malicious adapter matches for a canonical URL. */
-    internal suspend fun checkUrlMatches(url: String): List<UrlCheckResult> {
+    internal suspend fun checkUrlMatches(
+        url: String,
+        onDeviceOnly: Boolean = false,
+    ): List<UrlCheckResult> {
         // A link on a shared host such as s3.us-east-1.amazonaws.com has no
         // registrable domain to send anywhere, but a list on the phone can
         // still match it, so only the remote services skip it.
         val lookupUrl = normalizeRemoteLookupUrl(url)
         val onDeviceUrl = normalizeOnDeviceLookupUrl(url)
         if (lookupUrl.isBlank() && onDeviceUrl.isBlank()) return emptyList()
-        return lookupUrlEvidence(lookupUrl, onDeviceUrl)
+        return lookupUrlEvidence(lookupUrl, onDeviceUrl, adaptersFor(enabledAdapters, onDeviceOnly))
             .filter(UrlThreatResult::isMalicious)
             .map(::toCheckResult)
     }
 
+    /** With [onDeviceOnly], only the adapters that match a list on the phone, so nothing about the link is sent. */
+    internal fun adaptersFor(
+        adapters: List<UrlThreatAdapter>,
+        onDeviceOnly: Boolean,
+    ): List<UrlThreatAdapter> = if (onDeviceOnly) adapters.filter { it.matchesOnDevice } else adapters
+
     private suspend fun lookupUrlEvidence(
         remoteLookupUrl: String,
         onDeviceLookupUrl: String = remoteLookupUrl,
+        adapters: List<UrlThreatAdapter> = enabledAdapters,
     ): List<UrlThreatResult> {
-        if (enabledAdapters.isEmpty()) return emptyList()
+        if (adapters.isEmpty()) return emptyList()
         val nowMillis = System.currentTimeMillis()
         return coroutineScope {
-            enabledAdapters
+            adapters
                 .mapNotNull { adapter ->
                     val lookupUrl = (if (adapter.matchesOnDevice) onDeviceLookupUrl else remoteLookupUrl).ifBlank { return@mapNotNull null }
                     async {

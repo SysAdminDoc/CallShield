@@ -1602,10 +1602,11 @@
     <string name="url_threat_malware">malware</string>
     <string name="url_threat_spam">spam</string>
     <string name="url_threat_dangerous">dangerous</string>
-    <string name="url_threat_signal">%1$s link</string>
     <string name="notif_phishing_title">Phishing URL detected</string>
     <string name="notif_phishing_text">SMS from %1$s contains a %2$s link</string>
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by a threat feed as %2$s. Do not tap any links in this message.</string>
+    <string name="notif_phishing_app_text">%1$s message from %2$s contains a %3$s link</string>
+    <string name="notif_phishing_app_big_text">A %1$s message from %2$s contains a URL flagged by a threat feed as %3$s. Do not tap any links in this message. The original notification was not removed.</string>
     <string name="notif_status_title">CallShield active</string>
     <string name="notif_status_text">Protecting against spam calls &amp; texts</string>
     <string name="notif_role_lost_title">Call screening is off</string>

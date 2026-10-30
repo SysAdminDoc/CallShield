@@ -15,6 +15,14 @@ class UrlSafetyCheckerTest {
     }
 
     @Test
+    fun `an on-device-only check keeps only the feeds matched on the phone`() {
+        val all = UrlThreatAdapterCatalog.all()
+
+        assertEquals(listOf(UrlThreatSource.OPENPHISH), UrlSafetyChecker.adaptersFor(all, onDeviceOnly = true).map { it.source })
+        assertEquals(all, UrlSafetyChecker.adaptersFor(all, onDeviceOnly = false))
+    }
+
+    @Test
     fun `extractCandidateUrls normalizes duplicates and strips trailing punctuation`() {
         val urls =
             UrlSafetyChecker.extractCandidateUrls(

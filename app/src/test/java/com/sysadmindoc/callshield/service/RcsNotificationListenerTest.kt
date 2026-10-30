@@ -18,6 +18,10 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.UnknownCallWindow
+import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
+import com.sysadmindoc.callshield.data.remote.UrlThreatSource
+import com.sysadmindoc.callshield.ui.urlThreatLabels
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -90,7 +94,7 @@ class RcsNotificationListenerTest {
         val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
         val realCheck = RcsNotificationListener.urlCheck
         Thread.setDefaultUncaughtExceptionHandler { _, e -> crashes += e }
-        RcsNotificationListener.urlCheck = { _, _, _ ->
+        RcsNotificationListener.urlCheck = { _, _, _, _ ->
             checked.countDown()
             error("threat feed unreadable")
         }
@@ -102,6 +106,40 @@ class RcsNotificationListenerTest {
         } finally {
             RcsNotificationListener.urlCheck = realCheck
             Thread.setDefaultUncaughtExceptionHandler(previousHandler)
+        }
+    }
+
+    @Test
+    fun `a flagged link in an opted-in WhatsApp message gets the phishing alert from on-device checks alone`() {
+        runBlocking { fixture.repository.setNotificationScreeningPackages(setOf(GOOGLE_MESSAGES, WHATSAPP)) }
+        val onDeviceOnlyAsked = withFlaggingLinkCheck()
+        try {
+            postUntil(chatNotification(NOTES, sender = "Dana", packageName = WHATSAPP)) { phishingAlerts().isNotEmpty() }
+
+            assertEquals(
+                context.getString(R.string.notif_phishing_app_text, "WhatsApp", "Dana", urlThreatLabels(context, listOf(PHISHING_LINK))),
+                phishingAlerts().single().extras.getString(Notification.EXTRA_TEXT),
+            )
+            assertEquals(listOf(true), onDeviceOnlyAsked.distinct())
+            assertEquals(0, callLogRows())
+        } finally {
+            RcsNotificationListener.urlCheck = realUrlCheck
+        }
+    }
+
+    @Test
+    fun `an RCS link check still uses the lookups the user turned on`() {
+        val onDeviceOnlyAsked = withFlaggingLinkCheck()
+        try {
+            postUntil(chatNotification(NOTES, sender = "Dana")) { phishingAlerts().isNotEmpty() }
+
+            assertEquals(
+                context.getString(R.string.notif_phishing_app_text, "Google Messages", "Dana", urlThreatLabels(context, listOf(PHISHING_LINK))),
+                phishingAlerts().single().extras.getString(Notification.EXTRA_TEXT),
+            )
+            assertEquals(listOf(false), onDeviceOnlyAsked.distinct())
+        } finally {
+            RcsNotificationListener.urlCheck = realUrlCheck
         }
     }
 
@@ -156,13 +194,34 @@ class RcsNotificationListenerTest {
 
     private fun codeWarnings() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_CODE_DURING_CALL }
 
+    private fun phishingAlerts() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_PHISHING }
+
+    private fun callLogRows() =
+        fixture.sqlite.query("SELECT COUNT(*) FROM call_log").use {
+            it.moveToFirst()
+            it.getInt(0)
+        }
+
+    private val realUrlCheck = RcsNotificationListener.urlCheck
+
+    /** Flags every link, so the alert doesn't depend on a feed, and returns what each check was asked. */
+    private fun withFlaggingLinkCheck(): List<Boolean> {
+        val onDeviceOnlyAsked = CopyOnWriteArrayList<Boolean>()
+        RcsNotificationListener.urlCheck = { _, _, _, onDeviceOnly ->
+            onDeviceOnlyAsked += onDeviceOnly
+            listOf(PHISHING_LINK)
+        }
+        return onDeviceOnlyAsked
+    }
+
     @Suppress("DEPRECATION")
     private fun chatNotification(
         body: String,
         sender: String? = null,
+        packageName: String = GOOGLE_MESSAGES,
     ) = StatusBarNotification(
-        GOOGLE_MESSAGES,
-        GOOGLE_MESSAGES,
+        packageName,
+        packageName,
         1,
         null,
         Process.myUid(),
@@ -180,6 +239,15 @@ class RcsNotificationListenerTest {
 
     private companion object {
         const val GOOGLE_MESSAGES = "com.google.android.apps.messaging"
+        const val WHATSAPP = "com.whatsapp"
         const val TEAMS = "com.microsoft.teams"
+        const val NOTES = "Here are the notes from today https://example.com/notes"
+        val PHISHING_LINK =
+            UrlSafetyChecker.UrlCheckResult(
+                url = "https://example.com",
+                isMalicious = true,
+                source = UrlThreatSource.OPENPHISH,
+                category = UrlThreatCategory.PHISHING,
+            )
     }
 }

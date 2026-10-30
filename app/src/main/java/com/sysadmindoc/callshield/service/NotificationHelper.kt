@@ -810,35 +810,52 @@ object NotificationHelper {
         synchronized(lock) { lastNotifTime = 0L }
     }
 
+    /**
+     * [sourceName] names the chat or email app a flagged message came from. Its
+     * [sender] is a name rather than a texted number, so the alert says which
+     * app and opens CallShield instead of a number's screen.
+     */
     fun notifyPhishingUrl(
         context: Context,
         sender: String,
         threats: String,
+        sourceName: String? = null,
     ) {
-        val nid = stableId(sender, 50)
+        val identity = if (sourceName == null) sender else "$sourceName|$sender"
+        val nid = stableId(identity, 50)
 
         val openIntent =
             PendingIntent.getActivity(
                 context,
-                stableId(sender, 51),
+                stableId(identity, 51),
                 Intent(context, MainActivity::class.java).apply {
-                    putExtra("open_number", sender)
+                    if (sourceName == null) putExtra("open_number", sender)
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
                 },
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
+        val (text, bigText) =
+            if (sourceName == null) {
+                val shown = PhoneFormatter.formatIsolated(sender)
+                Pair(
+                    context.getString(R.string.notif_phishing_text, shown, threats),
+                    context.getString(R.string.notif_phishing_big_text, shown, threats),
+                )
+            } else {
+                Pair(
+                    context.getString(R.string.notif_phishing_app_text, sourceName, sender, threats),
+                    context.getString(R.string.notif_phishing_app_big_text, sourceName, sender, threats),
+                )
+            }
 
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_PHISHING)
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_phishing_title))
-                .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.formatIsolated(sender), threats))
-                .setStyle(
-                    NotificationCompat
-                        .BigTextStyle()
-                        .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.formatIsolated(sender), threats)),
-                ).setContentIntent(openIntent)
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+                .setContentIntent(openIntent)
                 .setAutoCancel(true)
 
         safeNotify(context, nid, builder)

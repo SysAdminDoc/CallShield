@@ -1142,10 +1142,11 @@
     <string name="url_threat_malware">恶意软件</string>
     <string name="url_threat_spam">垃圾信息</string>
     <string name="url_threat_dangerous">危险</string>
-    <string name="url_threat_signal">%1$s链接</string>
     <string name="notif_phishing_title">检测到钓鱼链接</string>
     <string name="notif_phishing_text">来自 %1$s 的短信包含一条 %2$s 链接</string>
     <string name="notif_phishing_big_text">来自 %1$s 的短信包含一条被威胁情报源标记为 %2$s 的链接。请勿点击此消息中的任何链接。</string>
+    <string name="notif_phishing_app_text">来自 %2$s 的 %1$s 消息包含一条 %3$s 链接</string>
+    <string name="notif_phishing_app_big_text">来自 %2$s 的一条 %1$s 消息包含一条被威胁情报源标记为 %3$s 的链接。请勿点击此消息中的任何链接。原始通知未被移除。</string>
     <string name="notif_status_title">CallShield 已启用</string>
     <string name="notif_status_text">正在防护垃圾通话与短信</string>
     <string name="notif_role_lost_title">来电筛查已关闭</string>

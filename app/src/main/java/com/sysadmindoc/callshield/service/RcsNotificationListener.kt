@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
-import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningCategory
@@ -286,7 +285,8 @@ class RcsNotificationListener : NotificationListenerService() {
                 ruleId = result.ruleId,
                 pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
             )
-        } else if (result?.screeningDiagnostics?.hasIssues == true) {
+        } else if (source.category == NotificationScreeningCategory.RCS && result?.screeningDiagnostics?.hasIssues == true) {
+            // A diagnostic row keeps the text, so a chat or email message never writes one.
             repo.logScreeningDiagnostic(
                 number = senderNumber,
                 isCall = false,
@@ -326,20 +326,18 @@ class RcsNotificationListener : NotificationListenerService() {
             // Best-effort, as in SmsReceiver. This scope has no exception
             // handler, so a throw here would take the whole app down.
             try {
-                val malicious = urlCheck(body, stripQuery, allowRemoteLookup)
+                // Chat and email links are matched only against lists on the phone.
+                val onDeviceOnly = source.category != NotificationScreeningCategory.RCS
+                val malicious = urlCheck(body, stripQuery, allowRemoteLookup, onDeviceOnly)
                 if (malicious.isNotEmpty()) {
-                    val threats = urlThreatLabels(applicationContext, malicious)
-                    if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
-                        NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
-                    } else {
-                        NotificationHelper.notifyScreenedMessage(
-                            context = applicationContext,
-                            sourceName = source.stableName,
-                            sender = sender,
-                            confidence = 100,
-                            reason = applicationContext.getString(R.string.url_threat_signal, threats),
-                        )
-                    }
+                    // A texted number gets the SMS alert that opens its screen; any other sender gets one naming the app.
+                    val isTextedNumber = source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7
+                    NotificationHelper.notifyPhishingUrl(
+                        applicationContext,
+                        sender,
+                        urlThreatLabels(applicationContext, malicious),
+                        sourceName = source.stableName.takeUnless { isTextedNumber },
+                    )
                 }
             } catch (_: Exception) {
                 // URL check is best-effort
@@ -406,9 +404,16 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
-        /** The link check behind the URL warning. Tests replace it to make it throw. */
-        internal var urlCheck: suspend (body: String, stripQuery: Boolean, allowRemoteLookup: Boolean) -> List<UrlSafetyChecker.UrlCheckResult> =
-            { body, stripQuery, allowRemoteLookup -> UrlSafetyChecker.checkSmsBody(body, stripQuery, allowRemoteLookup) }
+        /** The link check behind the URL warning. Tests replace it to make it throw or to see how it was asked. */
+        internal var urlCheck: suspend (
+            body: String,
+            stripQuery: Boolean,
+            allowRemoteLookup: Boolean,
+            onDeviceOnly: Boolean,
+        ) -> List<UrlSafetyChecker.UrlCheckResult> =
+            { body, stripQuery, allowRemoteLookup, onDeviceOnly ->
+                UrlSafetyChecker.checkSmsBody(body, stripQuery, allowRemoteLookup, onDeviceOnly)
+            }
 
         /**
          * Logs a message this listener flagged. The SMS receiver has usually
