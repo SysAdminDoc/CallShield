@@ -7,13 +7,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReport
 import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,6 +31,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -148,6 +155,40 @@ class SpamActionReceiverRobolectricTest {
         assertFalse("runAction finished", worker.isAlive)
         assertNull("nothing escaped runAction", escaped)
         assertEquals(context.getString(R.string.notification_action_failed), ShadowToast.getTextOfLatestToast())
+    }
+
+    /**
+     * Called straight through onReceive like the tests here, goAsync() has no
+     * broadcast to hand back, so the work's last step must not assume one. When
+     * it did, the NullPointerException left the app scope after the test ended,
+     * and the next runTest in the run, in whatever class, failed with
+     * UncaughtExceptionsBeforeTest. The first runTest turns on the collector
+     * that holds it. The transport waits for the latch, so the launched job is
+     * still running when the scope's children are read.
+     */
+    @Test
+    fun `an action called without a broadcast finishes without throwing into the app scope`() {
+        runTest { }
+        val reporting = CountDownLatch(1)
+        CommunityContributor.transport = {
+            reporting.await(5, TimeUnit.SECONDS)
+            ContributeResult(true, "faked in test", ContributeOutcome.REPORTED_SPAM)
+        }
+        val appJob = CallShieldApp.appScope.coroutineContext.job
+        val before = appJob.children.toSet()
+
+        SpamActionReceiver().onReceive(
+            context,
+            Intent(SpamActionReceiver.ACTION_FEEDBACK_SPAM).putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, "+15553330003"),
+        )
+        val launched = appJob.children.toSet() - before
+        reporting.countDown()
+        assertEquals(1, launched.size)
+        // Bounded: a failed action posts its toast to this thread, so a plain
+        // join would hang instead of failing.
+        runBlocking { withTimeout(10_000) { launched.joinAll() } }
+
+        runTest { }
     }
 
     @Test

@@ -107,8 +107,9 @@ class SpamActionReceiver : BroadcastReceiver() {
         // The work must outlive onReceive (goAsync covers the broadcast
         // lifetime, not the suspend body), so it runs on the process-wide
         // appScope rather than a scope created and leaked per broadcast.
-        val pendingResult = goAsync()
-        launchAction(appContext, work) { pendingResult.finish() }
+        // goAsync() is null when onReceive is called without a broadcast.
+        val pendingResult: PendingResult? = goAsync()
+        launchAction(appContext, work) { pendingResult?.finish() }
     }
 
     /** "Not spam" on a blocked-call alert: let the number ring for a day, and tell the community when its data was wrong. */
