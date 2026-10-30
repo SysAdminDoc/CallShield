@@ -1,4 +1,4 @@
-# CallShield spam numbers, database version 59 (updated 2026-10-30)
+# CallShield spam numbers, database version 61 (updated 2026-10-30)
 # One E.164 number per line. spam_numbers.txt.sig signs this file; data/README.md says how to check it.
 # Numbers come from US FCC and FTC complaint data and CallShield community reports.
 # Licence: MIT, with each source's terms in data/source-manifest.json.
@@ -38322,6 +38322,7 @@
 +18177274685
 +18177278686
 +18177361144
++18177450910
 +18177524003
 +18177541423
 +18177566060
@@ -43707,6 +43708,7 @@
 +18663843084
 +18663843346
 +18663856065
++18663865765
 +18663870770
 +18663874362
 +18663896685
@@ -44340,6 +44342,7 @@
 +18669181460
 +18669190291
 +18669220040
++18669231419
 +18669236434
 +18669259892
 +18669280183
@@ -46588,6 +46591,7 @@
 +18889023628
 +18889023813
 +18889041868
++18889051086
 +18889051783
 +18889051813
 +18889052870

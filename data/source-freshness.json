@@ -2,12 +2,12 @@
   "schema_version": 2,
   "last_success": {
     "community_reports": "2026-10-10T00:42:01+00:00",
-    "fcc_complaints": "2026-10-29T17:03:10+00:00",
-    "ftc_complaints": "2026-10-29T17:03:10+00:00",
-    "saracroche_prefixes": "2026-10-29T17:03:10+00:00"
+    "fcc_complaints": "2026-10-30T18:58:59+00:00",
+    "ftc_complaints": "2026-10-30T18:58:59+00:00",
+    "saracroche_prefixes": "2026-10-30T18:58:59+00:00"
   },
   "newest_record_date": {
-    "fcc_complaints": "2026-10-29",
-    "ftc_complaints": "2026-10-28"
+    "fcc_complaints": "2026-10-30",
+    "ftc_complaints": "2026-10-29"
   }
 }

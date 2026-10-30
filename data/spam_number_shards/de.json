@@ -4880,6 +4880,66 @@
       ]
     },
     {
+      "number": "+18663865765",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2026-10-29",
+      "last_seen": "2026-10-29",
+      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "complaint_role": "caller_id",
+      "spoof_signal": "unverified_originating_number",
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-10-29",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-10-29",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-10-29",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
+        }
+      ],
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
       "number": "+18663936873",
       "type": "robocall",
       "reports": 4,
@@ -6043,11 +6103,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     },
@@ -6063,11 +6123,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     }

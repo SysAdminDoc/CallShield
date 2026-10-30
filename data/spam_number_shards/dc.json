@@ -3627,6 +3627,21 @@
       "description": "Community reported",
       "sources": [
         "community"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2026-09-30",
+          "last_seen": "2026-09-30",
+          "retrieved_at": "2026-10-30T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 2108678400000
+        }
       ]
     },
     {
@@ -4133,6 +4148,51 @@
           "parser_version": "legacy-v1",
           "expires_at_epoch_ms": 2105481600000
         }
+      ]
+    },
+    {
+      "number": "+18177450910",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2026-10-27",
+      "last_seen": "2026-10-29",
+      "description": "FTC caller ID: Other; FCC callback_business: Unwanted Calls (Live Voice)",
+      "complaint_role": "caller_id",
+      "spoof_signal": "unverified_originating_number",
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-10-27",
+          "last_seen": "2026-10-27",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-10-29",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
+        }
+      ],
+      "sources": [
+        "legacy_import"
       ]
     },
     {
@@ -5558,11 +5618,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     },
@@ -5578,11 +5638,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     }

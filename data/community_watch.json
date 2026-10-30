@@ -1,18 +1,10 @@
 {
   "schema_version": 1,
-  "generated": "2026-10-30T16:22:08+00:00",
-  "input_report_digest": "97efb489adbbf68f1e91f572230675523fc45daacadc63e10f8963fba04612fe",
-  "count": 4,
+  "generated": "2026-10-30T19:00:36+00:00",
+  "input_report_digest": "920df4bc1479196df5118ed7f8f6ba30d2af41cb2ecd2e3207b2bc1c27dab538",
+  "count": 2,
   "cleared": false,
   "numbers": [
-    {
-      "number": "+8613800138000",
-      "reporter_count": 6
-    },
-    {
-      "number": "+8613392135190",
-      "reporter_count": 4
-    },
     {
       "number": "+18445943307",
       "reporter_count": 2

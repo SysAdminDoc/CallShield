@@ -2334,6 +2334,21 @@
       "description": "Community reported",
       "sources": [
         "community"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2026-10-19",
+          "last_seen": "2026-10-26",
+          "retrieved_at": "2026-10-30T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 2108678400000
+        }
       ]
     },
     {
@@ -5160,8 +5175,8 @@
       "type": "robocall",
       "reports": 5,
       "first_seen": "2019-06-26",
-      "last_seen": "2026-08-06",
-      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-10-29",
+      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -5195,6 +5210,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-10-29",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1824922739000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -5742,11 +5772,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     },
@@ -5762,11 +5792,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     }

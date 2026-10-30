@@ -4409,7 +4409,7 @@
       "type": "robocall",
       "reports": 4,
       "first_seen": "2026-09-28",
-      "last_seen": "2026-10-28",
+      "last_seen": "2026-10-29",
       "description": "FTC caller ID: Other; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
@@ -4419,13 +4419,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-10-20",
-          "last_seen": "2026-10-28",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "first_seen": "2026-10-28",
+          "last_seen": "2026-10-29",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1824829390000,
+          "expires_at_epoch_ms": 1824922739000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -5337,11 +5337,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "retrieved_at": "2026-10-30T18:58:59+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801069390000
+          "expires_at_epoch_ms": 1801162739000
         }
       ]
     }
