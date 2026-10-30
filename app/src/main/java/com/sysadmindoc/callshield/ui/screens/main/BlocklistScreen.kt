@@ -173,6 +173,7 @@ private const val BLOCKLIST_TAB_WHITELIST = 4
 private const val BLOCKLIST_TAB_DATABASE = 5
 internal const val BLOCKLIST_SWIPE_ITEM_TAG = "blocklist_swipe_item"
 internal const val BLOCKLIST_REGEX_CHECKBOX_TAG = "blocklist_regex_checkbox"
+internal const val BLOCKLIST_SNACKBAR_HOST_TAG = "blocklist_snackbar_host"
 internal const val WHITELIST_RANGE_TAG = "whitelist_range"
 
 private data class BlocklistWorkspaceModel(
@@ -678,7 +679,14 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    // The Add button is 54dp tall with 16dp below it, so the bar
+                    // rises 8dp above it instead of covering it.
+                    .padding(
+                        start = 16.dp,
+                        top = 12.dp,
+                        end = 16.dp,
+                        bottom = if (workspace.addActionLabel != null) 78.dp else 12.dp,
+                    ).testTag(BLOCKLIST_SNACKBAR_HOST_TAG),
         )
     }
 
