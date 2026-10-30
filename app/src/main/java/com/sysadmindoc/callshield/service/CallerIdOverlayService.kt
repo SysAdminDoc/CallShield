@@ -280,11 +280,11 @@ class CallerIdOverlayService : Service() {
     private var lookupJob: Job? = null
     private var dismissRunnable: Runnable? = null
 
-    // Call-state watcher so the overlay dismisses when the call actually ends,
-    // instead of lingering for the full 20 s backstop. Held as Any?/nullable so
-    // the API 31+ TelephonyCallback type is never referenced on older devices.
-    private var callStateCallback: Any? = null
-    private var phoneStateListener: android.telephony.PhoneStateListener? = null
+    // Call-state watchers so the overlay dismisses when the call actually ends,
+    // instead of lingering for the full 20 s backstop: one per watched line,
+    // each with the manager it was registered on. Held as Any so the API 31+
+    // TelephonyCallback type is never referenced on older devices.
+    private val callStateWatchers = mutableListOf<Pair<android.telephony.TelephonyManager, Any>>()
 
     @Volatile private var isOverlayActive = false
 
@@ -760,33 +760,39 @@ class CallerIdOverlayService : Service() {
                 return
             }
             val tm = getSystemService(android.telephony.TelephonyManager::class.java) ?: return
+            val lines = callStateLines(tm)
             // Both registration APIs deliver the *current* state immediately.
             // Incoming overlays register while the phone is RINGING, but an
             // outgoing warning registers during call setup where the radio can
             // still report IDLE — acting on that snapshot would dismiss the
             // warning before the user can read it. Outgoing sessions therefore
             // ignore IDLE until a non-idle state has been observed.
-            val shouldDismissOnIdle = idleDismissGate(outgoingRiskWarning)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                registerModernCallStateWatcher(tm, sessionId, shouldDismissOnIdle)
-            } else {
-                @Suppress("DEPRECATION")
-                val listener =
-                    object : android.telephony.PhoneStateListener() {
-                        @Deprecated("Legacy pre-API-31 call-state listener")
-                        @Suppress("OVERRIDE_DEPRECATION")
-                        override fun onCallStateChanged(
-                            state: Int,
-                            phoneNumber: String?,
-                        ) {
-                            if (shouldDismissOnIdle(state)) {
-                                dismiss(sessionId)
+            val shouldDismissOnIdle = idleDismissGate(outgoingRiskWarning, lines.size)
+            lines.forEachIndexed { line, lineManager ->
+                val onState: (Int) -> Unit = { state ->
+                    if (shouldDismissOnIdle(line, state)) {
+                        dismiss(sessionId)
+                    }
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    registerModernCallStateWatcher(lineManager, onState)
+                } else {
+                    @Suppress("DEPRECATION")
+                    val listener =
+                        object : android.telephony.PhoneStateListener() {
+                            @Deprecated("Legacy pre-API-31 call-state listener")
+                            @Suppress("OVERRIDE_DEPRECATION")
+                            override fun onCallStateChanged(
+                                state: Int,
+                                phoneNumber: String?,
+                            ) {
+                                onState(state)
                             }
                         }
-                    }
-                phoneStateListener = listener
-                @Suppress("DEPRECATION")
-                tm.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+                    callStateWatchers += lineManager to listener
+                    @Suppress("DEPRECATION")
+                    lineManager.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+                }
             }
         } catch (_: Exception) {
             // Best-effort — the 20 s handler backstop guarantees dismissal.
@@ -796,57 +802,85 @@ class CallerIdOverlayService : Service() {
     @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.S)
     private fun registerModernCallStateWatcher(
         tm: android.telephony.TelephonyManager,
-        sessionId: Long,
-        shouldDismissOnIdle: (Int) -> Boolean,
+        onState: (Int) -> Unit,
     ) {
         val callback =
             object :
                 android.telephony.TelephonyCallback(),
                 android.telephony.TelephonyCallback.CallStateListener {
                 override fun onCallStateChanged(state: Int) {
-                    if (shouldDismissOnIdle(state)) {
-                        dismiss(sessionId)
-                    }
+                    onState(state)
                 }
             }
-        callStateCallback = callback
+        callStateWatchers += tm to callback
         tm.registerTelephonyCallback(mainExecutor, callback)
     }
 
     /**
-     * Stateful predicate: for outgoing warnings, IDLE only dismisses after a
-     * non-idle state has been seen (the registration snapshot may be IDLE).
-     * Incoming overlays keep the original dismiss-on-any-IDLE behavior.
+     * The managers to watch: one per active SIM when there are several, else
+     * the default one. The default manager's first report is the default
+     * SIM's own state, so on a dual-SIM phone a call ringing on the other SIM
+     * read IDLE and closed its overlay at once; a per-SIM manager reports its
+     * own SIM throughout. Screening can't pick the call's own SIM instead,
+     * because Telecom hands screening apps a null account handle. Needs
+     * READ_PHONE_STATE, which [registerCallStateWatcher] has already checked.
      */
-    private fun idleDismissGate(outgoingRiskWarning: Boolean): (Int) -> Boolean {
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun callStateLines(tm: android.telephony.TelephonyManager): List<android.telephony.TelephonyManager> {
+        val subscriptions =
+            try {
+                getSystemService(android.telephony.SubscriptionManager::class.java)
+                    ?.activeSubscriptionInfoList
+                    .orEmpty()
+            } catch (_: Exception) {
+                emptyList()
+            }
+        if (subscriptions.size < 2) return listOf(tm)
+        return subscriptions.map { tm.createForSubscriptionId(it.subscriptionId) }
+    }
+
+    /**
+     * Stateful predicate over [lineCount] watched lines: IDLE dismisses once
+     * every line has reported and all of them read IDLE, so a call on one SIM
+     * keeps the overlay up while the other SIM sits idle. For outgoing
+     * warnings, IDLE only dismisses after a non-idle state has been seen (the
+     * registration snapshot may be IDLE). Incoming overlays keep the original
+     * dismiss-on-IDLE behavior, snapshot included: a call that ended before
+     * the overlay registered closes it at once.
+     */
+    private fun idleDismissGate(
+        outgoingRiskWarning: Boolean,
+        lineCount: Int,
+    ): (Int, Int) -> Boolean {
         var sawNonIdle = !outgoingRiskWarning
-        return { state ->
+        val lineStates = arrayOfNulls<Int>(lineCount)
+        return { line, state ->
+            lineStates[line] = state
             if (state != android.telephony.TelephonyManager.CALL_STATE_IDLE) {
                 sawNonIdle = true
                 false
             } else {
-                sawNonIdle
+                sawNonIdle && lineStates.all { it == android.telephony.TelephonyManager.CALL_STATE_IDLE }
             }
         }
     }
 
     private fun unregisterCallStateWatcher() {
-        try {
-            val tm = getSystemService(android.telephony.TelephonyManager::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                (callStateCallback as? android.telephony.TelephonyCallback)?.let {
-                    tm?.unregisterTelephonyCallback(it)
+        callStateWatchers.forEach { (tm, watcher) ->
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    (watcher as? android.telephony.TelephonyCallback)?.let(tm::unregisterTelephonyCallback)
+                } else {
+                    @Suppress("DEPRECATION")
+                    (watcher as? android.telephony.PhoneStateListener)?.let {
+                        tm.listen(it, android.telephony.PhoneStateListener.LISTEN_NONE)
+                    }
                 }
-            } else {
-                @Suppress("DEPRECATION")
-                phoneStateListener?.let { tm?.listen(it, android.telephony.PhoneStateListener.LISTEN_NONE) }
+            } catch (_: Exception) {
+                // ignore
             }
-        } catch (_: Exception) {
-            // ignore
-        } finally {
-            callStateCallback = null
-            phoneStateListener = null
         }
+        callStateWatchers.clear()
     }
 
     /** Query all sources in parallel and update the overlay as each responds. */

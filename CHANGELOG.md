@@ -78,6 +78,7 @@ All notable changes to CallShield will be documented in this file.
 - Restoring a backup keeps when each number was blocked, so the Blocked list's Newest sort comes back in the same order. Backups made before this restore those blocks with the time of the restore.
 - The Recent tab shows how CallShield handled each call when it came in. It used to check every number again when the list loaded, so a call you answered from a number you blocked later showed up as Spam and counted toward the Spam total. Now only calls CallShield actually blocked count as Spam, and an earlier call from a number flagged since says "Flagged after this call" along with the reason.
 - TalkBack reads chips where only one can be on as radio buttons, selected or not selected. That covers the Activity and Recent filters, the Rules sort and Database filters, Lookup's Number and Message switch, the log cleanup days and the category actions. They used to say "Check box", which sounded like you could pick several. The Blocked log's Reason filter reads as a drop-down list.
+- On a phone with two SIMs, the caller ID popup for a call on the second SIM closed the moment it opened. It went by the main SIM's call state, and that reads idle while the other SIM rings. The popup now watches each SIM and closes once every one of them is idle, the same way an outgoing call's warning does.
 
 ## v1.12.0 (2026-10-09)
 
