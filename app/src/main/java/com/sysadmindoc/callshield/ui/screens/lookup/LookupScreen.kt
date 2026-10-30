@@ -67,6 +67,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -134,6 +135,8 @@ import com.sysadmindoc.callshield.util.sanitizePhoneNumberInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private val REQUEST_IDS_SAVER = Saver<MutableSet<Long>, LongArray>(save = { it.toLongArray() }, restore = { it.toMutableSet() })
 
 @Composable
 fun LookupScreen(viewModel: MainViewModel) {
@@ -230,8 +233,9 @@ fun LookupScreen(viewModel: MainViewModel) {
     }
 
     // Report works here as on a number's screen: it blocks the number on this
-    // phone too, with Undo. An outcome another screen asked for is dropped.
-    var reportRequestId by remember { mutableStateOf<Long?>(null) }
+    // phone too, with Undo. An outcome another screen asked for is dropped. The
+    // request ids are saved, so a tap's result still shows after a rotation.
+    var reportRequestId by rememberSaveable { mutableStateOf<Long?>(null) }
     val reportOutcome by viewModel.reportOutcome.collectAsStateWithLifecycle()
     LaunchedEffect(reportOutcome, reportRequestId) {
         reportOutcome?.let { outcome ->
@@ -243,7 +247,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     // Not spam and Mark trusted wait five seconds before the allow and the
     // report go out, as on a number's screen, so Undo can take them back. Each
     // checked number is held on its own, so every tap made here gets its result.
-    val notSpamRequests = remember { mutableSetOf<Long>() }
+    val notSpamRequests = rememberSaveable(saver = REQUEST_IDS_SAVER) { mutableSetOf<Long>() }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
     val undoLabel = stringResource(R.string.detail_undo)
 

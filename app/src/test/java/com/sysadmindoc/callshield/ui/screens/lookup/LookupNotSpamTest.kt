@@ -6,6 +6,7 @@ import android.os.Looper
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -54,6 +55,7 @@ import java.time.Duration
 class LookupNotSpamTest {
     @get:Rule
     val composeRule = createComposeRule()
+    private val restoration = StateRestorationTester(composeRule)
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val number = "+12129460191"
@@ -86,7 +88,7 @@ class LookupNotSpamTest {
                 exportLogs = ExportLogsUseCase(context),
             )
         shadowOf(Looper.getMainLooper()).idle()
-        composeRule.setContent { CallShieldTheme { LookupScreen(viewModel) } }
+        restoration.setContent { CallShieldTheme { LookupScreen(viewModel) } }
     }
 
     @After
@@ -145,6 +147,20 @@ class LookupNotSpamTest {
 
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5_100))
         awaitText("Marked safe and reported")
+        assertEquals(listOf(number), sentNumbers())
+    }
+
+    /** The request ids lived in a plain `remember`, so a rotation during the wait forgot the tap was made here. */
+    @Test
+    fun `Mark trusted's result still shows after a rotation during the wait`() {
+        lookUp(waitFor = "Mark trusted")
+
+        composeRule.onNode(hasText("Mark trusted") and hasClickAction()).performScrollTo().performClick()
+        awaitText("Marked not spam")
+        restoration.emulateSavedInstanceStateRestore()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5_100))
+        awaitText("Marked safe and reported")
+
         assertEquals(listOf(number), sentNumbers())
     }
 

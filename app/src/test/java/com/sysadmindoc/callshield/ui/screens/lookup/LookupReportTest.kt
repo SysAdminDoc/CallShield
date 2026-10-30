@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Looper
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -36,6 +37,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * More's Report spam number opens Lookup, so Lookup has to offer Report for a
@@ -48,10 +51,12 @@ import org.robolectric.annotation.Config
 class LookupReportTest {
     @get:Rule
     val composeRule = createComposeRule()
+    private val restoration = StateRestorationTester(composeRule)
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val number = "+12129460188"
     private val sent = mutableListOf<CommunityReport>()
+    private val release = CountDownLatch(1)
     private val originalTransport = CommunityContributor.transport
     private val originalRepository = CommunityContributor.repositoryFor
     private lateinit var fixture: IsolatedRepositoryFixture
@@ -80,11 +85,12 @@ class LookupReportTest {
                 exportLogs = ExportLogsUseCase(context),
             )
         shadowOf(Looper.getMainLooper()).idle()
-        composeRule.setContent { CallShieldTheme { LookupScreen(viewModel) } }
+        restoration.setContent { CallShieldTheme { LookupScreen(viewModel) } }
     }
 
     @After
     fun tearDown() {
+        release.countDown()
         CommunityContributor.transport = originalTransport
         CommunityContributor.repositoryFor = originalRepository
         SpamRepository.replaceInstanceForTests(null)
@@ -93,20 +99,47 @@ class LookupReportTest {
 
     @Test
     fun `Report on a number nothing flags blocks it here and sends the report`() {
+        lookUp()
+
+        composeRule.onNodeWithText("Report").performScrollTo().performClick()
+        awaitBlockedMessage()
+
+        assertEquals(listOf(number), sent.map { it.number })
+        assertEquals(true, runBlocking { fixture.dao.findByNumber(number) }?.isUserBlocked)
+    }
+
+    /** The request id lived in a plain `remember`, so a rotation before the result came back dropped it and its Undo. */
+    @Test
+    fun `Report's result and its Undo still show after a rotation while it goes out`() {
+        CommunityContributor.transport = { report ->
+            release.await(LOOKUP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            synchronized(sent) { sent += report }
+            ContributeResult(true, ContributeOutcome.REPORTED_SPAM.name, ContributeOutcome.REPORTED_SPAM)
+        }
+        lookUp()
+
+        composeRule.onNodeWithText("Report").performScrollTo().performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        release.countDown()
+        awaitBlockedMessage()
+
+        composeRule.onNodeWithText("Undo").assertExists()
+        assertEquals(listOf(number), synchronized(sent) { sent.map { it.number } })
+    }
+
+    private fun lookUp() {
         composeRule.onNode(hasSetTextAction()).performTextInput(number)
         composeRule.onNodeWithText("Check number").performClick()
         // The check runs on the IO dispatcher, which waitForIdle doesn't wait for.
         composeRule.waitUntil(LOOKUP_TIMEOUT_MS) {
             composeRule.onAllNodes(hasText("Mark trusted")).fetchSemanticsNodes().isNotEmpty()
         }
+    }
 
-        composeRule.onNodeWithText("Report").performScrollTo().performClick()
+    private fun awaitBlockedMessage() {
         composeRule.waitUntil(LOOKUP_TIMEOUT_MS) {
             composeRule.onAllNodes(hasText("Blocked on this phone.", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
-
-        assertEquals(listOf(number), sent.map { it.number })
-        assertEquals(true, runBlocking { fixture.dao.findByNumber(number) }?.isUserBlocked)
     }
 
     private companion object {

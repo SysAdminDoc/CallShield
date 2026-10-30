@@ -150,9 +150,10 @@ fun NumberDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val undoLabel = stringResource(R.string.detail_undo)
-    var reportRequestId by remember(number) { mutableStateOf<Long?>(null) }
+    // Saved, so a tap's result still shows after a rotation.
+    var reportRequestId by rememberSaveable(number) { mutableStateOf<Long?>(null) }
     // A second Not spam here restarts the first one's wait, so the last tap is the only one to show.
-    var notSpamRequestId by remember(number) { mutableStateOf<Long?>(null) }
+    var notSpamRequestId by rememberSaveable(number) { mutableStateOf<Long?>(null) }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge

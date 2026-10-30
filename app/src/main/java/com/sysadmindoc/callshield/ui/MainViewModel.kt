@@ -5,6 +5,7 @@ package com.sysadmindoc.callshield.ui
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
@@ -1588,7 +1589,10 @@ class MainViewModel
 
         private val _reportOutcome = MutableStateFlow<ReportOutcome?>(null)
         val reportOutcome: StateFlow<ReportOutcome?> = _reportOutcome
-        private var reportRequests = 0L
+
+        // Screens save these ids across a rotation and a process restart, so a
+        // new process starts past any id the last one handed out.
+        private var reportRequests = SystemClock.elapsedRealtime()
         private var reportJob: Job? = null
 
         /**
@@ -1644,7 +1648,7 @@ class MainViewModel
 
         private val _notSpamOutcome = MutableStateFlow<NotSpamOutcome?>(null)
         val notSpamOutcome: StateFlow<NotSpamOutcome?> = _notSpamOutcome
-        private var notSpamRequests = 0L
+        private var notSpamRequests = SystemClock.elapsedRealtime()
 
         /** A Not spam tap waiting out its Undo window. */
         private data class HeldNotSpam(
