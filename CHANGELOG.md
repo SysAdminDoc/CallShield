@@ -27,6 +27,7 @@ All notable changes to CallShield will be documented in this file.
 - A number you block, unblock or report while the spam database is updating keeps that change when the update finishes. A change made just before the update wrote its rows could be put back the way it was.
 - Texts from a regular phone number that ends in 7726 get screened again. CallShield leaves the 7726 carrier spam report short code alone, but it also skipped every full number ending in those four digits, so a blocked or known spam number like that was never checked, logged or flagged.
 - If checking a text runs into an error, CallShield still lets the text through and now leaves a warning in the system log. Before, nothing recorded that the check had failed.
+- Community reports that arrive without the app's report id now count as one reporter between them, per number and day. The app has sent that id with every report since v1.10.0. On 2026-10-30 a script that sent none reported the same few numbers from a new network each time, and each one counted as a different person. The rule covers the watch list, promotion into the database, the trending list, spam link domains and Not spam votes. Reports from older builds still count, just together.
 - The spam report form on GitHub now says up front that it files a public
   note, and that Report on a number's screen in the app is what sends the
   anonymous report that counts. It used to say a report there could go in

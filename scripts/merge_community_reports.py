@@ -27,6 +27,7 @@ from pipeline_io import (
     require_matching_derived_feed,
 )
 from report_dedup import (
+    NO_ID_REPORTER,
     capped_reporter_count,
     find_burst_duplicates,
     find_resent_reports,
@@ -184,9 +185,17 @@ def load_community_pending(today: str) -> dict[str, dict]:
                     or not isinstance(event.get("device"), str)
                     or not event["device"]
                     or validated_reporter_bucket(event["device"]) != event["device"]
+                    or ("no_id" in event and event["no_id"] is not True)
                 ):
                     raise ValueError(f"invalid watch event for {number}")
                 if event["day"] >= watch_cutoff:
+                    # Ledgers written before 2026-10-30 didn't mark a watch event whose
+                    # report had no app id. Its promotion event, same day and bucket, says so.
+                    if "no_id" not in event and any(
+                        promotion["key"].startswith("file:") and promotion["day"] == event["day"] and promotion["bucket"] == event["bucket"]
+                        for promotion in state["events"]
+                    ):
+                        event = {**event, "no_id": True}
                     watch_events.append(event)
             raw_not_spam_days = state.get("not_spam_days", [])
             if not isinstance(raw_not_spam_days, list):
@@ -228,8 +237,10 @@ def empty_community_state(number: str, report_type: str, day: str) -> dict:
     }
 
 
-def add_watch_event(state: dict, day: str, identity: tuple[str, str]) -> None:
-    event = {"day": day, "bucket": identity[0], "device": identity[1]}
+def add_watch_event(state: dict, day: str, identity: tuple[str, str], has_report_id: bool) -> None:
+    event: dict[str, str | bool] = {"day": day, "bucket": identity[0], "device": identity[1]}
+    if not has_report_id:
+        event["no_id"] = True
     if event not in state.setdefault("watch_events", []):
         state["watch_events"].append(event)
 
@@ -238,10 +249,12 @@ def community_watch_reporter_count(state: dict) -> int:
     """Same-day devices on the busiest day, capped per group, and only on a day
     that heard from two groups: the label says "2 CallShield users", and two
     phones behind one home network (a guest subnet gives one /48 two /64s) are
-    as likely one person. A second group is the second opinion."""
+    as likely one person. A second group is the second opinion. Reports without
+    an app id are one reporter between them (report_dedup.NO_ID_REPORTER)."""
     by_day: dict[str, set[tuple[str, str]]] = {}
     for event in state.get("watch_events", []):
-        by_day.setdefault(event["day"], set()).add((event["bucket"], event["device"]))
+        identity = NO_ID_REPORTER if event.get("no_id") else (event["bucket"], event["device"])
+        by_day.setdefault(event["day"], set()).add(identity)
     return max(
         (
             capped_reporter_count(identities)
@@ -457,11 +470,13 @@ def same_day_reporters(events: list[dict]) -> int:
     The Worker's bucket is an HMAC of the UTC day and the reporter's network, so
     it changes at midnight by design and one reporter on three days shows three
     buckets. Only buckets from the same day are known to be different reporters.
+    Reports without an app id (keyed by file) are one reporter between them.
     """
     by_day: dict[str, set[str]] = {}
     for event in events:
         if event["bucket"]:
-            by_day.setdefault(event["day"], set()).add(event["bucket"])
+            reporter = NO_ID_REPORTER[0] if event["key"].startswith("file:") else event["bucket"]
+            by_day.setdefault(event["day"], set()).add(reporter)
     return max((len(buckets) for buckets in by_day.values()), default=0)
 
 
@@ -1173,7 +1188,8 @@ def main(argv: list[str] | None = None):
                         not_spam_days.append(reported_at)
                 reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
                 if reporter_bucket:
-                    not_spam_votes.setdefault(number, set()).add(reporter_bucket)
+                    # Votes without an app id are one voter between them.
+                    not_spam_votes.setdefault(number, set()).add(reporter_bucket if report_id else NO_ID_REPORTER[0])
                 else:
                     # A vote with no reporter identity cannot be counted as an
                     # independent source, so it is dropped. Tracked separately
@@ -1190,7 +1206,7 @@ def main(argv: list[str] | None = None):
                     if state is None:
                         state = empty_community_state(number, spam_type, reported_at)
                         pending[number] = state
-                    add_watch_event(state, reported_at, identity)
+                    add_watch_event(state, reported_at, identity, has_report_id=bool(report_id))
                 if reported_at < pending_cutoff and number not in existing:
                     # Too old to count toward promoting a new row. A row that is already
                     # in the database (FCC-backed or published) still takes the report.
@@ -1205,6 +1221,8 @@ def main(argv: list[str] | None = None):
                     if state and (
                         any(event["key"] == key for event in state["events"])
                         or (bucket and any(event["bucket"] == bucket and event["day"] == reported_at for event in state["events"]))
+                        # Reports without an app id are one reporter between them.
+                        or (not report_id and any(event["key"].startswith("file:") and event["day"] == reported_at for event in state["events"]))
                     ):
                         collapsed += 1
                     elif number in existing:

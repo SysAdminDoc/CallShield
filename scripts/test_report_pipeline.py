@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -22,6 +23,8 @@ TIMES = [
     NOW,
 ]
 BUCKETS = [f"{index:016x}" for index in range(1, 7)]
+# write_report's default: a fresh id, as the app has sent with every report since v1.10.0.
+APP_REPORT_ID = "app"
 
 
 def run_script_result(
@@ -74,9 +77,12 @@ def write_report(
     reported_at: str,
     report_type: str = "phishing",
     domains: list[str] | None = None,
-    report_id: str | None = None,
+    report_id: str | None = APP_REPORT_ID,
     device: str | None = None,
 ) -> None:
+    """report_id=None writes a report with no id, as older builds and other clients send."""
+    if report_id == APP_REPORT_ID:
+        report_id = str(uuid.uuid4())
     report = {"number": number, "type": report_type, "reported_at": reported_at}
     if bucket is not None:
         report["reporter_bucket"] = bucket
@@ -1170,9 +1176,9 @@ def assert_a_published_number_leaves_the_watch_list(data_dir: Path) -> None:
 def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> None:
     """Reports stored before 2026-10-30 turned bare Chinese mobiles into +1
     numbers (15017944158 into +1 501-794-4158, an Arkansas line). One whose +86
-    reading is already listed, or one in a dead area code that no app sent,
-    never reaches the watch list, and a ledger row it left behind is dropped.
-    Reports the fixed Worker stored, and numbers the database lists or a
+    reading is already listed, or one in a dead area code that no app sent, is
+    dropped along with any ledger row it left behind. Reports the fixed Worker
+    stored, and numbers the database lists or a
     maintainer approved, are taken as sent."""
     def fcc_row(number: str) -> dict:
         return {"number": number, "type": "spam", "reports": 1, "first_seen": BASE_DAY, "last_seen": BASE_DAY,
@@ -1207,7 +1213,7 @@ def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> Non
     for index, bucket in enumerate(BUCKETS[:2], start=1):
         write_report(
             data_dir, f"{after_the_fix[1:]}-{index}.json", after_the_fix, bucket, f"{TODAY}T00:0{index}:00+00:00",
-            device=BUCKETS[index + 1],
+            device=BUCKETS[index + 1], report_id=None,
         )
     # Too old to count as a report, the app's report still leaves a watch row.
     write_report(
@@ -1215,26 +1221,28 @@ def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> Non
         report_id="00000000-0000-4000-8000-0000000000ff",
     )
     run_drain(data_dir)
-    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
-    watched = sorted(row["number"] for row in feed["numbers"])
-    assert watched == [ordinary, twin_listed_later, sent_by_the_app, after_the_fix], feed
     pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
     assert twin_listed not in pending and dead_area_code not in pending, sorted(pending)
+    for kept in (ordinary, twin_listed_later, after_the_fix):
+        assert len(pending[kept]["watch_events"]) == 2, pending.get(kept)
+    # Two reports with no app id are one reporter, so only the app's own make the list.
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    watched = sorted(row["number"] for row in feed["numbers"])
+    assert watched == [sent_by_the_app], feed
     assert not list((data_dir / "reports").glob("*.json")), "the merge left misread reports in the queue"
     assert row_for(data_dir, listed)["reports"] == 3, row_for(data_dir, listed)
-    assert row_for(data_dir, approved) is not None and pending_reports_for(data_dir, approved) == 2
+    # Kept, and as one report: its second id-less report that day is the same reporter.
+    assert row_for(data_dir, approved) is not None and pending_reports_for(data_dir, approved) == 1
 
     # Its +86 reading listed later, the ledger row an earlier drain kept goes.
     database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     database["numbers"].append(fcc_row("+8618638657795"))
     write_json(data_dir / "spam_numbers.json", database)
     run_script("merge_community_reports.py", data_dir)
-    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
-    watched = sorted(row["number"] for row in feed["numbers"])
-    assert watched == [ordinary, sent_by_the_app, after_the_fix], feed
     pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
     assert twin_listed_later not in pending, sorted(pending)
-    assert pending_reports_for(data_dir, approved) == 2
+    assert ordinary in pending and after_the_fix in pending, sorted(pending)
+    assert pending_reports_for(data_dir, approved) == 1
     # Its id went with its report, which doesn't make it a report no app sent.
     assert pending[aged_out]["watch_events"] and not pending[aged_out]["events"], pending.get(aged_out)
 
@@ -1251,15 +1259,99 @@ def assert_bare_digit_misreadings_stay_off_the_hot_list(data_dir: Path) -> None:
                       "last_seen": BASE_DAY, "description": "FCC complaint", "sources": ["fcc_complaints"]}]},
     )
     # Four reporters over six hours on BASE_DAY, before the pinned fix day, are
-    # enough to trend, and each number gets the same four.
+    # enough to trend, and each number gets the same four: three from the app and
+    # one with no id. The guard sets the last aside for the misread numbers only,
+    # which leaves them a report short.
     for number in (twin_listed, dead_area_code, ordinary):
         for index, reported_at in enumerate(TIMES[:4], start=1):
             write_report(data_dir, f"{number[1:]}-{index}.json", number, f"0000000000a1{index:04x}", reported_at,
-                         device=f"0000000000a2{index:04x}")
+                         device=f"0000000000a2{index:04x}", report_id=None if index == 4 else APP_REPORT_ID)
     run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     hot = {entry["number"] for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
     if hot != {ordinary}:
         raise AssertionError(f"only the live area code's number should trend: {sorted(hot)}")
+
+
+def assert_reports_without_an_id_count_as_one_reporter(data_dir: Path) -> None:
+    """On 2026-10-28 a client sent six reports for one number in seven seconds,
+    with no report id and each from a new reporter bucket. Counted per bucket
+    they met every reporter bar CallShield has. However many there are, reports
+    without the app's id count as one reporter per number per day: for the
+    database's quorum, the watch list, the hot list, domains and not-spam votes."""
+    burst, mixed, voted = "+12122340901", "+12122340902", "+12122340905"
+    # Two reports two days apart, which a pre-ledger row needs to stay listed.
+    first_seen = (datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "prefixes": [],
+         "numbers": [{"number": voted, "reports": 2, "type": "spam", "description": "Community reported",
+                      "sources": ["community"], "first_seen": first_seen, "last_seen": TODAY}]},
+    )
+    earlier = f"{(datetime.now(timezone.utc) - timedelta(days=3)).date().isoformat()}T04:00:00+00:00"
+    write_report(data_dir, "burst-old.json", burst, BUCKETS[5], earlier, report_id=None)
+    for index, (bucket, reported_at) in enumerate(zip(BUCKETS[:5], TIMES)):
+        write_report(data_dir, f"burst-{index}.json", burst, bucket, reported_at, device=bucket,
+                     domains=["burst.example"], report_id=None)
+    for index, number in enumerate(("+12122340903", "+12122340904")):
+        write_report(data_dir, f"domain-{index}.json", number, BUCKETS[5 - index], TIMES[index],
+                     domains=["burst.example"], report_id=None)
+    # Two reports with no id and one from the app are two reporters.
+    write_report(data_dir, "mixed-0.json", mixed, BUCKETS[0], TIMES[0], report_id=None)
+    write_report(data_dir, "mixed-1.json", mixed, BUCKETS[1], TIMES[1], report_id=None)
+    write_report(data_dir, "mixed-2.json", mixed, BUCKETS[2], TIMES[2])
+    for index, bucket in enumerate(BUCKETS[:3]):
+        write_report(data_dir, f"vote-{index}.json", voted, bucket, TIMES[index], report_type="not_spam", report_id=None)
+    for index, bucket in enumerate(BUCKETS[3:5]):
+        write_report(data_dir, f"vote-app-{index}.json", voted, bucket, TIMES[3 + index], report_type="not_spam")
+    run_drain(data_dir)
+
+    assert row_for(data_dir, burst) is None, "a burst with no ids met the three-reporter quorum"
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    rows = {row["number"]: row["reporter_count"] for row in feed["numbers"]}
+    assert rows == {mixed: 2}, rows
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert all(event.get("no_id") is True for event in pending[burst]["watch_events"]), pending[burst]
+    assert pending_reports_for(data_dir, burst) == 2, "one report a day from reports with no id"
+    hot = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]
+    assert burst not in {entry["number"] for entry in hot}, hot
+    domains = json.loads((data_dir / "spam_domains_review.json").read_text(encoding="utf-8"))["candidates"]
+    assert "burst.example" not in {entry["domain"] for entry in domains}, domains
+    review = json.loads((data_dir / "not_spam_review.json").read_text(encoding="utf-8"))["candidates"]
+    assert [(entry["number"], entry["not_spam_votes"]) for entry in review] == [(voted, 3)], review
+
+    # A ledger written before the rule marked no watch event, and its file-keyed
+    # promotion events are what show which reports had no id.
+    ledger_dir = data_dir.parent / "ledger"
+    old_burst, counted = "+8613800138000", "+12122340906"
+    write_json(
+        ledger_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+
+    def ledger_row(number: str, key_prefix: str, buckets: list[str]) -> dict:
+        return {
+            "published": False,
+            "entry": {"number": number, "type": "spam", "reports": 0, "first_seen": BASE_DAY, "last_seen": BASE_DAY,
+                      "description": "Community reported", "sources": ["community"]},
+            "events": [{"key": f"{key_prefix}{index}", "day": BASE_DAY, "bucket": bucket, "count": 1}
+                       for index, bucket in enumerate(buckets)],
+            "watch_events": [{"day": BASE_DAY, "bucket": bucket, "device": bucket} for bucket in buckets],
+            "not_spam_days": [],
+        }
+
+    write_json(
+        ledger_dir / "community_pending.json",
+        {"schema_version": 1, "retention_days": 30, "watch_retention_days": 90, "numbers": {
+            old_burst: ledger_row(old_burst, "file:burst-", BUCKETS[:5]),
+            counted: ledger_row(counted, "id:00000000-0000-4000-8000-00000000000", BUCKETS[:2]),
+        }},
+    )
+    run_drain(ledger_dir)
+    feed = json.loads((ledger_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert {row["number"]: row["reporter_count"] for row in feed["numbers"]} == {counted: 2}, feed
+    pending = json.loads((ledger_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert all(event.get("no_id") is True for event in pending[old_burst]["watch_events"]), pending[old_burst]
+    assert not any("no_id" in event for event in pending[counted]["watch_events"]), pending[counted]
 
 
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
@@ -2036,6 +2128,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_bare_digit_misreadings_stay_off_the_hot_list(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_reports_without_an_id_count_as_one_reporter(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")

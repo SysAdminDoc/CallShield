@@ -31,11 +31,11 @@ from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     MAX_DEVICES_PER_GROUP,
     busiest_day_reporters,
+    counted_reporter,
     find_burst_duplicates,
     find_resent_reports,
     parse_reported_at,
     reporter_day_key,
-    reporter_identity,
     validated_report_id,
 )
 
@@ -141,7 +141,9 @@ def main(argv: list[str] | None = None) -> int:
 
                 reported_at_str = report.get("reported_at", "")
                 reported_at = parse_reported_at(reported_at_str)
-                identity = reporter_identity(report)
+                # Every report without an app id counts as one reporter, so they
+                # collapse below as one reporter's same-day duplicates.
+                identity = counted_reporter(report)
                 if identity is None:
                     continue
                 if reported_at is None or reported_at < cutoff or reported_at > now + timedelta(minutes=5):

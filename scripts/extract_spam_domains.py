@@ -31,6 +31,7 @@ from pipeline_io import (
     report_queue_digest,
 )
 from report_dedup import (
+    NO_ID_REPORTER,
     busiest_day_reporters,
     parse_reported_at,
     reporter_day_key,
@@ -207,11 +208,13 @@ def main(argv: list[str] | None = None) -> int:
                     if report_id in seen_report_ids:
                         continue
                     seen_report_ids.add(report_id)
+                # Reports without an app id count as one reporter between them.
+                reporter = reporter_day[0] if report_id else NO_ID_REPORTER[0]
 
                 reports_scanned += 1
                 for domain in domains:
                     domain_numbers.setdefault(domain, set()).add(number)
-                    domain_reporters.setdefault(domain, set()).add((reporter_day[1], reporter_day[0]))
+                    domain_reporters.setdefault(domain, set()).add((reporter_day[1], reporter))
 
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")

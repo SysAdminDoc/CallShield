@@ -56,6 +56,22 @@ def reporter_identity(report: dict) -> tuple[str, str] | None:
     return group, validated_reporter_bucket(report.get("reporter_device")) or group
 
 
+# Every report without an app id counts as this one reporter. The app has sent
+# an id with every report since v1.10.0, and a script that sends none from a new
+# network each time (2026-10-28: six reports for one number in seven seconds, from
+# six buckets) would otherwise count as a crowd. Older builds' reports still
+# count, together as one reporter per number per day.
+NO_ID_REPORTER = ("no-id", "no-id")
+
+
+def counted_reporter(report: dict) -> tuple[str, str] | None:
+    """The reporter a report counts as: its identity, or NO_ID_REPORTER without an app id."""
+    identity = reporter_identity(report)
+    if identity is None or validated_report_id(report.get("report_id")):
+        return identity
+    return NO_ID_REPORTER
+
+
 def capped_reporter_count(identities) -> int:
     """Count distinct devices, at most MAX_DEVICES_PER_GROUP from any one group."""
     devices_by_group: dict[str, set[str]] = {}
