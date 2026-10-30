@@ -264,10 +264,10 @@ class SpamRepositoryImpl(
         val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
         val verdict = pipelineRun.result
         if (verdict == null) {
-            return SpamCheckResult(isSpam = false, screeningDiagnostics = pipelineRun.diagnostics)
+            return SpamCheckResult(isSpam = false, screeningDiagnostics = pipelineRun.diagnostics, suspicion = ctx.suspicion)
         }
 
-        val result = verdict.toSpamCheckResult(pipelineRun.diagnostics)
+        val result = verdict.toSpamCheckResult(pipelineRun.diagnostics).copy(suspicion = ctx.suspicion)
         return if (smsBody == null) CategoryCallPolicy.apply(result, prefs) else result
     }
 

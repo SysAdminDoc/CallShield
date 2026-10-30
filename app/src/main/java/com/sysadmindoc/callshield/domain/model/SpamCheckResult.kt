@@ -11,4 +11,12 @@ data class SpamCheckResult(
     val screeningDiagnostics: ScreeningDiagnostics? = null,
     /** Raw signal tokens behind a scored block; [description] is display text. */
     val signals: List<String> = emptyList(),
+    /** A live call's below-threshold heuristic score, shown only if the call goes on to ring. */
+    val suspicion: CallSuspicion? = null,
+)
+
+/** A heuristic [score] too low to block, and the first [reason] behind it. */
+data class CallSuspicion(
+    val score: Int,
+    val reason: String,
 )

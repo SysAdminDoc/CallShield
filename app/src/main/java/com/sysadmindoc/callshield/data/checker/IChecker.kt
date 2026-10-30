@@ -8,6 +8,7 @@ import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import kotlinx.coroutines.CancellationException
@@ -153,6 +154,13 @@ data class CheckContext(
 ) {
     /** Shared plan classification for NANP-only checkers in this evaluation. */
     val numberingPlan: NumberingPlan = NumberingPlan.from(number, homeRegionIso)
+
+    /**
+     * Set by [HeuristicChecker] when a live call scores too low to block. A
+     * later checker can still block the call, so the screening service shows
+     * it only once the call is going to ring.
+     */
+    var suspicion: CallSuspicion? = null
 
     /**
      * Forms to try when matching stored numbers exactly, canonical first.

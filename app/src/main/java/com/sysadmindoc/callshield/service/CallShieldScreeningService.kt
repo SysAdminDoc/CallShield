@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.checker.MeetingModeChecker
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.di.ApplicationScope
+import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
@@ -71,9 +72,9 @@ class CallShieldScreeningService : CallScreeningService() {
         }
 
     /** Kept injectable so the RTT contract can prove that no overlay is launched. */
-    internal var incomingOverlayLauncher: (android.content.Context, String, Int, String) -> Unit =
-        { context, number, confidence, reason ->
-            CallerIdOverlayService.startIncoming(context, number, confidence, reason)
+    internal var incomingOverlayLauncher: (android.content.Context, String, Int, String, Boolean) -> Unit =
+        { context, number, confidence, reason, liveEnrichment ->
+            CallerIdOverlayService.startIncoming(context, number, confidence, reason, liveEnrichment)
         }
 
     /** Kept injectable so a test can see which calls take their overlay back. */
@@ -250,6 +251,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                 CategoryCallPolicy.parseMatchSource(result.matchSource)?.action
                                     ?: CategoryCallAction.INHERIT
                             if (categoryAction == CategoryCallAction.ALLOW) {
+                                result.suspicion?.let { showSuspicion(number, it, prefs) }
                                 respondAllow(responseGate)
                                 CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, result.matchSource)
                                 logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
@@ -264,21 +266,27 @@ class CallShieldScreeningService : CallScreeningService() {
                                     pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
                                     prefs = prefs,
                                     callerIdentity = callerIdentity,
+                                    suspicion = result.suspicion,
                                 )
                             }
                         } else {
                             val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
                             val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
-                            // Unknown non-contact caller — area-code-only caller ID overlay.
-                            // A number other users reported gets it even with no area code
-                            // to name, since the popup is where its label shows.
-                            val location =
-                                AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
-                                    ?: "".takeIf { heuristics().communityWatchReporterCount(appContext, number) >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS }
-                            if (location != null) {
-                                try {
-                                    incomingOverlayLauncher(appContext, number, 0, location)
-                                } catch (_: Exception) {
+                            val suspicion = result.suspicion
+                            if (suspicion != null) {
+                                showSuspicion(number, suspicion, prefs)
+                            } else {
+                                // Unknown non-contact caller — area-code-only caller ID overlay.
+                                // A number other users reported gets it even with no area code
+                                // to name, since the popup is where its label shows.
+                                val location =
+                                    AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
+                                        ?: "".takeIf { heuristics().communityWatchReporterCount(appContext, number) >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS }
+                                if (location != null) {
+                                    try {
+                                        incomingOverlayLauncher(appContext, number, 0, location, false)
+                                    } catch (_: Exception) {
+                                    }
                                 }
                             }
                             respondAllow(responseGate)
@@ -378,6 +386,7 @@ class CallShieldScreeningService : CallScreeningService() {
         pipelineDiagnostic: String? = null,
         prefs: androidx.datastore.preferences.core.Preferences,
         callerIdentity: CallerIdentity? = null,
+        suspicion: CallSuspicion? = null,
     ) {
         val repository = repository()
         val logTimestamp = System.currentTimeMillis()
@@ -476,10 +485,12 @@ class CallShieldScreeningService : CallScreeningService() {
                     ),
                     number,
                     reason,
+                    suspicion,
+                    prefs,
                 )
             }
         } else {
-            respondRinging(responseGate, response, number, reason)
+            respondRinging(responseGate, response, number, reason, suspicion, prefs)
         }
 
         applicationScope.launch {
@@ -817,15 +828,17 @@ class CallShieldScreeningService : CallScreeningService() {
 
     /**
      * Sends a block [response]. A silenced call still reaches the phone and can
-     * be answered, so it's watched for one-time codes like an allowed one. A
-     * rejected call never rings, so an overlay a checker opened for it while
-     * screening ran is taken back.
+     * be answered, so it's watched for one-time codes like an allowed one, and
+     * gets the [suspicion] warning. A rejected call never rings, so it gets no
+     * overlay, and one still up for the same caller is taken back.
      */
     private fun respondRinging(
         responseGate: ScreeningResponseGate<CallResponse>,
         response: CallResponse,
         number: String,
         reason: String,
+        suspicion: CallSuspicion?,
+        prefs: androidx.datastore.preferences.core.Preferences,
     ) {
         val unanswered = !responseGate.hasResponded
         responseGate.respond(response)
@@ -837,6 +850,27 @@ class CallShieldScreeningService : CallScreeningService() {
                 incomingOverlayWithdrawer(applicationContext, number)
             } catch (_: Exception) {
             }
+        } else if (unanswered && suspicion != null) {
+            showSuspicion(number, suspicion, prefs)
+        }
+    }
+
+    /** Shows the "Possible spam" overlay for a call screening let ring. */
+    private fun showSuspicion(
+        number: String,
+        suspicion: CallSuspicion,
+        prefs: androidx.datastore.preferences.core.Preferences,
+    ) {
+        try {
+            incomingOverlayLauncher(
+                applicationContext,
+                number,
+                suspicion.score,
+                suspicion.reason,
+                prefs[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false,
+            )
+        } catch (_: Exception) {
+            // The overlay is best effort.
         }
     }
 

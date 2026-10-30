@@ -1,12 +1,15 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.Application
 import android.app.role.RoleManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Process
 import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.telecom.TelecomManager
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
@@ -46,6 +49,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowCallScreeningService
@@ -65,6 +69,7 @@ class CallShieldScreeningServiceRobolectricTest {
     private lateinit var shadowService: ShadowCallScreeningService
     private val outgoingWarnings = mutableListOf<OutgoingRiskWarning>()
     private val incomingOverlays = mutableListOf<Triple<String, Int, String>>()
+    private val overlayLiveLookups = mutableListOf<Boolean>()
     private val withdrawnOverlays = mutableListOf<String>()
 
     @Before
@@ -101,10 +106,12 @@ class CallShieldScreeningServiceRobolectricTest {
         service.applicationScope = scope
         outgoingWarnings.clear()
         incomingOverlays.clear()
+        overlayLiveLookups.clear()
         OutgoingRiskPolicy.resetForTests()
         service.outgoingWarningLauncher = { _, warning -> outgoingWarnings += warning }
-        service.incomingOverlayLauncher = { _, number, confidence, reason ->
+        service.incomingOverlayLauncher = { _, number, confidence, reason, liveEnrichment ->
             incomingOverlays += Triple(number, confidence, reason)
+            overlayLiveLookups += liveEnrichment
         }
         withdrawnOverlays.clear()
         service.incomingOverlayWithdrawer = { _, number -> withdrawnOverlays += number }
@@ -116,6 +123,7 @@ class CallShieldScreeningServiceRobolectricTest {
         Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(true)
         DirectBootScreeningStore.clearForTest(context)
         UnknownCallWindow.shared.clear()
+        SpamHeuristics.updateHotRanges(emptyList())
         scope.cancel()
         fixture.close()
     }
@@ -578,6 +586,51 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `a suspicious call that rings shows Possible spam with its score`() {
+        val number = "+12125550197"
+        midBandSuspicion()
+        runBlocking { repository.setLiveCallerEnrichment(true) }
+
+        service.onScreenCall(callDetails(number))
+
+        assertFalse(awaitResponse().disallowCall)
+        assertEquals(listOf(Triple(number, 35, "hot_campaign_range")), incomingOverlays)
+        assertEquals(listOf(true), overlayLiveLookups)
+        assertTrue(startedOverlayServices().isEmpty())
+    }
+
+    @Test
+    fun `a suspicious call a later check rejects never opens the overlay`() {
+        val number = "+12125550198"
+        midBandSuspicion()
+        runBlocking { repository.setCnapBlockPatterns(setOf("SPAM LIKELY")) }
+
+        service.onScreenCall(callDetails(number, callerName = "SPAM LIKELY"))
+
+        assertTrue(awaitResponse().rejectCall)
+        awaitUntil { withdrawnOverlays.isNotEmpty() }
+        assertTrue(incomingOverlays.isEmpty())
+        assertTrue(startedOverlayServices().isEmpty())
+    }
+
+    @Test
+    fun `a suspicious call a later check silences still shows Possible spam`() {
+        val number = "+12125550199"
+        midBandSuspicion()
+        runBlocking {
+            repository.setCnapBlockPatterns(setOf("SPAM LIKELY"))
+            repository.setSilentVoicemail(true)
+        }
+
+        service.onScreenCall(callDetails(number, callerName = "SPAM LIKELY"))
+
+        assertTrue(awaitResponse().silenceCall)
+        awaitUntil { incomingOverlays.isNotEmpty() }
+        assertEquals(listOf(Triple(number, 35, "hot_campaign_range")), incomingOverlays)
+        assertTrue(withdrawnOverlays.isEmpty())
+    }
+
+    @Test
     fun `category allow lets a categorized database hit ring`() {
         val number = "+12125550190"
         runBlocking {
@@ -875,13 +928,38 @@ class CallShieldScreeningServiceRobolectricTest {
         number: String,
         direction: Int = Call.Details.DIRECTION_INCOMING,
         properties: Int = 0,
+        callerName: String? = null,
     ): Call.Details =
         ReflectionHelpers.callConstructor(Call.Details::class.java).also { details ->
             ReflectionHelpers.setField(details, "mHandle", Uri.parse("tel:$number"))
             ReflectionHelpers.setField(details, "mCreationTimeMillis", 1_753_094_800_000L)
             ReflectionHelpers.setField(details, "mCallDirection", direction)
             ReflectionHelpers.setField(details, "mCallProperties", properties)
+            if (callerName != null) {
+                ReflectionHelpers.setField(details, "mCallerDisplayName", callerName)
+                ReflectionHelpers.setField(details, "mCallerDisplayNamePresentation", TelecomManager.PRESENTATION_ALLOWED)
+            }
         }
+
+    // Heuristics on and the caller's exchange in the hot campaign list: a
+    // score of 35, suspicious but under the block threshold of 60.
+    private fun midBandSuspicion() {
+        runBlocking { repository.setHeuristics(true) }
+        SpamHeuristics.updateHotRanges(listOf("212555"))
+    }
+
+    private fun startedOverlayServices(): List<Intent> =
+        generateSequence { shadowOf(context as Application).nextStartedService }
+            .filter { it.component?.className == CallerIdOverlayService::class.java.name }
+            .toList()
+
+    private fun awaitUntil(condition: () -> Boolean) {
+        runBlocking {
+            withTimeout(5_000L) {
+                while (!condition()) delay(10L)
+            }
+        }
+    }
 
     private fun awaitResponse(): CallScreeningService.CallResponse =
         runBlocking {

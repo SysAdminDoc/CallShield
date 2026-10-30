@@ -27,8 +27,8 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
-import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import com.sysadmindoc.callshield.ui.describeIdentityEvidence
 import com.sysadmindoc.callshield.ui.joinSignalLabels
 import com.sysadmindoc.callshield.ui.signalLabel
@@ -1046,17 +1046,13 @@ internal class HeuristicChecker(
             )
         }
 
-        // Suspicious-but-not-blocked overlay (realtime CALLS only, score 30..threshold).
+        // Suspicious-but-not-blocked warning (realtime CALLS only, score 30..threshold).
         // Guard on smsBody == null so a suspicious SMS re-scored through the shared
         // chain never pops an incoming-call overlay or fires live caller lookups.
+        // The screening service shows it once it knows a later checker didn't
+        // reject the call, so a rejected call never flashes it.
         if (ctx.realtimeCall && ctx.smsBody == null && hResult.score in 30 until threshold) {
-            showCallerIdOverlay(
-                appContext,
-                ctx.number,
-                hResult.score,
-                hResult.reasons.firstOrNull() ?: "suspicious",
-                ctx.prefs[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false,
-            )
+            ctx.suspicion = CallSuspicion(hResult.score, hResult.reasons.firstOrNull() ?: "suspicious")
         }
         return null
     }
@@ -1081,20 +1077,6 @@ internal class HeuristicChecker(
             ctx.smsBody.takeIf {
                 (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) && !ctx.smsContextTrusted
             }
-    }
-
-    private fun showCallerIdOverlay(
-        ctx: Context,
-        number: String,
-        confidence: Int,
-        reason: String,
-        liveEnrichmentEnabled: Boolean,
-    ) {
-        try {
-            CallerIdOverlayService.startIncoming(ctx, number, confidence, reason, liveEnrichmentEnabled)
-        } catch (_: Exception) {
-            // overlay is best-effort
-        }
     }
 }
 

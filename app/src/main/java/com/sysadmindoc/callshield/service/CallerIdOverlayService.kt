@@ -292,12 +292,10 @@ class CallerIdOverlayService : Service() {
 
     // What the active session is showing, so a later start for the SAME
     // caller with LESS information can be ignored instead of tearing the
-    // session down. Concretely: HeuristicChecker shows a "Possible spam N%"
-    // overlay for mid-band scores during checkSpam(), then the screening
-    // service's not-spam path fires the generic area-code overlay
-    // (confidence 0) for every NANP caller — without this guard the second
-    // start destroyed the suspicion warning before the user could read it
-    // and restarted the live lookups from scratch.
+    // session down. Concretely: a generic area-code start (confidence 0)
+    // arriving after a "Possible spam N%" warning for the same caller would
+    // otherwise destroy the warning before the user could read it and
+    // restart the live lookups from scratch.
     @Volatile private var activeNumber: String = ""
 
     @Volatile private var activeConfidence = 0
@@ -730,7 +728,8 @@ class CallerIdOverlayService : Service() {
         // Auto-dismiss after 20 seconds (backstop). The call-state watcher below
         // dismisses sooner, right when the call ends, so a 2-3 s silenced call's
         // overlay doesn't hover over unrelated UI for the full 20 s. A call that
-        // screening rejects never rings, so it's closed by withdrawIncoming().
+        // screening rejects never rings and gets no overlay, and one still up
+        // for the same caller is closed by withdrawIncoming().
         scheduleDismiss(sessionId, AUTO_DISMISS_MS)
         registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId
