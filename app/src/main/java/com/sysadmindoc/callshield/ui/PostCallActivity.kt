@@ -149,11 +149,15 @@ class PostCallActivity : AppCompatActivity() {
                         .blockNumber(number, "spam", app.getString(R.string.desc_blocked_post_call_local))
                 }.onFailure { Log.w(TAG, "Local post-call block failed", it) }
             } else {
-                app.sendBroadcast(
-                    Intent(app, SpamActionReceiver::class.java)
-                        .setAction(SpamActionReceiver.ACTION_FEEDBACK_SPAM)
-                        .putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, number),
-                )
+                // A direct call, not a broadcast to SpamActionReceiver: Android 17
+                // QPR2 no longer lets a broadcast an app sends to itself raise the
+                // sender's priority, and this screen finishes right after the tap.
+                // The prompt and toast go inside runAction too, so a failure there
+                // is shown instead of thrown into appScope after the screen closed.
+                SpamActionReceiver.runAction(app) {
+                    val work = withContext(Dispatchers.Main) { SpamActionReceiver.spamFeedback(app, number) }
+                    work()
+                }
             }
         }
         finishAndRemoveTask()

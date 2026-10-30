@@ -1,15 +1,23 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
+import com.sysadmindoc.callshield.data.CommunityReport
+import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -17,6 +25,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowToast
+import kotlin.concurrent.thread
 
 /**
  * Robolectric coverage for [SpamActionReceiver] — drives the real
@@ -79,6 +89,65 @@ class SpamActionReceiverRobolectricTest {
             "feedback notification must be cancelled under feedbackNotificationId",
             shadowOf(nm).getNotification(id) != null,
         )
+    }
+
+    /**
+     * The post-call screen calls this directly instead of broadcasting
+     * FEEDBACK_SPAM to the receiver, so the prompt must go at once, nothing
+     * may be broadcast, and the returned work must block and report.
+     *
+     * The other tests here leave their receiver work running on the app
+     * scope, and it reports through the same fake transport, so only this
+     * number's reports are compared. It uses the shared repository like
+     * those tests do, so their late writes never land on a fixture that is
+     * being closed.
+     */
+    @Test
+    fun `spam feedback shared with the post-call screen blocks and reports without a broadcast`() {
+        val number = "+15553330002"
+        val id = postFeedbackNotification(number)
+        val sent = mutableListOf<CommunityReport>()
+        CommunityContributor.transport = { report ->
+            synchronized(sent) { sent += report }
+            ContributeResult(true, "faked in test", ContributeOutcome.REPORTED_SPAM)
+        }
+
+        val work = SpamActionReceiver.spamFeedback(context, number)
+
+        assertFalse("the after-call prompt goes at once", shadowOf(nm).getNotification(id) != null)
+        assertTrue("nothing is broadcast", shadowOf(context as Application).broadcastIntents.isEmpty())
+        runBlocking { work() }
+        val repository = SpamRepository.getInstance(context)
+        assertEquals("user_blocklist", runBlocking { repository.isSpam(number) }.matchSource)
+        val ours = synchronized(sent) { sent.filter { it.number == number } }
+        assertEquals(listOf(number to "spam"), ours.map { it.number to it.type })
+    }
+
+    /** The post-call screen has already closed when this runs, so a failed write must show the toast and throw nothing. */
+    @Test
+    fun `a failed action shows the failure toast instead of throwing`() {
+        ShadowToast.reset()
+        var escaped: Throwable? = null
+        // Off the main thread, since runAction posts its toast to it.
+        val worker =
+            thread {
+                try {
+                    runBlocking { SpamActionReceiver.runAction(context) { error("disk full") } }
+                } catch (e: Throwable) {
+                    escaped = e
+                }
+            }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (worker.isAlive && System.currentTimeMillis() < deadline) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(20)
+        }
+        worker.join(1_000)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse("runAction finished", worker.isAlive)
+        assertNull("nothing escaped runAction", escaped)
+        assertEquals(context.getString(R.string.notification_action_failed), ShadowToast.getTextOfLatestToast())
     }
 
     @Test

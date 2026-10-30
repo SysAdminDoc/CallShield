@@ -48,6 +48,7 @@ All notable changes to CallShield will be documented in this file.
 - Database v57 adds the FCC complaints published through 2026-10-29 and FTC's through 2026-10-28, for 51,379 numbers, and refreshes the 652 French telemarketing ranges. The community watch list now carries 7 numbers that several people reported.
 - The Simplified Chinese translation now covers nearly every screen, with 311 more strings and every plural, from aixtin (#42). Only the two newest strings still show in English.
 - The Android post-call screen has a Call back button (#43). It opens your dialer with the number filled in, so a call that dropped is one tap from a redial and CallShield still needs no permission to place calls.
+- Spam on the post-call screen now records the block and the report itself, and the home screen widget redraws itself when your lists change. Both used to hand the job to the app's own receiver with a broadcast, which Android 17 QPR2 no longer delivers once the app has left the screen, so the block could have been lost.
 
 ## v1.12.0 (2026-10-09)
 

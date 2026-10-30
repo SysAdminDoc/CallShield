@@ -29,12 +29,7 @@ class SpamActionReceiver : BroadcastReceiver() {
             when (intent.action) {
                 ACTION_FEEDBACK_SPAM -> {
                     val number = intent.getStringExtra(EXTRA_FEEDBACK_NUMBER) ?: return
-                    notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
-                    Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
-                    suspend {
-                        repo.blockNumber(number, "spam", appContext.getString(R.string.desc_blocked_from_after_call_feedback))
-                        CommunityContributor.contribute(appContext, repo.normalizeNumber(number), "spam")
-                    }
+                    spamFeedback(appContext, number)
                 }
 
                 ACTION_FEEDBACK_NOT_SPAM -> {
@@ -109,29 +104,11 @@ class SpamActionReceiver : BroadcastReceiver() {
                 }
             } ?: return
 
-        // Previously this created a fresh CoroutineScope(SupervisorJob+IO) per
-        // broadcast, which was never cancelled and leaked a Job on every
-        // action. Reuse the process-wide appScope — the work must outlive
-        // onReceive anyway (goAsync covers the broadcast lifetime, not the
-        // suspend body).
+        // The work must outlive onReceive (goAsync covers the broadcast
+        // lifetime, not the suspend body), so it runs on the process-wide
+        // appScope rather than a scope created and leaked per broadcast.
         val pendingResult = goAsync()
-        CallShieldApp.appScope.launch {
-            try {
-                work.invoke()
-            } catch (e: Exception) {
-                // The confirmation toast already fired for responsiveness; a
-                // failed DB write must not stay silent (and an uncaught throw
-                // here would take down the process via appScope).
-                Log.w("SpamActionReceiver", "Notification action failed", e)
-                withContext(Dispatchers.Main) {
-                    Toast
-                        .makeText(appContext, appContext.getString(R.string.notification_action_failed), Toast.LENGTH_SHORT)
-                        .show()
-                }
-            } finally {
-                pendingResult.finish()
-            }
-        }
+        launchAction(appContext, work) { pendingResult.finish() }
     }
 
     /** "Not spam" on a blocked-call alert: let the number ring for a day, and tell the community when its data was wrong. */
@@ -184,5 +161,66 @@ class SpamActionReceiver : BroadcastReceiver() {
         const val ACTION_FEEDBACK_SPAM = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
         const val ACTION_FEEDBACK_NOT_SPAM = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
         const val EXTRA_FEEDBACK_NUMBER = "number"
+        private const val TAG = "SpamActionReceiver"
+
+        /**
+         * The after-call "Spam" feedback: cancels the prompt and confirms at
+         * once, and returns the block plus the community report to run off
+         * the main thread. Shared with the post-call screen, which calls it
+         * directly instead of broadcasting to this receiver: Android 17 QPR2
+         * no longer lets a broadcast an app sends to itself raise the
+         * sender's priority, and that screen finishes right after the tap.
+         * Call on the main thread, which the toast needs.
+         */
+        fun spamFeedback(
+            appContext: Context,
+            number: String,
+        ): suspend () -> Unit {
+            val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
+            Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
+            val repo = SpamRepository.getInstance(appContext)
+            return {
+                repo.blockNumber(number, "spam", appContext.getString(R.string.desc_blocked_from_after_call_feedback))
+                CommunityContributor.contribute(appContext, repo.normalizeNumber(number), "spam")
+            }
+        }
+
+        /**
+         * Runs [work] now and ignores what it returns. The confirmation toast
+         * already fired for responsiveness, so a failed write is logged and
+         * shown rather than left silent, and never thrown into the caller's
+         * scope.
+         */
+        suspend fun runAction(
+            appContext: Context,
+            work: suspend () -> Any?,
+        ) {
+            try {
+                work()
+            } catch (e: Exception) {
+                Log.w(TAG, "Notification action failed", e)
+                withContext(Dispatchers.Main) {
+                    Toast
+                        .makeText(appContext, appContext.getString(R.string.notification_action_failed), Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+
+        /** [runAction] on the process scope, then [onDone] whether it succeeded or not. */
+        fun launchAction(
+            appContext: Context,
+            work: suspend () -> Any?,
+            onDone: () -> Unit,
+        ) {
+            CallShieldApp.appScope.launch {
+                try {
+                    runAction(appContext, work)
+                } finally {
+                    onDone()
+                }
+            }
+        }
     }
 }

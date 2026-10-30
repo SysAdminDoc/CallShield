@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.relativeTimeSpan
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -36,19 +37,23 @@ class CallShieldWidget : AppWidgetProvider() {
         // Without this the process drops to cached priority as soon as
         // onUpdate returns and can be killed mid-query, leaving the widget on
         // layout placeholders until the next 30-minute cycle.
-        val pendingResult = goAsync()
-        val appContext = context.applicationContext
+        // Null when onUpdate is called directly rather than from a delivered
+        // broadcast (Robolectric's widget host does that).
+        val pendingResult: PendingResult? = goAsync()
+        render(context.applicationContext, appWidgetIds).invokeOnCompletion { pendingResult?.finish() }
+    }
+
+    /** Loads the counts and pushes every widget in [appWidgetIds]; the job ends once the last one is updated. */
+    private fun render(
+        appContext: Context,
+        appWidgetIds: IntArray,
+    ): Job =
         CallShieldApp.appScope.launch {
-            try {
-                val manager = AppWidgetManager.getInstance(appContext)
-                for (id in appWidgetIds) {
-                    updateWidget(appContext, manager, id)
-                }
-            } finally {
-                pendingResult.finish()
+            val manager = AppWidgetManager.getInstance(appContext)
+            for (id in appWidgetIds) {
+                updateWidget(appContext, manager, id)
             }
         }
-    }
 
     private suspend fun updateWidget(
         appContext: Context,
@@ -163,17 +168,21 @@ class CallShieldWidget : AppWidgetProvider() {
     }
 
     companion object {
-        fun refreshAll(context: Context) {
-            val intent =
-                Intent(context, CallShieldWidget::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                }
+        /**
+         * Re-renders every placed widget directly and returns the job doing
+         * it, or null when none is placed. This used to broadcast
+         * ACTION_APPWIDGET_UPDATE to this provider; Android 17 QPR2 no longer
+         * lets a broadcast an app sends to itself raise the sender's
+         * priority, and most refreshes come from background syncs.
+         */
+        fun refreshAll(context: Context): Job? {
+            val appContext = context.applicationContext
             val ids =
                 AppWidgetManager
-                    .getInstance(context)
-                    .getAppWidgetIds(ComponentName(context, CallShieldWidget::class.java))
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-            context.sendBroadcast(intent)
+                    .getInstance(appContext)
+                    .getAppWidgetIds(ComponentName(appContext, CallShieldWidget::class.java))
+            if (ids.isEmpty()) return null
+            return CallShieldWidget().render(appContext, ids)
         }
     }
 
