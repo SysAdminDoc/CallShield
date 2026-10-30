@@ -685,6 +685,9 @@ def assert_external_source_parsers() -> None:
                     {
                         "version": 42,
                         "numbers": [
+                            "+4930123456",
+                            {"phone": "+4930123457", "rating": "G_FRAUD", "votes": "many"},
+                            {"phone": "+4930123458", "rating": "G_FRAUD", "votes": [3]},
                             {
                                 "phone": "+49123456789",
                                 "rating": "G_FRAUD",
@@ -760,6 +763,10 @@ def assert_external_source_parsers() -> None:
         module.requests.get = lambda *args, **kwargs: FakeResponse({}, status_code=401)
         if module.fetch_phoneblock(limit=5):
             raise AssertionError("PhoneBlock auth failure must fail closed")
+        for payload in (["+49123456789"], {"numbers": {"+49123456789": 20}}, {"numbers": None}):
+            module.requests.get = lambda *args, payload=payload, **kwargs: FakeResponse(payload)
+            if module.fetch_phoneblock(limit=5):
+                raise AssertionError(f"PhoneBlock payload {payload!r} must fail closed")
     finally:
         module.requests.get = original_get
         module.time.sleep = original_sleep

@@ -738,12 +738,22 @@ def fetch_phoneblock(limit: int = 0, api_key: str | None = None) -> list[dict]:
         print(f"  Error: {exc}")
         return []
 
+    rows = payload.get("numbers", []) if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        print("  Error: response has no numbers array")
+        return []
+
     numbers = {}
-    for row in payload.get("numbers", []):
-        normalized = normalize_external_phone(row.get("phone", ""))
-        if not normalized or int(row.get("votes", 0) or 0) <= 0:
+    for row in rows:
+        if not isinstance(row, dict):
             continue
-        votes = int(row.get("votes", 1) or 1)
+        normalized = normalize_external_phone(row.get("phone", ""))
+        try:
+            votes = int(row.get("votes", 0) or 0)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not normalized or votes <= 0:
+            continue
         rating = str(row.get("rating", "unknown"))
         spam_type = "scam" if rating in {"G_FRAUD", "F_GAMBLE"} else "telemarketer"
         activity = row.get("lastActivity")
