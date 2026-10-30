@@ -35,6 +35,9 @@ def run_script_result(
     # The merge asks FCC about pending numbers. Here it reads a saved lookup
     # instead, and a test that has no such file gets no complaints.
     env["CALLSHIELD_FCC_COMPLAINTS_FILE"] = str(fcc_complaints_file(data_dir))
+    # Reports dated BASE_DAY came in before the Worker's bare-digit fix and
+    # reports dated TODAY after it, whatever day the suite runs.
+    env["CALLSHIELD_BARE_DIGIT_FIX_DAY"] = TODAY
     result = subprocess.run(
         [sys.executable, str(SCRIPTS_DIR / name), *(args or [])],
         cwd=ROOT,
@@ -1164,6 +1167,78 @@ def assert_a_published_number_leaves_the_watch_list(data_dir: Path) -> None:
     assert feed["numbers"] == [] and feed["cleared"] is True, feed
 
 
+def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> None:
+    """Reports stored before 2026-10-30 turned bare Chinese mobiles into +1
+    numbers (15017944158 into +1 501-794-4158, an Arkansas line). One whose +86
+    reading is already listed, or one in a dead area code that no app sent,
+    never reaches the watch list, and a ledger row it left behind is dropped.
+    Reports the fixed Worker stored, and numbers the database lists or a
+    maintainer approved, are taken as sent."""
+    def fcc_row(number: str) -> dict:
+        return {"number": number, "type": "spam", "reports": 1, "first_seen": BASE_DAY, "last_seen": BASE_DAY,
+                "description": "FCC complaint", "sources": ["fcc_complaints"]}
+
+    twin_listed = "+15017944158"
+    dead_area_code = "+18957465363"
+    sent_by_the_app = "+18957465364"
+    after_the_fix = "+18957465365"
+    listed = "+18957465366"
+    approved = "+18957465367"
+    aged_out = "+18957465368"
+    ordinary = "+12122340801"
+    twin_listed_later = "+18638657795"
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["fcc_complaints"], "prefixes": [],
+         "numbers": [fcc_row("+8615017944158"), fcc_row(listed)]},
+    )
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [{"number": approved, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/review"}]},
+    )
+    reported = (datetime.now(timezone.utc) - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+    for number in (twin_listed, dead_area_code, sent_by_the_app, listed, approved, ordinary, twin_listed_later):
+        for index, bucket in enumerate(BUCKETS[:2], start=1):
+            report_id = f"00000000-0000-4000-8000-{index:012x}" if number == sent_by_the_app else None
+            write_report(
+                data_dir, f"{number[1:]}-{index}.json", number, bucket, (reported + timedelta(hours=index)).isoformat(),
+                device=BUCKETS[index + 1], report_id=report_id,
+            )
+    for index, bucket in enumerate(BUCKETS[:2], start=1):
+        write_report(
+            data_dir, f"{after_the_fix[1:]}-{index}.json", after_the_fix, bucket, f"{TODAY}T00:0{index}:00+00:00",
+            device=BUCKETS[index + 1],
+        )
+    # Too old to count as a report, the app's report still leaves a watch row.
+    write_report(
+        data_dir, f"{aged_out[1:]}.json", aged_out, BUCKETS[0], (reported - timedelta(days=40)).isoformat(),
+        report_id="00000000-0000-4000-8000-0000000000ff",
+    )
+    run_drain(data_dir)
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    watched = sorted(row["number"] for row in feed["numbers"])
+    assert watched == [ordinary, twin_listed_later, sent_by_the_app, after_the_fix], feed
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert twin_listed not in pending and dead_area_code not in pending, sorted(pending)
+    assert not list((data_dir / "reports").glob("*.json")), "the merge left misread reports in the queue"
+    assert row_for(data_dir, listed)["reports"] == 3, row_for(data_dir, listed)
+    assert row_for(data_dir, approved) is not None and pending_reports_for(data_dir, approved) == 2
+
+    # Its +86 reading listed later, the ledger row an earlier drain kept goes.
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    database["numbers"].append(fcc_row("+8618638657795"))
+    write_json(data_dir / "spam_numbers.json", database)
+    run_script("merge_community_reports.py", data_dir)
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    watched = sorted(row["number"] for row in feed["numbers"])
+    assert watched == [ordinary, sent_by_the_app, after_the_fix], feed
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert twin_listed_later not in pending, sorted(pending)
+    assert pending_reports_for(data_dir, approved) == 2
+    # Its id went with its report, which doesn't make it a report no app sent.
+    assert pending[aged_out]["watch_events"] and not pending[aged_out]["events"], pending.get(aged_out)
+
+
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
     """Issue #27: one report of a Munich number waits for corroboration no
     imported source can give. The maintainer's review publishes it, and later
@@ -1932,6 +2007,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_a_published_number_leaves_the_watch_list(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_bare_digit_misreadings_stay_off_the_watch_list(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")

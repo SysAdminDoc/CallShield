@@ -17,7 +17,7 @@ import os
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from phone_normalization import validated_report_number
+from phone_normalization import bare_digit_misreading, validated_report_number
 
 from pipeline_io import (
     FeedCollapseError,
@@ -151,6 +151,26 @@ def main(argv: list[str] | None = None) -> int:
                 report_ids.append((validated_report_id(report.get("report_id")), reported_at, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
+
+    # Reports stored before 2026-10-30 may carry a bare foreign number read as
+    # +1 (see bare_digit_misreading); the merge drops the same ones.
+    db_numbers: set[str] = set()
+    if DB_FILE.exists():
+        with open(DB_FILE) as f:
+            db_numbers = {str(entry.get("number", "")) for entry in json.load(f).get("numbers", [])}
+    known_numbers = db_numbers | {entry[0] for entry in pending}
+    files_with_id = {token for report_id, _, token in report_ids if report_id}
+    misread = {
+        entry[4]
+        for entry in pending
+        if entry[0] not in db_numbers
+        and bare_digit_misreading(
+            entry[0], known_numbers, entry[4] in files_with_id, entry[1].astimezone(timezone.utc).date().isoformat()
+        )
+    }
+    if misread:
+        print(f"  Dropped {len(misread)} report(s) for +1 numbers that read as bare foreign numbers")
+        pending = [entry for entry in pending if entry[4] not in misread]
 
     # A report the app sent twice under one id is one reporter, even when the
     # resend came from another network and so from another reporter bucket.

@@ -15,7 +15,12 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from phone_normalization import is_plausible_number, split_country_code, validated_report_number
+from phone_normalization import (
+    bare_digit_misreading,
+    is_plausible_number,
+    split_country_code,
+    validated_report_number,
+)
 from pipeline_io import (
     atomic_write_json,
     report_queue_digest,
@@ -1036,6 +1041,37 @@ def main(argv: list[str] | None = None):
     if revoked_released or revoked_removed:
         print(f"Revoked approvals: {revoked_removed} rows unpublished, {revoked_released} left to their other sources")
 
+    # Reports the Worker stored before 2026-10-30 may carry a bare foreign
+    # number read as +1. A number the database lists or a maintainer approved
+    # stands on its own evidence; an unpublished ledger row doesn't. A row
+    # judged here still holds its reports, so a row whose app report aged out
+    # isn't mistaken for one no app sent.
+    approved_numbers = {approval["number"] for approval in approvals}
+    known_numbers = set(existing) | set(pending) | {number for _, number, _ in peeked}
+
+    def misread(number: str, has_report_id: bool, reported_day: str) -> bool:
+        return (
+            number not in existing
+            and number not in approved_numbers
+            and bare_digit_misreading(number, known_numbers, has_report_id, reported_day)
+        )
+
+    misread_rows = sorted(
+        number
+        for number, state in pending.items()
+        if not state["published"]
+        and state["events"]
+        and misread(
+            number,
+            any(str(event.get("key", "")).startswith("id:") for event in state["events"]),
+            max(event["day"] for event in [*state["events"], *state.get("watch_events", [])]),
+        )
+    )
+    for number in misread_rows:
+        del pending[number]
+    if misread_rows:
+        print(f"Dropped {len(misread_rows)} pending +1 rows that read as bare foreign numbers: {', '.join(misread_rows)}")
+
     demoted = 0
     for number, entry in list(existing.items()):
         if canonical_source_ids(entry) != {"community_reports"}:
@@ -1063,6 +1099,7 @@ def main(argv: list[str] | None = None):
     # Counting them by raw value keeps the run auditable without reprinting one
     # line per file for a burst of the same fictional number.
     implausible: Counter[str] = Counter()
+    misread_reports: Counter[str] = Counter()
     processed_files = []
     counted_ids: set[str] = set()
     already_merged = 0
@@ -1090,6 +1127,15 @@ def main(argv: list[str] | None = None):
                 skipped += 1
                 continue
 
+            parsed_at = parse_reported_at(report.get("reported_at"))
+            reported_at = parsed_at.astimezone(timezone.utc).date().isoformat() if parsed_at else today
+            reported_at = min(reported_at, today)
+
+            if misread(number, bool(validated_report_id(report.get("report_id"))), reported_at):
+                misread_reports[number] += 1
+                processed_files.append(report_file)
+                continue
+
             if report_file.name in previously_merged:
                 processed_files.append(report_file)
                 already_merged += 1
@@ -1109,9 +1155,6 @@ def main(argv: list[str] | None = None):
             report_id = validated_report_id(report.get("report_id"))
 
             spam_type = report.get("type", "unknown")
-            parsed_at = parse_reported_at(report.get("reported_at"))
-            reported_at = parsed_at.astimezone(timezone.utc).date().isoformat() if parsed_at else today
-            reported_at = min(reported_at, today)
 
             # Handle false-positive reports: collect one vote per reporter for review.
             # SECURITY: anonymous not_spam votes may only weaken COMMUNITY rows.
@@ -1395,6 +1438,10 @@ def main(argv: list[str] | None = None):
         print(f"\nRejected as implausible ({skipped} report(s), {len(implausible)} distinct):")
         for raw, count in sorted(implausible.items(), key=lambda item: (-item[1], item[0])):
             print(f"  {raw} x{count}")
+    if misread_reports:
+        print(f"\nDropped as bare foreign numbers read as +1 ({sum(misread_reports.values())} report(s)):")
+        for number, count in sorted(misread_reports.items(), key=lambda item: (-item[1], item[0])):
+            print(f"  {number} x{count}")
 
     print(
         f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), "

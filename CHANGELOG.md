@@ -81,6 +81,7 @@ All notable changes to CallShield will be documented in this file.
 - On a phone with two SIMs, the caller ID popup for a call on the second SIM closed the moment it opened. It went by the main SIM's call state, and that reads idle while the other SIM rings. The popup now watches each SIM and closes once every one of them is idle, the same way an outgoing call's warning does.
 - On a phone with two SIMs, Answer and hang up now rejects a spam call when either SIM is roaming. Android doesn't tell call screening apps which SIM a call came in on, so CallShield only checked the main one, and a call on a roaming second SIM could get answered abroad, where answering can cost you.
 - The report service now takes a number sent without a + only when it has ten digits, read as a US or Canadian number. Any other bare length is turned away, since nothing says which country it's from. A Chinese mobile sent as 15017944158 was being stored as +1 501-794-4158, a line in Arkansas, and could end up on the watch list. The import scripts for North American feeds still read a bare 1 plus ten digits as +1.
+- The community report merge and the watch list now set aside reports from before that fix that were most likely misread that way. That's a +1 number whose +86 reading is already a known number, or one in an area code no phone line uses that didn't come from the app. A number already in the database or approved by hand is never set aside, and neither is a report from after the fix.
 
 ## v1.12.0 (2026-10-09)
 

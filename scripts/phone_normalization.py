@@ -1,5 +1,17 @@
 """Shared phone normalization helpers for report and import scripts."""
 
+import csv
+import os
+from collections.abc import Container
+from functools import lru_cache
+from pathlib import Path
+
+NANP_AREA_CODES_FILE = Path(__file__).resolve().parent.parent / "data" / "nanp-area-codes.csv"
+# The Worker stopped reading bare digits as NANP on 2026-10-30, so a report
+# dated from the next UTC day on went through the fixed Worker. Tests move the
+# day with CALLSHIELD_BARE_DIGIT_FIX_DAY.
+BARE_DIGIT_FIX_DAY = os.environ.get("CALLSHIELD_BARE_DIGIT_FIX_DAY", "2026-10-31")
+
 FORMAT_CONTROL_CODES = {0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF}
 
 # Every assigned two-digit country calling code (ITU-T E.164). Calling codes are
@@ -146,6 +158,34 @@ def is_plausible_number(e164: str | None) -> bool:
         if nxx[0] < "2" or nxx == "555":
             return False
     return True
+
+
+@lru_cache(maxsize=1)
+def nanp_area_codes_in_service() -> frozenset[str]:
+    """Area codes the pinned NANPA snapshot (data/nanp-area-codes.csv) lists as in service."""
+    with NANP_AREA_CODES_FILE.open(encoding="utf-8-sig", newline="") as source:
+        rows = csv.DictReader(line for line in source if not line.startswith("#"))
+        return frozenset(row["npa"] for row in rows if row["status"] == "in_service")
+
+
+def bare_digit_misreading(e164: str, known: Container[str], has_report_id: bool, reported_day: str) -> bool:
+    """Whether a stored +1 number is most likely a bare foreign number read as NANP.
+
+    Until 2026-10-30 the report paths read any bare 11 digits as "+digits", so
+    a Chinese mobile sent as 15017944158 was stored as +1 501-794-4158, an
+    Arkansas line. The stored form can't show that, so two signs decide: its
+    +86 reading is already a known number, or no subscriber can hold it (its
+    area code isn't in service) and no app sent it (the app has attached a
+    report id since v1.10.0). A spoofed caller ID can sit in a dead area code
+    too, which is why the second sign needs both halves, and why a report
+    dated BARE_DIGIT_FIX_DAY or later is never judged: the fixed Worker stored
+    it as sent.
+    """
+    if reported_day >= BARE_DIGIT_FIX_DAY or len(e164) != 12 or not e164.startswith("+1"):
+        return False
+    if f"+86{e164[1:]}" in known:
+        return True
+    return not has_report_id and e164[2:5] not in nanp_area_codes_in_service()
 
 
 def validated_report_number(raw: str | None) -> str | None:
