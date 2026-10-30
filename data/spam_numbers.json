@@ -1,5 +1,5 @@
 {
-  "version": 58,
+  "version": 59,
   "updated": "2026-10-30",
   "description": "CallShield community spam number database",
   "sources": [
@@ -731023,6 +731023,33 @@
       ]
     },
     {
+      "number": "+12012000067",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-08-29",
+      "last_seen": "2026-10-30",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "community",
+        "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-29",
+          "last_seen": "2018-08-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 2105481600000
+        }
+      ]
+    },
+    {
       "number": "+12037601637",
       "type": "robocall",
       "reports": 3,
@@ -995641,32 +995668,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2018-06-15",
           "last_seen": "2019-04-09",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 2105481600000
-        }
-      ]
-    },
-    {
-      "number": "+12012000067",
-      "type": "robocall",
-      "reports": 3,
-      "first_seen": "2018-08-29",
-      "last_seen": "2018-08-29",
-      "description": "FCC: Unwanted Calls",
-      "sources": [
-        "legacy_import"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2018-08-29",
-          "last_seen": "2018-08-29",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",
