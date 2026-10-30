@@ -82,13 +82,14 @@ export function normalizePhoneNumberForReport(number) {
   }
 
   if (digits.length < 7 || digits.length > 15) return null;
-  if (!explicitInternational && digits.length === 10) return `+1${digits}`;
-  if (explicitInternational) {
-    // Only an explicitly international number tells us where the country code
-    // ends, which is what trunk-prefix stripping needs.
-    digits = stripNationalTrunkPrefix(digits);
-    if (digits.length < 7 || digits.length > 15) return null;
-  }
+  // Without a "+" only ten digits say where a number belongs. Any other bare
+  // length is a guess that can land on a real subscriber: a Chinese mobile
+  // sent as 15017944158 became +1 501-794-4158, an Arkansas line.
+  if (!explicitInternational) return digits.length === 10 ? `+1${digits}` : null;
+  // Only an explicitly international number tells us where the country code
+  // ends, which is what trunk-prefix stripping needs.
+  digits = stripNationalTrunkPrefix(digits);
+  if (digits.length < 7 || digits.length > 15) return null;
   return `+${digits}`;
 }
 

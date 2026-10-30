@@ -15,7 +15,8 @@
     "A null expectation means the implementation must REJECT the input. The Kotlin column",
     "is null for bare national numbers by design: the app always has an E.164 number from",
     "PhoneNumberUtils, so a missing '+' there means the input is untrustworthy. The other",
-    "two accept hand-typed reports and apply the 10-digit -> NANP heuristic."
+    "two accept hand-typed reports and apply the 10-digit -> NANP heuristic, and reject",
+    "every other bare length."
   ],
   "functions": {
     "kotlin": "CommunityContributor.normalizeForReport",
@@ -82,6 +83,16 @@
       "input": "2122345678",
       "why": "Bare national. Kotlin rejects (the app always holds E.164); the hand-typed report paths apply the NANP heuristic. Intentional divergence.",
       "expected": { "kotlin": null, "worker": "+12122345678", "python": "+12122345678" }
+    },
+    {
+      "input": "15017944158",
+      "why": "Bare 11 digits: a Chinese mobile (+86 150 1794 4158) and an Arkansas line (+1 501 794 4158) read the same. Reading it as +1 put the Arkansas number on the 2026-10-30 watch list, so every bare length but 10 is rejected.",
+      "expected": { "kotlin": null, "worker": null, "python": null }
+    },
+    {
+      "input": "12122345678",
+      "why": "Bare 1 + ten digits is rejected too: on the report path it can't be told apart from a Chinese mobile. Only the NANP-only importers (normalize_nanp_number) read it as +1.",
+      "expected": { "kotlin": null, "worker": null, "python": null }
     },
     {
       "input": "‎+‏86 0558​ 646‎ 8536",

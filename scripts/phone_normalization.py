@@ -81,14 +81,16 @@ def normalize_report_number(raw: str | None) -> str | None:
     digits = "".join(ch for ch in normalized if "0" <= ch <= "9")
     if len(digits) < 7 or len(digits) > 15:
         return None
-    if normalized.startswith("+"):
-        # Only an explicitly international number tells us where the country
-        # code ends, which is what trunk-prefix stripping needs.
-        digits = strip_national_trunk_prefix(digits)
-        if len(digits) < 7 or len(digits) > 15:
-            return None
-    elif len(digits) == 10:
-        digits = f"1{digits}"
+    if not normalized.startswith("+"):
+        # Without a "+" only ten digits say where a number belongs. Any other
+        # bare length is a guess that can land on a real subscriber: a Chinese
+        # mobile sent as 15017944158 became +1 501-794-4158, an Arkansas line.
+        return f"+1{digits}" if len(digits) == 10 else None
+    # Only an explicitly international number tells us where the country
+    # code ends, which is what trunk-prefix stripping needs.
+    digits = strip_national_trunk_prefix(digits)
+    if len(digits) < 7 or len(digits) > 15:
+        return None
     return f"+{digits}"
 
 
@@ -99,7 +101,13 @@ def normalize_nanp_number(raw: str | None) -> str | None:
     importers can't ship fictional NANP rows (555 area/exchange, N11 service
     codes) that the merge script would only purge on its next run.
     """
-    normalized = normalize_report_number(raw)
+    normalized = normalize_phone_number(raw)
+    # A North American feed's bare 1 + ten digits is NANP. Only this
+    # NANP-only path may read it that way; the report path sees numbers
+    # from everywhere.
+    if len(normalized) == 11 and normalized.startswith("1"):
+        normalized = f"+{normalized}"
+    normalized = normalize_report_number(normalized)
     if not normalized:
         return None
     digits = normalized[1:]

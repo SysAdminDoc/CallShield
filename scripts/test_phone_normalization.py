@@ -27,6 +27,9 @@ def main() -> None:
     assert normalize_report_number("\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u0660") is None
 
     assert normalize_nanp_number("212-234-5678") == "+12122345678"
+    # A US feed's 1 + ten digits still imports, though the report path now
+    # rejects that bare form (it reads the same as a Chinese mobile).
+    assert normalize_nanp_number("1-212-234-5678") == "+12122345678"
     assert normalize_nanp_number("+442071234567") is None
     # Bulk importers now share the plausibility gate: fictional NANP rows
     # (555 exchange, 555/N11 area codes) are rejected at import time instead
