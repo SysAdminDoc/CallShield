@@ -146,6 +146,10 @@ android {
             isIncludeAndroidResources = true
 
             all {
+                // Gradle's 512 MB default ran out of heap in full runs: one worker
+                // loads android-all for SDK 29, 30, 32, 33, 34, 35 and 36, and
+                // CopyConfirmationTest's 32/33 jars came last and failed to load.
+                it.maxHeapSize = "2g"
                 // The wall-clock ceilings in HotPathBenchmarkTest and RaceTest
                 // were read from this property but nothing ever set it, so a
                 // loaded machine (parallel builds are routine here) could flake
