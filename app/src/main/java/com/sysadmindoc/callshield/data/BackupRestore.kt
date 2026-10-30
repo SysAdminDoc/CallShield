@@ -112,6 +112,8 @@ object BackupRestore {
         val type: String,
         val description: String,
         val expiresAt: Long? = null,
+        /** When it was blocked, for the newest-first sort; null in older backups, which restore it as the restore time. */
+        val blockedAt: Long? = null,
     )
 
     data class BackupWhitelist(
@@ -368,7 +370,7 @@ object BackupRestore {
                     // Export pulls only user-sourced rows, and restore always
                     // recreates them as source="user" (so sync's replaceBySource
                     // can't wipe them), so provenance isn't part of the schema.
-                    BackupNumber(it.number, it.type, it.description, it.expiresAt)
+                    BackupNumber(it.number, it.type, it.description, it.expiresAt, it.blockedAt)
                 }
             } else {
                 emptyList()
@@ -828,9 +830,9 @@ object BackupRestore {
                     for (n in payload.blockedNumbers) {
                         val applied =
                             if (n.expiresAt != null) {
-                                repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description, keepLocal = true)
+                                repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description, keepLocal = true, blockedAt = n.blockedAt)
                             } else {
-                                repo.blockNumber(n.number, n.type, n.description, keepLocal = true)
+                                repo.blockNumber(n.number, n.type, n.description, keepLocal = true, blockedAt = n.blockedAt)
                             }
                         // A temp block refused by a local permanent allow (and
                         // vice versa below) must not inflate the success toast.
@@ -1181,6 +1183,8 @@ object BackupRestore {
                 number = it,
                 type = type.trim().ifBlank { "unknown" },
                 description = description.trim(),
+                // A time from the future would pin the row to the top of the newest-first sort.
+                blockedAt = blockedAt?.takeIf { time -> time in 1..nowMillis },
             )
         }
     }

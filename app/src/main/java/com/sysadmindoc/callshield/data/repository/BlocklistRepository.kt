@@ -114,6 +114,8 @@ class BlocklistRepository(
         // A restore: an allow or block this phone already has for the number
         // stays as it is, unless it's temporary and the backup's block is permanent.
         keepLocal: Boolean = false,
+        // A restore passes the backup's block time so the newest-first sort keeps its order.
+        blockedAt: Long? = null,
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
@@ -148,7 +150,7 @@ class BlocklistRepository(
                                 source = "user",
                                 isUserBlocked = true,
                                 expiresAt = expiresAt,
-                                blockedAt = now,
+                                blockedAt = blockedAt ?: now,
                             ),
                         )
                     }
@@ -163,7 +165,7 @@ class BlocklistRepository(
                                     isUserBlocked = true,
                                     expiresAt = expiresAt,
                                     // Changing a block's length or label keeps its place in the newest-first sort.
-                                    blockedAt = existing.blockedAt.takeIf { existing.isUserBlocked } ?: now,
+                                    blockedAt = existing.blockedAt.takeIf { existing.isUserBlocked } ?: blockedAt ?: now,
                                 ),
                             )
                         }
@@ -181,7 +183,8 @@ class BlocklistRepository(
         type: String = "unknown",
         description: String = "",
         keepLocal: Boolean = false,
-    ) = blockNumber(number, type, description, expiresAt, keepLocal = keepLocal)
+        blockedAt: Long? = null,
+    ) = blockNumber(number, type, description, expiresAt, keepLocal = keepLocal, blockedAt = blockedAt)
 
     suspend fun temporaryAllowNumber(
         number: String,

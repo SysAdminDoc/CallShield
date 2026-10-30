@@ -849,7 +849,8 @@ class SpamRepository(
         description: String = "",
         cleanupExpired: Boolean = true,
         keepLocal: Boolean = false,
-    ) = blocklistRepository.blockNumber(number, type, description, cleanupExpired = cleanupExpired, keepLocal = keepLocal)
+        blockedAt: Long? = null,
+    ) = blocklistRepository.blockNumber(number, type, description, cleanupExpired = cleanupExpired, keepLocal = keepLocal, blockedAt = blockedAt)
 
     suspend fun temporaryBlockNumber(
         number: String,
@@ -857,7 +858,8 @@ class SpamRepository(
         type: String = "unknown",
         description: String = "",
         keepLocal: Boolean = false,
-    ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description, keepLocal)
+        blockedAt: Long? = null,
+    ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description, keepLocal, blockedAt)
 
     suspend fun cleanupExpiredTemporaryDecisions() = blocklistRepository.cleanupExpiredTemporaryDecisions()
 
