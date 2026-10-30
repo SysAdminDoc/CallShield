@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import android.Manifest
 import android.app.Application
 import android.app.role.RoleManager
 import android.content.Context
@@ -10,6 +11,8 @@ import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.telecom.TelecomManager
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
@@ -54,6 +57,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowCallScreeningService
 import org.robolectric.shadows.ShadowRoleManager
+import org.robolectric.shadows.ShadowSubscriptionManager
 import org.robolectric.shadows.ShadowUserManager
 import org.robolectric.util.ReflectionHelpers
 import javax.inject.Provider
@@ -478,6 +482,22 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
         awaitScopeIdle()
+    }
+
+    @Test
+    fun `answer and hang up takes a blocked call when no SIM roams`() {
+        val (response, phase) = answerHangUpResponse(secondSimRoaming = false)
+        assertTrue(response.silenceCall)
+        assertFalse(response.rejectCall)
+        assertTrue(phase != AnswerHangUpController.Phase.NONE)
+    }
+
+    @Test
+    fun `answer and hang up rejects instead while the second SIM roams`() {
+        // Screening gets no account handle, so the call may be on either SIM.
+        val (response, phase) = answerHangUpResponse(secondSimRoaming = true)
+        assertTrue(response.rejectCall)
+        assertEquals(AnswerHangUpController.Phase.NONE, phase)
     }
 
     @Test
@@ -940,6 +960,41 @@ class CallShieldScreeningServiceRobolectricTest {
                 ReflectionHelpers.setField(details, "mCallerDisplayNamePresentation", TelecomManager.PRESENTATION_ALLOWED)
             }
         }
+
+    private fun answerHangUpResponse(secondSimRoaming: Boolean): Pair<CallScreeningService.CallResponse, AnswerHangUpController.Phase> {
+        val number = "+12125550185"
+        runBlocking {
+            repository.blockNumber(number, type = "test")
+            repository.setAnswerHangUpEnabled(true)
+        }
+        shadowOf(context as Application).grantPermissions(
+            Manifest.permission.ANSWER_PHONE_CALLS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+        )
+        val phone = context.getSystemService(TelephonyManager::class.java)
+        val secondSim: TelephonyManager = Shadow.newInstanceOf(TelephonyManager::class.java)
+        shadowOf(secondSim).setIsNetworkRoaming(secondSimRoaming)
+        shadowOf(phone).setTelephonyManagerForSubscriptionId(1, Shadow.newInstanceOf(TelephonyManager::class.java))
+        shadowOf(phone).setTelephonyManagerForSubscriptionId(2, secondSim)
+        val sims =
+            (1..2).map {
+                ShadowSubscriptionManager.SubscriptionInfoBuilder
+                    .newBuilder()
+                    .setId(it)
+                    .setSimSlotIndex(it - 1)
+                    .buildSubscriptionInfo()
+            }
+        shadowOf(context.getSystemService(SubscriptionManager::class.java)).setActiveSubscriptionInfos(*sims.toTypedArray())
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        awaitScopeIdle()
+        val phase = AnswerHangUpController.phaseForTest()
+        AnswerHangUpController.resetForTest()
+        return response to phase
+    }
 
     // Heuristics on and the caller's exchange in the hot campaign list: a
     // score of 35, suspicious but under the block threshold of 60.

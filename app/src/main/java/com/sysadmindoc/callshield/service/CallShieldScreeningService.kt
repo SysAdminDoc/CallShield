@@ -597,14 +597,25 @@ class CallShieldScreeningService : CallScreeningService() {
 
     /**
      * Answering a call abroad can be charged, so a roaming line rejects instead.
-     * The SIM the call came in on decides, not the default one, and an
-     * unreadable state counts as roaming.
+     * Telecom hands screening apps a null account handle, so the call's own SIM
+     * can't be read: on a dual-SIM phone any active SIM that roams counts, and
+     * an unreadable state counts as roaming. Needs READ_PHONE_STATE, which
+     * [hasAnswerHangUpPermissions] has already checked.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     private fun isRoaming(callDetails: Call.Details): Boolean =
         try {
             val telephony = getSystemService(android.telephony.TelephonyManager::class.java) ?: return true
-            val line = callDetails.accountHandle?.let(telephony::createForPhoneAccountHandle) ?: telephony
-            line.isNetworkRoaming
+            val handle = callDetails.accountHandle
+            val subscriptions =
+                getSystemService(android.telephony.SubscriptionManager::class.java)
+                    ?.activeSubscriptionInfoList
+                    .orEmpty()
+            when {
+                handle != null -> (telephony.createForPhoneAccountHandle(handle) ?: telephony).isNetworkRoaming
+                subscriptions.size < 2 -> telephony.isNetworkRoaming
+                else -> subscriptions.any { telephony.createForSubscriptionId(it.subscriptionId).isNetworkRoaming }
+            }
         } catch (_: SecurityException) {
             true
         }
