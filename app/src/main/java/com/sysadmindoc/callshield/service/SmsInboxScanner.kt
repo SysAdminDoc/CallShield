@@ -10,6 +10,8 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -83,6 +85,9 @@ object SmsInboxScanner {
                     if (addrIdx < 0 || bodyIdx < 0) return@withContext ScanResult(0, 0, emptyList())
 
                     while (c.moveToNext() && scanned < limit) {
+                        // A scan whose screen went away stops instead of checking the rest of
+                        // the inbox, whether or not the last check noticed.
+                        currentCoroutineContext().ensureActive()
                         val address = c.getString(addrIdx) ?: continue
                         val body = c.getString(bodyIdx) ?: ""
                         val date = if (dateIdx >= 0) c.getLong(dateIdx) else 0L
@@ -118,6 +123,7 @@ object SmsInboxScanner {
                     error = context.getString(R.string.dashboard_sms_inbox_permission_denied),
                 )
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
                 return@withContext ScanResult(scanned, spamList.size, spamList)
             }
 

@@ -11,8 +11,12 @@ import android.net.Uri
 import android.provider.Telephony
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -52,6 +56,39 @@ class SmsInboxScannerTest {
             asked,
         )
         assertEquals(listOf("Unverified"), result.spamMessages.map { it.number })
+    }
+
+    /** The per-message catch skipped the cancel too, so a scan whose screen had gone kept checking every text. */
+    @Test
+    fun `a scan whose screen goes away stops instead of checking the rest`() {
+        shadowOf(context.applicationContext as Application).grantPermissions(Manifest.permission.READ_SMS)
+        val inbox = Robolectric.setupContentProvider(FakeSmsInbox::class.java, "sms")
+        inbox.rows =
+            listOf(
+                InboxRow("+15550100001", "See you at 6", date = 3L, subscriptionId = 1),
+                InboxRow("+15550100002", "Running late", date = 2L, subscriptionId = 1),
+                InboxRow("+15550100003", "Lunch?", date = 1L, subscriptionId = 1),
+                InboxRow("+15550100004", "On my way", date = 0L, subscriptionId = 1),
+            )
+        val screen = Job()
+        val asked = mutableListOf<String>()
+        var result: SmsInboxScanner.ScanResult? = null
+
+        runBlocking {
+            launch(screen) {
+                result =
+                    SmsInboxScanner.scan(context, limit = 10) { address, _, _ ->
+                        asked += address
+                        screen.cancel()
+                        // A real check suspends on the database here.
+                        yield()
+                        SpamCheckResult(isSpam = false)
+                    }
+            }.join()
+        }
+
+        assertEquals(listOf("+15550100001"), asked)
+        assertNull(result)
     }
 
     data class InboxRow(

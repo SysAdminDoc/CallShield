@@ -43,6 +43,8 @@ import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -200,6 +202,10 @@ class SyncRepository(
                         shouldRetry = SyncFailureText.shouldRetry(remoteFailure),
                     )
                 } catch (e: Exception) {
+                    // A caller that went away (a stopped worker, a closed screen) ends the
+                    // sync cancelled. Room's CancellationException from a closed database
+                    // isn't the caller's, so it's still a failed sync.
+                    currentCoroutineContext().ensureActive()
                     android.util.Log.w("SyncRepository", "Spam database sync failed", e)
                     SyncResult(
                         success = false,
@@ -1102,12 +1108,14 @@ class SyncRepository(
         )
 
     @Suppress("TooGenericExceptionCaught")
-    private inline fun runExternalBlocklistOperation(
+    private suspend inline fun runExternalBlocklistOperation(
         block: () -> ExternalBlocklistImportResult,
     ): ExternalBlocklistImportResult =
         try {
             block()
         } catch (e: Exception) {
+            // Same as the sync: a caller that went away isn't a failed download.
+            currentCoroutineContext().ensureActive()
             // Same hygiene as the v1.7.26 restore/import pass: raw e.message
             // embeds the full user URL (OkHttp) or SQLite constraint names —
             // log the cause for diagnostics, show a localized generic reason.
