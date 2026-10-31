@@ -7,6 +7,13 @@
       "reviewed_at": "2026-09-28",
       "reference": "https://github.com/SysAdminDoc/CallShield/issues/27",
       "note": "Munich landline. Clever Dialer: 1.5 of 5 from 223 reviews, 342 blocks, repeated daily calls claiming to be a health insurer. tellows.de: 21 ratings warning about it."
+    },
+    {
+      "number": "+393762768421",
+      "type": "telemarketer",
+      "reviewed_at": "2026-10-31",
+      "reference": "https://github.com/SysAdminDoc/CallShield/issues/40",
+      "note": "Italian mobile. tellows.it: 9 ratings dated 2026-10-20 to 2026-10-30 (scam 3, phone harassment 2, aggressive advertising 1), No. 763 on its blacklist, 739 searches last month, repeated evening calls selling energy contracts in Enel's name. PhoneBlock: 1 complaint. CallFilter: 2 mostly negative reviews."
     }
   ]
 }

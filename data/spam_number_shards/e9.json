@@ -6571,6 +6571,32 @@
           "expires_at_epoch_ms": 2105481600000
         }
       ]
+    },
+    {
+      "number": "+393762768421",
+      "type": "telemarketer",
+      "reports": 1,
+      "first_seen": "2026-10-20",
+      "last_seen": "2026-10-31",
+      "description": "Community reported; Reviewed by the maintainer",
+      "sources": [
+        "community"
+      ],
+      "evidence": [
+        {
+          "source_id": "maintainer_review",
+          "evidence_type": "maintainer_review",
+          "license": "CallShield database terms",
+          "attribution": "Reviewed by the CallShield maintainer against public reports",
+          "first_seen": "2026-10-31",
+          "last_seen": "2026-10-31",
+          "retrieved_at": "2026-10-31T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "curated",
+          "parser_version": "maintainer-review-v1",
+          "expires_at_epoch_ms": 1856476800000
+        }
+      ]
     }
   ],
   "prefixes": [
