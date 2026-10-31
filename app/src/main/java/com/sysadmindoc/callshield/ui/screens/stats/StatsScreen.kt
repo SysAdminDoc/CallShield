@@ -68,6 +68,7 @@ fun StatsScreen(viewModel: MainViewModel) {
     val hourAggregates by viewModel.logHourCounts.collectAsStateWithLifecycle()
     val topNumberAggregates by viewModel.logTopNumbers.collectAsStateWithLifecycle()
     val areaCodeAggregates by viewModel.logAreaCodeCounts.collectAsStateWithLifecycle()
+    val mapAreaCodeAggregates by viewModel.logMapAreaCodeCounts.collectAsStateWithLifecycle()
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
 
     // Room emits compact projections instead of materializing the unbounded
@@ -101,6 +102,11 @@ fun StatsScreen(viewModel: MainViewModel) {
     val areaCodeCounts: List<Pair<String, Int>> =
         remember(areaCodeAggregates, homeRegion) {
             countsByAreaCode(areaCodeAggregates, homeRegion).map { (block, count) -> block.areaCode to count }
+        }
+
+    val regionCounts: Map<String, Int> =
+        remember(mapAreaCodeAggregates, homeRegion) {
+            countsByRegion(countsByAreaCode(mapAreaCodeAggregates, homeRegion).map { (block, count) -> block.areaCode to count })
         }
 
     val dayBucket = rememberDayBucket()
@@ -393,6 +399,17 @@ fun StatsScreen(viewModel: MainViewModel) {
                                 Text(stringResource(R.string.stats_repeat_hits, count), color = CatRed, fontWeight = FontWeight.Bold)
                             }
                         }
+                    }
+                }
+            }
+
+            // State and province map, worked out on this phone from the log's area codes
+            if (regionCounts.isNotEmpty()) {
+                PremiumCard(accentColor = CatPeach) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.stats_spam_by_region), CatPeach)
+                        Spacer(Modifier.height(8.dp))
+                        RegionTileMap(regionCounts)
                     }
                 }
             }

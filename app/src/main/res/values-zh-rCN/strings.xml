@@ -690,6 +690,10 @@
     <string name="stats_by_detection_method">按检测方式</string>
     <string name="stats_top_offenders">主要违规者</string>
     <string name="stats_spam_by_area_code">按区号的垃圾</string>
+    <string name="stats_spam_by_region">按州或省的垃圾</string>
+    <string name="stats_region_map_summary">最多垃圾:%1$s</string>
+    <string name="stats_region_map_fewer">较少</string>
+    <string name="stats_region_map_more">较多</string>
     <string name="stats_spam_by_hour">按小时的垃圾</string>
     <string name="stats_spam_concentrate">垃圾电话集中时段</string>
     <string name="stats_time_12a">0时</string>

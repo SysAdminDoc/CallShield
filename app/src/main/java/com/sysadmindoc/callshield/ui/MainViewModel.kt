@@ -128,6 +128,9 @@ class MainViewModel
             const val DASHBOARD_RECENT_LOG_LIMIT = 50
             const val STATS_TOP_LIMIT = 10
             const val STATS_AREA_CODE_LIMIT = 15
+
+            // More than North America has, counting a +1 number and a bare one apart.
+            const val STATS_MAP_AREA_CODE_LIMIT = 2_000
             const val EXCHANGE_SIGHTING_LIMIT = 2_000
         }
 
@@ -201,6 +204,12 @@ class MainViewModel
         val logAreaCodeCounts: StateFlow<List<LogAggregate>> =
             repo
                 .observeLogAreaCodeCounts(STATS_AREA_CODE_LIMIT)
+                .screenState(emptyList())
+
+        /** Every area code in the log, for the statistics map. The list under it shows only the busiest. */
+        val logMapAreaCodeCounts: StateFlow<List<LogAggregate>> =
+            repo
+                .observeLogAreaCodeCounts(STATS_MAP_AREA_CODE_LIMIT)
                 .screenState(emptyList())
 
         /** Blocked North American numbers of the last 14 days, for the dashboard's exchange suggestion (slowCampaignExchanges). */

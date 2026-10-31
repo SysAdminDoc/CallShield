@@ -862,6 +862,10 @@
     <string name="stats_by_detection_method">Por método de detecção</string>
     <string name="stats_top_offenders">Maiores incômodos</string>
     <string name="stats_spam_by_area_code">Spam por DDD</string>
+    <string name="stats_spam_by_region">Spam por estado ou província</string>
+    <string name="stats_region_map_summary">Mais spam: %1$s</string>
+    <string name="stats_region_map_fewer">Menos</string>
+    <string name="stats_region_map_more">Mais</string>
     <string name="stats_spam_by_hour">Spam por hora</string>
     <string name="stats_spam_concentrate">Quando as chamadas de spam se concentram</string>
     <string name="stats_time_12a">0h</string>
