@@ -1173,6 +1173,48 @@ def assert_a_published_number_leaves_the_watch_list(data_dir: Path) -> None:
     assert feed["numbers"] == [] and feed["cleared"] is True, feed
 
 
+def assert_a_designated_indian_series_never_reaches_a_feed(data_dir: Path) -> None:
+    """Regulation 34A bars a call app from tagging India's 140, 1600 and 1601
+    series for everyone, so reports on them publish nothing, and the rows an
+    earlier merge left in the ledger go with the next one. A number that only
+    shares digits with a series is reported as usual."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": TODAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    designated = ["+911401234567", "+911600123456", "+911601123456"]
+    hyderabad = "+914012345678"
+    reported = (datetime.now(timezone.utc) - timedelta(days=3)).replace(hour=10, minute=0, second=0, microsecond=0)
+    for number in [*designated, hyderabad]:
+        # Three reporters on one day, then one of them again a day later.
+        for index, bucket in enumerate(BUCKETS[:3], start=1):
+            at = (reported + timedelta(hours=index)).isoformat()
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, bucket, at, device=BUCKETS[index])
+        write_report(
+            data_dir, f"{number[1:]}-later.json", number, BUCKETS[0], (reported + timedelta(days=1, hours=2)).isoformat(), device=BUCKETS[1]
+        )
+    run_drain(data_dir)
+
+    assert row_for(data_dir, hyderabad) is not None, "an ordinary Indian number must still publish"
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    for number in designated:
+        assert row_for(data_dir, number) is None, f"{number} must not publish"
+        assert number not in pending, f"{number} must not stay in the ledger"
+        assert number not in [row["number"] for row in feed["numbers"]], feed
+
+    # A ledger row from before the guard is dropped, not promoted.
+    payload = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))
+    state = json.loads(json.dumps(payload["numbers"][hyderabad]))
+    state["published"] = False
+    state["entry"]["number"] = designated[0]
+    payload["numbers"][designated[0]] = state
+    write_json(data_dir / "community_pending.json", payload)
+    run_script("merge_community_reports.py", data_dir)
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert designated[0] not in pending and row_for(data_dir, designated[0]) is None, pending
+
+
 def assert_bare_digit_misreadings_stay_off_the_watch_list(data_dir: Path) -> None:
     """Reports stored before 2026-10-30 turned bare Chinese mobiles into +1
     numbers (15017944158 into +1 501-794-4158, an Arkansas line). One whose +86
@@ -2127,6 +2169,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_a_published_number_leaves_the_watch_list(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_a_designated_indian_series_never_reaches_a_feed(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_bare_digit_misreadings_stay_off_the_watch_list(Path(tmp) / "data")

@@ -30,6 +30,8 @@ TWO_DIGIT_COUNTRY_CODES = frozenset(
 )
 ONE_DIGIT_COUNTRY_CODES = frozenset({"1", "7"})
 
+DESIGNATED_SERIES_PREFIXES = ("+91140", "+911600", "+911601")
+
 # Countries whose national significant numbers genuinely retain a leading 0 in
 # E.164 — stripping it there would corrupt the number, not repair it:
 #   +39  Italy (and Vatican City, which E.164-splits under 39): +39 06 ... is
@@ -188,14 +190,26 @@ def bare_digit_misreading(e164: str, known: Container[str], has_report_id: bool,
     return not has_report_id and e164[2:5] not in nanp_area_codes_in_service()
 
 
+def in_designated_series(e164: str) -> bool:
+    """India's series for commercial and government calls: 140xx promotional,
+    1600xx banking and government, 1601xx utilities, logistics and courier.
+
+    TRAI's 2026 Third Amendment (regulation 34A) bars a call app from tagging
+    them for everyone, so they stay out of every shared feed. A person's own
+    choice on their own phone stays theirs: the app's 140 block is opt-in.
+    """
+    return e164.startswith(DESIGNATED_SERIES_PREFIXES)
+
+
 def validated_report_number(raw: str | None) -> str | None:
     """Normalize and plausibility-check a community report number.
 
-    Returns the E.164 form, or None for junk/fictional/malformed input.
+    Returns the E.164 form, or None for junk/fictional/malformed input and for
+    a number in a designated series.
     Use this (not normalize_report_number) at the trust boundary where
     anonymous reports enter the shipped database.
     """
     normalized = normalize_report_number(raw)
-    if normalized and is_plausible_number(normalized):
+    if normalized and is_plausible_number(normalized) and not in_designated_series(normalized):
         return normalized
     return None

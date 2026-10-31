@@ -33,9 +33,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from collections import Counter
 from phone_normalization import (
-    is_plausible_number,
     normalize_nanp_number,
-    normalize_report_number,
+    validated_report_number,
 )
 
 from pipeline_io import atomic_write_json
@@ -325,8 +324,7 @@ def normalize_external_phone(raw: str) -> str | None:
     value = str(raw or "").strip()
     if not value.startswith("+"):
         return normalize_phone(value)
-    normalized = normalize_report_number(value)
-    return normalized if normalized and is_plausible_number(normalized) else None
+    return validated_report_number(value)
 
 
 # ── Source 1: FTC API ──────────────────────────────────────────────────

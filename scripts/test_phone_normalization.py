@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from phone_normalization import (
+    in_designated_series,
     is_plausible_number,
     normalize_nanp_number,
     normalize_phone_number,
@@ -75,6 +76,15 @@ def main() -> None:
     assert validated_report_number("+15559876543") is None       # fictional test number
     assert validated_report_number("01145884697") is None        # junk international prefix
     assert validated_report_number("+442071234567") == "+442071234567"
+
+    # India's designated commercial and government series stay out of the shared
+    # data. Numbers that only share digits with them still count.
+    for designated in ("+911401234567", "+911600123456", "+911601123456"):
+        assert in_designated_series(designated)
+        assert validated_report_number(designated) is None
+    for ordinary in ("+914012345678", "+911602123456", "+919812345601", "+14012345678"):
+        assert not in_designated_series(ordinary)
+    assert validated_report_number("+914012345678") == "+914012345678"
 
     check_shared_fixtures()
 

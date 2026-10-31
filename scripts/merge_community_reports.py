@@ -17,6 +17,7 @@ from pathlib import Path
 
 from phone_normalization import (
     bare_digit_misreading,
+    in_designated_series,
     is_plausible_number,
     split_country_code,
     validated_report_number,
@@ -139,6 +140,8 @@ def load_community_pending(today: str) -> dict[str, dict]:
         watch_cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_WATCH_DAYS)).isoformat()
         pending = {}
         for number, state in payload["numbers"].items():
+            if in_designated_series(number):
+                continue
             if (
                 not is_plausible_number(number)
                 or not isinstance(state, dict)
