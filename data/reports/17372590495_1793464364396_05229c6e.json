@@ -1,0 +1,14 @@
+{
+  "number": "+17372590495",
+  "type": "sms_spam",
+  "reported_at": "2026-10-31T16:32:44.396Z",
+  "source": "community_app",
+  "reporter_bucket": "1318250fbd1c95e2",
+  "reporter_device": "94edb4b1da683692",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
