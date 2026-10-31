@@ -1730,7 +1730,7 @@
     <string name="protection_test_capability_full_sms_advisory">已观察到完整内容，但 Android 16+ 不保证短信接收顺序。</string>
     <string name="protection_test_capability_hint">请保持已开启的访问权限。CallShield 不请求默认短信或消息角色；在有数据时，发送者和 URL 检查会继续运行。</string>
     <string name="protection_test_capability_not_observed">尚未观察到消息样本；消息到达时会检查此能力。</string>
-    <string name="protection_test_capability_redacted">降级：Android 或消息应用隐去了正文；仅发送者检查仍可用。</string>
+    <string name="protection_test_capability_redacted">降级：Android 或消息应用隐去了正文；发送者显示时仍会检查。</string>
     <string name="protection_test_capability_sender_only">降级：发送者可用但正文不可用；使用仅发送者检查。</string>
     <string name="protection_test_capability_unsupported">降级：此消息路径未提供可用的发送者或内容证据。</string>
     <string name="protection_test_checker_health">检查器健康状态</string>
@@ -1797,7 +1797,7 @@
     <string name="settings_capability_full">设备端可获得完整消息内容</string>
     <string name="settings_capability_full_sms_advisory">内容可用；Android 16+ 可能延迟短信接收投递</string>
     <string name="settings_capability_not_observed">等待消息样本</string>
-    <string name="settings_capability_redacted">降级：正文被隐去；仅发送者检查仍可用</string>
+    <string name="settings_capability_redacted">降级：正文被隐去；发送者显示时仍会检查</string>
     <string name="settings_capability_sender_only">降级：仅发送者检查；正文不可用</string>
     <string name="settings_capability_unsupported">降级：无可用的发送者或内容证据</string>
     <string name="settings_export_redress_csv">导出已拦截来电用于维权</string>

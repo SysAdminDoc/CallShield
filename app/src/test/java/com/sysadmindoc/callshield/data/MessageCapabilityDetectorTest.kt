@@ -103,6 +103,36 @@ class MessageCapabilityDetectorTest {
     }
 
     @Test
+    fun `a hidden code that also blanks the sender is redacted`() {
+        val status =
+            MessageCapabilityDetector.classifyNotification(
+                apiLevel = 37,
+                notificationAccessGranted = true,
+                senderPresent = false,
+                bodyPresent = false,
+                redactionSuspected = true,
+                observedAtMillis = 1_000L,
+            )
+
+        assertEquals(MessageCapabilityState.BODY_REDACTED, status.state)
+    }
+
+    @Test
+    fun `a notification with neither sender nor body is unsupported`() {
+        val status =
+            MessageCapabilityDetector.classifyNotification(
+                apiLevel = 37,
+                notificationAccessGranted = true,
+                senderPresent = false,
+                bodyPresent = false,
+                redactionSuspected = false,
+                observedAtMillis = 1_000L,
+            )
+
+        assertEquals(MessageCapabilityState.UNSUPPORTED, status.state)
+    }
+
+    @Test
     fun `notification access absence is unsupported`() {
         val status =
             MessageCapabilityDetector.classifyNotification(

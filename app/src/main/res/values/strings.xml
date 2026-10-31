@@ -735,7 +735,7 @@
     <string name="settings_capability_full">Full message content available on-device</string>
     <string name="settings_capability_full_sms_advisory">Content available; Android 16+ may delay SMS receiver delivery</string>
     <string name="settings_capability_sender_only">Degraded: sender-only checks; body unavailable</string>
-    <string name="settings_capability_redacted">Degraded: body redacted; sender-only checks remain available</string>
+    <string name="settings_capability_redacted">Degraded: body hidden; the sender is still checked when it\'s shown</string>
     <string name="settings_capability_delayed">Degraded: message access was delayed</string>
     <string name="settings_capability_unsupported">Degraded: no usable sender or content evidence</string>
     <string name="notification_screening_sources_title">Screened message sources</string>
@@ -1206,7 +1206,7 @@
     <string name="protection_test_capability_full">Full message content was observed on-device.</string>
     <string name="protection_test_capability_full_sms_advisory">Full content was observed, but Android 16+ does not guarantee SMS receiver ordering.</string>
     <string name="protection_test_capability_sender_only">Degraded: the sender was available but the body was not; sender-only checks are used.</string>
-    <string name="protection_test_capability_redacted">Degraded: Android or the messaging app redacted the body; sender-only checks remain available.</string>
+    <string name="protection_test_capability_redacted">Degraded: Android or the messaging app hid the body; the sender is still checked when it\'s shown.</string>
     <string name="protection_test_capability_delayed">Degraded: message access was delayed; content evidence may be stale or unavailable.</string>
     <string name="protection_test_capability_unsupported">Degraded: this message path did not provide usable sender or content evidence.</string>
     <string name="protection_test_capability_hint">Keep enabled access in place. CallShield does not request a default SMS or messaging role; sender and URL checks continue when data is available.</string>

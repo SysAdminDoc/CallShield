@@ -91,6 +91,29 @@ class RcsNotificationListenerTest {
 
     @Test
     @Config(sdk = [35])
+    fun `a hidden code with no sender is recorded as a hidden body`() {
+        postUntil(hiddenCodeNotification(), COLD_SCREEN_TIMEOUT) { notificationCapability() == MessageCapabilityState.BODY_REDACTED.name }
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `a hidden code with the app's name for a title is recorded the same way`() {
+        postUntil(hiddenCodeNotification(title = "Messages"), COLD_SCREEN_TIMEOUT) { notificationCapability() == MessageCapabilityState.BODY_REDACTED.name }
+    }
+
+    @Test
+    fun `a group summary doesn't overwrite what the last message showed`() {
+        postUntil(chatNotification(NOTES, sender = caller), COLD_SCREEN_TIMEOUT) { notificationCapability() == MessageCapabilityState.FULL_CONTENT.name }
+
+        listener.onNotificationPosted(groupSummaryNotification())
+        // Recording the capability is the first thing processing does.
+        Thread.sleep(1_000L)
+
+        assertEquals(MessageCapabilityState.FULL_CONTENT.name, runBlocking { notificationCapability() })
+    }
+
+    @Test
+    @Config(sdk = [35])
     fun `a hidden code from a blocked number isn't screened as spam`() {
         runBlocking { fixture.repository.blockNumber(caller, type = "test") }
         // The same number's readable text is logged, so the block applies to it.
@@ -318,12 +341,37 @@ class RcsNotificationListenerTest {
     )
 
     /**
-     * A code notification as Android 15 and later hand it to a listener they
-     * don't trust with one (NotificationManagerService.redactStatusBarNotification):
-     * the app's name for a title and the placeholder for every text.
+     * The summary Google Messages posts after each message, read from a real
+     * one on Android 17: flagged a group summary, with no title or text.
      */
     @Suppress("DEPRECATION")
-    private fun hiddenCodeNotification(title: String = "Messages") =
+    private fun groupSummaryNotification() =
+        StatusBarNotification(
+            GOOGLE_MESSAGES,
+            GOOGLE_MESSAGES,
+            7,
+            "incoming_message_group_key",
+            Process.myUid(),
+            0,
+            0,
+            Notification
+                .Builder(context, "chats")
+                .setSmallIcon(android.R.drawable.sym_def_app_icon)
+                .setGroup("incoming_message_group_key")
+                .setGroupSummary(true)
+                .build(),
+            Process.myUserHandle(),
+            System.currentTimeMillis(),
+        )
+
+    /**
+     * A code notification as Android hands it to a listener it doesn't trust
+     * with one, read from a real code in Google Messages on Android 17: an empty
+     * title, the placeholder for every text, and an empty sender on the message.
+     * A notification that isn't MessagingStyle gets the app's name for a title.
+     */
+    @Suppress("DEPRECATION")
+    private fun hiddenCodeNotification(title: String = "") =
         StatusBarNotification(
             GOOGLE_MESSAGES,
             GOOGLE_MESSAGES,

@@ -121,7 +121,8 @@ internal object MessageCapabilityDetector {
             source = MessageCapabilitySource.NOTIFICATION_LISTENER,
             state =
                 when {
-                    !notificationAccessGranted || !senderPresent -> {
+                    // Android blanks the sender too when it hides a one-time code.
+                    !notificationAccessGranted || (!senderPresent && !redactionSuspected) -> {
                         MessageCapabilityState.UNSUPPORTED
                     }
 

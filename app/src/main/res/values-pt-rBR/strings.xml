@@ -704,7 +704,7 @@
     <string name="settings_capability_full">Conteúdo completo da mensagem disponível no aparelho</string>
     <string name="settings_capability_full_sms_advisory">Conteúdo disponível; o Android 16+ pode atrasar a entrega de SMS ao receptor</string>
     <string name="settings_capability_sender_only">Limitado: só verificações do remetente; corpo indisponível</string>
-    <string name="settings_capability_redacted">Limitado: corpo oculto; as verificações do remetente continuam disponíveis</string>
+    <string name="settings_capability_redacted">Limitado: corpo oculto; o remetente é verificado quando aparece</string>
     <string name="settings_capability_delayed">Limitado: o acesso à mensagem foi atrasado</string>
     <string name="settings_capability_unsupported">Limitado: nenhuma evidência utilizável de remetente ou conteúdo</string>
     <string name="notification_screening_sources_title">Fontes de mensagens filtradas</string>
@@ -1164,7 +1164,7 @@
     <string name="protection_test_capability_full">O conteúdo completo da mensagem foi observado no aparelho.</string>
     <string name="protection_test_capability_full_sms_advisory">O conteúdo completo foi observado, mas o Android 16+ não garante a ordem dos receptores de SMS.</string>
     <string name="protection_test_capability_sender_only">Limitado: o remetente estava disponível, mas o texto não; são usadas só verificações do remetente.</string>
-    <string name="protection_test_capability_redacted">Limitado: o Android ou o app de mensagens ocultou o texto; as verificações só do remetente continuam disponíveis.</string>
+    <string name="protection_test_capability_redacted">Limitado: o Android ou o app de mensagens ocultou o texto; o remetente continua sendo verificado quando aparece.</string>
     <string name="protection_test_capability_delayed">Limitado: o acesso à mensagem atrasou; a evidência de conteúdo pode estar desatualizada ou indisponível.</string>
     <string name="protection_test_capability_unsupported">Limitado: este caminho de mensagem não forneceu evidência útil do remetente nem do conteúdo.</string>
     <string name="protection_test_capability_hint">Mantenha o acesso ativado. O CallShield não pede a função de app padrão de SMS ou mensagens; as verificações de remetente e de links continuam quando há dados.</string>

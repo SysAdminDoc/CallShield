@@ -160,6 +160,9 @@ class RcsNotificationListener : NotificationListenerService() {
         if (!NotificationScreeningSources.shouldReadPackage(sbn.packageName, enabledScreeningPackages)) {
             return
         }
+        // A summary only restates its children. Google Messages posts one with
+        // no title or text after every message.
+        if ((sbn.notification?.flags ?: 0) and Notification.FLAG_GROUP_SUMMARY != 0) return
 
         scope.launch {
             try {
@@ -537,8 +540,9 @@ class RcsNotificationListener : NotificationListenerService() {
 
         /**
          * Android 15 and later hide a one-time code from a listener it doesn't
-         * trust with one: the text becomes this placeholder and the title the
-         * app's name. Read from the phone itself, so it matches in any language.
+         * trust with one: the text becomes this placeholder, and the title goes
+         * empty on a MessagingStyle notification and to the app's name on any
+         * other. Read from the phone itself, so it matches in any language.
          */
         @SuppressLint("DiscouragedApi")
         internal fun systemHiddenCodePlaceholder(): String? {
