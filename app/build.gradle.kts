@@ -150,6 +150,21 @@ android {
                 // loads android-all for SDK 29, 30, 32, 33, 34, 35 and 36, and
                 // CopyConfirmationTest's 32/33 jars came last and failed to load.
                 it.maxHeapSize = "2g"
+                // Robolectric 4.17 reaches into JDK internals (SharedSecrets for raw
+                // FileDescriptors once an SDK 36 application starts), and Java 17+
+                // refuses that without these opens. The list is the one Robolectric's
+                // getting-started guide gives for JDK 17 and later.
+                it.jvmArgs(
+                    "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                    "--add-opens=java.base/java.util=ALL-UNNAMED",
+                    "--add-opens=java.base/java.io=ALL-UNNAMED",
+                    "--add-opens=java.base/java.net=ALL-UNNAMED",
+                    "--add-opens=java.base/java.security=ALL-UNNAMED",
+                    "--add-opens=java.base/java.text=ALL-UNNAMED",
+                    "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+                    "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+                    "--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+                )
                 // The wall-clock ceilings in HotPathBenchmarkTest and RaceTest
                 // were read from this property but nothing ever set it, so a
                 // loaded machine (parallel builds are routine here) could flake
