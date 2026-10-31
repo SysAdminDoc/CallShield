@@ -10,7 +10,7 @@ class AppLanguageTest {
     fun `release options contain only actual shipped locales`() {
         val options = AppLanguage.options(includePseudoLocales = false)
 
-        assertEquals(listOf("", "en"), options.map { it.languageTag })
+        assertEquals(listOf("", "en", "zh-CN", "pt-BR", "es"), options.map { it.languageTag })
     }
 
     @Test
@@ -19,14 +19,28 @@ class AppLanguageTest {
 
         assertTrue(AppLanguage.ACCENTED_PSEUDO_TAG in tags)
         assertTrue(AppLanguage.RTL_PSEUDO_TAG in tags)
-        assertFalse("es" in tags)
+        assertFalse("de" in tags)
     }
 
     @Test
     fun `unsupported tags fall back to system default`() {
-        assertEquals("", AppLanguage.normalizeLanguageTag("es"))
+        assertEquals("", AppLanguage.normalizeLanguageTag("de"))
         assertEquals("", AppLanguage.normalizeLanguageTag("  "))
         assertEquals("en", AppLanguage.normalizeLanguageTag(" en "))
+    }
+
+    @Test
+    fun `shipped translations keep their tags`() {
+        assertEquals("zh-CN", AppLanguage.normalizeLanguageTag("zh-CN"))
+        assertEquals("pt-BR", AppLanguage.normalizeLanguageTag("pt-BR"))
+        assertEquals("es", AppLanguage.normalizeLanguageTag(" es "))
+    }
+
+    @Test
+    fun `Android's picker can hand back a regional Spanish and it still reads as Spanish`() {
+        assertEquals("es", AppLanguage.normalizeLanguageTag("es-MX"))
+        assertEquals("es", AppLanguage.normalizeLanguageTag("es-419"))
+        assertEquals("", AppLanguage.normalizeLanguageTag("est"))
     }
 
     @Test

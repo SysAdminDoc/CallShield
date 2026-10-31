@@ -1,17 +1,22 @@
 # Translating CallShield
 
-CallShield ships English only today. Translations are welcome, and partial ones
-are genuinely useful. Android falls back to English per string, so a translation
-that covers the screens people actually look at is better than none.
+CallShield ships in English, Simplified Chinese, Brazilian Portuguese and
+Spanish. New languages are welcome, and partial ones help. Android falls back to
+English per string, so a translation that covers the screens people actually
+look at is better than none.
+
+The Portuguese and Spanish text hasn't had a native speaker's review yet. If
+something reads wrong, a PR that fixes a few lines is as useful as a whole new
+language.
 
 The general translation thread is
 [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7). Comment there to
-claim a language so two people don't translate the same 1,103 strings.
+claim a language so two people don't translate the same 1,800 strings.
 
 ## What to translate
 
-The source of truth is `app/src/main/res/values/strings.xml` (1,103 strings and
-30 `<plurals>`). Create `app/src/main/res/values-<locale>/` and put your
+The source of truth is `app/src/main/res/values/strings.xml` (about 1,800 strings
+and 50 `<plurals>`). Create `app/src/main/res/values-<locale>/` and put your
 translated `<string>` and `<plurals>` elements there. Either layout works,
 everything in one `strings.xml` or split into `strings.xml` + `plurals.xml`.
 Resource filenames carry no meaning to the Android build.
@@ -23,6 +28,7 @@ Locale directory names use Android's qualifier form, not BCP-47:
 | Simplified Chinese | `values-zh-rCN` |
 | German | `values-de` |
 | Brazilian Portuguese | `values-pt-rBR` |
+| Spanish | `values-es` |
 
 **Priority order**, if you are not translating everything:
 
@@ -46,6 +52,10 @@ Note the BCP-47 form here (`zh-CN`), which differs from the resource directory
 populates the per-app language picker in Android's system settings. Skip it and
 your translation only appears for users whose entire device is set to that
 language. It is the single easiest thing to forget.
+
+Then add it to the app's own picker in `ui/AppLanguage.kt`, with its name in its
+own language as a `translatable="false"` string. `ShippedLocalesTest` fails if
+the two lists disagree.
 
 ## Check your work
 

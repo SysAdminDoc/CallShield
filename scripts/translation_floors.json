@@ -1,6 +1,8 @@
 {
   "description": "Minimum translated-string coverage per locale, in percent. check_translations.py fails when a shipped locale drops below its floor. --update-floors only raises a floor. Lowering one is a hand edit, made on purpose and explained in the commit message.",
   "floors": {
+    "values-es": 98.5,
+    "values-pt-rBR": 98.5,
     "values-zh-rCN": 98.5
   }
 }

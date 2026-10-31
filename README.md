@@ -617,7 +617,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 
 ## Translations
 
-CallShield ships in English and Simplified Chinese. The Chinese text covers nearly every string, and the newest few fall back to English.
+CallShield ships in English, Simplified Chinese, Brazilian Portuguese and Spanish. A string that isn't translated yet falls back to English. The Portuguese and Spanish text hasn't had a native speaker's review, so corrections are welcome. Pick a language under Settings, or in Android's per-app language screen.
 More translations are welcome. See
 [docs/TRANSLATING.md](docs/TRANSLATING.md) for the resource layout, the priority
 order for partial translations, and `scripts/check_translations.py`, which
@@ -641,7 +641,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 2134 JVM unit tests (JUnit) |
-| Strings | 1805 string resources and 52 plural groups (translation-ready) |
+| Strings | 1808 string resources and 52 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

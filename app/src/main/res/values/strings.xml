@@ -622,6 +622,10 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_system_default">System default</string>
     <string name="settings_language_english">English</string>
+    <!-- A language keeps its own name in the picker, whatever language the app is showing. -->
+    <string name="settings_language_chinese_simplified" translatable="false">简体中文</string>
+    <string name="settings_language_portuguese_brazil" translatable="false">Português (Brasil)</string>
+    <string name="settings_language_spanish" translatable="false">Español</string>
     <string name="settings_language_pseudo_accented">Pseudolocale: accented</string>
     <string name="settings_language_pseudo_rtl">Pseudolocale: right-to-left</string>
     <string name="settings_language_dialog_title">Choose app language</string>
