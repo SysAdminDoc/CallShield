@@ -1,0 +1,15 @@
+{
+  "number": "+18775196917",
+  "type": "sms_spam",
+  "reported_at": "2026-10-31T12:19:59.966Z",
+  "source": "community_app",
+  "reporter_bucket": "52c108095355ae80",
+  "reporter_device": "7b88b93d0b2ef0fe",
+  "report_id": "8d594db7-7d06-47c7-a5be-5a581f34370e",
+  "sms_domains": [
+    "kly1.io"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
