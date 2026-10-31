@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -796,20 +797,22 @@ fun WeeklyBarChart(
         dailyCounts.forEachIndexed { index, (_, count) ->
             val barHeight = (count.toFloat() / maxCount) * (size.height - 30.dp.toPx())
             val x = index * (barWidth + gap) + gap / 2
+            // The day labels below mirror with the layout, and drawing doesn't on its own.
+            val barStart = if (layoutDirection == LayoutDirection.Rtl) size.width - x - barWidth else x
 
             // Bar with rounded top
             drawRoundRect(
                 color = barColor,
-                topLeft = Offset(x, size.height - 30.dp.toPx() - barHeight),
+                topLeft = Offset(barStart, size.height - 30.dp.toPx() - barHeight),
                 size = Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(4.dp.toPx()),
             )
         }
     }
     // Day labels below
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+    Row(modifier = Modifier.fillMaxWidth()) {
         dailyCounts.forEach { (day, count) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(day, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
                 Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }

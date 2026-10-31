@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -859,10 +860,13 @@ fun GroupedCallItem(
                 Modifier
                     .fillMaxWidth()
                     .drawBehind {
+                        // Drawing doesn't mirror on its own, and the padding below does.
+                        val stripWidth = 3.dp.toPx()
+                        val stripStart = if (layoutDirection == LayoutDirection.Rtl) size.width - stripWidth else 0f
                         drawRect(
                             color = accentColor.copy(alpha = 0.5f),
-                            topLeft = Offset(0f, 0f),
-                            size = Size(3.dp.toPx(), size.height),
+                            topLeft = Offset(stripStart, 0f),
+                            size = Size(stripWidth, size.height),
                         )
                     }.padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
