@@ -119,6 +119,11 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
                 .filter { this[it.key] == true }
                 .map { it.key.name }
                 .sorted(),
+        disabledRegulatoryPrefixes =
+            RegulatoryPrefix.entries
+                .filter { it.onByDefaultAtHome && this[it.key] == false }
+                .map { it.key.name }
+                .sorted(),
         meetingModeEnabled = this[SpamRepository.KEY_MEETING_MODE] ?: false,
         meetingModeApps = this[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty().sorted(),
         outgoingCallHoldEnabled = this[SpamRepository.KEY_OUTGOING_CALL_HOLD] ?: false,
@@ -209,6 +214,12 @@ internal fun BackupSettings.sanitized(): BackupSettings =
                 .filter { name -> RegulatoryPrefix.entries.any { it.key.name == name } }
                 .distinct()
                 .sorted(),
+        disabledRegulatoryPrefixes =
+            disabledRegulatoryPrefixes
+                .map { it.trim() }
+                .filter { name -> RegulatoryPrefix.entries.any { it.key.name == name && it.onByDefaultAtHome } }
+                .distinct()
+                .sorted(),
         meetingModeApps =
             meetingModeApps
                 .map { it.trim() }
@@ -273,7 +284,13 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
         preferences[SpamRepository.KEY_ALLOWED_REGIONS] = allowedRegions.toSet()
     }
     preferences[SpamRepository.KEY_REGION_BLOCK] = regionBlockEnabled && allowedRegions.isNotEmpty()
-    RegulatoryPrefix.entries.forEach { preferences[it.key] = it.key.name in enabledRegulatoryPrefixes }
+    RegulatoryPrefix.entries.forEach {
+        when {
+            it.key.name in enabledRegulatoryPrefixes -> preferences[it.key] = true
+            !it.onByDefaultAtHome || it.key.name in disabledRegulatoryPrefixes -> preferences[it.key] = false
+            else -> preferences.remove(it.key)
+        }
+    }
     preferences[SpamRepository.KEY_MEETING_MODE] = meetingModeEnabled
     if (meetingModeApps.isEmpty()) {
         preferences.remove(SpamRepository.KEY_MEETING_MODE_APPS)

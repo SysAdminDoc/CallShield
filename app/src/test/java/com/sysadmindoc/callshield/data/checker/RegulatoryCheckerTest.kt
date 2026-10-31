@@ -194,6 +194,48 @@ class RegulatoryCheckerTest {
         }
 
     @Test
+    fun `India's protected series ring through on an Indian SIM before anyone sets them`() =
+        runBlocking {
+            val india = RegulatoryAllowChecker(homeRegion = { "IN" })
+            assertTrue(india.isEnabled(ctx("+911600123456")))
+            assertNotNull(india.check(ctx("+911600123456")))
+            assertNotNull(india.check(ctx("+911601123456")))
+            assertNotNull(india.check(ctx("1600123456")))
+            assertNotNull(india.check(ctx("1601123456")))
+            assertNull(india.check(ctx("+911602123456")))
+        }
+
+    @Test
+    fun `a person's choice beats the default in both directions`() =
+        runBlocking {
+            val off = preferencesOf(SpamRepository.KEY_REG_INDIA_1601_ALLOW to false)
+            assertNull(RegulatoryAllowChecker(homeRegion = { "IN" }).check(ctx("+911601123456", off)))
+            assertNotNull(RegulatoryAllowChecker(homeRegion = { "IN" }).check(ctx("+911600123456", off)))
+
+            val on = preferencesOf(SpamRepository.KEY_REG_INDIA_1601_ALLOW to true)
+            assertNotNull(RegulatoryAllowChecker(homeRegion = { "US" }).check(ctx("+911601123456", on)))
+        }
+
+    @Test
+    fun `the protected series start off outside India`() =
+        runBlocking {
+            listOf<String?>("US", "BR", null).forEach { region ->
+                val checker = RegulatoryAllowChecker(homeRegion = { region })
+                assertTrue(!checker.isEnabled(ctx("+911600123456")))
+                assertNull(checker.check(ctx("+911600123456")))
+                assertNull(checker.check(ctx("+911601123456")))
+            }
+        }
+
+    @Test
+    fun `an Indian SIM leaves the 140 block opt-in`() =
+        runBlocking {
+            val india = RegulatoryPrefixChecker(homeRegion = { "IN" })
+            assertTrue(!india.isEnabled(ctx("+911401234567")))
+            assertNull(india.check(ctx("+911401234567")))
+        }
+
+    @Test
     fun `the allow never fires on a blocking range and the block never fires on the allow`() =
         runBlocking {
             val everything = preferencesOf(*RegulatoryPrefix.entries.map { it.key to true }.toTypedArray())

@@ -84,6 +84,7 @@ internal fun feedTrustFailureFor(
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
     private val privateDataStore: DataStore<Preferences>,
+    private val homeRegionIso: () -> String? = { null },
 ) {
     private companion object {
         const val DEFAULT_TIME_BLOCK_START = 22
@@ -162,7 +163,7 @@ class SettingsRepository(
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
     val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> =
-        dataStore.data.map { prefs -> RegulatoryPrefix.entries.filterTo(mutableSetOf()) { prefs[it.key] == true } }
+        dataStore.data.map { prefs -> RegulatoryPrefix.entries.filterTo(mutableSetOf()) { it.isOn(prefs, homeRegionIso) } }
     val meetingModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_MEETING_MODE] ?: false }
     val expectingCallUntil: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_EXPECTING_CALL_UNTIL] ?: 0L }
     val meetingModeApps: Flow<Set<String>> =

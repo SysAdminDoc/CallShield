@@ -526,6 +526,22 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun `a backup keeps a switched-off protected series off and an untouched one untouched`() {
+        val source = mutablePreferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to false)
+        val settings = source.toBackupSettings()
+        assertEquals(listOf("reg_india_1600_allow_enabled"), settings.disabledRegulatoryPrefixes)
+
+        val validation = BackupRestore.validateBackupJson(BackupRestore.backupToJson(Backup(settings = settings)))
+        val restoredSettings = checkNotNull((validation as BackupRestore.RestoreValidation.Valid).payload.settings)
+        val target = mutablePreferencesOf(SpamRepository.KEY_REG_INDIA_1601_ALLOW to false)
+        restoredSettings.writeTo(target)
+
+        assertEquals(false, target[SpamRepository.KEY_REG_INDIA_1600_ALLOW])
+        // Left unset, so it keeps following the region of the phone it's restored on.
+        assertEquals(null, target[SpamRepository.KEY_REG_INDIA_1601_ALLOW])
+    }
+
+    @Test
     fun `meeting mode and its apps survive a settings round trip`() {
         val source =
             mutablePreferencesOf(

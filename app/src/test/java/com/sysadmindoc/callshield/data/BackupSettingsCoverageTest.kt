@@ -92,6 +92,8 @@ class BackupSettingsCoverageTest {
             selectedContactGroups = listOf("group:1"),
             activeProfileName = "recommended",
             notificationScreeningPackages = listOf("com.google.android.apps.messaging"),
+            // A series that's on by default at home is only written once someone has set it.
+            disabledRegulatoryPrefixes = RegulatoryPrefix.entries.filter { it.onByDefaultAtHome }.map { it.key.name },
             meetingModeApps = listOf("us.zoom.videomeetings"),
             outgoingCallHoldEnabled = true,
             appTheme = "light",

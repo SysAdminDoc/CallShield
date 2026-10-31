@@ -4,9 +4,11 @@ import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.R
 
 /**
- * A number series a telecom regulator set aside, each behind its own opt-in
- * setting. A range either blocks (sales-call ranges) or rings through (a
- * protected series).
+ * A number series a telecom regulator set aside, each behind its own setting.
+ * A range either blocks (sales-call ranges) or rings through (a protected
+ * series). Each is opt-in, except that a series the home country's regulator
+ * bars call apps from flagging starts on for a phone in that country, and a
+ * person can still turn it off.
  *
  * Matched in E.164 form and in the national form a caller ID keeps when
  * Android can't put it in E.164, which happens for a range newer than the
@@ -28,6 +30,8 @@ enum class RegulatoryPrefix(
     val descriptionRes: Int,
     val titleRes: Int,
     val summaryRes: Int,
+    /** On for a phone whose home region is [regionIso] until the person sets it. */
+    val onByDefaultAtHome: Boolean = false,
 ) {
     SPAIN_400(
         key = SpamRepository.KEY_REG_SPAIN_400,
@@ -72,8 +76,27 @@ enum class RegulatoryPrefix(
         descriptionRes = R.string.reg_prefix_india_1600_allow_match,
         titleRes = R.string.reg_prefix_india_1600_allow,
         summaryRes = R.string.reg_prefix_india_1600_allow_desc,
+        onByDefaultAtHome = true,
+    ),
+    INDIA_1601(
+        key = SpamRepository.KEY_REG_INDIA_1601_ALLOW,
+        allows = true,
+        regionIso = "IN",
+        e164Prefix = "+911601",
+        nationalPrefix = "1601",
+        nationalLength = 10,
+        descriptionRes = R.string.reg_prefix_india_1601_allow_match,
+        titleRes = R.string.reg_prefix_india_1601_allow,
+        summaryRes = R.string.reg_prefix_india_1601_allow_desc,
+        onByDefaultAtHome = true,
     ),
     ;
+
+    /** The person's own setting, or else the range's default for this phone. */
+    fun isOn(
+        prefs: Preferences,
+        homeRegionIso: () -> String?,
+    ): Boolean = prefs[key] ?: (onByDefaultAtHome && homeRegionIso() == regionIso)
 
     /** [homeRegionIso] is read only for a number in national form. */
     fun matches(
@@ -97,7 +120,7 @@ enum class RegulatoryPrefix(
             homeRegionIso: () -> String?,
         ): RegulatoryPrefix? =
             entries.firstOrNull {
-                it.allows == allows && prefs[it.key] == true && it.matches(number, homeRegionIso)
+                it.allows == allows && it.isOn(prefs, homeRegionIso) && it.matches(number, homeRegionIso)
             }
     }
 }

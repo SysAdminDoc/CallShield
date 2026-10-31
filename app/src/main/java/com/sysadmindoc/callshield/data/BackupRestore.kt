@@ -208,6 +208,8 @@ object BackupRestore {
         val notificationScreeningPackages: List<String>? = null,
         /** Preference key names of the [RegulatoryPrefix] rules that are on. */
         val enabledRegulatoryPrefixes: List<String> = emptyList(),
+        /** Key names of the on-by-default rules turned off; one in neither list follows the phone's region. */
+        val disabledRegulatoryPrefixes: List<String> = emptyList(),
         val meetingModeEnabled: Boolean = false,
         val meetingModeApps: List<String> = emptyList(),
         // Null in a backup made before these were saved, which leaves the

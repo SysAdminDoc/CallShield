@@ -86,6 +86,7 @@ class SettingsRenderCoverageTest {
             "KEY_REG_INDIA_140" to Control(Tab.ADVANCED, RegulatoryPrefix.INDIA_140.titleRes),
             "KEY_REG_BRAZIL_0303" to Control(Tab.ADVANCED, RegulatoryPrefix.BRAZIL_0303.titleRes),
             "KEY_REG_INDIA_1600_ALLOW" to Control(Tab.ADVANCED, RegulatoryPrefix.INDIA_1600.titleRes),
+            "KEY_REG_INDIA_1601_ALLOW" to Control(Tab.ADVANCED, RegulatoryPrefix.INDIA_1601.titleRes),
             "KEY_STIR_SHAKEN" to Control(Tab.ADVANCED, R.string.settings_stir_shaken),
             "KEY_STIR_TRUSTED_ALLOW" to Control(Tab.ADVANCED, R.string.settings_stir_trusted_allow),
             "KEY_ANSWERED_CALLER_TRUST" to Control(Tab.ADVANCED, R.string.settings_answered_caller_trust),

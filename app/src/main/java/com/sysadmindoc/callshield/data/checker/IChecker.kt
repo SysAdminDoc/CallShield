@@ -297,7 +297,7 @@ object CheckerPriority {
     const val PREFIX_MATCH = 5_320 // downloaded prefix reputation rows (country/NPA ranges)
     const val REGULATORY_PREFIX = 5_310 // opt-in country telemarketing prefix blocks
     const val STIR_SHAKEN_TRUSTED = 5_300
-    const val REGULATORY_ALLOW = 5_250 // protected series (India 1600)
+    const val REGULATORY_ALLOW = 5_250 // protected series (India 1600 and 1601)
     const val GITHUB_DATABASE = 5_200 // downloaded exact reputation rows
     const val DB_PREFIX_EXPANSION = 5_150 // auto-block last-2-digit siblings of DB entries
     const val RECENTLY_DIALED = 5_000 // user just called this number

@@ -109,6 +109,7 @@ class SpamRepository(
             dataStore = settingsDataStore ?: appContext.dataStore,
             privateDataStore =
                 privateSettingsDataStore ?: appContext.noBackupDataStore("callshield_private_prefs"),
+            homeRegionIso = { canonicalizer().homeRegionIso },
         )
     private val spamRepositoryImpl =
         SpamRepositoryImpl(
@@ -224,6 +225,7 @@ class SpamRepository(
         val KEY_REG_INDIA_140 = booleanPreferencesKey("reg_india_140_enabled")
         val KEY_REG_BRAZIL_0303 = booleanPreferencesKey("reg_brazil_0303_enabled")
         val KEY_REG_INDIA_1600_ALLOW = booleanPreferencesKey("reg_india_1600_allow_enabled")
+        val KEY_REG_INDIA_1601_ALLOW = booleanPreferencesKey("reg_india_1601_allow_enabled")
 
         // Meeting mode: silence non-contacts while a picked meeting app holds an ongoing notification.
         val KEY_MEETING_MODE = booleanPreferencesKey("meeting_mode_enabled")

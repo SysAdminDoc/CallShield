@@ -1769,11 +1769,14 @@
     <string name="reg_prefix_brazil_0303">Bloquear telemarketing 0303 de Brasil</string>
     <string name="reg_prefix_brazil_0303_desc">Los telemarketers de Brasil llaman desde el código 0303 que ANATEL reservó para ellos.</string>
     <string name="reg_prefix_india_1600_allow">Proteger la serie 1600 de India</string>
-    <string name="reg_prefix_india_1600_allow_desc">La serie 1600 de India pertenece a bancos, aseguradoras y oficinas de gobierno, así que sus llamadas suenan sin pasar por la base de datos de spam.</string>
+    <string name="reg_prefix_india_1600_allow_desc">La serie 1600 de India pertenece a bancos, aseguradoras y oficinas de gobierno, así que sus llamadas suenan sin pasar por la base de datos de spam. Activado de forma predeterminada con una SIM de India.</string>
+    <string name="reg_prefix_india_1601_allow">Proteger la serie 1601 de India</string>
+    <string name="reg_prefix_india_1601_allow_desc">La serie 1601 de India pertenece a empresas de servicios públicos, logística y mensajería, así que sus llamadas suenan sin pasar por la base de datos de spam. Activado de forma predeterminada con una SIM de India.</string>
     <string name="reg_prefix_spain_400_match">Rango de llamadas comerciales 400 de España</string>
     <string name="reg_prefix_india_140_match">Serie de llamadas promocionales 140 de India</string>
     <string name="reg_prefix_brazil_0303_match">Código de telemarketing 0303 de Brasil</string>
     <string name="reg_prefix_india_1600_allow_match">Serie 1600 de India para bancos, aseguradoras y oficinas de gobierno</string>
+    <string name="reg_prefix_india_1601_allow_match">Serie 1601 de India para servicios públicos, logística y mensajería</string>
     <string name="region_rules_title">Reglas de región y nombre de quien llama</string>
     <string name="region_rules_disclosure">Estas reglas se ejecutan por completo en tu dispositivo. El bloqueo por región lee el código de área de un número norteamericano y el código de país de cualquier otro. La confianza por nombre usa solo un nombre presentado por la operadora que Android entrega al servicio de filtrado.</string>
     <string name="region_rules_block_outside">Bloquear llamadas fuera de las regiones permitidas</string>
@@ -1858,7 +1861,7 @@
     <string name="reasoning_temporary_allow_headline">Permitiste este número por un tiempo.</string>
     <string name="reasoning_temporary_allow_detail">Suena hasta que termine el permiso temporal.</string>
     <string name="reasoning_regulatory_allow_headline">Este número está en una serie que protege el regulador.</string>
-    <string name="reasoning_regulatory_allow_detail">Bancos, aseguradoras y oficinas de gobierno llaman desde ahí, así que suena sin pasar por la base de datos de spam, la heurística, las horas de silencio ni las reglas de región.</string>
+    <string name="reasoning_regulatory_allow_detail">Está reservada para llamadas de servicio y de gobierno, así que suena sin pasar por la base de datos de spam, la heurística, las horas de silencio ni las reglas de región.</string>
     <string name="reasoning_recently_dialed_headline">Llamaste a este número hace poco, así que la devolución de llamada sonó.</string>
     <string name="reasoning_recently_dialed_detail">Cualquier número al que llamaste en las últimas 24 horas pasa las reglas de región, las horas de silencio y la heurística de spam.</string>
     <string name="reasoning_emergency_callback_headline">El margen para devoluciones de llamada de emergencia está activo.</string>
