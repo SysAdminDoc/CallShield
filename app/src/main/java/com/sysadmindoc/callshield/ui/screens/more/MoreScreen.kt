@@ -107,6 +107,7 @@ fun MoreHub(
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val appUpdateChecksEnabled by viewModel.appUpdateChecksEnabled.collectAsStateWithLifecycle()
+    val strictOffline by viewModel.strictOfflineEnabled.collectAsStateWithLifecycle()
     val appUpdateState by viewModel.appUpdateState.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
@@ -261,6 +262,7 @@ fun MoreHub(
             Spacer(Modifier.height(8.dp))
             AppUpdatePreferenceRow(
                 enabled = appUpdateChecksEnabled,
+                strictOffline = strictOffline,
                 status = appUpdateState.status,
                 latestTag = appUpdateState.latestTag,
                 onEnabledChange = viewModel::setAppUpdateChecks,
@@ -443,6 +445,7 @@ private fun AppThemeMode.labelResource(): Int =
 @Composable
 private fun AppUpdatePreferenceRow(
     enabled: Boolean,
+    strictOffline: Boolean,
     status: AppUpdateStatus,
     latestTag: String?,
     onEnabledChange: (Boolean) -> Unit,
@@ -479,7 +482,11 @@ private fun AppUpdatePreferenceRow(
                     )
                     // The off text is the privacy promise, so it gets room to finish.
                     Text(
-                        if (enabled) statusText else stringResource(R.string.more_update_checks_off),
+                        when {
+                            !enabled -> stringResource(R.string.more_update_checks_off)
+                            strictOffline -> stringResource(R.string.more_update_offline)
+                            else -> statusText
+                        },
                         color = CatSubtext,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 4,
@@ -488,7 +495,7 @@ private fun AppUpdatePreferenceRow(
                 }
                 Switch(checked = enabled, onCheckedChange = null)
             }
-            if (enabled) {
+            if (enabled && !strictOffline) {
                 TextButton(
                     onClick = onCheckNow,
                     modifier = Modifier.fillMaxWidth(),

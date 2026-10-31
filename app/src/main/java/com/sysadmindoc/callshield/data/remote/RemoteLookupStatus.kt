@@ -19,6 +19,9 @@ enum class RemoteLookupStatus {
     UNREADABLE_BODY,
     PARSE_ERROR,
     UNAVAILABLE,
+
+    /** Strict offline mode is on, so no request was made. */
+    OFFLINE_MODE,
     ;
 
     val isFallback: Boolean
@@ -35,7 +38,9 @@ enum class RemoteLookupStatus {
 }
 
 internal fun Throwable.toRemoteLookupStatus(): RemoteLookupStatus =
-    if (this is SocketTimeoutException || this is InterruptedIOException) {
+    if (isStrictOffline()) {
+        RemoteLookupStatus.OFFLINE_MODE
+    } else if (this is SocketTimeoutException || this is InterruptedIOException) {
         RemoteLookupStatus.TIMEOUT
     } else {
         RemoteLookupStatus.UNAVAILABLE

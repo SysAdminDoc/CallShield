@@ -2013,4 +2013,15 @@
         <item quantity="one">%d regra removida</item>
         <item quantity="other">%d regras removidas</item>
     </plurals>
+    <string name="settings_strict_offline">Modo offline estrito</string>
+    <string name="settings_strict_offline_desc">Pausa tudo o que usa a internet: a sincronização, a busca por atualizações, as consultas ao vivo e as denúncias à comunidade. A proteção continua usando os dados que já estão neste telefone</string>
+    <string name="contribute_offline_mode">O modo offline está ativado, então esta denúncia não foi enviada nem salva. Desative nos Ajustes e denuncie de novo.</string>
+    <string name="sync_strict_offline">O modo offline está ativado, então nada foi baixado. A proteção continua usando os dados deste telefone.</string>
+    <string name="strict_offline_lists">O modo offline está ativado, então não dá para baixar listas agora.</string>
+    <string name="remote_lookup_status_offline_mode">Modo offline ativado</string>
+    <string name="more_update_offline">O modo offline está ativado, então as atualizações não estão sendo verificadas.</string>
+    <string name="protection_test_hot_offline">O modo offline está ativado, então esta lista não está sendo atualizada. Ela volta a atualizar quando você desativar o modo</string>
+    <string name="lookup_message_offline">O modo offline está ativado. A verificação é feita só neste telefone e nada é enviado.</string>
+    <string name="dashboard_sync_offline">%1$s. Modo offline ativado</string>
+    <string name="settings_feed_mirror_offline">O modo offline está ativado, então não foi possível verificar nem salvar o endereço.</string>
 </resources>

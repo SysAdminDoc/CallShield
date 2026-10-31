@@ -35,6 +35,7 @@ import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.service.AnswerHangUpController
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -264,6 +265,7 @@ class SettingsRepository(
     val appTheme: Flow<String> = dataStore.data.map { sanitizeAppTheme(it[SpamRepository.KEY_APP_THEME]) }
     val blocklistSort: Flow<BlocklistSort> = dataStore.data.map { BlocklistSort.fromStored(it[SpamRepository.KEY_BLOCKLIST_SORT]) }
     val appUpdateChecksEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false }
+    val strictOfflineEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_STRICT_OFFLINE] ?: false }
 
     /** The stored release notice while [installedCode] is older and the user hasn't dismissed that release. */
     fun appReleaseNotice(installedCode: Int = BuildConfig.VERSION_CODE): Flow<AppReleaseNotice?> =
@@ -595,6 +597,18 @@ class SettingsRepository(
     suspend fun setRemoteUrlLookup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REMOTE_URL_LOOKUP] = enabled }
 
     suspend fun setLiveCallerEnrichment(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] = enabled }
+
+    suspend fun setStrictOffline(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_STRICT_OFFLINE] = enabled }
+
+    /** The stored switch; a setting that can't be read counts as on, so a failed read never lets a request out. */
+    suspend fun isStrictOffline(): Boolean =
+        try {
+            strictOfflineEnabled.first()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            true
+        }
 
     suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
 

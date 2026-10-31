@@ -179,6 +179,7 @@ fun DashboardScreen(
     val blockedToday by viewModel.blockedToday.collectAsStateWithLifecycle()
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val strictOffline by viewModel.strictOfflineEnabled.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val blockHidden by viewModel.blockUnknownEnabled.collectAsStateWithLifecycle()
@@ -557,6 +558,7 @@ fun DashboardScreen(
             lastSync = lastSync,
             lastSyncSource = lastSyncSource,
             syncState = syncState,
+            strictOffline = strictOffline,
             heroAction = heroAction,
             onSyncDatabase = {
                 hapticTick(context)
@@ -1403,6 +1405,7 @@ internal fun DashboardHeroCard(
     lastSyncSource: String,
     syncState: SyncState,
     heroAction: HeroAction?,
+    strictOffline: Boolean = false,
     databaseCount: Int = 0,
     onSyncDatabase: () -> Unit = {},
 ) {
@@ -1414,7 +1417,7 @@ internal fun DashboardHeroCard(
             DashboardHeroMode.SetupNeeded -> CatYellow
             DashboardHeroMode.Disabled -> CatRed
         }
-    val syncLabel =
+    val syncAge =
         when {
             lastSync <= 0L && lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED -> {
                 stringResource(R.string.dashboard_database_bundled_ready)
@@ -1429,6 +1432,8 @@ internal fun DashboardHeroCard(
                     ?: stringResource(R.string.dashboard_synced_just_now)
             }
         }
+    // Strict offline mode is why nothing is refreshing, so the age reads as informational, not as stale.
+    val syncLabel = if (strictOffline) stringResource(R.string.dashboard_sync_offline, syncAge) else syncAge
     Column(
         modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1553,7 +1558,7 @@ internal fun DashboardHeroCard(
                     value = databaseValue,
                     label = stringResource(R.string.dashboard_metric_numbers),
                     icon = Icons.Default.Storage,
-                    color = syncFreshnessColor(lastSync, lastSyncSource),
+                    color = syncFreshnessColor(lastSync, lastSyncSource, strictOffline),
                     horizontal = true,
                 )
             }
@@ -1582,7 +1587,7 @@ internal fun DashboardHeroCard(
                     value = databaseValue,
                     label = stringResource(R.string.dashboard_metric_numbers),
                     icon = Icons.Default.Storage,
-                    color = syncFreshnessColor(lastSync, lastSyncSource),
+                    color = syncFreshnessColor(lastSync, lastSyncSource, strictOffline),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -2056,8 +2061,10 @@ internal fun relativeTimeText(timestamp: Long): String = relativeTimeSpan(timest
 private fun syncFreshnessColor(
     lastSync: Long,
     lastSyncSource: String,
+    strictOffline: Boolean,
 ): Color {
     val now = rememberNowTick()
+    if (strictOffline) return CatBlue
     if (lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) return CatBlue
     if (lastSync <= 0L) return CatYellow
     val ago = now - lastSync

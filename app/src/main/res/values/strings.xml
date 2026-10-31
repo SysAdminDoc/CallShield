@@ -2098,4 +2098,15 @@
         <item quantity="one">%d rule removed</item>
         <item quantity="other">%d rules removed</item>
     </plurals>
+    <string name="settings_strict_offline">Strict offline mode</string>
+    <string name="settings_strict_offline_desc">Pauses everything that uses the internet: syncing, update checks, live lookups and community reports. Protection keeps using the data already on this phone</string>
+    <string name="contribute_offline_mode">Offline mode is on, so this report was not sent or saved. Turn it off in Settings, then report again.</string>
+    <string name="sync_strict_offline">Offline mode is on, so nothing was downloaded. Protection still uses the data on this phone.</string>
+    <string name="strict_offline_lists">Offline mode is on, so lists cannot be downloaded right now.</string>
+    <string name="remote_lookup_status_offline_mode">Offline mode is on</string>
+    <string name="more_update_offline">Offline mode is on, so updates are not being checked.</string>
+    <string name="protection_test_hot_offline">Offline mode is on, so this list is not refreshing. It updates again when you turn offline mode off</string>
+    <string name="lookup_message_offline">Offline mode is on. Checked on this phone only, and nothing is sent.</string>
+    <string name="dashboard_sync_offline">%1$s. Offline mode is on</string>
+    <string name="settings_feed_mirror_offline">Offline mode is on, so the address could not be checked or saved.</string>
 </resources>

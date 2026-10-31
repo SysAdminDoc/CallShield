@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -47,8 +48,10 @@ class HotListSyncWorker
         private val hotFeedDataSource: HotFeedDataSource,
         private val checkerDependencies: CheckerDependencies,
     ) : CoroutineWorker(context, params) {
-        override suspend fun doWork(): Result =
-            try {
+        override suspend fun doWork(): Result {
+            // Strict offline mode: skip quietly. The next period checks again.
+            if (StrictOffline.blocksRequests()) return Result.success()
+            return try {
                 val outcome =
                     HotDataSync.refresh(
                         context = applicationContext,
@@ -71,6 +74,7 @@ class HotListSyncWorker
             } catch (_: Exception) {
                 retryOrWaitForNextRun()
             }
+        }
 
         // Linear backoff with no cap grew past the 30 minute period, so a feed
         // that stayed down slowed every refresh to one every few hours. A failed

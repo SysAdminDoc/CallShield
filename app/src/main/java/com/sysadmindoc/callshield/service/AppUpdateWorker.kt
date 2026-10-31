@@ -20,6 +20,7 @@ import com.sysadmindoc.callshield.data.AppUpdateRelease
 import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -37,6 +38,7 @@ class AppUpdateWorker
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             if (!repository.appUpdateChecksEnabled.first()) return Result.success()
+            if (StrictOffline.blocksRequests()) return Result.success()
 
             val previous = repository.appUpdateState.first()
             val state =

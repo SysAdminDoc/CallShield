@@ -2013,4 +2013,15 @@
         <item quantity="one">%d regla eliminada</item>
         <item quantity="other">%d reglas eliminadas</item>
     </plurals>
+    <string name="settings_strict_offline">Modo sin conexión estricto</string>
+    <string name="settings_strict_offline_desc">Pausa todo lo que usa internet: la sincronización, la búsqueda de actualizaciones, las consultas en vivo y los reportes a la comunidad. La protección sigue usando los datos que ya están en este teléfono</string>
+    <string name="contribute_offline_mode">El modo sin conexión está activado, así que este reporte no se envió ni se guardó. Desactívalo en Ajustes y vuelve a reportar.</string>
+    <string name="sync_strict_offline">El modo sin conexión está activado, así que no se descargó nada. La protección sigue usando los datos de este teléfono.</string>
+    <string name="strict_offline_lists">El modo sin conexión está activado, así que ahora no se pueden descargar listas.</string>
+    <string name="remote_lookup_status_offline_mode">Modo sin conexión activado</string>
+    <string name="more_update_offline">El modo sin conexión está activado, así que no se buscan actualizaciones.</string>
+    <string name="protection_test_hot_offline">El modo sin conexión está activado, así que esta lista no se actualiza. Volverá a hacerlo cuando lo desactives</string>
+    <string name="lookup_message_offline">El modo sin conexión está activado. Se revisa solo en este teléfono y no se envía nada.</string>
+    <string name="dashboard_sync_offline">%1$s. Modo sin conexión activado</string>
+    <string name="settings_feed_mirror_offline">El modo sin conexión está activado, así que no se pudo comprobar ni guardar la dirección.</string>
 </resources>

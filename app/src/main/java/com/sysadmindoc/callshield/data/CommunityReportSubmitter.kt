@@ -4,6 +4,7 @@ import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReportHistory.Delivery
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -52,6 +53,7 @@ internal class CommunityReportSubmitter(
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val record: suspend (CommunityReport, Delivery) -> Unit = { _, _ -> },
+    private val isOffline: () -> Boolean = { StrictOffline.isOn() },
 ) {
     suspend fun submit(
         number: String,
@@ -73,6 +75,9 @@ internal class CommunityReportSubmitter(
         // reports couldn't read back an entry with an empty type.
         val reportType = type.ifBlank { "spam" }
         val vote = CommunityReportLedger.voteOf(reportType)
+        // Before the claim, so the day's one report isn't used up by a send that never happens,
+        // and before the outbox, so no copy waits to go out the moment the switch is turned off.
+        if (isOffline()) return CommunityContributor.offlineResult()
         if (!claim(normalized, vote, clock())) {
             // The community already has this report from this device, so it
             // counts as done rather than as a failure.

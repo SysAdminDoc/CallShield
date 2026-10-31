@@ -97,6 +97,7 @@ class BackupSettingsCoverageTest {
             meetingModeApps = listOf("us.zoom.videomeetings"),
             outgoingCallHoldEnabled = true,
             appTheme = "light",
+            strictOfflineEnabled = true,
             appUpdateChecksEnabled = true,
             feedMirrorUrl = "https://mirror.example/callshield/",
             externalBlocklists = listOf(BackupRestore.BackupExternalBlocklist("https://lists.example/spam.txt", "Example")),
@@ -175,6 +176,7 @@ class BackupSettingsCoverageTest {
                 meetingModeApps = listOf("us.zoom.videomeetings"),
                 outgoingCallHoldEnabled = true,
                 appTheme = "light",
+                strictOfflineEnabled = true,
                 appUpdateChecksEnabled = true,
                 feedMirrorUrl = "https://mirror.example/callshield/",
                 externalBlocklists =

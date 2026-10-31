@@ -129,6 +129,7 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
         outgoingCallHoldEnabled = this[SpamRepository.KEY_OUTGOING_CALL_HOLD] ?: false,
         appTheme = sanitizeAppTheme(this[SpamRepository.KEY_APP_THEME]),
         appUpdateChecksEnabled = this[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false,
+        strictOfflineEnabled = this[SpamRepository.KEY_STRICT_OFFLINE] ?: false,
         feedMirrorUrl = this[SpamRepository.KEY_FEED_MIRROR_URL].orEmpty(),
         externalBlocklists =
             externalBlocklistSubscriptions().map {
@@ -324,6 +325,7 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
     }
     outgoingCallHoldEnabled?.let { preferences[SpamRepository.KEY_OUTGOING_CALL_HOLD] = it }
     appTheme?.let { preferences[SpamRepository.KEY_APP_THEME] = it }
+    strictOfflineEnabled?.let { preferences[SpamRepository.KEY_STRICT_OFFLINE] = it }
     when (appUpdateChecksEnabled) {
         true -> preferences[SpamRepository.KEY_APP_UPDATE_CHECKS] = true
         false -> preferences.remove(SpamRepository.KEY_APP_UPDATE_CHECKS)

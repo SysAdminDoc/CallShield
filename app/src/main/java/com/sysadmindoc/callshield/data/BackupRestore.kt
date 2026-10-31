@@ -217,6 +217,7 @@ object BackupRestore {
         val outgoingCallHoldEnabled: Boolean? = null,
         val appTheme: String? = null,
         val appUpdateChecksEnabled: Boolean? = null,
+        val strictOfflineEnabled: Boolean? = null,
         /** "" when the backed-up phone had no mirror. */
         val feedMirrorUrl: String? = null,
         /** The subscribed lists, or null in a backup from before they were saved. */

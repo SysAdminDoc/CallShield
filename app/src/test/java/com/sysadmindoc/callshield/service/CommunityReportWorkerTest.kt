@@ -18,8 +18,10 @@ import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReport
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -181,6 +183,30 @@ class CommunityReportWorkerTest {
         assertEquals("work-id", first!!.id)
         assertEquals(first, second)
     }
+
+    @Test
+    fun `a queued report skips with success in strict offline mode and is marked not sent`() {
+        StrictOffline.set(true)
+        var transportCalls = 0
+        val worker =
+            TestListenableWorkerBuilder<CommunityReportWorker>(context)
+                .setInputData(CommunityReportWorker.request(report).workSpec.input)
+                .setWorkerFactory(
+                    factory {
+                        transportCalls++
+                        ContributeResult(true, "ok", ContributeOutcome.REPORTED_SPAM)
+                    },
+                ).build()
+
+        assertEquals(ListenableWorker.Result.success(), runBlocking { worker.doWork() })
+
+        assertEquals("no request was attempted", 0, transportCalls)
+        assertEquals("the day's claim is given back", listOf("$number:spam"), released)
+        assertEquals(listOf("report-1:NOT_SENT"), recorded)
+    }
+
+    @After
+    fun tearDown() = StrictOffline.resetForTest()
 
     private fun run(
         outcome: ContributeOutcome,

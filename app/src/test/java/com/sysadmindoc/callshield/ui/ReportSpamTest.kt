@@ -9,11 +9,13 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReport
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
@@ -92,6 +94,7 @@ class ReportSpamTest {
 
     @After
     fun tearDown() {
+        StrictOffline.resetForTest()
         CommunityContributor.transport = originalTransport
         CommunityContributor.repositoryFor = originalRepository
         fixture.close()
@@ -150,6 +153,19 @@ class ReportSpamTest {
         assertEquals(allowed, runBlocking { fixture.dao.findWhitelistEntry(number) })
         assertEquals(until, allowed.expiresAt)
         assertNull(runBlocking { fixture.dao.findByNumber(number) }?.takeIf { it.isUserBlocked })
+    }
+
+    @Test
+    fun `a report made in strict offline mode says offline mode is on and sends nothing`() {
+        StrictOffline.set(true)
+
+        viewModel.reportSpam(number, "spam", blockHere = true)
+        val outcome = awaitOutcome()
+
+        assertEquals(context.getString(R.string.contribute_offline_mode), outcome.message.text)
+        assertEquals(false, outcome.message.success)
+        assertEquals("no request was attempted", emptyList<CommunityReport>(), sent)
+        assertEquals("the block is local, so it still applies", true, runBlocking { fixture.dao.findByNumber(number) }?.isUserBlocked)
     }
 
     @Test

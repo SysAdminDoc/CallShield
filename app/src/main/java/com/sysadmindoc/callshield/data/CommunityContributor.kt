@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.remote.HttpClient
+import com.sysadmindoc.callshield.data.remote.isStrictOffline
 import com.sysadmindoc.callshield.service.CommunityReportWorker
 import com.sysadmindoc.callshield.util.countryCallingCodeOf
 import kotlinx.coroutines.CancellationException
@@ -81,6 +82,13 @@ object CommunityContributor {
 
         /** Couldn't be sent now; the outbox delivers it when the network allows. */
         QUEUED,
+
+        /**
+         * Strict offline mode is on, so nothing was sent and nothing was kept: no
+         * daily claim was used and no queued copy exists. The person can report
+         * again once the switch is off.
+         */
+        OFFLINE_MODE,
         ;
 
         /** A failure that trying again later can fix. */
@@ -163,6 +171,7 @@ object CommunityContributor {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (e.isStrictOffline()) return@withContext offlineResult()
                 ContributeResult(
                     success = false,
                     message = "Network error: ${e.message}",
@@ -170,6 +179,9 @@ object CommunityContributor {
                 )
             }
         }
+
+    /** What a report gets while strict offline mode is on. */
+    internal fun offlineResult() = ContributeResult(false, "Strict offline mode is on", ContributeOutcome.OFFLINE_MODE)
 
     /** How the app reads the Worker's answer to one report. */
     internal fun resultFor(

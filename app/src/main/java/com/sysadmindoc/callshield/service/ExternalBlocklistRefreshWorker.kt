@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.data.ExternalBlocklistRefreshPolicy
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -33,6 +34,7 @@ class ExternalBlocklistRefreshWorker
         internal var clock: () -> Long = System::currentTimeMillis
 
         override suspend fun doWork(): Result {
+            if (StrictOffline.blocksRequests()) return Result.success()
             // A list that fails or is held back says so on its own row and is
             // tried again when next due. Retrying the whole run would only
             // fetch the healthy lists again.

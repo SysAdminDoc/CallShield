@@ -50,6 +50,7 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
     val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
     val remoteUrlLookup by viewModel.remoteUrlLookupEnabled.collectAsStateWithLifecycle()
     val liveCallerEnrichment by viewModel.liveCallerEnrichmentEnabled.collectAsStateWithLifecycle()
+    val strictOffline by viewModel.strictOfflineEnabled.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val freqThreshold by viewModel.freqThreshold.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
@@ -124,6 +125,13 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
             Icons.Default.TravelExplore,
             liveCallerEnrichment,
         ) { viewModel.setLiveCallerEnrichment(it) }
+        GradientDivider()
+        SettingsToggle(
+            stringResource(R.string.settings_strict_offline),
+            stringResource(R.string.settings_strict_offline_desc),
+            Icons.Default.CloudOff,
+            strictOffline,
+        ) { viewModel.setStrictOffline(it) }
         GradientDivider()
         SettingsToggle(
             stringResource(R.string.settings_sms_burst),

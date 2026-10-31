@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistHttpException
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -40,7 +41,10 @@ class ExternalBlocklistRefreshWorkerTest {
     private val hour = TimeUnit.HOURS.toMillis(1)
 
     @After
-    fun tearDown() = fixture.close()
+    fun tearDown() {
+        StrictOffline.resetForTest()
+        fixture.close()
+    }
 
     @Test
     fun `a stale subscription is refreshed and a failed refresh keeps the last good rows`() {
@@ -137,6 +141,25 @@ class ExternalBlocklistRefreshWorkerTest {
 
         assertEquals(1, feed.fetches)
         assertEquals(emptySet<String>(), rows())
+    }
+
+    @Test
+    fun `strict offline mode skips the run with success and fetches nothing`() {
+        feed.body = "+12125550101"
+        val addedAt = subscribe()
+        val fetchesBefore = feed.fetches
+        val attemptBefore = subscription().lastAttemptAt
+
+        StrictOffline.set(true)
+        runWorkerAt(addedAt + 90 * hour)
+
+        assertEquals("no list was fetched", fetchesBefore, feed.fetches)
+        assertEquals("a skipped run is not a failed attempt", "", subscription().lastError)
+        assertEquals(attemptBefore, subscription().lastAttemptAt)
+
+        StrictOffline.set(false)
+        runWorkerAt(addedAt + 90 * hour)
+        assertEquals("the list is fetched once the switch is off", fetchesBefore + 1, feed.fetches)
     }
 
     private fun subscribe(): Long {

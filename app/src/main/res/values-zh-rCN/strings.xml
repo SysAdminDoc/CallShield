@@ -1892,4 +1892,15 @@
         <item quantity="one">已移除 %d 条规则</item>
         <item quantity="other">已移除 %d 条规则</item>
     </plurals>
+    <string name="settings_strict_offline">严格离线模式</string>
+    <string name="settings_strict_offline_desc">暂停所有使用互联网的功能：同步、更新检查、实时查询和社区举报。防护会继续使用这部手机上已有的数据</string>
+    <string name="contribute_offline_mode">离线模式已开启，所以这条举报没有发送，也没有保存。请在设置中关闭离线模式，然后重新举报。</string>
+    <string name="sync_strict_offline">离线模式已开启，所以没有下载任何内容。防护仍在使用这部手机上的数据。</string>
+    <string name="strict_offline_lists">离线模式已开启，所以现在无法下载名单。</string>
+    <string name="remote_lookup_status_offline_mode">离线模式已开启</string>
+    <string name="more_update_offline">离线模式已开启，所以不会检查更新。</string>
+    <string name="protection_test_hot_offline">离线模式已开启，所以这份名单不会刷新。关闭离线模式后会恢复更新</string>
+    <string name="lookup_message_offline">离线模式已开启。只在这部手机上检查，不会发送任何内容。</string>
+    <string name="dashboard_sync_offline">%1$s。离线模式已开启</string>
+    <string name="settings_feed_mirror_offline">离线模式已开启，所以无法检查或保存这个地址。</string>
 </resources>

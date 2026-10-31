@@ -41,6 +41,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -200,6 +201,7 @@ class SpamRepository(
         val KEY_URL_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
         val KEY_REMOTE_URL_LOOKUP = booleanPreferencesKey("urlhaus_remote_lookup_enabled")
         val KEY_LIVE_CALLER_ENRICHMENT = booleanPreferencesKey("live_caller_enrichment_enabled")
+        val KEY_STRICT_OFFLINE = booleanPreferencesKey("strict_offline_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_SELECTED_CONTACT_GROUPS = stringSetPreferencesKey("selected_contact_group_keys")
@@ -413,6 +415,14 @@ class SpamRepository(
                 ).also { instance = it }
             }
 
+        /**
+         * The stored strict offline switch, read straight from the preferences file
+         * without building the repository or the database. Throws when it can't be read.
+         */
+        internal suspend fun readStrictOffline(context: Context): Boolean =
+            context.applicationContext.dataStore.data
+                .first()[KEY_STRICT_OFFLINE] ?: false
+
         /** Hands [repository] to every [getInstance] caller, or forgets it when null. */
         @VisibleForTesting
         internal fun replaceInstanceForTests(repository: SpamRepository?) {
@@ -488,6 +498,7 @@ class SpamRepository(
     val appTheme: Flow<String> = settingsRepository.appTheme
     val blocklistSort: Flow<BlocklistSort> = settingsRepository.blocklistSort
     val appUpdateChecksEnabled: Flow<Boolean> = settingsRepository.appUpdateChecksEnabled
+    val strictOfflineEnabled: Flow<Boolean> = settingsRepository.strictOfflineEnabled
     val appUpdateState: Flow<AppUpdateState> = settingsRepository.appUpdateState
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
     val feedMirrorUrl: Flow<String?> = settingsRepository.feedMirrorUrl
@@ -642,6 +653,10 @@ class SpamRepository(
     suspend fun setRemoteUrlLookup(enabled: Boolean) = settingsRepository.setRemoteUrlLookup(enabled)
 
     suspend fun setLiveCallerEnrichment(enabled: Boolean) = settingsRepository.setLiveCallerEnrichment(enabled)
+
+    suspend fun setStrictOffline(enabled: Boolean) = settingsRepository.setStrictOffline(enabled)
+
+    suspend fun isStrictOffline(): Boolean = settingsRepository.isStrictOffline()
 
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
 

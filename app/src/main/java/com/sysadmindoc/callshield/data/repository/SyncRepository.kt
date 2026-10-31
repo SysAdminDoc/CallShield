@@ -35,9 +35,11 @@ import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.remote.sha256Hex
 import com.sysadmindoc.callshield.data.remote.spamShardIdFor
+import com.sysadmindoc.callshield.data.remote.isStrictOffline
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
@@ -85,6 +87,16 @@ class SyncRepository(
     @Suppress("LongMethod", "TooGenericExceptionCaught")
     suspend fun syncFromGitHub(force: Boolean = false): SyncResult =
         withContext(Dispatchers.IO) {
+            // Strict offline mode: no fetch, and no fall back to the bundled snapshot that a failed
+            // fetch would load. Said plainly, as a notice rather than a failed sync.
+            if (StrictOffline.blocksRequests()) {
+                return@withContext SyncResult(
+                    success = true,
+                    message = context.getString(R.string.sync_strict_offline),
+                    warning = true,
+                    offline = true,
+                )
+            }
             syncMutex.withLock {
                 try {
                     val currentCount = dao.getSpamCount()
@@ -342,6 +354,7 @@ class SyncRepository(
     /** Saves [url] as the feed mirror once it serves this project's signed manifest. */
     suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave {
         val normalized = FeedMirror.normalize(url) ?: return FeedMirrorSave.INVALID
+        if (StrictOffline.blocksRequests()) return FeedMirrorSave.OFFLINE
         if (remote.probeMirror(normalized).isFailure) return FeedMirrorSave.UNVERIFIED
         settingsRepository.setFeedMirrorUrl(normalized)
         return FeedMirrorSave.SAVED
@@ -432,6 +445,8 @@ class SyncRepository(
     @Suppress("TooGenericExceptionCaught")
     suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> =
         withContext(Dispatchers.IO) {
+            // Strict offline mode: leave every list as it is. Nothing is recorded as a failed attempt.
+            if (StrictOffline.blocksRequests()) return@withContext emptyList()
             syncMutex.withLock {
                 settingsRepository
                     .readExternalBlocklistSubscriptions()
@@ -1130,6 +1145,13 @@ class SyncRepository(
         } catch (e: Exception) {
             // Same as the sync: a caller that went away isn't a failed download.
             currentCoroutineContext().ensureActive()
+            if (e.isStrictOffline()) {
+                return ExternalBlocklistImportResult(
+                    success = false,
+                    message = context.getString(R.string.strict_offline_lists),
+                    offline = true,
+                )
+            }
             // Same hygiene as the v1.7.26 restore/import pass: raw e.message
             // embeds the full user URL (OkHttp) or SQLite constraint names —
             // log the cause for diagnostics, show a localized generic reason.
@@ -1192,6 +1214,9 @@ enum class FeedMirrorSave {
 
     /** It didn't serve a signed copy of the manifest. */
     UNVERIFIED,
+
+    /** Strict offline mode is on, so the address wasn't checked. */
+    OFFLINE,
 }
 
 /** "+", then 3-15 digits: whole-country-code rows are the shortest legitimate prefixes. */

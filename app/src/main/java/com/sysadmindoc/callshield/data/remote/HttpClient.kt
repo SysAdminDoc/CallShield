@@ -152,6 +152,7 @@ object HttpClient {
         OkHttpClient
             .Builder()
             .certificatePinner(certificatePinner)
+            .addInterceptor(StrictOfflineInterceptor)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .followRedirects(true)

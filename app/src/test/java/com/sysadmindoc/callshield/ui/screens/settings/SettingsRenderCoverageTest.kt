@@ -99,6 +99,7 @@ class SettingsRenderCoverageTest {
             "KEY_SMS_CONTENT" to Control(Tab.ADVANCED, R.string.settings_sms_content),
             "KEY_REMOTE_URL_LOOKUP" to Control(Tab.ADVANCED, R.string.settings_remote_url_lookup),
             "KEY_LIVE_CALLER_ENRICHMENT" to Control(Tab.ADVANCED, R.string.settings_live_caller_enrichment),
+            "KEY_STRICT_OFFLINE" to Control(Tab.ADVANCED, R.string.settings_strict_offline),
             "KEY_SMS_BURST" to Control(Tab.ADVANCED, R.string.settings_sms_burst),
             "KEY_FREQ_ESCALATION" to Control(Tab.ADVANCED, R.string.settings_repeat_caller),
             "KEY_FREQ_THRESHOLD" to Control(Tab.ADVANCED, R.string.settings_repeat_caller_threshold),

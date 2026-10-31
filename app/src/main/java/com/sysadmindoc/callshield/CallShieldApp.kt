@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.remote.FeedMirror
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CrashReporter
@@ -72,6 +73,9 @@ class CallShieldApp :
     override fun onCreate() {
         super.onCreate()
         appScope = applicationScope
+        // Before anything that could start a request: until the collector below has a
+        // value, the HTTP client reads the stored switch itself and treats a failure as on.
+        StrictOffline.installReader { runBlocking { SpamRepository.readStrictOffline(this@CallShieldApp) } }
         initializeAfterUserUnlock()
     }
 
@@ -139,6 +143,16 @@ class CallShieldApp :
             }
 
             registerCacheInvalidationObservers()
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).strictOfflineEnabled.collect { StrictOffline.set(it) }
+                } catch (e: Exception) {
+                    // Back to unknown: the next request reads the stored switch again, and a failed read refuses it.
+                    StrictOffline.forget()
+                    Log.w("CallShieldApp", "Failed to follow the strict offline setting", e)
+                }
+            }
 
             appScope.launch {
                 try {

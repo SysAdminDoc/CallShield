@@ -526,6 +526,8 @@ class MainViewModel
         val remoteUrlLookupEnabled =
             repo.remoteUrlLookupEnabled
                 .screenState(false)
+        /** Strict offline mode: no network request is made while this is on. */
+        val strictOfflineEnabled = repo.strictOfflineEnabled.screenState(false)
         val liveCallerEnrichmentEnabled =
             repo.liveCallerEnrichmentEnabled
                 .screenState(false)
@@ -788,7 +790,7 @@ class MainViewModel
                     val result = syncDatabase(force = true)
                     // Sync now also picks up a new release notice and list
                     // catalog, as the six-hour worker does.
-                    if (result.success) {
+                    if (result.success && !result.offline) {
                         try {
                             repo.refreshAppReleaseNotice()
                             repo.refreshListCatalog()
@@ -889,6 +891,7 @@ class MainViewModel
                         FeedMirrorSave.SAVED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_saved), success = true)
                         FeedMirrorSave.INVALID -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_invalid), success = false)
                         FeedMirrorSave.UNVERIFIED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_unverified), success = false)
+                        FeedMirrorSave.OFFLINE -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_offline), success = false)
                     }
             }
         }
@@ -1390,7 +1393,7 @@ class MainViewModel
         }
 
         fun checkForAppUpdate() {
-            if (appUpdateChecksEnabled.value) AppUpdateWorker.checkNow(appContext)
+            if (appUpdateChecksEnabled.value && !strictOfflineEnabled.value) AppUpdateWorker.checkNow(appContext)
         }
 
         fun setBlockCalls(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockCalls(v) }
@@ -1416,6 +1419,8 @@ class MainViewModel
         fun setUrlStripQuery(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setUrlStripQuery(v) }
 
         fun setRemoteUrlLookup(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setRemoteUrlLookup(v) }
+
+        fun setStrictOffline(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setStrictOffline(v) }
 
         fun setLiveCallerEnrichment(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setLiveCallerEnrichment(v) }
 
@@ -1825,6 +1830,10 @@ class MainViewModel
 
                     CommunityContributor.ContributeOutcome.QUEUED -> {
                         appContext.getString(R.string.contribute_queued)
+                    }
+
+                    CommunityContributor.ContributeOutcome.OFFLINE_MODE -> {
+                        appContext.getString(R.string.contribute_offline_mode)
                     }
                 }
             return StatusMessage(text, success)

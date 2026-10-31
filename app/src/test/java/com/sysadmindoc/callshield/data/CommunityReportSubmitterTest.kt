@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -331,6 +332,36 @@ class CommunityReportSubmitterTest {
         // Released, so trying again isn't answered with "already reported".
         assertEquals(ContributeOutcome.INVALID_NUMBER, store.submit("+12122340101").outcome)
         assertEquals(2, sent.size)
+    }
+
+    @Test
+    fun `a report made in strict offline mode is refused before it is claimed or queued`() {
+        val store = store()
+        val offlineSubmitter =
+            CommunityReportSubmitter(
+                claim = store.settings::claimCommunityReport,
+                release = store.settings::releaseCommunityReport,
+                transport = { report ->
+                    sent += report
+                    ContributeResult(true, "stored", ContributeOutcome.REPORTED_SPAM)
+                },
+                enqueue = { report -> queued += report },
+                dequeue = { report -> dequeued += report },
+                clock = { now },
+                newId = { "report-${++nextId}" },
+                record = { report, delivery -> recorded += "${report.id}:$delivery" },
+                isOffline = { true },
+            )
+
+        val refused = runBlocking { offlineSubmitter.submit("+12122340101", "spam", null) }
+
+        assertEquals(ContributeOutcome.OFFLINE_MODE, refused.outcome)
+        assertFalse(refused.success)
+        assertEquals("nothing was sent", emptyList<CommunityReport>(), sent)
+        assertEquals("nothing waits in the outbox", emptyList<CommunityReport>(), queued)
+        assertEquals(emptyList<String>(), recorded)
+        // The day's claim was not used up, so the same report goes out once the switch is off.
+        assertEquals(ContributeOutcome.REPORTED_SPAM, store.submit("+12122340101").outcome)
     }
 
     @Test

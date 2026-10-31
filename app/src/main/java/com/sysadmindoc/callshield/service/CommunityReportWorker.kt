@@ -13,12 +13,14 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.await
 import com.sysadmindoc.callshield.data.CommunityContributor
+import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.CommunityReport
 import com.sysadmindoc.callshield.data.CommunityReportHistory.Delivery
 import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
@@ -39,19 +41,28 @@ class CommunityReportWorker internal constructor(
     params: WorkerParameters,
     private val transport: suspend (CommunityReport) -> ContributeResult,
     private val record: suspend (CommunityReport, Delivery) -> Unit = { _, _ -> },
+    private val offline: () -> Boolean = { StrictOffline.blocksRequests() },
     private val release: suspend (number: String, vote: String) -> Unit,
 ) : CoroutineWorker(context, params) {
     constructor(context: Context, params: WorkerParameters) : this(
         context,
         params,
-        CommunityContributor::send,
-        { report, delivery -> SpamRepository.getInstance(context.applicationContext).recordCommunityReport(report, delivery) },
-        { number, vote -> SpamRepository.getInstance(context.applicationContext).releaseCommunityReport(number, vote) },
+        transport = CommunityContributor::send,
+        record = { report, delivery -> SpamRepository.getInstance(context.applicationContext).recordCommunityReport(report, delivery) },
+        release = { number, vote -> SpamRepository.getInstance(context.applicationContext).releaseCommunityReport(number, vote) },
     )
 
     override suspend fun doWork(): Result {
         val report = reportFrom(inputData, fallbackId = id.toString()) ?: return Result.failure()
-        val result = transport(report)
+        val result = if (offline()) CommunityContributor.offlineResult() else transport(report)
+        if (result.outcome == ContributeOutcome.OFFLINE_MODE) {
+            // Strict offline mode: nothing is sent while it is on. Skip with success rather than
+            // retry, but free the day's claim and mark the report Not sent so My reports shows
+            // the truth and the person can report it again.
+            release(report.number, CommunityReportLedger.voteOf(report.type))
+            note(report, Delivery.NOT_SENT)
+            return Result.success()
+        }
         val givenUp = !result.success && (!result.outcome.isTransient || runAttemptCount + 1 >= MAX_ATTEMPTS)
         return when {
             result.success -> {

@@ -116,7 +116,9 @@ internal fun PastedMessagePanel(viewModel: MainViewModel) {
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val aggressive by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
-    val remoteLookup by viewModel.remoteUrlLookupEnabled.collectAsStateWithLifecycle()
+    val remoteLookupSetting by viewModel.remoteUrlLookupEnabled.collectAsStateWithLifecycle()
+    val strictOffline by viewModel.strictOfflineEnabled.collectAsStateWithLifecycle()
+    val remoteLookup = remoteLookupSetting && !strictOffline
     val stripQuery by viewModel.urlStripQueryEnabled.collectAsStateWithLifecycle()
     // Like the number field: only check for a clip until Paste is tapped.
     val clipboardHasText = remember(context) { clipboardHasText(context) }
@@ -182,7 +184,13 @@ internal fun PastedMessagePanel(viewModel: MainViewModel) {
             },
             supportingText = {
                 Text(
-                    stringResource(if (remoteLookup) R.string.lookup_message_privacy_remote else R.string.lookup_message_privacy),
+                    stringResource(
+                        when {
+                            strictOffline -> R.string.lookup_message_offline
+                            remoteLookup -> R.string.lookup_message_privacy_remote
+                            else -> R.string.lookup_message_privacy
+                        },
+                    ),
                     color = CatOverlay,
                 )
             },

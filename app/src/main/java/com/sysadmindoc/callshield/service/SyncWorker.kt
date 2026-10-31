@@ -15,6 +15,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.remote.StrictOffline
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -31,6 +32,8 @@ class SyncWorker
         private val repo: SpamRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
+            // Strict offline mode: nothing to fetch, and a retry would only ask again. The next period checks again.
+            if (StrictOffline.blocksRequests()) return Result.success()
             val result = syncDatabase()
 
             // Also sync the ML model weights file — lightweight, same GitHub repo

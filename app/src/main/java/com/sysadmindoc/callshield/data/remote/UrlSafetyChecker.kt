@@ -125,8 +125,11 @@ object UrlSafetyChecker {
     private suspend fun lookupUrlEvidence(
         remoteLookupUrl: String,
         onDeviceLookupUrl: String = remoteLookupUrl,
-        adapters: List<UrlThreatAdapter> = enabledAdapters,
+        allAdapters: List<UrlThreatAdapter> = enabledAdapters,
     ): List<UrlThreatResult> {
+        // Strict offline mode: only the lists already on the phone are matched, so a link is
+        // checked as far as it can be without a request and the rest are left out, not failed.
+        val adapters = if (StrictOffline.blocksRequests()) allAdapters.filter { it.matchesOnDevice } else allAdapters
         if (adapters.isEmpty()) return emptyList()
         val nowMillis = System.currentTimeMillis()
         return coroutineScope {

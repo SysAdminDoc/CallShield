@@ -834,6 +834,9 @@ private suspend fun runTests(context: Context): List<TestResult> =
         // not missing protection.
         val hotRangesCleared = HotDataSync.HOT_RANGES_FEED in hotDataHealth.clearedFeeds
         val hotDataHealthy = hotDataState == HotFeedFreshness.State.CURRENT && (hotRangesLoaded || hotRangesCleared)
+        // Strict offline mode stops the refresh on purpose, so a list that is not current is not a fault.
+        val strictOffline = repo.isStrictOffline()
+        val hotDataPaused = strictOffline && !hotDataHealthy
         // Downloads failing certificate verification are not a network hiccup:
         // this build's pins no longer match, and only an app update fixes that.
         val feedTrustFailed = repo.readFeedTrustFailedAt() > 0L
@@ -850,9 +853,9 @@ private suspend fun runTests(context: Context): List<TestResult> =
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_hot_list_data),
-                passed = hotDataHealthy,
+                passed = hotDataHealthy || hotDataPaused,
                 detail =
-                    when (hotDataState) {
+                    if (hotDataPaused) context.getString(R.string.protection_test_hot_offline) else when (hotDataState) {
                         HotFeedFreshness.State.UNREACHABLE -> {
                             hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
                         }
@@ -876,7 +879,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 priority = TestPriority.Recommended,
                 recoveryHint =
                     when {
-                        hotDataHealthy -> null
+                        hotDataHealthy || hotDataPaused -> null
 
                         // A stalled publisher is not something the device can
                         // sync its way out of, so do not tell the user to retry.

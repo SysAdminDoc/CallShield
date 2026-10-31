@@ -65,4 +65,6 @@ data class ExternalBlocklistImportResult(
     val message: String,
     val preview: ExternalBlocklistPreview? = null,
     val subscription: ExternalBlocklistSubscription? = null,
+    /** Strict offline mode is why nothing was fetched. */
+    val offline: Boolean = false,
 )

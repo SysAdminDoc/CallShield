@@ -1180,6 +1180,10 @@ class CallerIdOverlayService : Service() {
                 RemoteLookupStatus.UNAVAILABLE -> {
                     R.string.remote_lookup_status_unavailable
                 }
+
+                RemoteLookupStatus.OFFLINE_MODE -> {
+                    R.string.remote_lookup_status_offline_mode
+                }
             }
         return getString(statusRes)
     }
