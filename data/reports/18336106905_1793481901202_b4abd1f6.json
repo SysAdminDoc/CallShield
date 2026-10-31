@@ -1,0 +1,15 @@
+{
+  "number": "+18336106905",
+  "type": "sms_spam",
+  "reported_at": "2026-10-31T21:25:01.202Z",
+  "source": "community_app",
+  "reporter_bucket": "72a84ad24e06b8e0",
+  "reporter_device": "775cff206b81c1a0",
+  "report_id": "ea44f0c0-c191-4106-adeb-60cc33f32129",
+  "sms_domains": [
+    "me.shanan-group.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
