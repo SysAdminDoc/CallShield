@@ -1359,6 +1359,7 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
     imported source can give. The maintainer's review publishes it, and later
     community reports can't demote it."""
     munich, reported, fresh = "+498943780834", "+18056377456", "+13109462201"
+    generic = "+393762768421"
     fcc_evidence = {
         "source_id": "fcc_complaints",
         "retrieved_at": f"{BASE_DAY}T00:00:00+00:00",
@@ -1386,6 +1387,7 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
         },
     )
     write_report(data_dir, "498943780834_1.json", munich, None, f"{BASE_DAY}T11:54:55+00:00", report_type="unknown")
+    write_report(data_dir, "393762768421_1.json", generic, None, f"{BASE_DAY}T11:55:55+00:00", report_type="spam")
     run_drain(data_dir)
     assert row_for(data_dir, munich) is None, "one report must not publish a number"
     assert pending_reports_for(data_dir, munich) == 1
@@ -1401,6 +1403,7 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
             },
             {"number": reported, "type": "robocall", "reviewed_at": BASE_DAY, "reference": "https://github.com/SysAdminDoc/CallShield/issues/24"},
             {"number": fresh, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/report"},
+            {"number": generic, "type": "telemarketer", "reviewed_at": BASE_DAY, "reference": "https://github.com/SysAdminDoc/CallShield/issues/40"},
         ]
     }
     write_json(data_dir / "spam_numbers_approved.json", approvals)
@@ -1411,6 +1414,8 @@ def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> No
     row = row_for(data_dir, munich)
     assert row is not None, "the reviewed number must be published"
     assert row["type"] == "telemarketer" and row["reports"] == 1, row
+    # The app's blanket "spam" on a report doesn't overrule what the review found (#40).
+    assert row_for(data_dir, generic)["type"] == "telemarketer", row_for(data_dir, generic)
     assert row["description"] == "Community reported; Reviewed by the maintainer", row
     assert row["sources"] == ["community"], row
     [evidence] = row["evidence"]

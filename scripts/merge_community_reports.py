@@ -858,7 +858,7 @@ def apply_maintainer_approvals(
         base = dict(state["entry"]) if state else {}
         entry = {
             "number": number,
-            "type": spam_type if base.get("type") in (None, "", "unknown") else base["type"],
+            "type": spam_type,
             "reports": max(1, sum(event.get("count", 1) for event in events)),
             "first_seen": min(days),
             "last_seen": max(days),
