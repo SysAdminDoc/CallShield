@@ -35,6 +35,14 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `everyday words inside the loan and gambling patterns score nothing`() {
+        assertEquals(0, SmsContentAnalyzer.analyze("Dana is online now, she wanted to ask about Saturday").score)
+        assertEquals(0, SmsContentAnalyzer.analyze("Your delivery slot is 2pm, driver 10 min away").score)
+        assertTrue(SmsContentAnalyzer.analyze("Slot gacor hari ini, deposit 10rb bonus 100%").score > 0)
+        assertTrue(SmsContentAnalyzer.analyze("Pinjaman online cepat cair tanpa jaminan, hub WA kami").score > 0)
+    }
+
+    @Test
     fun `verification message requires an explicit phrase and code`() {
         assertTrue(SmsContentAnalyzer.isVerificationMessage("Your verification code is 482913."))
         assertTrue(SmsContentAnalyzer.isVerificationMessage("Use OTP 4829 to finish signing in."))
@@ -789,7 +797,7 @@ class SmsContentAnalyzerTest {
     fun `any other signal brings a named sender's footer back`() {
         // A brand name up front doesn't make a link or a callback lure safe.
         listOf(
-            "USPS: your parcel is on hold. Reschedule at https://usps-parcel.top/r" to 70,
+            "USPS: your parcel is on hold. Reschedule at https://usps-parcel.top/r" to 85,
             "Lakeside Clinic: confirm your visit at https://bit.ly/3xYz" to 75,
             "CVS: YOUR PRESCRIPTION IS READY FOR PICKUP TODAY" to 55,
             "Lakeside Clinic: call 800-555-0100 about your visit." to 50,
@@ -864,6 +872,30 @@ class SmsContentAnalyzerTest {
             "Recordatorio: su entrevista de trabajo es mañana a las 10:00 en nuestras oficinas.",
             "Seu holerite de setembro já está disponível no portal do colaborador.",
             "La tua busta paga di settembre è disponibile nel portale dipendenti.",
+        ).forEach { body ->
+            assertEquals(body, 0, SmsContentAnalyzer.analyze(body).score)
+        }
+    }
+
+    @Test
+    fun `a blocked account lure needs a link, and a broken phone needs a new number`() {
+        listOf(
+            "BMO has suspended your account for security reasons. Visit : https://bmo-secure.example.invalid/a1 to reactivate",
+            "We have detected an issue and blocked your Internet Banking. Please visit https://nab-secure.example.invalid/a1 to confirm your details",
+            "Please review and update your account to avoid suspension",
+            "Hallo Mama, mein Handy ist kaputt. Das ist meine neue Nummer, schreib mir auf WhatsApp",
+            "Dear customer your SIM documents has been pending, your service will stop soon",
+            "Dear customer your bank account has been locked, please call customer care immediately",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).score > 0)
+        }
+        listOf(
+            "We blocked a suspicious sign-in attempt on your account. No action is needed.",
+            "Please update your card on file to avoid an interruption to your gym membership.",
+            "Die Waschmaschine ist kaputt, der Techniker kommt morgen frueh.",
+            "Mein Handy ist kaputt, ich bin bis Freitag nur per E-Mail erreichbar.",
+            "Dear customer, your new SIM is active and your documents were approved.",
+            "Dear customer, your order is on its way. Please call customer care if you have any questions.",
         ).forEach { body ->
             assertEquals(body, 0, SmsContentAnalyzer.analyze(body).score)
         }

@@ -640,6 +640,92 @@ private object SmsEvaluationCorpus {
                 linkKind = SmsCorpusLinkKind.NONE,
                 body = "Bonjour, c'est le papa de Léo. Voici mon nouveau numéro pour le covoiturage.",
             ),
+            // Look-alikes for the real-world lure phrases added for the IMC 2025
+            // sample: a bank's fraud alert, a real parcel notice, a bill, an
+            // appointment. Each language also carries one lure so recall prints.
+            localized("nl", "NL", SPAM, NONE, "bank_block_lure", "Rabobank: uw rekening wordt vandaag geblokkeerd. Om blokkade te voorkomen moet u uw gegevens bevestigen via de link in dit bericht."),
+            localized("nl", "NL", LEGITIMATE, NONE, "parcel_today", "Uw pakket wordt vandaag tussen 14:00 en 16:00 bezorgd. U hoeft niets te doen."),
+            localized("nl", "NL", LEGITIMATE, NONE, "new_card_sent", "Uw nieuwe betaalpas is verzonden en komt binnen drie werkdagen aan. Activeren kan straks in de app."),
+            localized("nl", "NL", HARD_NEGATIVE, NONE, "bank_fraud_alert", "Fraudemelding van uw bank: kent u een betaling van 89 euro bij een webwinkel niet? Bel het nummer op de achterkant van uw pas."),
+            localized("nl", "NL", LEGITIMATE, BENIGN_DOMAIN, "dentist_appointment", "Uw afspraak bij de tandarts is morgen om 9:30. Wijzigen kan via https://praktijk.example.invalid/afspraak."),
+            localized("nl", "NL", HARD_NEGATIVE, NONE, "energy_bill", "Uw energierekening staat klaar in Mijn Account. Betalen hoeft niet, het bedrag wordt op 1 maart afgeschreven."),
+            localized("nl", "NL", LEGITIMATE, NONE, "waste_collection", "De gemeente laat weten dat de afvalcontainer donderdag later wordt geleegd door werkzaamheden."),
+            localized("fr", "FR", HARD_NEGATIVE, NONE, "bank_declined_payment", "Alerte de votre banque: un paiement de 59 euros a ete refuse a l'etranger. Si c'est vous, aucune action n'est necessaire. Sinon appelez le numero au dos de votre carte."),
+            localized("fr", "FR", LEGITIMATE, NONE, "parcel_tomorrow", "Votre colis sera livre demain entre 9h et 13h. Pas besoin d'etre present si vous avez un point relais."),
+            localized("fr", "FR", LEGITIMATE, BENIGN_DOMAIN, "dentist_appointment", "Votre rendez-vous chez le dentiste est confirme pour mardi a 14h. Modifier: https://cabinet.example.invalid/rdv."),
+            localized("fr", "FR", HARD_NEGATIVE, NONE, "tax_notice_portal", "Impots: votre avis d'imposition est disponible dans votre espace particulier. Aucun paiement n'est demande par SMS."),
+            localized("fr", "FR", LEGITIMATE, NONE, "electricity_bill", "Votre facture d'electricite de mars est disponible. Le prelevement aura lieu le 5 avril."),
+            localized("de", "DE", HARD_NEGATIVE, NONE, "bank_security_notice", "Sicherheitshinweis Ihrer Bank: Wir fragen Sie niemals per SMS nach TAN oder PIN. Bei Fragen rufen Sie die Nummer auf Ihrer Karte an."),
+            localized("de", "DE", LEGITIMATE, NONE, "parcel_today", "Ihr Paket wird heute zwischen 14 und 16 Uhr zugestellt. Sie muessen nichts tun."),
+            localized("de", "DE", LEGITIMATE, BENIGN_DOMAIN, "dentist_appointment", "Ihr Termin beim Zahnarzt ist am Dienstag um 9:30 Uhr. Aenderungen unter https://praxis.example.invalid/termin."),
+            localized("de", "DE", HARD_NEGATIVE, NONE, "new_girocard_sent", "Ihre Girocard wurde versendet und kommt in drei bis fuenf Werktagen an. Die Aktivierung erfolgt an Ihrem Geldautomaten."),
+            localized("de", "DE", LEGITIMATE, NONE, "electricity_bill", "Ihre Stromrechnung fuer Maerz ist in Ihrem Kundenportal abrufbar. Der Betrag wird am 5. April abgebucht."),
+            localized("de", "DE", LEGITIMATE, NONE, "washer_broken", "Die Waschmaschine ist kaputt, der Techniker kommt morgen frueh. Ich rufe dich danach an."),
+            localized("de", "DE", HARD_NEGATIVE, NONE, "phone_broken_email", "Mein Handy ist kaputt, ich bin bis Freitag nur per E-Mail erreichbar. Bis dann im Buero."),
+            localized("id", "ID", SPAM, NONE, "prize_pin_lure", "Selamat! Nomor Anda terpilih mendapat hadiah Rp.50jt. Hubungi panitia sekarang untuk klaim PIN hadiah."),
+            localized("id", "ID", LEGITIMATE, NONE, "order_on_the_way", "Pesanan Anda sedang dikirim dan tiba besok. Kurir akan menghubungi Anda sebelum mengantar."),
+            localized("id", "ID", HARD_NEGATIVE, NONE, "bank_fraud_warning", "Peringatan penipuan dari bank: kami tidak pernah meminta PIN atau kode OTP lewat SMS atau telepon. Abaikan pesan yang meminta data tersebut."),
+            localized("id", "ID", LEGITIMATE, NONE, "clinic_reminder", "Pengingat: janji temu Anda di klinik besok pukul 09.30. Mohon datang 10 menit lebih awal."),
+            localized("id", "ID", LEGITIMATE, BENIGN_DOMAIN, "electricity_bill", "Tagihan listrik bulan ini sudah terbit. Lihat rinciannya di https://pln.example.invalid/tagihan."),
+            localized("id", "ID", LEGITIMATE, NONE, "payment_received", "Pembayaran Rp 150.000 ke toko Anda telah diterima. Terima kasih sudah berbelanja."),
+            localized("hi", "IN", SPAM, NONE, "kbc_lottery_lure", "आपका नंबर KBC लकी ड्रॉ में चुना गया है, 25 लाख का इनाम जीता है। इनाम पाने के लिए अभी कॉल करें।"),
+            localized("hi", "IN", LEGITIMATE, NONE, "order_tomorrow", "आपका ऑर्डर कल सुबह तक पहुंच जाएगा। डिलीवरी पार्टनर आपसे पहले संपर्क करेगा।"),
+            localized("hi", "IN", HARD_NEGATIVE, NONE, "bank_fraud_warning", "बैंक की ओर से सूचना: हम आपसे SMS या फोन पर कभी OTP, पिन या कार्ड नंबर नहीं मांगते। ऐसा संदेश आए तो उसे अनदेखा करें।"),
+            localized("hi", "IN", LEGITIMATE, NONE, "electricity_bill", "आपका बिजली बिल जारी हो गया है। भुगतान की अंतिम तारीख 15 तारीख है। विवरण ऐप में देखें।"),
+            localized("hi", "IN", LEGITIMATE, NONE, "clinic_hinglish", "Aapka appointment kal subah 10 baje clinic mein hai. Kripya samay par pahunchein."),
+            localized("hi", "IN", LEGITIMATE, NONE, "salary_credited", "आपके खाते में वेतन जमा हो गया है। बैलेंस देखने के लिए बैंक की ऐप खोलें।"),
+            localized("ja", "JP", SPAM, SUSPICIOUS_TLD, "absent_parcel_lure", "お客様宛にお荷物のお届けにあがりましたが不在の為持ち帰りました。下記よりご確認ください。 https://nimotsu.example.xyz/a"),
+            localized("ja", "JP", LEGITIMATE, NONE, "parcel_tomorrow", "ご注文の商品は明日午前中にお届け予定です。ご不在の場合は宅配ボックスをご利用ください。"),
+            localized("ja", "JP", HARD_NEGATIVE, NONE, "bank_fraud_warning", "銀行からのお知らせ: 当行がSMSで暗証番号やパスワードをお尋ねすることはありません。不審なメッセージは無視してください。"),
+            localized("ja", "JP", LEGITIMATE, NONE, "dentist_appointment", "明日15時に歯科の予約が入っています。変更はお電話でお願いします。"),
+            localized("ja", "JP", LEGITIMATE, BENIGN_DOMAIN, "electricity_statement", "電気料金のお知らせです。今月分の明細はマイページで確認できます。 https://denki.example.invalid/mypage"),
+            localized("ja", "JP", HARD_NEGATIVE, NONE, "card_statement", "クレジットカードの利用明細を発行しました。身に覚えのない請求は、カード裏面の番号までお電話ください。"),
+            localized("en", "US", HARD_NEGATIVE, NONE, "bank_fraud_alert", "Your bank noticed a \$48.20 purchase at a grocery store today. If it wasn't you, call the number on the back of your card. We will never ask for your password."),
+            localized("en", "US", LEGITIMATE, NONE, "parcel_delivered", "Your package from Corner Market was delivered to the front door at 2:15 PM."),
+            localized("en", "US", LEGITIMATE, BENIGN_DOMAIN, "toll_statement", "Your E-ZPass statement for March is ready. View it any time at https://tolls.example.invalid/account."),
+            localized("en", "US", HARD_NEGATIVE, NONE, "irs_refund_status", "Reminder: you can check your return status on the official IRS website. The IRS never contacts people by text."),
+            localized("en", "US", HARD_NEGATIVE, NONE, "card_locked_by_owner", "Your debit card is temporarily locked at your request. You can unlock it any time in the mobile app."),
+            localized("en", "US", HARD_NEGATIVE, NONE, "card_blocked_at_branch", "Your card was blocked after three wrong PIN tries. Please take your ID to any branch and they will sort it out."),
+            localized("en", "US", HARD_NEGATIVE, BENIGN_DOMAIN, "blocked_sign_in_notice", "We blocked a suspicious sign-in attempt on your account. No action is needed. See recent activity at https://bank.example.invalid/security."),
+            localized("en", "US", LEGITIMATE, NONE, "card_update_gym", "Please update your card on file to avoid an interruption to your gym membership."),
+            localized("en", "US", LEGITIMATE, NONE, "new_sim_approved", "Dear customer, your new SIM is active and your documents were approved. There is nothing more to do."),
+            localized("en", "US", LEGITIMATE, NONE, "order_call_support", "Dear customer, your order is on its way. Please call customer care if you have any questions."),
+            localized("es", "ES", HARD_NEGATIVE, NONE, "bank_fraud_notice2", "Aviso de su banco: detectamos una compra de 52 euros en una tienda de comestibles. Si no la reconoce, llame al numero que figura en el reverso de su tarjeta."),
+            localized("es", "ES", LEGITIMATE, NONE, "parcel_tomorrow2", "Su paquete llegara manana entre las 9 y las 13 horas. No hace falta que haga nada."),
+            localized("es", "ES", HARD_NEGATIVE, NONE, "tax_agency_notice", "Agencia Tributaria: su borrador de la renta esta disponible en la sede electronica oficial. No pedimos datos por SMS."),
+            localized("es", "ES", LEGITIMATE, NONE, "dentist_reminder", "Recordatorio: tiene cita con el dentista el martes a las 10:30. Si no puede venir, llame a la clinica."),
+            localized("es", "ES", HARD_NEGATIVE, NONE, "card_blocked_by_owner", "Ha bloqueado su tarjeta desde la aplicacion. Podra desbloquearla cuando quiera desde el mismo menu."),
+            localized("it", "IT", HARD_NEGATIVE, NONE, "bank_fraud_notice2", "Avviso della tua banca: abbiamo notato un pagamento di 48 euro in un supermercato. Se non sei stato tu, chiama il numero sul retro della carta."),
+            localized("it", "IT", LEGITIMATE, NONE, "parcel_tomorrow2", "Il tuo pacco arrivera domani tra le 9 e le 13. Non devi fare nulla."),
+            localized("it", "IT", HARD_NEGATIVE, NONE, "toll_receipt", "Il pagamento del pedaggio di ieri e stato registrato. Non serve alcuna azione da parte tua."),
+            localized("it", "IT", LEGITIMATE, NONE, "dentist_reminder", "Promemoria: hai un appuntamento dal dentista martedi alle 10:30. Per spostarlo chiama lo studio."),
+            localized("it", "IT", HARD_NEGATIVE, NONE, "card_blocked_by_owner", "Hai bloccato la carta dall'app. Potrai sbloccarla quando vuoi dallo stesso menu."),
+            localized("pt", "BR", HARD_NEGATIVE, NONE, "bank_fraud_notice2", "Aviso do seu banco: notamos uma compra de R\$ 52 em um mercado. Se nao foi voce, ligue para o numero que esta no verso do cartao."),
+            localized("pt", "BR", LEGITIMATE, NONE, "parcel_tomorrow2", "Sua encomenda chega amanha entre 9h e 13h. Voce nao precisa fazer nada."),
+            localized("pt", "BR", HARD_NEGATIVE, NONE, "correios_notice", "Correios: sua encomenda foi entregue na portaria. Nao pedimos pagamento nem dados por mensagem."),
+            localized("pt", "BR", LEGITIMATE, NONE, "dentist_reminder", "Lembrete: sua consulta com o dentista e na terca as 10:30. Para remarcar, ligue para a clinica."),
+            localized("pt", "BR", HARD_NEGATIVE, NONE, "card_blocked_by_owner", "Voce bloqueou o cartao pelo aplicativo. Pode desbloquear quando quiser no mesmo menu."),
+            localized("ms", "MY", SPAM, SUSPICIOUS_TLD, "ewallet_credit_lure", "Bantuan khas telah dikreditkan ke eWallet anda. Sila semak baki di https://bantuan.example.xyz/a"),
+            localized("ms", "MY", HARD_NEGATIVE, NONE, "bank_fraud_notice", "Makluman bank anda: kami mengesan pembelian RM52 di sebuah pasar raya. Jika ini bukan anda, sila hubungi nombor di belakang kad anda."),
+            localized("ms", "MY", LEGITIMATE, NONE, "parcel_tomorrow", "Bungkusan anda akan sampai esok antara 9 pagi dan 1 petang. Anda tidak perlu buat apa-apa."),
+            localized("ms", "MY", LEGITIMATE, NONE, "dentist_reminder", "Peringatan: temujanji anda dengan doktor gigi ialah pada hari Selasa jam 10:30 pagi."),
+            localized("ms", "MY", HARD_NEGATIVE, NONE, "card_frozen_by_owner", "Anda telah membekukan kad anda melalui aplikasi. Anda boleh membukanya semula bila-bila masa dari menu yang sama."),
+            localized("ms", "MY", LEGITIMATE, NONE, "bill_ready", "Bil elektrik anda untuk bulan Mac sudah tersedia dalam aplikasi. Bayaran akan ditolak pada 5 April."),
+            localized("pl", "PL", SPAM, SUSPICIOUS_TLD, "parcel_fee_lure", "Twoja paczka została wstrzymana z powodu niedopłaty. Prosimy uregulować należność: https://paczka.example.xyz/a"),
+            localized("pl", "PL", HARD_NEGATIVE, NONE, "bank_fraud_notice", "Powiadomienie z banku: zauważyliśmy płatność kartą na 52 zł w sklepie spożywczym. Jeśli to nie Ty, zadzwoń pod numer z tyłu karty."),
+            localized("pl", "PL", LEGITIMATE, NONE, "parcel_tomorrow", "Twoja paczka dotrze jutro między 9 a 13. Nie musisz nic robić."),
+            localized("pl", "PL", LEGITIMATE, NONE, "dentist_reminder", "Przypomnienie: wizyta u dentysty we wtorek o 10:30. Aby ją przełożyć, zadzwoń do gabinetu."),
+            localized("pl", "PL", HARD_NEGATIVE, NONE, "card_blocked_by_owner", "Zablokowałeś kartę w aplikacji. Możesz ją odblokować w każdej chwili w tym samym menu."),
+            localized("pl", "PL", LEGITIMATE, NONE, "bill_ready", "Rachunek za prąd za marzec jest już w aplikacji. Opłata zostanie pobrana 5 kwietnia."),
+            localized("tr", "TR", SPAM, SUSPICIOUS_TLD, "account_blocked_lure", "Hesabınız şüpheli işlemler nedeniyle bloke edildi. Doğrulamak için tıklayın: https://hesap.example.xyz/a"),
+            localized("tr", "TR", HARD_NEGATIVE, NONE, "bank_fraud_notice", "Bankanızdan bilgi: markette 52 TL tutarında bir kart harcaması fark ettik. Size ait değilse kartınızın arkasındaki numarayı arayın."),
+            localized("tr", "TR", LEGITIMATE, NONE, "parcel_tomorrow", "Kargonuz yarın 9 ile 13 arasında teslim edilecek. Herhangi bir işlem yapmanız gerekmiyor."),
+            localized("tr", "TR", LEGITIMATE, NONE, "dentist_reminder", "Hatırlatma: diş hekimi randevunuz salı günü saat 10:30'da. Değiştirmek için kliniği arayın."),
+            localized("tr", "TR", HARD_NEGATIVE, NONE, "card_blocked_by_owner", "Kartınızı uygulamadan kapattınız. Dilediğiniz zaman aynı menüden yeniden açabilirsiniz."),
+            localized("tr", "TR", LEGITIMATE, NONE, "bill_ready", "Mart ayı elektrik faturanız uygulamada hazır. Ödeme 5 Nisan'da hesabınızdan çekilecek."),
+            localized("en", "US", HARD_NEGATIVE, NONE, "dvla_tax_reminder", "DVLA: your vehicle tax renewal is due next month. Renew on the official GOV.UK site only. We never ask for payment details by text."),
+            localized("en", "US", LEGITIMATE, NONE, "kyc_verified", "Your identity details were verified successfully. No further action is needed on your account."),
+            localized("en", "US", LEGITIMATE, NONE, "loan_agreement_ready", "Your loan application was approved. The signed agreement is in your online account whenever you want to read it."),
         )
 
     val falsePositiveBudgetByLanguage =
@@ -877,27 +963,50 @@ private object Imc25Sample {
     private const val HEADER = "row\tlanguage\tscam_type\tsender\tshortener\ttext"
 
     /**
-     * Recall each group keeps at the evaluator threshold, measured 2026-09-30
-     * once reply bait landed: all 0.122 and reply-based 0.257, from 0.103 and
-     * 0.045 before it. Only reports from a phone number count as a first
+     * Recall each group keeps at the evaluator threshold, measured 2026-10-31
+     * once the lure phrases landed: all 0.303 and reply-based 0.275, from 0.122
+     * and 0.257 before them. Only reports from a phone number count as a first
      * text, and "wrong number" counts only as an opener. A floor only moves up.
      */
     val recallFloors =
         mapOf(
-            "all" to 0.12,
-            "reply-based" to 0.25,
-            "en" to 0.16,
-            "es" to 0.17,
-            "nl" to 0.07,
-            "fr" to 0.08,
-            "de" to 0.13,
-            "it" to 0.18,
-            "id" to 0.10,
-            "pt" to 0.15,
-            "ja" to 0.04,
-            "hi" to 0.04,
-            "ms" to 0.10,
-            "pl" to 0.03,
+            "all" to 0.30,
+            "reply-based" to 0.27,
+            "en" to 0.37,
+            "es" to 0.47,
+            "nl" to 0.39,
+            "fr" to 0.35,
+            "de" to 0.29,
+            "it" to 0.35,
+            "id" to 0.26,
+            "pt" to 0.21,
+            "ja" to 0.43,
+            "hi" to 0.26,
+            "ms" to 0.26,
+            "pl" to 0.17,
+            "tr" to 0.32,
+        )
+
+    /**
+     * Floors on the held-out half alone (odd rows), which no pattern was tuned on,
+     * measured when the lure phrases landed. Baseline before them: all 0.1135.
+     */
+    val heldOutRecallFloors =
+        mapOf(
+            "all" to 0.26,
+            "en" to 0.33,
+            "es" to 0.45,
+            "nl" to 0.35,
+            "fr" to 0.28,
+            "de" to 0.21,
+            "it" to 0.29,
+            "id" to 0.21,
+            "pt" to 0.16,
+            "ja" to 0.33,
+            "hi" to 0.25,
+            "ms" to 0.18,
+            "pl" to 0.17,
+            "tr" to 0.31,
         )
 
     /** Languages with fewer sampled rows are reported together. */
@@ -964,7 +1073,18 @@ private object Imc25Sample {
 
     fun reportLanguage(tag: String): String = if (rows.count { it.languageTag == tag } >= MIN_LANGUAGE_ROWS) tag else OTHER
 
-    fun evaluate(analyzer: SmsContentAnalyzer = SmsContentAnalyzer()): Imc25Report {
+    /**
+     * The reporting split, fixed by row number: even rows are the half the
+     * keyword patterns were tuned on, odd rows were never read while tuning.
+     * Recall on the odd half is the honest number.
+     */
+    val tuningRows: List<Row> by lazy { rows.filter { it.row % 2 == 0 } }
+    val heldOutRows: List<Row> by lazy { rows.filter { it.row % 2 != 0 } }
+
+    fun evaluate(
+        analyzer: SmsContentAnalyzer = SmsContentAnalyzer(),
+        rows: List<Row> = this.rows,
+    ): Imc25Report {
         val caught = rows.associateWith { analyzer.analyze(it.body, firstContact = it.fromPhoneNumber).score >= SmsEvaluationCorpus.SCORE_THRESHOLD }
         val clean = SmsEvaluationCorpus.examples.filterNot { it.expectedSpam }
         val cleanFlagged =
@@ -1151,6 +1271,10 @@ class SmsEvaluationCorpusTest {
     fun `IMC 2025 sample reports precision, recall and false-positive rate per language`() {
         val report = Imc25Sample.evaluate()
         println(report.format())
+        println("--- tuning half (even rows) ---")
+        println(Imc25Sample.evaluate(rows = Imc25Sample.tuningRows).format())
+        println("--- held-out half (odd rows) ---")
+        println(Imc25Sample.evaluate(rows = Imc25Sample.heldOutRows).format())
 
         assertTrue(Imc25Sample.rows.size in 4_000..Imc25Sample.MAX_ROWS)
         assertEquals(
@@ -1171,6 +1295,12 @@ class SmsEvaluationCorpusTest {
                 }
             val recall = requireNotNull(metrics.recall)
             assertTrue("$group recall $recall fell below its floor $floor", recall >= floor)
+        }
+        val heldOut = Imc25Sample.evaluate(rows = Imc25Sample.heldOutRows)
+        Imc25Sample.heldOutRecallFloors.forEach { (group, floor) ->
+            val metrics = if (group == "all") heldOut.all else heldOut.byLanguage.getValue(group)
+            val recall = requireNotNull(metrics.recall)
+            assertTrue("held-out $group recall $recall fell below its floor $floor", recall >= floor)
         }
         assertEquals("clean messages flagged", 0, report.all.falsePositives)
     }
