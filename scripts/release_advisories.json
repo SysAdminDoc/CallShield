@@ -6,10 +6,10 @@
       "component": "org.jetbrains.kotlin:kotlin-gradle-plugin",
       "dependency_key": "kotlin",
       "fixed_in": "2.4.20",
-      "disposition": "mitigated-build-cache",
-      "evidence_files": ["gradle.properties"],
+      "disposition": "resolved",
+      "evidence_files": ["gradle/libs.versions.toml"],
       "source": "https://github.com/advisories/GHSA-r937-wjx7-w2jp",
-      "rationale": "No shared or remote Gradle build cache is configured; the local cache is trusted until the AGP 9 dependency tranche can move Kotlin to the fixed line."
+      "rationale": "The version catalog pins the Kotlin Gradle plugin to a release past the fix, and the root build script is what puts that version on the build classpath."
     },
     {
       "id": "GHSA-mqwm-5m85-gmcv",

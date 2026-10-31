@@ -186,6 +186,8 @@ fun verifyApkDataPrivacy(apkFile: File) {
 
 plugins {
     alias(libs.plugins.android.application) apply false
+    // Never applied: AGP 9 compiles Kotlin itself but only asks for KGP 2.2.10 at
+    // runtime, so this line is what puts the catalog's Kotlin on the build classpath.
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.ksp) apply false

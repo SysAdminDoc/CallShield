@@ -15,7 +15,7 @@ the same raw bytes.
 - Dependency graph: checked-in Gradle lockfiles generated with
   `./gradlew --write-locks`
 - Java runtime: JDK 17
-- Android SDK: compile/target SDK 36
+- Android SDK: compile SDK 37, target SDK 36
 - Signing: local release keystore values supplied through `local.properties` or
   environment variables
 
@@ -85,7 +85,7 @@ Get-Content .\app-release.apk.sha256
 ```
 
 3. Check out the same release tag.
-4. Use the same JDK 17, Android SDK 36, Gradle wrapper, and dependency
+4. Use the same JDK 17, Android SDK 37, Gradle wrapper, and dependency
    lockfiles.
 5. Build:
 

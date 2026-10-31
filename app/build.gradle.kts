@@ -1,11 +1,9 @@
 import io.gitlab.arturbosch.detekt.Detekt
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kover)
@@ -25,6 +23,8 @@ val localProperties =
 
 fun signingProp(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
 
+val stagedAssetsDir = layout.buildDirectory.dir("generated/callshieldAssets")
+
 val stageBundledAssets =
     tasks.register<Sync>("stageBundledAssets") {
         from(rootProject.file("data")) {
@@ -39,12 +39,12 @@ val stageBundledAssets =
                 "list_catalog.json",
             )
         }
-        into(layout.buildDirectory.dir("generated/callshieldAssets"))
+        into(stagedAssetsDir)
     }
 
 android {
     namespace = "com.sysadmindoc.callshield"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.sysadmindoc.callshield"
@@ -109,19 +109,22 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // The QA install's app label is a resValue, and AGP 9 turns these off by default.
+        resValues = true
     }
 
     sourceSets {
         getByName("main") {
             // The repository data directory also contains raw community
             // submissions and maintainer notes. Stage an explicit runtime
-            // allowlist instead of recursively packaging that directory.
-            assets.srcDir(layout.buildDirectory.dir("generated/callshieldAssets"))
+            // allowlist instead of recursively packaging that directory. AGP 9
+            // refuses a Provider here, and preBuild already orders the staging task.
+            assets.directories += stagedAssetsDir.get().asFile.path
         }
         // Test fixtures both suites use, such as the hand-built pre-export
         // databases the JVM and instrumented migration tests both upgrade.
-        getByName("test").java.srcDir("src/sharedTest/java")
-        getByName("androidTest").java.srcDir("src/sharedTest/java")
+        getByName("test").kotlin.directories += "src/sharedTest/java"
+        getByName("androidTest").kotlin.directories += "src/sharedTest/java"
     }
 
     lint {
@@ -191,12 +194,6 @@ android {
 
 room {
     schemaDirectory("$projectDir/schemas")
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
 }
 
 hilt {
@@ -316,6 +313,8 @@ dependencies {
     implementation(libs.okio)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
+    // moshi-kotlin only asks for kotlin-reflect 1.8.21; keep it on the compiler's version.
+    implementation(libs.kotlin.reflect)
     debugImplementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit4)

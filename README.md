@@ -549,7 +549,7 @@ known-advisory dispositions, and source-snapshot provenance. Run the report
 directly with `python scripts/verify_release_drift.py` when reviewing metadata
 without building an APK.
 
-Requires JDK 17 or 21. The Gradle 8.14 wrapper won't start on JDK 25, so point
+Requires JDK 17 or 21. AGP 9 won't run on anything older and nothing newer is tested, so point
 JAVA_HOME at 17 or 21. With release signing properties configured, the signed APK is
 at `app/build/outputs/apk/release/app-release.apk`. Without them, the local
 verification build emits `app-release-unsigned.apk`.
@@ -628,11 +628,11 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 
 | Component | Technology |
 |-----------|-----------|
-| Language | Kotlin 2.3.21 |
-| UI | Jetpack Compose BOM 2026.06.01 + Material 3 |
+| Language | Kotlin 2.4.21 |
+| UI | Jetpack Compose BOM 2026.09.00 + Material 3 |
 | Theme | System, Light, Graphite, and true-black AMOLED |
 | Database | Room 2.8.5 (SQLite), 10 entities |
-| Networking | OkHttp 5.4.0 + certificate pinning |
+| Networking | OkHttp 5.5.1 + certificate pinning |
 | JSON | Moshi 1.15.2 |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences 1.2.1 |
