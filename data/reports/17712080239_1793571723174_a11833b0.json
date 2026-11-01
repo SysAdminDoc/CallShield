@@ -1,0 +1,14 @@
+{
+  "number": "+17712080239",
+  "type": "sms_spam",
+  "reported_at": "2026-11-01T22:22:03.174Z",
+  "source": "community_app",
+  "reporter_bucket": "d952ac733b7fb67c",
+  "reporter_device": "ca7cb58f1e03ed8b",
+  "sms_domains": [
+    "fwdblue.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
