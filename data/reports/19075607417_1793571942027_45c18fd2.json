@@ -1,0 +1,15 @@
+{
+  "number": "+19075607417",
+  "type": "sms_spam",
+  "reported_at": "2026-11-01T22:25:42.027Z",
+  "source": "community_app",
+  "reporter_bucket": "ca22f091210b4204",
+  "reporter_device": "9918bd3c94e39441",
+  "report_id": "3903d962-e499-47a5-8717-51ad46520a09",
+  "sms_domains": [
+    "akvoterinfo.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
