@@ -1,0 +1,14 @@
+{
+  "number": "+17712025786",
+  "type": "sms_spam",
+  "reported_at": "2026-11-02T04:03:21.789Z",
+  "source": "community_app",
+  "reporter_bucket": "b16b9a3914842b11",
+  "reporter_device": "ee6a4a71bc007a24",
+  "sms_domains": [
+    "demsenate.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
