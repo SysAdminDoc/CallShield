@@ -1,0 +1,15 @@
+{
+  "number": "+18334829157",
+  "type": "sms_spam",
+  "reported_at": "2026-11-02T13:05:23.732Z",
+  "source": "community_app",
+  "reporter_bucket": "703bee782e4693d3",
+  "reporter_device": "ac69ea3656990005",
+  "report_id": "0051c1e3-8bcd-4bb1-9a84-095f0fdf12ea",
+  "sms_domains": [
+    "ln.clinicallylinked.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
