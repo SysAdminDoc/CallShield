@@ -1,0 +1,9 @@
+{
+  "number": "+19073007702",
+  "type": "sms_spam",
+  "reported_at": "2026-11-02T22:45:13.356Z",
+  "source": "community_app",
+  "reporter_bucket": "83b2fe19f35c2788",
+  "reporter_device": "e760165a7a82cd88",
+  "report_id": "d14f1d89-6afb-47b5-8b96-05a195e15d4e"
+}
