@@ -1,0 +1,15 @@
+{
+  "number": "+19075607400",
+  "type": "sms_spam",
+  "reported_at": "2026-11-03T17:32:48.383Z",
+  "source": "community_app",
+  "reporter_bucket": "48cd0e7ebba0d6df",
+  "reporter_device": "23fc2adffe77a7c3",
+  "report_id": "44ed95ff-ef64-42ad-b084-51d7d75b1369",
+  "sms_domains": [
+    "myvoterportal.alaska.gov"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
