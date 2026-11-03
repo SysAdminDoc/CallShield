@@ -1,0 +1,14 @@
+{
+  "number": "+17712558290",
+  "type": "sms_spam",
+  "reported_at": "2026-11-03T17:17:04.336Z",
+  "source": "community_app",
+  "reporter_bucket": "7ec7c29e7dc7eb9d",
+  "reporter_device": "e70297b23b8062fe",
+  "sms_domains": [
+    "tcp-give.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
