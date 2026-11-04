@@ -1,0 +1,14 @@
+{
+  "number": "+16626548028",
+  "type": "sms_spam",
+  "reported_at": "2026-11-04T17:47:55.076Z",
+  "source": "community_app",
+  "reporter_bucket": "5f37af0640f20ff9",
+  "reporter_device": "cd2dfe3098bff8bf",
+  "sms_domains": [
+    "colom4ms.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
