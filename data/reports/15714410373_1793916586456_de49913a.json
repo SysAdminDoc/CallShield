@@ -1,0 +1,14 @@
+{
+  "number": "+15714410373",
+  "type": "sms_spam",
+  "reported_at": "2026-11-05T22:09:46.456Z",
+  "source": "community_app",
+  "reporter_bucket": "bbc76cf88644eb25",
+  "reporter_device": "0ce7827833a75500",
+  "sms_domains": [
+    "act.wilderness.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
