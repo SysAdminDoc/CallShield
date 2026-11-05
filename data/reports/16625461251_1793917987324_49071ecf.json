@@ -1,0 +1,14 @@
+{
+  "number": "+16625461251",
+  "type": "sms_spam",
+  "reported_at": "2026-11-05T22:33:07.324Z",
+  "source": "community_app",
+  "reporter_bucket": "bbc76cf88644eb25",
+  "reporter_device": "0ce7827833a75500",
+  "sms_domains": [
+    "scottcolom.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
