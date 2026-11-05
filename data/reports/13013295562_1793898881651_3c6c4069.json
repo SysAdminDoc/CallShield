@@ -1,0 +1,15 @@
+{
+  "number": "+13013295562",
+  "type": "sms_spam",
+  "reported_at": "2026-11-05T17:14:41.651Z",
+  "source": "community_app",
+  "reporter_bucket": "eea5d27f9e2df1aa",
+  "reporter_device": "1d460f8553363f0c",
+  "report_id": "0b6d57b2-aef8-4607-9682-e5fee91479f0",
+  "sms_domains": [
+    "linksafeusa.net"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
