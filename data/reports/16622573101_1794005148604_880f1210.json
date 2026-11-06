@@ -1,0 +1,15 @@
+{
+  "number": "+16622573101",
+  "type": "sms_spam",
+  "reported_at": "2026-11-06T22:45:48.604Z",
+  "source": "community_app",
+  "reporter_bucket": "beaac5442fc061bf",
+  "reporter_device": "2e14e3bbe70ed712",
+  "report_id": "6705391e-69a6-406d-9d8c-25e5c0cae879",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
