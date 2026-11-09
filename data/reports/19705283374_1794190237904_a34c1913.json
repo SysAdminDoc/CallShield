@@ -1,0 +1,14 @@
+{
+  "number": "+19705283374",
+  "type": "sms_spam",
+  "reported_at": "2026-11-09T02:10:37.904Z",
+  "source": "community_app",
+  "reporter_bucket": "c8511191b0f22874",
+  "reporter_device": "493ad82f78e8a289",
+  "sms_domains": [
+    "eileenforcolorado.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
