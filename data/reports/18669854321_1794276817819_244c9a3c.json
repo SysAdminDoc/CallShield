@@ -1,0 +1,9 @@
+{
+  "number": "+18669854321",
+  "type": "sms_spam",
+  "reported_at": "2026-11-10T02:13:37.819Z",
+  "source": "community_app",
+  "reporter_bucket": "d479b895ecdc28d6",
+  "reporter_device": "61f860e623cff42a",
+  "report_id": "7a0fbb0c-c963-4b9c-a85f-40f8b65d238e"
+}
