@@ -1,0 +1,14 @@
+{
+  "number": "+17712430890",
+  "type": "sms_spam",
+  "reported_at": "2026-11-10T20:12:00.311Z",
+  "source": "community_app",
+  "reporter_bucket": "f2fce2e0ed4bb191",
+  "reporter_device": "e09029b57cdd2c93",
+  "sms_domains": [
+    "collectivepac.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
