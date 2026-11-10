@@ -1,0 +1,14 @@
+{
+  "number": "+16177413446",
+  "type": "sms_spam",
+  "reported_at": "2026-11-10T22:37:49.620Z",
+  "source": "community_app",
+  "reporter_bucket": "54905f3c45d5fb67",
+  "reporter_device": "fcf70391c23172b4",
+  "sms_domains": [
+    "secure.ucs.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
