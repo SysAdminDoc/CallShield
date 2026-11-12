@@ -1,0 +1,15 @@
+{
+  "number": "+18339628360",
+  "type": "sms_spam",
+  "reported_at": "2026-11-12T19:48:07.910Z",
+  "source": "community_app",
+  "reporter_bucket": "cb2c496d2ef965ec",
+  "reporter_device": "51be8ababcfd5149",
+  "report_id": "3553b5aa-40b1-4e55-b118-961d58b5bb9f",
+  "sms_domains": [
+    "purecheckusa.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
