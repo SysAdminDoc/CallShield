@@ -1,0 +1,14 @@
+{
+  "number": "+17717774259",
+  "type": "sms_spam",
+  "reported_at": "2026-11-13T21:08:48.708Z",
+  "source": "community_app",
+  "reporter_bucket": "c2a2f44e16e5a375",
+  "reporter_device": "2fc3185ef800c139",
+  "sms_domains": [
+    "unrefugees.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
