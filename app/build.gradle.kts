@@ -72,10 +72,15 @@ android {
         }
     }
 
+    // -Pcallshield.qaInstall=true builds a copy that installs beside the real app.
+    // On the release type it is the minified build signed with the debug key, so
+    // R8 output can be checked on a phone without the release keystore.
+    val qaInstall = providers.gradleProperty("callshield.qaInstall").orNull == "true"
+
     buildTypes {
         debug {
             isPseudoLocalesEnabled = true
-            if (providers.gradleProperty("callshield.qaInstall").orNull == "true") {
+            if (qaInstall) {
                 applicationIdSuffix = ".qa"
                 versionNameSuffix = "-qa"
                 resValue("string", "qa_app_name", "CallShield QA")
@@ -88,8 +93,16 @@ android {
             vcsInfo {
                 include = false
             }
+            if (qaInstall) {
+                applicationIdSuffix = ".qa"
+                versionNameSuffix = "-qa"
+                resValue("string", "qa_app_name", "CallShield QA")
+                manifestPlaceholders["appLabel"] = "@string/qa_app_name"
+            }
             signingConfig =
-                if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+                if (qaInstall) {
+                    signingConfigs.getByName("debug")
+                } else if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
                     signingConfigs.getByName("release")
                 } else {
                     null
