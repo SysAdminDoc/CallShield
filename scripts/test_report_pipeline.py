@@ -1396,6 +1396,62 @@ def assert_reports_without_an_id_count_as_one_reporter(data_dir: Path) -> None:
     assert not any("no_id" in event for event in pending[counted]["watch_events"]), pending[counted]
 
 
+def assert_no_id_promotions_lose_their_place(data_dir: Path) -> None:
+    """Merges on 2026-10-29 published two +86 numbers from scripted reports with
+    no id, eight reporter buckets a day, and stored that three reporters carried
+    them. The rule that counts such reports as one reporter came a day later and
+    never revisited the stored flag, so both rows kept their place. While the
+    reports that published a row are still in the ledger, the flag is checked
+    again under today's count. A row whose three reporters aged out keeps it."""
+    scripted, counted, aged = "+8615017944158", "+12122340907", "+12122340908"
+    early = (datetime.now(timezone.utc) - timedelta(days=3)).date().isoformat()
+    late = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+
+    def listed(number: str) -> dict:
+        return {"number": number, "type": "spam", "reports": 6, "first_seen": early, "last_seen": late,
+                "description": "Community reported", "sources": ["community"]}
+
+    def published(number: str, events: list[tuple[str, str, str]]) -> dict:
+        return {
+            "published": True,
+            "bucket_quorum": True,
+            "entry": listed(number),
+            "events": [{"key": key, "day": day, "bucket": bucket, "count": 1} for key, day, bucket in events],
+            "watch_events": [],
+            "not_spam_days": [],
+        }
+
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "prefixes": [],
+         "numbers": [listed(number) for number in (scripted, counted, aged)]},
+    )
+    # Counted per bucket, the scripted row has five reporters on one day and
+    # reports two days apart, so it would pass every bar.
+    scripted_events = [(f"file:{scripted[1:]}_{index}", early, bucket) for index, bucket in enumerate(BUCKETS[:5])]
+    scripted_events += [(f"file:{scripted[1:]}_{5 + index}", late, bucket) for index, bucket in enumerate(BUCKETS[:3])]
+    counted_events = [(f"id:00000000-0000-4000-8000-00000000010{index}", early, bucket)
+                      for index, bucket in enumerate(BUCKETS[:3])]
+    counted_events.append(("id:00000000-0000-4000-8000-000000000109", late, BUCKETS[3]))
+    write_json(
+        data_dir / "community_pending.json",
+        {"schema_version": 1, "retention_days": 30, "watch_retention_days": 90, "numbers": {
+            scripted: published(scripted, scripted_events),
+            counted: published(counted, counted_events),
+            # Its three reporters passed 30 days and left one late report.
+            aged: published(aged, [(f"file:{aged[1:]}_0", late, BUCKETS[4])]),
+        }},
+    )
+    run_drain(data_dir)
+
+    assert row_for(data_dir, scripted) is None, "reports with no id kept a published row listed"
+    assert row_for(data_dir, counted) is not None, "three app reporters on one day lost their row"
+    assert row_for(data_dir, aged) is not None, "a row whose reporters aged out lost its place"
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert pending[scripted]["published"] is False and not pending[scripted].get("bucket_quorum"), pending[scripted]
+    assert pending[counted]["bucket_quorum"] is True and pending[aged]["bucket_quorum"] is True, pending
+
+
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
     """Issue #27: one report of a Munich number waits for corroboration no
     imported source can give. The maintainer's review publishes it, and later
@@ -2181,6 +2237,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_reports_without_an_id_count_as_one_reporter(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_no_id_promotions_lose_their_place(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")

@@ -526,6 +526,28 @@ def keeps_its_place(state: dict) -> bool:
     return bool(state.get("bucket_quorum") or state.get("fcc_complaint_day"))
 
 
+def recheck_no_id_quorum(state: dict) -> None:
+    """Drop a stored quorum that only reports without an app id made.
+
+    Merges before 2026-10-30 counted each reporter bucket of a report without an
+    id as its own reporter and stored the result, so a scripted burst kept its
+    row after the rule changed. While those reports are still in the ledger,
+    counting them per bucket reaches the quorum and counting them as one does
+    not. A row whose reporters aged out has neither, and keeps its place.
+    """
+    if not state.get("bucket_quorum"):
+        return
+    events = state["events"]
+    if same_day_reporters(events) >= COMMUNITY_REPORTER_QUORUM:
+        return
+    by_day: dict[str, set[str]] = {}
+    for event in events:
+        if event["bucket"]:
+            by_day.setdefault(event["day"], set()).add(event["bucket"])
+    if max((len(buckets) for buckets in by_day.values()), default=0) >= COMMUNITY_REPORTER_QUORUM:
+        state["bucket_quorum"] = False
+
+
 def fcc_caller_id(number: str) -> str:
     """+12037601637 as FCC writes it: 203-760-1637."""
     return f"{number[2:5]}-{number[5:8]}-{number[8:]}"
@@ -1097,6 +1119,7 @@ def main(argv: list[str] | None = None):
                 pending.pop(number, None)
             continue
         state = pending.setdefault(number, legacy_community_state(entry, today))
+        recheck_no_id_quorum(state)
         if state["published"] and (keeps_its_place(state) or not any(event["bucket"] for event in state["events"])):
             continue
         if community_has_quorum(state):
