@@ -4,6 +4,15 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Brazilian Portuguese and Spanish are in the app now, and the language picker lists them along with Simplified Chinese, which was already in the APK but could only be reached from Android's own per-app settings. Anything not translated yet shows in English.
+- On a phone with an Indian SIM, calls from the 1600 series (banks, insurers and government offices) and the 1601 series (utilities, logistics and courier companies) now ring through by default, the way TRAI's 2026 rules ask of call apps. You can turn either one off under Advanced, and a number you blocked yourself stays blocked. The shared database and community reports no longer take numbers from 140, 1600 or 1601.
+- The message check in Settings and the protection test read Android's hidden one-time codes correctly now. Android blanks the sender as well as the text on those, and the check took that to mean it couldn't read notifications at all. Google Messages also posts an empty summary after every message, and that wiped out what the message itself had shown.
+- Statistics has a state and province map now, shaded by how much spam came from each place. It's worked out on your phone from the area codes in your log and nothing leaves the phone. TalkBack reads the busiest places as one line, and the area code list stays right under it.
+- On a phone set to a right-to-left language, the weekly chart's bars now line up with their day labels and the color strip on grouped log rows sits on the correct side. Day labels also sit centered under their bars in every language.
+- Settings has a strict offline switch under Advanced. With it on, the app makes no network requests at all. Syncing, update checks, live lookups and community reports pause, and the screens say offline mode is on in place of a failure. Blocking keeps running on the database you already have. A report you make while it's on isn't saved for later, so make it again once the switch is off.
+- Text screening catches far more real scam texts. On the half of the IMC 2025 smishing sample the rules weren't written against, recall went from 11% to 26%, and none of the 146 clean test messages got flagged. The new rules cover blocked account, parcel, toll and wallet lures in Dutch, French, German, Indonesian, Hindi, Japanese, Spanish, Italian, Portuguese, Malay, Polish, Turkish and English.
+- Database v62 holds 51,411 numbers, with the report queue merged in.
+- A number a maintainer reviews now gets its type from that review when it's published. The app reports an unflagged number as plain spam, and that label used to win over the review's more exact one.
 - The data pipeline's test runner now uses the first Python on PATH that has the pipeline's packages installed. With an older Python ahead of it on PATH, three suites used to fail on a missing cryptography or numpy.
 - `scripts/device_smoke.py` deletes its last screen dump before taking a new one. A dump that failed used to leave the old file in place, so a step could act on labels from the screen before.
 

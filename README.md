@@ -6,13 +6,13 @@
 
 <p align="center">
   <strong>Open-source spam call blocker and text screener for Android</strong><br>
-  30+ detection layers with an on-device ML model | 51,407 spam numbers | Real-time caller ID | RCS filter | No API keys
+  30+ detection layers with an on-device ML model | 51,411 spam numbers | Real-time caller ID | RCS filter | No API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C407-f38ba8?style=flat-square" alt="51,407 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2134-94e2d5?style=flat-square" alt="2134 JVM unit tests">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C411-f38ba8?style=flat-square" alt="51,411 Numbers">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2190-94e2d5?style=flat-square" alt="2190 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and flags spam texts with an on-device engine of more than **30 detection layers**. They include a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity signals, an RCS notification filter and real-time caller ID. Its 51,407-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts and no tracking.
+CallShield blocks spam calls and flags spam texts with an on-device engine of more than **30 detection layers**. They include a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity signals, an RCS notification filter and real-time caller ID. Its 51,411-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts and no tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -71,7 +71,7 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## How It Works
 
-1. **51,407 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call complaints, numbers the maintainer reviewed by hand, and community reports that several people confirmed or that a recent FCC complaint backs up.
+1. **51,411 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call complaints, numbers the maintainer reviewed by hand, and community reports that several people confirmed or that a recent FCC complaint backs up.
 2. **30+ detection layers and ML.** The database, heuristics, bounded campaign and churn detection, an on-device gradient-boosted tree, SMS content and burst analysis, the RCS filter, STIR/SHAKEN and more.
 3. **Real-time caller ID overlay.** The local verdict appears as the phone rings. An optional SkipCalls check covers locally suspicious calls, and a SIT tone tells autodialers the line is dead.
 4. **Trending feeds.** The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports.
@@ -145,7 +145,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
 |  5250 | **Regulatory Allow** | Allow | Protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices) and 1601 (utilities, logistics and courier companies), per TRAI. On by default with an Indian SIM, and you can turn each one off |
-|  5200 | **Spam Database** | Block | 51,407 imported spam numbers plus the trending-numbers feed |
+|  5200 | **Spam Database** | Block | 51,411 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -240,7 +240,7 @@ The maintainer trains it by hand from the CallShield database (50K positive and 
 
 SMS content regressions use a separate CC0 corpus that CallShield wrote itself. It covers eight languages, the three sender forms, each kind of link, legitimate messages and hard negatives, and the test reports precision, recall and false-positive rate by language and message type without shipping personal data. Every spam message it catches is checked again in disguise (zero-width characters between letters, Cyrillic look-alike letters, fullwidth text, a hidden character in its link) and each copy has to be caught too: `./gradlew :app:testDebugUnitTest --tests com.sysadmindoc.callshield.data.SmsEvaluationCorpusTest`.
 
-The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset (Agarwal, Papasavva, Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0) in 63 languages. It prints recall for each language, with precision and false alarms taken from the clean messages above, and each large language has a floor it can't drop below. The number is humbling. Content rules alone catch 12% of those reports, and 26% of the wrong number and "hi mum" scams. Part of the gap is the dataset: it replaced every link with a placeholder, so the link rules see a link but never its host. `python scripts/sample_imc25_corpus.py` redraws the sample from a pinned copy of the dataset, and `IMC25-NOTICE.txt` next to it in `app/src/test/resources/sms-corpus/` credits it.
+The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset (Agarwal, Papasavva, Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0) in 63 languages. It prints recall for each language, with precision and false alarms taken from the clean messages above, and each large language has a floor it can't drop below. The number is humbling. Content rules alone catch 30% of those reports, and 27% of the wrong number and "hi mum" scams. On the half of the sample the rules weren't written against it's 26%, and that's the fairer number. Part of the gap is the dataset: it replaced every link with a placeholder, so the link rules see a link but never its host. `python scripts/sample_imc25_corpus.py` redraws the sample from a pinned copy of the dataset, and `IMC25-NOTICE.txt` next to it in `app/src/test/resources/sms-corpus/` credits it.
 
 ## Features
 
@@ -276,6 +276,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - Detection source donut chart
 - Monthly trend line
 - Top offenders, area code heatmap, hourly heatmap
+- A tile map of US states and Canadian provinces shaded by blocked calls
 - Protection Test shows local WorkManager attempts and Android stop reasons, with a warning when background quota repeatedly defers protection refreshes
 
 ### Smart Features
@@ -315,7 +316,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 
 ## Data Sources
 
-### Database (51,407 numbers + 668 range prefixes, locally maintained)
+### Database (51,411 numbers + 668 range prefixes, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
@@ -415,6 +416,8 @@ Call and message decisions run on the phone. No personal data is collected. Call
 - Local spam-domain checks don't disclose SMS or RCS links. Optional PhishTank lookups send only the site's base domain of SMS and RCS links, never chat or email ones, and the OpenPhish feed is downloaded for local matching. Neither receives message text
 - External blocklists you subscribe to, fetched from the addresses you entered or from the recommended lists you added
 - The update check, which is off by default. When it's on, it asks GitHub Releases once a week
+
+Strict offline mode (Settings > Advanced) turns every one of these requests off. Blocking keeps running on the database already on the phone.
 
 No API keys. None required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
@@ -598,12 +601,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2134 tests
+./gradlew testDebugUnitTest   # 2190 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2134 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2190 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -635,12 +638,12 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Networking | OkHttp 5.5.1 + certificate pinning |
 | JSON | Moshi 1.15.2 |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
-| Settings | DataStore Preferences 1.2.1 |
+| Settings | DataStore Preferences 1.3.0 |
 | Background | WorkManager 2.12.0 |
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2134 JVM unit tests (JUnit) |
+| Tests | 2190 JVM unit tests (JUnit) |
 | Strings | 1808 string resources and 52 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
