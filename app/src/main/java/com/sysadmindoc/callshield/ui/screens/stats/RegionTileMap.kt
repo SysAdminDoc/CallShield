@@ -198,7 +198,7 @@ private fun ShadeKey() {
         Text(stringResource(R.string.stats_region_map_fewer), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
         Spacer(Modifier.size(2.dp))
         for (step in 1..SHADE_STEPS) {
-            Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(shadeColor(step)))
+            Box(Modifier.size(10.dp).background(shadeColor(step)))
         }
         Spacer(Modifier.size(2.dp))
         Text(stringResource(R.string.stats_region_map_more), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
