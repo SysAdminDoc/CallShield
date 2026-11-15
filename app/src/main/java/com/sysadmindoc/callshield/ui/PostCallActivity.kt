@@ -76,6 +76,11 @@ class PostCallActivity : AppCompatActivity() {
     private var appTheme by mutableStateOf(AppThemeMode.Amoled)
     private var contentInstalled = false
 
+    override fun attachBaseContext(newBase: Context) {
+        AppLanguage.keepSystemChosenLanguage(newBase)
+        super.attachBaseContext(newBase)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         applyCachedWindowTheme(this)
         super.onCreate(savedInstanceState)

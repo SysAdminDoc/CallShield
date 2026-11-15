@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -62,6 +63,11 @@ data class LaunchRequest(
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private var launchRequest by mutableStateOf(LaunchRequest(id = 0))
+
+    override fun attachBaseContext(newBase: Context) {
+        AppLanguage.keepSystemChosenLanguage(newBase)
+        super.attachBaseContext(newBase)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The manifest theme pins a black WINDOW background; Compose's cached-

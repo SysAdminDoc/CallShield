@@ -1,5 +1,10 @@
 package com.sysadmindoc.callshield.ui
 
+import android.app.LocaleManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
@@ -45,6 +50,32 @@ object AppLanguage {
             }
         AppCompatDelegate.setApplicationLocales(locales)
     }
+
+    /**
+     * AppCompat copies its own saved language into Android once per install, from the
+     * first activity's attachBaseContext. That copy runs before the activity registers,
+     * so it reads Android's per-app language as empty and writes its own (empty) record
+     * over a language picked in Android's settings or restored from a backup before the
+     * app was ever opened. Marking the copy done when Android already holds a language
+     * keeps it; with none set, the copy still runs and moves a pre-Android 13 choice over.
+     * Call before super.attachBaseContext in every AppCompatActivity.
+     */
+    fun keepSystemChosenLanguage(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val copyDone = ComponentName(context, APPCOMPAT_LOCALE_COPY_MARKER)
+        val packageManager = context.packageManager
+        if (packageManager.getComponentEnabledSetting(copyDone) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) return
+        val chosen = context.getSystemService(LocaleManager::class.java)?.applicationLocales ?: return
+        if (chosen.isEmpty) return
+        packageManager.setComponentEnabledSetting(
+            copyDone,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP,
+        )
+    }
+
+    // AppCompatDelegate.APP_LOCALES_META_DATA_HOLDER_SERVICE_NAME, which is package-private.
+    private const val APPCOMPAT_LOCALE_COPY_MARKER = "androidx.appcompat.app.AppLocalesMetadataHolderService"
 
     internal fun normalizeLanguageTag(languageTag: String): String {
         val tag = languageTag.trim()
