@@ -9,7 +9,7 @@
     <string name="shortcut_scan_sms_long">Analizar bandeja de SMS</string>
     <string name="dashboard_enable_call_screening">Activar filtrado de llamadas</string>
     <string name="dashboard_review_permissions">Revisar permisos</string>
-    <string name="dashboard_live_protection">Protección en vivo</string>
+    <string name="dashboard_live_protection">Protección en tiempo real</string>
     <string name="dashboard_protection_active">Protección activa</string>
     <string name="dashboard_protection_disabled">Protección en pausa</string>
     <string name="dashboard_setup_needed">Falta configurar</string>
@@ -25,7 +25,7 @@
     <string name="dashboard_finish_setup_hint">Termina la configuración para activar el escudo contra spam.</string>
     <string name="dashboard_call_screener_missing_hint">Activa el filtro de llamadas para poder bloquear llamadas de spam.</string>
     <string name="dashboard_background_restricted_title">La actividad en segundo plano está restringida</string>
-    <string name="dashboard_background_restricted_body">CallShield podría perder actualizaciones de protección en vivo mientras el sistema limite la actividad en segundo plano. Permite la actividad en segundo plano y el acceso a la batería en Ajustes.</string>
+    <string name="dashboard_background_restricted_body">CallShield podría dejar de recibir actualizaciones de protección en tiempo real si el sistema restringe la actividad en segundo plano. Permite la actividad en segundo plano y configura el uso de la batería desde Ajustes.</string>
     <string name="dashboard_background_battery_title">El ahorro de batería puede retrasar la protección</string>
     <string name="dashboard_background_battery_body">La optimización de batería puede retrasar la sincronización y la protección en segundo plano. Permite que CallShield funcione sin restricciones de batería.</string>
     <string name="dashboard_background_battery_action">Abrir ajustes de batería</string>
@@ -50,8 +50,8 @@
     </plurals>
     <string name="dashboard_database_needed_short">Descarga los datos de protección más recientes.</string>
     <string name="dashboard_database_syncing_short">Actualizando los datos de protección.</string>
-    <string name="dashboard_screener_ready_short">Listo para bloquear llamadas en vivo.</string>
-    <string name="dashboard_screener_needed_short">Necesario para bloquear llamadas en vivo.</string>
+    <string name="dashboard_screener_ready_short">Listo para bloquear llamadas en tiempo real.</string>
+    <string name="dashboard_screener_needed_short">Necesario para bloquear llamadas en tiempo real.</string>
     <string name="dashboard_screener_optional_short">Apagado mientras el bloqueo de llamadas está desactivado.</string>
     <string name="dashboard_overlay_needed_short">Alertas flotantes del identificador de llamadas.</string>
     <string name="dashboard_notifications_needed_short">Alertas de bloqueo y recordatorios.</string>
@@ -81,12 +81,12 @@
     <string name="dashboard_profile_sleep">Dormir</string>
     <string name="dashboard_profile_off">Apagado</string>
     <string name="dashboard_profile_contacts_only">Solo contactos</string>
-    <string name="profile_work_description">Se bloquean las llamadas de spam conocidas. Se marcan los SMS riesgosos. Se permiten llamadas ocultas; horas de silencio apagadas.</string>
-    <string name="profile_personal_description">Se bloquean el spam conocido y las llamadas ocultas. Se marcan los SMS riesgosos; horas de silencio apagadas.</string>
-    <string name="profile_sleep_description">Se bloquean el spam conocido y las llamadas ocultas. Se marcan los SMS riesgosos; horas de silencio activadas.</string>
-    <string name="profile_maximum_description">Revisión agresiva de llamadas, llamadas ocultas bloqueadas, horas de silencio activadas. Se marcan los SMS riesgosos.</string>
+    <string name="profile_work_description">Se bloquean las llamadas de spam conocidas. Se marcan los SMS sospechosos. Se permiten llamadas ocultas; horas de silencio apagadas.</string>
+    <string name="profile_personal_description">Se bloquean el spam conocido y las llamadas ocultas. Se marcan los SMS sospechosos; horas de silencio apagadas.</string>
+    <string name="profile_sleep_description">Se bloquean el spam conocido y las llamadas ocultas. Se marcan los SMS sospechosos; horas de silencio activadas.</string>
+    <string name="profile_maximum_description">Revisión agresiva de llamadas, llamadas ocultas bloqueadas, horas de silencio activadas. Se marcan los SMS sospechosos.</string>
     <string name="profile_off_description">Bloqueo de llamadas y análisis de SMS apagados. Se permiten llamadas ocultas; horas de silencio apagadas.</string>
-    <string name="profile_contacts_only_description">Solo suenan los contactos y las personas de confianza. Llamadas ocultas bloqueadas, horas de silencio apagadas. Se marcan los SMS riesgosos.</string>
+    <string name="profile_contacts_only_description">Solo suenan los contactos y las personas de confianza. Llamadas ocultas bloqueadas, horas de silencio apagadas. Se marcan los SMS sospechosos.</string>
     <string name="profile_detail_calls">Llamadas</string>
     <string name="profile_detail_texts">SMS</string>
     <string name="profile_detail_hidden">Llamadas ocultas</string>
@@ -94,7 +94,7 @@
     <string name="profile_detail_checks">Revisión de llamadas</string>
     <string name="profile_detail_spam">Spam conocido bloqueado</string>
     <string name="profile_detail_contacts">Contactos y números de confianza</string>
-    <string name="profile_detail_flagged">SMS riesgosos marcados</string>
+    <string name="profile_detail_flagged">SMS sospechosos marcados</string>
     <string name="profile_detail_blocked">Bloqueadas</string>
     <string name="profile_detail_allowed">Permitidas</string>
     <string name="profile_detail_on">Activado</string>
@@ -106,7 +106,7 @@
     <string name="profile_failed">No se pudo cambiar el nivel de protección</string>
     <string name="profile_custom_description">Hay ajustes personalizados activos. Elige un nivel para cambiar estos controles en conjunto.</string>
     <string name="onboarding_profile_title">¿Qué tan estricto?</string>
-    <string name="onboarding_profile_body">Elige cómo maneja CallShield las llamadas y los SMS riesgosos. Puedes cambiarlo cuando quieras en Ajustes.</string>
+    <string name="onboarding_profile_body">Elige cómo maneja CallShield las llamadas y los SMS sospechosos. Puedes cambiarlo cuando quieras en Ajustes.</string>
     <string name="onboarding_profile_recommended">Recomendado</string>
     <string name="onboarding_profile_strict">Estricto</string>
     <string name="settings_restore_recommended">Restaurar ajustes recomendados</string>
@@ -208,7 +208,7 @@
     <string name="blocked_log_call">Llamada</string>
     <string name="blocked_log_sms">SMS</string>
     <string name="blocklist_heading">Lista de bloqueo y reglas</string>
-    <string name="blocklist_intro">Controla quién puede comunicarse contigo y cómo maneja CallShield las llamadas y los SMS riesgosos.</string>
+    <string name="blocklist_intro">Controla quién puede comunicarse contigo y cómo maneja CallShield las llamadas y los SMS sospechosos.</string>
     <string name="blocklist_tab_blocked_short">Bloqueados</string>
     <string name="blocklist_tab_wildcards_short">Comodines</string>
     <string name="blocklist_tab_keywords_short">Palabras clave</string>
@@ -1099,7 +1099,7 @@
     <string name="protection_test_exit_other">Android la cerró por otro motivo</string>
     <string name="protection_test_open_settings">Abrir ajustes de la app</string>
     <string name="protection_test_fix_permissions">Concede los permisos que faltan en los ajustes de apps de Android y vuelve a ejecutar el diagnóstico.</string>
-    <string name="protection_test_fix_screener">Configura CallShield como la app predeterminada de filtrado de llamadas para interceptar las llamadas de spam en vivo.</string>
+    <string name="protection_test_fix_screener">Configura CallShield como la aplicación predeterminada de filtrado de llamadas para interceptar el spam en tiempo real.</string>
     <string name="protection_test_fix_database">Sincroniza la base de datos desde el panel o la pantalla Más para tener datos de protección locales.</string>
     <string name="protection_test_fix_engine">Revisa los interruptores del motor de detección en Ajustes y vuelve a ejecutar esta prueba.</string>
     <string name="protection_test_fix_sync">Si la lista en tendencia sigue vacía, espera a la próxima actualización o sincroniza manualmente.</string>
@@ -1177,13 +1177,13 @@
     <string name="permission_contract_degraded_read_sms">Sin acceso a la bandeja de SMS, el análisis de la bandeja y la revisión de mensajes marcados no pueden leer los mensajes existentes.</string>
     <string name="permission_contract_degraded_receive_sms">El filtrado de SMS de spam entrantes no puede revisar mensajes nuevos hasta que se conceda el acceso a SMS entrantes.</string>
     <string name="permission_contract_advisory_receive_sms">En Android 16 o superior, la intercepción de SMS entrantes es solo orientativa; la app de SMS predeterminada puede recibir los mensajes primero y controla la entrega a la bandeja.</string>
-    <string name="permission_contract_degraded_call_screening">El bloqueo de llamadas en vivo no está disponible hasta que CallShield sea la app activa de filtrado de llamadas.</string>
+    <string name="permission_contract_degraded_call_screening">El bloqueo de llamadas en tiempo real no estará disponible hasta que CallShield sea la aplicación activa de filtrado de llamadas.</string>
     <string name="permission_contract_call_screening_unsupported">Esta versión de Android no ofrece el rol predeterminado de filtrado de llamadas.</string>
     <string name="permission_contract_fix_call_screening_unsupported">Usa un teléfono o versión del fabricante que admita el filtrado de llamadas de Android, o deja activada la protección de SMS y RCS.</string>
     <string name="permission_contract_degraded_phone_state">Algunas vías de compatibilidad del estado de llamadas del fabricante pueden no estar disponibles sin acceso al estado del teléfono.</string>
     <string name="permission_contract_degraded_answer_calls">Contestar y colgar llamadas bloqueadas está activado, pero sin este permiso no se pueden contestar las llamadas, así que se rechazan.</string>
     <string name="permission_contract_answer_calls_not_needed">No se necesita hasta que actives Contestar y colgar llamadas bloqueadas. Esa opción lo pedirá.</string>
-    <string name="permission_contract_degraded_overlay">El identificador de llamadas flotante y las tarjetas de información en vivo permanecen ocultos hasta que se permita la ventana emergente.</string>
+    <string name="permission_contract_degraded_overlay">El identificador de llamadas flotante y las tarjetas de información en tiempo real permanecen ocultos hasta que se permita la ventana emergente.</string>
     <string name="permission_contract_degraded_notification_access">El filtrado de RCS y la confianza en alertas push no pueden leer las notificaciones de mensajes de confianza hasta que se active el acceso a notificaciones.</string>
     <string name="permission_contract_post_notifications_name">Permiso de notificaciones</string>
     <string name="permission_contract_post_notifications_denied">Denegado, así que las alertas y las acciones de revisión pueden no mostrarse</string>
@@ -1991,10 +1991,10 @@
     <string name="model_health_defaults_detail">Ningún modelo guardado era utilizable, así que la protección usa pesos integrados.</string>
     <string name="model_health_loading">Estado del modelo pendiente</string>
     <string name="model_health_loading_detail">Aún no se completa ninguna carga del modelo.</string>
-    <string name="settings_live_caller_enrichment">Información de quien llama en vivo</string>
+    <string name="settings_live_caller_enrichment">Información de quien llama en tiempo real</string>
     <string name="settings_live_caller_enrichment_desc">Opcional. Solo en llamadas sospechosas según las comprobaciones locales, el número se envía a SkipCalls para compararlo con sus reportes de spam</string>
     <string name="overlay_score_local_clear">Comprobaciones locales sin problemas</string>
-    <string name="overlay_status_local_only">Basado en comprobaciones del dispositivo; la información en vivo está desactivada</string>
+    <string name="overlay_status_local_only">Basado en comprobaciones del dispositivo; la información en tiempo real está desactivada</string>
     <string name="blocklist_sort_newest">Más recientes primero</string>
     <string name="blocklist_sort_number">Por número</string>
     <string name="blocklist_sort_most_blocked">Más bloqueados</string>
@@ -2014,7 +2014,7 @@
         <item quantity="other">%d reglas eliminadas</item>
     </plurals>
     <string name="settings_strict_offline">Modo sin conexión estricto</string>
-    <string name="settings_strict_offline_desc">Pausa todo lo que usa internet: la sincronización, la búsqueda de actualizaciones, las consultas en vivo y los reportes a la comunidad. La protección sigue usando los datos que ya están en este teléfono</string>
+    <string name="settings_strict_offline_desc">Pausa todo lo que usa internet: la sincronización, la búsqueda de actualizaciones, las consultas en tiempo real y los reportes a la comunidad. La protección sigue usando los datos que ya están en este teléfono</string>
     <string name="contribute_offline_mode">El modo sin conexión está activado, así que este reporte no se envió ni se guardó. Desactívalo en Ajustes y vuelve a reportar.</string>
     <string name="sync_strict_offline">El modo sin conexión está activado, así que no se descargó nada. La protección sigue usando los datos de este teléfono.</string>
     <string name="strict_offline_lists">El modo sin conexión está activado, así que ahora no se pueden descargar listas.</string>
