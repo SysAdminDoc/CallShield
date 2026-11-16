@@ -132,6 +132,21 @@ class CodeDuringCallWarningTest {
     }
 
     @Test
+    fun `the end of the call is passed on once it's saved`() {
+        var endSeenThen = -2L
+        CodeDuringCallWarning.onCallAllowed(
+            CoroutineScope(Dispatchers.Unconfined),
+            context,
+            caller,
+            "",
+            window,
+            onEnded = { endSeenThen = context.getSharedPreferences("code_during_call", Context.MODE_PRIVATE).getLong("ended_at", -1L) },
+        )
+        // No phone-state permission here, so the call ends when it rang, at [now].
+        assertEquals(now, endSeenThen)
+    }
+
+    @Test
     fun `an allow list that can't be read doesn't stop the watch`() =
         runBlocking {
             assertFalse(CodeDuringCallWarning.allowListed({ error("the database is locked") }, caller))

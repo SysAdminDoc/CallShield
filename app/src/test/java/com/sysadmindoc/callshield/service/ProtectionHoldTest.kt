@@ -123,6 +123,30 @@ class ProtectionHoldTest {
     }
 
     @Test
+    fun `the release time is set as soon as the call ends, not at the next minute's look`() {
+        val call = window.callStarted(STRANGER)
+        finish(viewModel.setBlockCalls(false))
+        assertNull(held().releaseAt)
+
+        window.callEnded(call)
+        await { ProtectionHold.callEnded(context, window, isContact = { false }) }
+
+        val releaseAt = window.snapshot()!!.endedAt!! + UnknownCallWindow.AFTER_CALL_MS
+        assertEquals(releaseAt, held().releaseAt)
+        assertTrue(read(fixture.repository.blockCallsEnabled))
+        val queued =
+            WorkManager
+                .getInstance(context)
+                .getWorkInfosForUniqueWork(ProtectionHold.WORK_NAME)
+                .get()
+                .single { it.state == WorkInfo.State.ENQUEUED }
+        assertTrue(
+            "the release waits for the ten minutes, not the minute's look",
+            queued.initialDelayMillis > UnknownCallWindow.AFTER_CALL_MS - ProtectionHold.RECHECK_MS,
+        )
+    }
+
+    @Test
     fun `the hold ends when the ten minutes after the call are up`() {
         var now = 1_000_000L
         val clocked = UnknownCallWindow { now }

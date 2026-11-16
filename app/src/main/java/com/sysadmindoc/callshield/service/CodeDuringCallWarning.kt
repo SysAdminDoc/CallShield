@@ -37,6 +37,7 @@ internal object CodeDuringCallWarning {
         matchSource: String,
         window: UnknownCallWindow = UnknownCallWindow.shared,
         isTrusted: suspend (String) -> Boolean = { allowListed({ SpamRepository.getInstance(context) }, it) },
+        onEnded: suspend () -> Unit = { ProtectionHold.callEnded(context, window) },
     ) {
         if (!UnknownCallWindow.countsAsUnknown(matchSource)) return
         val callState = callStateReader(context)
@@ -46,6 +47,7 @@ internal object CodeDuringCallWarning {
             save(context, window)
             window.watchUntilEnded(token, callState)
             save(context, window)
+            onEnded()
         }
     }
 

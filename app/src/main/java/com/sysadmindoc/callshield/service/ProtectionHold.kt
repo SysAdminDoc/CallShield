@@ -19,8 +19,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Turning protection off while someone the user doesn't know is on the
@@ -191,6 +193,30 @@ object ProtectionHold {
             write(context, Pending())
             null
         }
+
+    /**
+     * The call [window] was watching has ended, so what's waiting gets its
+     * release time now rather than at the next minute's look. Until then the
+     * screen could only say "after your call ends" with the call already over.
+     */
+    suspend fun callEnded(
+        context: Context,
+        window: UnknownCallWindow = UnknownCallWindow.shared,
+        isContact: (String) -> Boolean = { SpamHeuristics.isInContacts(context, it) },
+    ) {
+        if (load(context).isEmpty) return
+        // The call watcher runs on a scope with no exception handler, so a throw here would end the process.
+        // The minute's look is still scheduled and does the same work.
+        try {
+            releaseDue(context, window = window, isContact = isContact)?.let { schedule(context, it, ExistingWorkPolicy.REPLACE) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            Log.w(TAG, "Couldn't set the release time when the call ended", e)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Couldn't set the release time when the call ended", e)
+        }
+    }
 
     /** Whether [requested] trusts contacts [current] didn't. An empty set trusts every contact. */
     internal fun widensTrust(
