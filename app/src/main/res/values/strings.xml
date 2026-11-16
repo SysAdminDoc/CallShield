@@ -554,6 +554,8 @@
     <string name="signal_short_message_with_link">Short message with a link</string>
     <string name="signal_disguised_text">A link or brand name hides characters</string>
     <string name="signal_reply_bait">A stranger\'s first text fishing for a reply</string>
+    <string name="signal_call_forwarding_code">Asks you to dial a code that forwards your calls</string>
+    <string name="call_forwarding_code_detail">Dialing a code like this sends your calls to another phone, including the calls banks and apps make to check it\'s you. If you already dialed it, dial ##002# to turn call forwarding off (on Verizon, dial *73).</string>
     <string name="signal_spam_domain">Link to a known spam site</string>
     <string name="signal_lookalike_host">Link imitating a real site</string>
     <!-- Joins the signals that fired. Labels never contain it, so the log can split them again. -->
@@ -1581,6 +1583,11 @@
     <string name="notif_code_during_call_text">A code arrived during your call with %1$s</string>
     <string name="notif_code_during_call_big_text">A one-time code arrived during or just after your call with %1$s, who isn\'t in your contacts. Your bank and real companies never ask you to read one out. If the caller asked for it, hang up and call the company back on a number you trust.</string>
     <string name="notif_code_during_call_hidden_caller">a hidden number</string>
+    <string name="notif_channel_call_forwarding">Call forwarding codes</string>
+    <string name="notif_channel_call_forwarding_desc">Warns when a text or chat asks you to dial a code that would forward your calls to another phone</string>
+    <string name="notif_call_forwarding_title">Don\'t dial that code</string>
+    <string name="notif_call_forwarding_text">%1$s sent a code that forwards your calls</string>
+    <string name="notif_call_forwarding_big_text">A message from %1$s asks you to dial %2$s. Dialing it sends your calls to another phone, including the calls banks and apps make to check it\'s you. If you already dialed it, dial ##002# to turn call forwarding off (on Verizon, dial *73).</string>
     <string name="notif_outgoing_held_title">Call to %1$s stopped</string>
     <string name="notif_outgoing_held_big_text">%1$s Tap Call anyway if you meant to call it.</string>
     <string name="notif_outgoing_call_anyway">Call anyway</string>

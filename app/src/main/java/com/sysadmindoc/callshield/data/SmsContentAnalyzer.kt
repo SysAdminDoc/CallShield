@@ -602,6 +602,11 @@ class SmsContentAnalyzer
             val visibleText = normalized.visible
             val ruleText = normalized.folded
 
+            if (CallForwardingCode.find(ruleText) != null) {
+                score += CallForwardingCode.SCORE
+                reasons.add(CallForwardingCode.SIGNAL)
+            }
+
             // Check for URL shorteners (high spam signal)
             val urls =
                 if ('.' in visibleText || visibleText.contains("http", ignoreCase = true)) {

@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.CallForwardingCode
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningCategory
@@ -267,6 +268,11 @@ class RcsNotificationListener : NotificationListenerService() {
         effectiveBody?.let { CodeDuringCallWarning.onMessage(applicationContext, it) }
 
         if (sender.isEmpty()) return
+        // A warning, not a verdict, so it runs whether or not messages are
+        // screened. The SMS receiver reads a text too; the alert posts once.
+        effectiveBody
+            ?.let { CallForwardingCode.inMessage(it) }
+            ?.let { NotificationHelper.notifyCallForwardingCode(applicationContext, sender, it) }
 
         val senderNumber = senderNumber(sender)
         // E2EE graceful degradation: when the body is empty or an encrypted
@@ -516,14 +522,17 @@ class RcsNotificationListener : NotificationListenerService() {
          * The "why" line of a screened-message notification, in the app
          * language: the deciding check's label, or the content signals.
          * Both used to reach the notification as internal tokens
-         * ("heuristic", "spam keywords, shortened url").
+         * ("heuristic", "spam keywords, shortened url"). A forwarding code
+         * is named outright, since it says what the message wants done.
          */
         internal fun screenedMessageReason(
             context: Context,
             result: SpamCheckResult?,
             contentVerdict: ContentVerdict?,
-        ): String =
-            result
+        ): String {
+            val signals = result?.takeIf { it.isSpam }?.signals.orEmpty() + contentVerdict?.signals.orEmpty()
+            if (CallForwardingCode.SIGNAL in signals) return signalLabel(context, CallForwardingCode.SIGNAL)
+            return result
                 ?.takeIf { it.isSpam }
                 ?.let { context.getString(reasonCodeLabelRes(it.reasonCode)) }
                 ?: contentVerdict
@@ -531,6 +540,7 @@ class RcsNotificationListener : NotificationListenerService() {
                     ?.map { signalLabel(context, it) }
                     ?.joinSignalLabels(context)
                     .orEmpty()
+        }
 
         /** Return real content only; encrypted/empty placeholders stay sender-only. */
         internal fun bodyForAnalysis(body: String): String? = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }

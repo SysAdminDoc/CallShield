@@ -63,6 +63,7 @@ object NotificationHelper {
     const val CHANNEL_APP_UPDATES = "app_updates"
     const val CHANNEL_OUTGOING_HOLD = "outgoing_call_hold"
     const val CHANNEL_CODE_DURING_CALL = "code_during_call"
+    const val CHANNEL_CALL_FORWARDING = "call_forwarding_code"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -95,6 +96,8 @@ object NotificationHelper {
     private const val OUTGOING_HOLD_OPEN_SALT = 82
     private const val CODE_DURING_CALL_ID_SALT = 90
     private const val CODE_DURING_CALL_OPEN_SALT = 91
+    private const val CALL_FORWARDING_ID_SALT = 92
+    private const val CALL_FORWARDING_OPEN_SALT = 93
     private const val PROGRESS_TOTAL = 100
     internal const val SYNC_NOTIFICATION_ID = 3
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
@@ -275,6 +278,16 @@ object NotificationHelper {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = context.getString(R.string.notif_channel_code_during_call_desc)
+            },
+        )
+        // High importance: the text is still in the inbox, one tap from the dialer.
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_CALL_FORWARDING,
+                context.getString(R.string.notif_channel_call_forwarding),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.notif_channel_call_forwarding_desc)
             },
         )
     }
@@ -859,6 +872,49 @@ object NotificationHelper {
                 .setAutoCancel(true)
 
         safeNotify(context, nid, builder)
+    }
+
+    /**
+     * A message from [sender] asks the reader to dial [code], a
+     * [com.sysadmindoc.callshield.data.CallForwardingCode]. CallShield isn't
+     * the SMS app, so the text stays in the inbox either way. The id comes
+     * from the code, so the copy the SMS receiver and the notification
+     * listener both read posts one alert.
+     */
+    fun notifyCallForwardingCode(
+        context: Context,
+        sender: String,
+        code: String,
+    ): Boolean {
+        val textedNumber = sender.none { it.isLetter() } && filterAsciiDigits(sender).length >= 7
+        val shown = if (textedNumber) PhoneFormatter.formatIsolated(sender) else PhoneFormatter.isolate(sender)
+        val identity = filterAsciiDigits(code)
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(identity, CALL_FORWARDING_OPEN_SALT),
+                Intent(context, MainActivity::class.java).apply {
+                    if (textedNumber) putExtra("open_number", sender)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_CALL_FORWARDING)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_call_forwarding_title))
+                .setContentText(context.getString(R.string.notif_call_forwarding_text, shown))
+                .setStyle(
+                    NotificationCompat
+                        .BigTextStyle()
+                        .bigText(context.getString(R.string.notif_call_forwarding_big_text, shown, PhoneFormatter.isolate(code))),
+                ).setContentIntent(openIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOnlyAlertOnce(true)
+                .setAutoCancel(true)
+
+        return safeNotify(context, stableId(identity, CALL_FORWARDING_ID_SALT), builder)
     }
 
     /** A one-time code arrived during or just after a call from [caller], who isn't a contact ("" when hidden). */

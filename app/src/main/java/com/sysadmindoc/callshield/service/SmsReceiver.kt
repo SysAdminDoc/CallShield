@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
 import android.telephony.SubscriptionManager
+import com.sysadmindoc.callshield.data.CallForwardingCode
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
@@ -134,6 +135,7 @@ class SmsReceiver : BroadcastReceiver() {
                 body = reassembleBody(messages.map { it.messageBody })
                 // A warning, not a verdict, so it runs whether or not texts are screened.
                 CodeDuringCallWarning.onMessage(appContext, body)
+                CallForwardingCode.inMessage(body)?.let { NotificationHelper.notifyCallForwardingCode(appContext, sender, it) }
 
                 // Spam classification + block logging is gated behind the
                 // Block-SMS toggle. Local phishing-URL checks below run

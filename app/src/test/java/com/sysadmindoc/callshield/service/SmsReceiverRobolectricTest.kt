@@ -114,6 +114,24 @@ class SmsReceiverRobolectricTest {
     }
 
     @Test
+    fun `a texted call-forwarding code warns even when SMS blocking is disabled`() {
+        val receiver = receiver()
+        val intent =
+            Intent(Telephony.Sms.Intents.SMS_RECEIVED_ACTION).apply {
+                putExtra("format", "3gpp")
+                putExtra("pdus", arrayOf(buildDeliverPdu("15551234567", "Your parcel is held. Dial *21*+12125550143# to release it")))
+            }
+
+        receiver.onReceive(context, intent)
+
+        val warning = awaitNotification(context.getString(com.sysadmindoc.callshield.R.string.notif_call_forwarding_title))
+        assertEquals(NotificationHelper.CHANNEL_CALL_FORWARDING, warning.channelId)
+        val bigText = warning.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
+        assertTrue(bigText, bigText.contains("*21*+12125550143"))
+        assertTrue(bigText, bigText.contains("##002#"))
+    }
+
+    @Test
     fun `a blocked number ending in 7726 is still screened and logged`() {
         val receiver = receiver()
         runBlocking {

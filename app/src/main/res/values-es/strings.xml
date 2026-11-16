@@ -531,6 +531,8 @@
     <string name="signal_short_message_with_link">Mensaje corto con un enlace</string>
     <string name="signal_disguised_text">Un enlace o nombre de marca oculta caracteres</string>
     <string name="signal_reply_bait">Primer mensaje de un desconocido que busca una respuesta</string>
+    <string name="signal_call_forwarding_code">Te pide marcar un código que desvía tus llamadas</string>
+    <string name="call_forwarding_code_detail">Marcar un código así envía tus llamadas a otro teléfono, incluidas las que hacen los bancos y las apps para confirmar que eres tú. Si ya lo marcaste, marca ##002# para desactivar el desvío de llamadas (en Verizon, marca *73).</string>
     <string name="signal_spam_domain">Enlace a un sitio de spam conocido</string>
     <string name="signal_lookalike_host">Enlace que imita un sitio real</string>
     <string name="signal_list_separator">", "</string>
@@ -1512,6 +1514,11 @@
     <string name="notif_code_during_call_text">Llegó un código durante tu llamada con %1$s</string>
     <string name="notif_code_during_call_big_text">Llegó un código de un solo uso durante o justo después de tu llamada con %1$s, que no está en tus contactos. Tu banco y las empresas reales nunca te piden que lo digas en voz alta. Si quien llamó te lo pidió, cuelga y llama a la empresa a un número de tu confianza.</string>
     <string name="notif_code_during_call_hidden_caller">un número oculto</string>
+    <string name="notif_channel_call_forwarding">Códigos de desvío de llamadas</string>
+    <string name="notif_channel_call_forwarding_desc">Avisa cuando un SMS o un chat te pide marcar un código que desviaría tus llamadas a otro teléfono</string>
+    <string name="notif_call_forwarding_title">No marques ese código</string>
+    <string name="notif_call_forwarding_text">%1$s envió un código que desvía tus llamadas</string>
+    <string name="notif_call_forwarding_big_text">Un mensaje de %1$s te pide marcar %2$s. Al marcarlo, tus llamadas se envían a otro teléfono, incluidas las que hacen los bancos y las apps para confirmar que eres tú. Si ya lo marcaste, marca ##002# para desactivar el desvío de llamadas (en Verizon, marca *73).</string>
     <string name="notif_outgoing_held_title">Llamada a %1$s detenida</string>
     <string name="notif_outgoing_held_big_text">%1$s Toca Llamar de todos modos si querías llamar.</string>
     <string name="notif_outgoing_call_anyway">Llamar de todos modos</string>

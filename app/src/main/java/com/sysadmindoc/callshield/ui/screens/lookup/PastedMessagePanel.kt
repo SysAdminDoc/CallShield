@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CallForwardingCode
 import com.sysadmindoc.callshield.data.PastedMessageVerdict
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -224,7 +225,7 @@ internal fun PastedMessagePanel(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun PastedMessageVerdictCard(verdict: PastedMessageVerdict) {
+internal fun PastedMessageVerdictCard(verdict: PastedMessageVerdict) {
     val context = LocalContext.current
     val accent = if (verdict.looksLikeSpam) CatRed else CatGreen
     // A link the URL check named already says it's a spam site.
@@ -256,6 +257,13 @@ private fun PastedMessageVerdictCard(verdict: PastedMessageVerdict) {
             }
             signals.forEach { signal ->
                 VerdictReasonRow(icon = Icons.Default.Flag, text = signalLabel(context, signal), tint = accent)
+            }
+            if (CallForwardingCode.SIGNAL in signals) {
+                Text(
+                    stringResource(R.string.call_forwarding_code_detail),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatText,
+                )
             }
             if (!verdict.looksLikeSpam) {
                 Text(

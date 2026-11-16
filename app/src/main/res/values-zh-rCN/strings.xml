@@ -401,6 +401,8 @@
     <string name="signal_short_message_with_link">带链接的简短消息</string>
     <string name="signal_disguised_text">链接或品牌名中藏有伪装字符</string>
     <string name="signal_reply_bait">陌生号码的第一条短信在诱你回复</string>
+    <string name="signal_call_forwarding_code">要你拨打会转接来电的代码</string>
+    <string name="call_forwarding_code_detail">拨打这类代码会把你的来电转到另一部手机，包括银行和应用确认身份时打来的电话。如果已经拨过，请拨 ##002# 关闭呼叫转移（Verizon 用户请拨 *73）。</string>
     <string name="signal_spam_domain">链接指向已知垃圾网站</string>
     <string name="signal_lookalike_host">链接仿冒知名网站</string>
     <string name="signal_list_separator">、</string>
@@ -502,6 +504,11 @@
     <string name="notif_code_during_call_text">与 %1$s 通话期间收到了一条验证码</string>
     <string name="notif_code_during_call_big_text">与 %1$s 通话期间或刚结束时收到了一条一次性验证码，对方不在你的联系人中。银行和正规公司绝不会让你念出验证码。如果来电者向你索要，请挂断电话，并通过你信任的号码回拨该公司。</string>
     <string name="notif_code_during_call_hidden_caller">隐藏号码</string>
+    <string name="notif_channel_call_forwarding">呼叫转移代码</string>
+    <string name="notif_channel_call_forwarding_desc">当短信或聊天消息要你拨打会把来电转到另一部手机的代码时发出提醒</string>
+    <string name="notif_call_forwarding_title">不要拨打这个代码</string>
+    <string name="notif_call_forwarding_text">%1$s 发来一个会转接你来电的代码</string>
+    <string name="notif_call_forwarding_big_text">来自 %1$s 的消息要你拨打 %2$s。拨打后，你的来电会转到另一部手机，包括银行和应用确认身份时打来的电话。如果已经拨过，请拨 ##002# 关闭呼叫转移（Verizon 用户请拨 *73）。</string>
     <string name="notif_outgoing_held_title">已拦下拨往 %1$s 的电话</string>
     <string name="notif_outgoing_held_big_text">%1$s 如确实要拨打，请点按“仍要拨打”。</string>
     <string name="notif_outgoing_call_anyway">仍要拨打</string>

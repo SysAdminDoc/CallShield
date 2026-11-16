@@ -531,6 +531,8 @@
     <string name="signal_short_message_with_link">Mensagem curta com um link</string>
     <string name="signal_disguised_text">Um link ou nome de marca esconde caracteres</string>
     <string name="signal_reply_bait">Primeiro SMS de um desconhecido tentando obter uma resposta</string>
+    <string name="signal_call_forwarding_code">Pede para você discar um código que desvia suas chamadas</string>
+    <string name="call_forwarding_code_detail">Discar um código assim envia suas chamadas para outro telefone, inclusive as que bancos e apps fazem para confirmar que é você. Se você já discou, disque ##002# para desativar o desvio de chamadas (na Verizon, disque *73).</string>
     <string name="signal_spam_domain">Link para um site de spam conhecido</string>
     <string name="signal_lookalike_host">Link que imita um site verdadeiro</string>
     <string name="signal_list_separator">", "</string>
@@ -1512,6 +1514,11 @@
     <string name="notif_code_during_call_text">Um código chegou durante sua chamada com %1$s</string>
     <string name="notif_code_during_call_big_text">Um código de uso único chegou durante ou logo depois da sua chamada com %1$s, que não está nos seus contatos. Seu banco e empresas de verdade nunca pedem que você leia um código em voz alta. Se quem ligou pediu, desligue e ligue de volta para a empresa por um número em que você confie.</string>
     <string name="notif_code_during_call_hidden_caller">um número oculto</string>
+    <string name="notif_channel_call_forwarding">Códigos de desvio de chamadas</string>
+    <string name="notif_channel_call_forwarding_desc">Avisa quando um SMS ou chat pede para você discar um código que desviaria suas chamadas para outro telefone</string>
+    <string name="notif_call_forwarding_title">Não disque esse código</string>
+    <string name="notif_call_forwarding_text">%1$s enviou um código que desvia suas chamadas</string>
+    <string name="notif_call_forwarding_big_text">Uma mensagem de %1$s pede para você discar %2$s. Se você discar, suas chamadas vão para outro telefone, inclusive as que bancos e apps fazem para confirmar que é você. Se você já discou, disque ##002# para desativar o desvio de chamadas (na Verizon, disque *73).</string>
     <string name="notif_outgoing_held_title">Chamada para %1$s barrada</string>
     <string name="notif_outgoing_held_big_text">%1$s Toque em Ligar mesmo assim se você pretendia ligar para ele.</string>
     <string name="notif_outgoing_call_anyway">Ligar mesmo assim</string>

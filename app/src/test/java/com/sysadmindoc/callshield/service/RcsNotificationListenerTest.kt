@@ -12,6 +12,7 @@ import android.os.Process
 import android.service.notification.StatusBarNotification
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CallForwardingCode
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilityState
@@ -22,6 +23,7 @@ import com.sysadmindoc.callshield.data.UnknownCallWindow
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
 import com.sysadmindoc.callshield.data.remote.UrlThreatSource
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.urlThreatLabels
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -78,6 +80,34 @@ class RcsNotificationListenerTest {
         assertEquals(
             context.getString(R.string.notif_code_during_call_text, PhoneFormatter.formatIsolated(caller)),
             codeWarnings().single().extras.getString(Notification.EXTRA_TEXT),
+        )
+    }
+
+    @Test
+    fun `a call-forwarding code in a chat notification warns once`() {
+        val chat = chatNotification("Hi, it's the courier. Dial **21*5551234567# so I can reach you", sender = "Jo")
+
+        postUntil(chat) { forwardingWarnings().isNotEmpty() }
+        listener.onNotificationPosted(chat)
+
+        val warning = forwardingWarnings().single()
+        assertEquals(context.getString(R.string.notif_call_forwarding_text, PhoneFormatter.isolate("Jo")), warning.extras.getString(Notification.EXTRA_TEXT))
+    }
+
+    @Test
+    fun `a screened message with a forwarding code names the code, not the check`() {
+        val verdict = RcsNotificationListener.contentVerdict("Dial *21*+12125550143# to keep your number", enabled = true, aggressive = false)
+        val label = context.getString(R.string.signal_call_forwarding_code)
+
+        assertTrue(verdict.isSpam)
+        assertEquals(label, RcsNotificationListener.screenedMessageReason(context, null, verdict))
+        assertEquals(
+            label,
+            RcsNotificationListener.screenedMessageReason(
+                context,
+                SpamCheckResult(isSpam = true, matchSource = "sms_content", signals = listOf("spam_keywords", CallForwardingCode.SIGNAL)),
+                null,
+            ),
         )
     }
 
@@ -286,6 +316,8 @@ class RcsNotificationListenerTest {
     private suspend fun notificationCapability() = fixture.repository.readPrefsSnapshot()[SpamRepository.KEY_NOTIFICATION_CAPABILITY_STATE]
 
     private fun phishingAlerts() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_PHISHING }
+
+    private fun forwardingWarnings() = shadowOf(notificationManager).allNotifications.filter { it.channelId == NotificationHelper.CHANNEL_CALL_FORWARDING }
 
     private fun callLogRows() =
         fixture.sqlite.query("SELECT COUNT(*) FROM call_log").use {
