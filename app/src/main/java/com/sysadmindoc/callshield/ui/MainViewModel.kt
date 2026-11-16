@@ -82,9 +82,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -1817,6 +1820,122 @@ class MainViewModel
         /** Clear [shown] once its screen is done showing it, keeping one that landed meanwhile. */
         fun clearNotSpamOutcome(shown: NotSpamOutcome) {
             _notSpamOutcome.compareAndSet(shown, null)
+        }
+
+        /**
+         * What Block, Report or Not spam did to the calls picked in Recent or
+         * the Blocked log. [done] counts the numbers it acted on. One Undo
+         * takes back [blockUndos] and the [notSpamRequests] still waiting; a
+         * report that went out stays sent.
+         */
+        data class SelectionOutcome(
+            val done: Int,
+            val alreadyReported: Int = 0,
+            val failed: Int = 0,
+            val blockUndos: List<BlocklistRepository.BlockUndo> = emptyList(),
+            val notSpamRequests: List<Long> = emptyList(),
+        ) {
+            val undoable: Boolean get() = blockUndos.isNotEmpty() || notSpamRequests.isNotEmpty()
+        }
+
+        // One batch at a time: a second batch that met the first's block
+        // would save it as the row its Undo puts back, and keep the number blocked.
+        private val pickedNumbersLock = Mutex()
+
+        /**
+         * Each picked number once, however it's spelled, in the order picked.
+         * Emergency lines are left out of a block with one message for all of them.
+         */
+        private fun pickedNumbers(
+            numbers: Collection<String>,
+            blocking: Boolean,
+        ): List<String> {
+            val distinct = numbers.filter { repo.normalizeNumber(it).isNotBlank() }.distinctBy { repo.normalizeNumber(it) }
+            if (!blocking) return distinct
+            val (emergency, rest) = distinct.partition { EmergencyNumberFloor.isProtected(it) }
+            if (emergency.isNotEmpty()) {
+                Toast.makeText(appContext, appContext.getString(R.string.emergency_number_block_refused), Toast.LENGTH_LONG).show()
+            }
+            return rest
+        }
+
+        // Runs on in the ViewModel when the screen goes, so a batch is never cut off halfway.
+        private suspend fun <T> pickedNumbersJob(work: suspend () -> T): T = viewModelScope.async { pickedNumbersLock.withLock { work() } }.await()
+
+        private suspend fun blockPicked(
+            number: String,
+            type: String,
+            description: String,
+        ): BlocklistRepository.BlockUndo? =
+            try {
+                repo.blockNumberUndoable(number, type, description)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Blocking a picked number failed", e)
+                null
+            }
+
+        /** Block every picked number. */
+        suspend fun blockPickedNumbers(
+            numbers: Collection<String>,
+            description: String,
+        ): SelectionOutcome =
+            pickedNumbersJob {
+                val undos = mutableListOf<BlocklistRepository.BlockUndo>()
+                var failed = 0
+                for (number in pickedNumbers(numbers, blocking = true)) {
+                    val undo = blockPicked(number, "spam", description)
+                    if (undo == null) failed++ else undos += undo
+                }
+                SelectionOutcome(done = undos.size, failed = failed, blockUndos = undos)
+            }
+
+        /**
+         * Report every picked number, blocking each here first as Report on a
+         * number's screen does. A number already blocked here keeps its block
+         * as it was. A number this phone reported in the last day isn't sent
+         * again and counts in [SelectionOutcome.alreadyReported].
+         */
+        suspend fun reportPickedNumbers(numbers: Collection<String>): SelectionOutcome =
+            pickedNumbersJob {
+                val undos = mutableListOf<BlocklistRepository.BlockUndo>()
+                var done = 0
+                var already = 0
+                var failed = 0
+                val blockedFromReport = appContext.getString(R.string.detail_blocked_from_report)
+                for (number in pickedNumbers(numbers, blocking = true)) {
+                    val normalized = repo.normalizeNumber(number)
+                    val blockedHere = repo.lookupForms(normalized).any { repo.observeNumber(it).first()?.isUserBlocked == true }
+                    if (!blockedHere) blockPicked(number, "spam", blockedFromReport)?.let { undos += it }
+                    val result = CommunityContributor.contribute(appContext, normalized, "spam")
+                    when {
+                        result.outcome == CommunityContributor.ContributeOutcome.ALREADY_SUBMITTED -> already++
+                        result.success || result.outcome == CommunityContributor.ContributeOutcome.QUEUED -> done++
+                        else -> failed++
+                    }
+                }
+                SelectionOutcome(done = done, alreadyReported = already, failed = failed, blockUndos = undos)
+            }
+
+        /**
+         * Not spam for every picked number. Each waits out
+         * [NOT_SPAM_UNDO_WINDOW_MS] like a tap on a number's screen, so one
+         * Undo inside that window stops all of them.
+         */
+        fun markPickedNotSpam(numbers: Collection<String>): SelectionOutcome {
+            val description = appContext.getString(R.string.desc_reported_not_spam)
+            val requests = pickedNumbers(numbers, blocking = false).map { scheduleNotSpam(it, description) }
+            return SelectionOutcome(done = requests.size, notSpamRequests = requests)
+        }
+
+        /** Undo for a batch: the waiting Not spam taps stop, and the blocks come off newest first. */
+        fun undoSelection(outcome: SelectionOutcome) {
+            outcome.notSpamRequests.forEach(::undoNotSpam)
+            if (outcome.blockUndos.isEmpty()) return
+            launchUndo("a batch of blocks") {
+                pickedNumbersLock.withLock { outcome.blockUndos.asReversed().forEach { repo.undoBlock(it) } }
+            }
         }
 
         /** This device's reports from the last 90 days, for My reports. */

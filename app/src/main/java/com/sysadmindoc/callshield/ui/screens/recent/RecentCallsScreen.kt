@@ -9,6 +9,7 @@ import android.os.Process
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -48,8 +49,12 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.NumberSelectionBar
+import com.sysadmindoc.callshield.ui.SelectableRow
+import com.sysadmindoc.callshield.ui.SelectionAction
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.applySelectionAction
 import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
@@ -136,8 +141,12 @@ internal suspend fun recentCallsWithVerdicts(
 /** How far apart a logged block and the phone's row for the same call can be, as the call-frequency check matches them. */
 private const val LOGGED_BLOCK_MATCH_MS = 10_000L
 
+/** [loadCalls] reads the phone's call log; tests hand it their own calls. */
 @Composable
-fun RecentCallsScreen(viewModel: MainViewModel) {
+fun RecentCallsScreen(
+    viewModel: MainViewModel,
+    loadCalls: suspend (Context) -> List<RecentCall> = ::loadRecentCalls,
+) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -177,7 +186,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             }
 
             try {
-                calls = loadRecentCalls(context.applicationContext)
+                calls = loadCalls(context.applicationContext)
                 loadFailed = false
                 initialLoadCompleted = true
             } catch (e: Exception) {
@@ -287,6 +296,30 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 color = CatRed,
             ),
         )
+
+    // Picked by number, so every call from a picked number shows as picked.
+    // A new filter starts over, and a number gone from the list drops out.
+    var selectedNumbers by rememberSaveable(filterMode) { mutableStateOf(emptySet<String>()) }
+    val shownNumbers = remember(filtered) { filtered.mapTo(HashSet()) { it.number } }
+    val currentShownNumbers by rememberUpdatedState(shownNumbers)
+    val picked = selectedNumbers.filter { it in shownNumbers }
+    val selecting = picked.isNotEmpty()
+    val blockedFromRecent = stringResource(R.string.desc_blocked_from_recent)
+    BackHandler(enabled = selecting) { selectedNumbers = emptySet() }
+
+    fun togglePicked(number: String) {
+        selectedNumbers = if (number in selectedNumbers) selectedNumbers - number else selectedNumbers + number
+    }
+
+    fun applyToPicked(action: SelectionAction) {
+        // Read at the tap: the bar's buttons can keep a lambda from the first pick.
+        val numbers = selectedNumbers.filter { it in currentShownNumbers }
+        selectedNumbers = emptySet()
+        hapticConfirm(context)
+        scope.launch {
+            applySelectionAction(viewModel, snackbarHost, resources, action, numbers, blockedFromRecent) { refreshRecentCalls(false) }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -427,7 +460,8 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                         }
                     }
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    // The selection bar covers the bottom, so the last call can scroll above it.
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = if (selecting) 136.dp else 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     itemsIndexed(
@@ -445,24 +479,41 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                         AnimatedVisibility(visible = visible, enter = slideInVertically { 30 } + fadeIn()) {
                             val allowReason = stringResource(R.string.recent_temporary_allow_reason)
                             val blockReason = stringResource(R.string.recent_temporary_block_reason)
-                            RecentCallItem(
-                                call = call,
-                                onOpenDetail = { viewModel.openNumberDetail(call.number) },
-                                onTemporaryAllow = { duration ->
-                                    scope.launch {
-                                        applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = true, duration = duration, description = allowReason)
-                                    }
-                                },
-                                onTemporaryBlock = { duration ->
-                                    scope.launch {
-                                        applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = false, duration = duration, description = blockReason)
-                                    }
-                                },
-                            )
+                            SelectableRow(
+                                label = call.contactName ?: PhoneFormatter.formatIsolated(call.number),
+                                selecting = selecting,
+                                selected = call.number in selectedNumbers,
+                                onSelect = { togglePicked(call.number) },
+                                longPressSelects = false,
+                            ) {
+                                RecentCallItem(
+                                    call = call,
+                                    onOpenDetail = { viewModel.openNumberDetail(call.number) },
+                                    onTemporaryAllow = { duration ->
+                                        scope.launch {
+                                            applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = true, duration = duration, description = allowReason)
+                                        }
+                                    },
+                                    onTemporaryBlock = { duration ->
+                                        scope.launch {
+                                            applyTemporaryDecision(viewModel, snackbarHost, resources, call.number, allow = false, duration = duration, description = blockReason)
+                                        }
+                                    },
+                                    onSelect = { togglePicked(call.number) },
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+        if (selecting) {
+            NumberSelectionBar(
+                count = picked.size,
+                onCancel = { selectedNumbers = emptySet() },
+                onAction = ::applyToPicked,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            )
         }
         SnackbarHost(snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
     }
@@ -481,6 +532,7 @@ fun RecentCallItem(
     onOpenDetail: () -> Unit,
     onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
     onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
+    onSelect: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
@@ -540,6 +592,8 @@ fun RecentCallItem(
     PremiumCard(
         onClick = onOpenDetail,
         cornerRadius = 12.dp,
+        onLongClick = onSelect,
+        onLongClickLabel = stringResource(R.string.blocklist_select_action),
     ) {
         Column {
             Box {

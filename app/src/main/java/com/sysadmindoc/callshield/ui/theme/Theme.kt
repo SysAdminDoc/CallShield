@@ -15,6 +15,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -501,13 +503,16 @@ fun CallShieldTheme(
 /** How far an accent card tints itself; AppThemeModeTest checks text drawn on it. */
 internal const val ACCENT_CARD_TINT = 0.055f
 
-// Shared surface for cards across the app's screens.
+// Shared surface for cards across the app's screens. [onLongClick] only
+// counts with [onClick]; [onLongClickLabel] is what TalkBack calls it.
 @Composable
 fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     accentColor: Color? = null,
     cornerRadius: Dp = ShapeXl,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
@@ -526,7 +531,19 @@ fun PremiumCard(
             modifier
         }
 
-    if (onClick != null) {
+    if (onClick != null && onLongClick != null) {
+        // Card's own onClick has no long press, so the card takes both here.
+        Card(
+            modifier =
+                cardModifier
+                    .clip(shape)
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = onLongClickLabel),
+            colors = colors,
+            shape = shape,
+            elevation = elevation,
+            content = content,
+        )
+    } else if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = cardModifier,

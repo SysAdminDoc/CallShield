@@ -234,6 +234,8 @@
     <string name="desc_blocked_from_after_call_feedback">从通话后反馈拦截</string>
     <string name="desc_marked_safe_from_after_call_feedback">从通话后反馈标记为安全</string>
     <string name="desc_blocked_from_notification">从通知拦截</string>
+    <string name="desc_blocked_from_recent">从最近通话拦截</string>
+    <string name="desc_blocked_from_log">从日志拦截</string>
     <string name="desc_reported_not_spam_from_notification">从通知举报为非垃圾</string>
     <string name="blocklist_empty_keywords">无关键词规则</string>
     <string name="blocklist_empty_keywords_sub">当垃圾短信复用相同措辞时，添加如“银行提醒”或“领取奖品”等短语。</string>
@@ -1140,7 +1142,6 @@
     <string name="backup_restore_undone">已撤销恢复，之前的内容已放回。</string>
     <string name="backup_restore_undo_failed">无法撤销恢复。</string>
     <string name="clip_label_phone">电话</string>
-    <string name="clip_label_phone_number">电话号码</string>
     <string name="clip_label_spam_number">CallShield 垃圾号码</string>
     <string name="log_export_subject">CallShield 拦截日志</string>
     <string name="log_export_chooser_title">导出日志</string>
@@ -1939,6 +1940,30 @@
     <plurals name="blocklist_selection_unblocked">
         <item quantity="one">已取消拦截 %d 个号码</item>
         <item quantity="other">已取消拦截 %d 个号码</item>
+    </plurals>
+    <plurals name="selection_blocked">
+        <item quantity="one">已拦截 %d 个号码</item>
+        <item quantity="other">已拦截 %d 个号码</item>
+    </plurals>
+    <plurals name="selection_reported">
+        <item quantity="one">已举报并拦截 %d 个号码</item>
+        <item quantity="other">已举报并拦截 %d 个号码</item>
+    </plurals>
+    <plurals name="selection_already_reported">
+        <item quantity="one">%d 个号码在过去一天内已举报过</item>
+        <item quantity="other">%d 个号码在过去一天内已举报过</item>
+    </plurals>
+    <plurals name="selection_not_reported">
+        <item quantity="one">%d 个号码无法举报</item>
+        <item quantity="other">%d 个号码无法举报</item>
+    </plurals>
+    <plurals name="selection_not_blocked">
+        <item quantity="one">%d 个号码无法拦截</item>
+        <item quantity="other">%d 个号码无法拦截</item>
+    </plurals>
+    <plurals name="selection_marked_not_spam">
+        <item quantity="one">已将 %d 个号码标记为非垃圾</item>
+        <item quantity="other">已将 %d 个号码标记为非垃圾</item>
     </plurals>
     <plurals name="blocklist_selection_removed">
         <item quantity="one">已移除 %d 条规则</item>

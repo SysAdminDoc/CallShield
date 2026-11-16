@@ -312,6 +312,8 @@
     <string name="desc_blocked_from_after_call_feedback">Blocked from after-call feedback</string>
     <string name="desc_marked_safe_from_after_call_feedback">Marked safe from after-call feedback</string>
     <string name="desc_blocked_from_notification">Blocked from notification</string>
+    <string name="desc_blocked_from_recent">Blocked from Recent</string>
+    <string name="desc_blocked_from_log">Blocked from the log</string>
     <string name="desc_reported_not_spam_from_notification">Reported as not spam from notification</string>
     <string name="contribute_reported_spam">Contributed anonymously</string>
     <string name="contribute_reported_not_spam">Reported as not spam</string>
@@ -1586,7 +1588,6 @@
     <string name="backup_restore_undone">Restore undone. What you had before is back.</string>
     <string name="backup_restore_undo_failed">Couldn\'t undo the restore.</string>
     <string name="clip_label_phone">Phone</string>
-    <string name="clip_label_phone_number">Phone number</string>
     <string name="clip_label_spam_number">CallShield spam number</string>
     <string name="log_export_subject">CallShield blocked log</string>
     <string name="log_export_chooser_title">Export log</string>
@@ -2147,6 +2148,30 @@
     <plurals name="blocklist_selection_unblocked">
         <item quantity="one">%d number unblocked</item>
         <item quantity="other">%d numbers unblocked</item>
+    </plurals>
+    <plurals name="selection_blocked">
+        <item quantity="one">%d number blocked</item>
+        <item quantity="other">%d numbers blocked</item>
+    </plurals>
+    <plurals name="selection_reported">
+        <item quantity="one">%d number reported and blocked</item>
+        <item quantity="other">%d numbers reported and blocked</item>
+    </plurals>
+    <plurals name="selection_already_reported">
+        <item quantity="one">%d was already reported in the last day</item>
+        <item quantity="other">%d were already reported in the last day</item>
+    </plurals>
+    <plurals name="selection_not_reported">
+        <item quantity="one">%d couldn\'t be reported</item>
+        <item quantity="other">%d couldn\'t be reported</item>
+    </plurals>
+    <plurals name="selection_not_blocked">
+        <item quantity="one">%d couldn\'t be blocked</item>
+        <item quantity="other">%d couldn\'t be blocked</item>
+    </plurals>
+    <plurals name="selection_marked_not_spam">
+        <item quantity="one">%d number marked not spam</item>
+        <item quantity="other">%d numbers marked not spam</item>
     </plurals>
     <plurals name="blocklist_selection_removed">
         <item quantity="one">%d rule removed</item>

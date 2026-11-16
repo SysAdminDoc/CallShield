@@ -1,12 +1,12 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -53,9 +53,13 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.NumberSelectionBar
+import com.sysadmindoc.callshield.ui.SelectableRow
+import com.sysadmindoc.callshield.ui.SelectionAction
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.applySelectionAction
 import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
@@ -94,6 +98,29 @@ fun BlockedLogScreen(
     val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
     val logClearedMessage = stringResource(R.string.blocked_log_log_cleared)
     val undoLabel = stringResource(R.string.blocked_log_undo)
+    val blockedFromLog = stringResource(R.string.desc_blocked_from_log)
+    val logSearchQuery by viewModel.logSearchQuery.collectAsStateWithLifecycle()
+    val logSearchResults by viewModel.logSearchResults.collectAsStateWithLifecycle()
+    val isSearching = logSearchQuery.length >= 2
+
+    // Picked by number, so every row of a picked number shows as picked. A new
+    // filter, grouping or search starts over.
+    var selectedNumbers by rememberSaveable(filterMode, selectedReasonCodeWire, grouped, logSearchQuery) {
+        mutableStateOf(emptySet<String>())
+    }
+    val selecting = selectedNumbers.isNotEmpty()
+    BackHandler(enabled = selecting) { selectedNumbers = emptySet() }
+
+    fun togglePicked(number: String) {
+        selectedNumbers = if (number in selectedNumbers) selectedNumbers - number else selectedNumbers + number
+    }
+
+    fun applyToPicked(action: SelectionAction) {
+        val numbers = selectedNumbers.toList()
+        selectedNumbers = emptySet()
+        hapticConfirm(context)
+        scope.launch { applySelectionAction(viewModel, snackbarHost, resources, action, numbers, blockedFromLog) }
+    }
 
     fun temporaryDecision(
         number: String,
@@ -110,6 +137,7 @@ fun BlockedLogScreen(
     // until the snackbar goes, so Undo puts every one back.
     fun clearLog() {
         hapticConfirm(context)
+        selectedNumbers = emptySet()
         scope.launch {
             val cleared = viewModel.clearLogUndoable().getOrNull() ?: return@launch
             // A second tap finds nothing to clear; the first snackbar keeps the rows.
@@ -143,6 +171,16 @@ fun BlockedLogScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
+        bottomBar = {
+            if (selecting) {
+                NumberSelectionBar(
+                    count = selectedNumbers.size,
+                    onCancel = { selectedNumbers = emptySet() },
+                    onAction = ::applyToPicked,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
+        },
         containerColor = Black,
         contentWindowInsets = WindowInsets(0),
     ) { padding ->
@@ -284,10 +322,6 @@ fun BlockedLogScreen(
                 }
             }
 
-            val logSearchQuery by viewModel.logSearchQuery.collectAsStateWithLifecycle()
-            val logSearchResults by viewModel.logSearchResults.collectAsStateWithLifecycle()
-            val isSearching = logSearchQuery.length >= 2
-
             OutlinedTextField(
                 value = logSearchQuery,
                 onValueChange = viewModel::setLogSearchQuery,
@@ -332,6 +366,9 @@ fun BlockedLogScreen(
                         results = logSearchResults,
                         viewModel = viewModel,
                         onTemporaryDecision = ::temporaryDecision,
+                        selecting = selecting,
+                        selectedNumbers = selectedNumbers,
+                        onSelect = ::togglePicked,
                     )
                 }
             } else if (firstPageFailed(activeRefreshState, stale, activeItemCount)) {
@@ -391,12 +428,21 @@ fun BlockedLogScreen(
                     ) { index ->
                         val group = groupedCalls[index]?.item ?: return@items
                         val call = group.call
-                        GroupedCallItem(
-                            call = call,
-                            count = group.occurrences,
-                            onTap = { viewModel.openNumberDetail(call.number) },
-                            onBlock = { viewModel.blockNumber(call.number) },
-                        )
+                        SelectableRow(
+                            label = PhoneFormatter.formatIsolated(call.number),
+                            selecting = selecting,
+                            selected = call.number in selectedNumbers,
+                            onSelect = { togglePicked(call.number) },
+                            longPressSelects = false,
+                        ) {
+                            GroupedCallItem(
+                                call = call,
+                                count = group.occurrences,
+                                onTap = { viewModel.openNumberDetail(call.number) },
+                                onBlock = { viewModel.blockNumber(call.number) },
+                                onSelect = { togglePicked(call.number) },
+                            )
+                        }
                     }
                 }
             } else {
@@ -514,47 +560,56 @@ fun BlockedLogScreen(
                                     }
                                 }
                             }
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                modifier = Modifier.accessibleSwipeActions(swipeActions),
-                                backgroundContent = {
-                                    val direction = dismissState.dismissDirection
-                                    val color =
-                                        when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> CatYellow.copy(alpha = 0.3f)
-                                            SwipeToDismissBoxValue.EndToStart -> CatRed.copy(alpha = 0.3f)
-                                            else -> SurfaceBright
-                                        }
-                                    val icon =
-                                        when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Block
-                                            SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-                                            else -> Icons.Default.Block
-                                        }
-                                    val align =
-                                        when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                            else -> Alignment.CenterEnd
-                                        }
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(color)
-                                                .padding(horizontal = 20.dp),
-                                        contentAlignment = align,
-                                    ) {
-                                        Icon(icon, null, tint = CatText)
-                                    }
-                                },
+                            SelectableRow(
+                                label = PhoneFormatter.formatIsolated(call.number),
+                                selecting = selecting,
+                                selected = call.number in selectedNumbers,
+                                onSelect = { togglePicked(call.number) },
+                                longPressSelects = false,
                             ) {
-                                BlockedCallItem(
-                                    call = call,
-                                    onTap = { viewModel.openNumberDetail(call.number) },
-                                    onTemporaryAllow = { temporaryDecision(call.number, allow = true, duration = it) },
-                                    onTemporaryBlock = { temporaryDecision(call.number, allow = false, duration = it) },
-                                )
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    modifier = Modifier.accessibleSwipeActions(swipeActions),
+                                    backgroundContent = {
+                                        val direction = dismissState.dismissDirection
+                                        val color =
+                                            when (direction) {
+                                                SwipeToDismissBoxValue.StartToEnd -> CatYellow.copy(alpha = 0.3f)
+                                                SwipeToDismissBoxValue.EndToStart -> CatRed.copy(alpha = 0.3f)
+                                                else -> SurfaceBright
+                                            }
+                                        val icon =
+                                            when (direction) {
+                                                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Block
+                                                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+                                                else -> Icons.Default.Block
+                                            }
+                                        val align =
+                                            when (direction) {
+                                                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                                else -> Alignment.CenterEnd
+                                            }
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(color)
+                                                    .padding(horizontal = 20.dp),
+                                            contentAlignment = align,
+                                        ) {
+                                            Icon(icon, null, tint = CatText)
+                                        }
+                                    },
+                                ) {
+                                    BlockedCallItem(
+                                        call = call,
+                                        onTap = { viewModel.openNumberDetail(call.number) },
+                                        onTemporaryAllow = { temporaryDecision(call.number, allow = true, duration = it) },
+                                        onTemporaryBlock = { temporaryDecision(call.number, allow = false, duration = it) },
+                                        onSelect = { togglePicked(call.number) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -597,7 +652,7 @@ fun BlockedCallItem(
     onTap: () -> Unit,
     onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
     onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
-    modifier: Modifier = Modifier,
+    onSelect: () -> Unit,
 ) {
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
@@ -607,19 +662,15 @@ fun BlockedCallItem(
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
-    val clipLabelPhoneNumber = stringResource(R.string.clip_label_phone_number)
     val expandedStateDescription = stringResource(R.string.accessibility_state_expanded)
     val collapsedStateDescription = stringResource(R.string.accessibility_state_collapsed)
 
+    // A long press picks the call; Copy waits in the row's actions.
     PremiumCard(
         cornerRadius = 12.dp,
-        modifier =
-            modifier.combinedClickable(
-                onClick = onTap,
-                onLongClick = {
-                    context.copyToClipboard(clipLabelPhoneNumber, call.number, copiedShortMessage)
-                },
-            ),
+        onClick = onTap,
+        onLongClick = onSelect,
+        onLongClickLabel = stringResource(R.string.blocklist_select_action),
     ) {
         Column {
             val eventColor =
@@ -837,6 +888,7 @@ fun GroupedCallItem(
     count: Int,
     onTap: () -> Unit,
     onBlock: () -> Unit,
+    onSelect: (() -> Unit)? = null,
 ) {
     val homeRegion = rememberHomeRegion()
     val location = rememberCallerPlace(call.number, homeRegion, call.isCall)
@@ -854,6 +906,8 @@ fun GroupedCallItem(
         cornerRadius = 12.dp,
         accentColor = if (count >= 5) CatRed.copy(alpha = 0.5f) else null,
         onClick = onTap,
+        onLongClick = onSelect,
+        onLongClickLabel = stringResource(R.string.blocklist_select_action),
     ) {
         Row(
             modifier =
@@ -922,18 +976,30 @@ private fun LogSearchResultsList(
     results: List<BlockedCall>,
     viewModel: MainViewModel,
     onTemporaryDecision: (number: String, allow: Boolean, duration: TemporaryDecisionDuration) -> Unit,
+    selecting: Boolean,
+    selectedNumbers: Set<String>,
+    onSelect: (number: String) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(results, key = { it.id }) { call ->
-            BlockedCallItem(
-                call = call,
-                onTap = { viewModel.openNumberDetail(call.number) },
-                onTemporaryAllow = { onTemporaryDecision(call.number, true, it) },
-                onTemporaryBlock = { onTemporaryDecision(call.number, false, it) },
-            )
+            SelectableRow(
+                label = PhoneFormatter.formatIsolated(call.number),
+                selecting = selecting,
+                selected = call.number in selectedNumbers,
+                onSelect = { onSelect(call.number) },
+                longPressSelects = false,
+            ) {
+                BlockedCallItem(
+                    call = call,
+                    onTap = { viewModel.openNumberDetail(call.number) },
+                    onTemporaryAllow = { onTemporaryDecision(call.number, true, it) },
+                    onTemporaryBlock = { onTemporaryDecision(call.number, false, it) },
+                    onSelect = { onSelect(call.number) },
+                )
+            }
         }
     }
 }

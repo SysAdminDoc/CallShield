@@ -302,6 +302,8 @@
     <string name="desc_blocked_from_after_call_feedback">Bloqueado no feedback após a chamada</string>
     <string name="desc_marked_safe_from_after_call_feedback">Marcado como seguro no feedback após a chamada</string>
     <string name="desc_blocked_from_notification">Bloqueado por uma notificação</string>
+    <string name="desc_blocked_from_recent">Bloqueado em Recentes</string>
+    <string name="desc_blocked_from_log">Bloqueado pelo registro</string>
     <string name="desc_reported_not_spam_from_notification">Denunciado como não é spam por uma notificação</string>
     <string name="contribute_reported_spam">Contribuição anônima enviada</string>
     <string name="contribute_reported_not_spam">Denunciado como não é spam</string>
@@ -1519,7 +1521,6 @@
     <string name="backup_restore_undone">Restauração desfeita. O que você tinha antes voltou.</string>
     <string name="backup_restore_undo_failed">Não foi possível desfazer a restauração.</string>
     <string name="clip_label_phone">Telefone</string>
-    <string name="clip_label_phone_number">Número de telefone</string>
     <string name="clip_label_spam_number">Número de spam do CallShield</string>
     <string name="log_export_subject">Registro de bloqueios do CallShield</string>
     <string name="log_export_chooser_title">Exportar registro</string>
@@ -2062,6 +2063,30 @@
     <plurals name="blocklist_selection_unblocked">
         <item quantity="one">%d número desbloqueado</item>
         <item quantity="other">%d números desbloqueados</item>
+    </plurals>
+    <plurals name="selection_blocked">
+        <item quantity="one">%d número bloqueado</item>
+        <item quantity="other">%d números bloqueados</item>
+    </plurals>
+    <plurals name="selection_reported">
+        <item quantity="one">%d número denunciado e bloqueado</item>
+        <item quantity="other">%d números denunciados e bloqueados</item>
+    </plurals>
+    <plurals name="selection_already_reported">
+        <item quantity="one">%d já foi denunciado no último dia</item>
+        <item quantity="other">%d já foram denunciados no último dia</item>
+    </plurals>
+    <plurals name="selection_not_reported">
+        <item quantity="one">%d não pôde ser denunciado</item>
+        <item quantity="other">%d não puderam ser denunciados</item>
+    </plurals>
+    <plurals name="selection_not_blocked">
+        <item quantity="one">%d não pôde ser bloqueado</item>
+        <item quantity="other">%d não puderam ser bloqueados</item>
+    </plurals>
+    <plurals name="selection_marked_not_spam">
+        <item quantity="one">%d número marcado como não spam</item>
+        <item quantity="other">%d números marcados como não spam</item>
     </plurals>
     <plurals name="blocklist_selection_removed">
         <item quantity="one">%d regra removida</item>

@@ -7,7 +7,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +28,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -102,7 +100,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -111,11 +108,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -147,6 +142,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.SelectableRow
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.firstPageFailed
 import com.sysadmindoc.callshield.ui.isStaleFor
@@ -1210,10 +1206,7 @@ private fun EmptyStateCard(
     )
 }
 
-/**
- * A rule row a long press selects. While any row is selected, a tap toggles
- * the row, and its own buttons, switch and swipe are out of reach.
- */
+/** A rule row a long press selects; see [SelectableRow]. */
 @Composable
 private fun SelectableRuleRow(
     label: String,
@@ -1222,88 +1215,14 @@ private fun SelectableRuleRow(
     onSelect: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    val currentOnSelect by rememberUpdatedState(onSelect)
-    val selectLabel = stringResource(R.string.blocklist_select_action)
-    val shape = RoundedCornerShape(12.dp)
-    Box(
-        modifier =
-            Modifier
-                .testTag(BLOCKLIST_SELECTABLE_ROW_TAG)
-                .then(
-                    if (selecting) {
-                        Modifier
-                    } else {
-                        Modifier
-                            // The row's buttons and switch take their own presses,
-                            // so only the card itself starts a selection.
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        hapticTick(context)
-                                        currentOnSelect()
-                                    },
-                                )
-                            }
-                            // One TalkBack stop per row; the swipe's Unblock action
-                            // merges up because this node sets no actions of its own.
-                            .semantics(mergeDescendants = true) {
-                                onLongClick(label = selectLabel) {
-                                    currentOnSelect()
-                                    true
-                                }
-                            }
-                    },
-                ),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (selecting) {
-                SelectionMark(selected)
-                Spacer(Modifier.width(10.dp))
-            }
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .then(
-                            when {
-                                !selecting -> Modifier
-                                selected -> Modifier.border(2.dp, CatGreen, shape).clearAndSetSemantics {}
-                                else -> Modifier.clearAndSetSemantics {}
-                            },
-                        ),
-            ) {
-                content()
-            }
-        }
-        if (selecting) {
-            // Drawn over the row so a tap selects instead of reaching its controls.
-            Box(
-                modifier =
-                    Modifier
-                        .matchParentSize()
-                        .clip(shape)
-                        .toggleable(value = selected, role = Role.Checkbox, onValueChange = { currentOnSelect() })
-                        .semantics { contentDescription = label },
-            )
-        }
-    }
-}
-
-@Composable
-private fun SelectionMark(selected: Boolean) {
-    Box(
-        modifier =
-            Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .then(if (selected) Modifier.background(CatGreen) else Modifier.border(2.dp, CatSubtext, CircleShape)),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) {
-            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
-        }
-    }
+    SelectableRow(
+        label = label,
+        selecting = selecting,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = Modifier.testTag(BLOCKLIST_SELECTABLE_ROW_TAG),
+        content = content,
+    )
 }
 
 /** Stands in for the Add button while rows are selected. */
