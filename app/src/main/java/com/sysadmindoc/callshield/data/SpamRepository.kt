@@ -283,6 +283,9 @@ class SpamRepository(
         val KEY_ANSWER_HANG_UP = booleanPreferencesKey("answer_hang_up_mode")
         val KEY_HANG_UP_DELAY_SECONDS = intPreferencesKey("hang_up_delay_seconds")
 
+        // How a call CallShield rejects shows up afterwards: rejected, missed or quiet.
+        val KEY_HARD_BLOCK_STYLE = stringPreferencesKey("hard_block_style")
+
         // A3 push-alert bridge — master toggle. When off, the registry is
         // not fed by RcsNotificationListener and PushAlertChecker returns
         // null unconditionally, so the pipeline behaves as if the feature
@@ -488,6 +491,7 @@ class SpamRepository(
     val silentVoicemailEnabled: Flow<Boolean> = settingsRepository.silentVoicemailEnabled
     val answerHangUpEnabled: Flow<Boolean> = settingsRepository.answerHangUpEnabled
     val hangUpDelaySeconds: Flow<Int> = settingsRepository.hangUpDelaySeconds
+    val hardBlockStyle: Flow<HardBlockStyle> = settingsRepository.hardBlockStyle
     val pushAlertEnabled: Flow<Boolean> = settingsRepository.pushAlertEnabled
     val expectingCallUntil: Flow<Long> = settingsRepository.expectingCallUntil
     val pushAlertDisabledPackages: Flow<Set<String>> = settingsRepository.pushAlertDisabledPackages
@@ -592,6 +596,8 @@ class SpamRepository(
     suspend fun setAnswerHangUpEnabled(enabled: Boolean) = settingsRepository.setAnswerHangUpEnabled(enabled)
 
     suspend fun setHangUpDelaySeconds(seconds: Int) = settingsRepository.setHangUpDelaySeconds(seconds)
+
+    suspend fun setHardBlockStyle(style: HardBlockStyle) = settingsRepository.setHardBlockStyle(style)
 
     suspend fun setPushAlert(enabled: Boolean) = settingsRepository.setPushAlert(enabled)
 

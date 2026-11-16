@@ -734,6 +734,14 @@
     <string name="notification_screening_done">Listo</string>
     <string name="settings_silent_voicemail">Modo buzón de voz silencioso</string>
     <string name="settings_silent_voicemail_desc">Las llamadas bloqueadas van al buzón de voz en silencio. Tu teléfono no suena y quien llama oye el timbre normal.</string>
+    <string name="settings_hard_block_style">Cómo aparecen las llamadas rechazadas</string>
+    <string name="hard_block_style_reject">Rechazada</string>
+    <string name="hard_block_style_missed">Perdida</string>
+    <string name="hard_block_style_quiet">Sin aviso</string>
+    <string name="hard_block_style_reject_desc">Tu teléfono la registra como rechazada y puede mostrar un aviso de llamada perdida.</string>
+    <string name="hard_block_style_missed_desc">Tu teléfono la registra como perdida en lugar de rechazada.</string>
+    <string name="hard_block_style_missed_unsupported">Esta versión de Android aún no puede registrarla como perdida, así que queda como rechazada.</string>
+    <string name="hard_block_style_quiet_desc">Sin aviso de llamada perdida. Sigue en tu historial de llamadas y en el registro de bloqueos de CallShield.</string>
     <string name="settings_answer_hang_up">Contestar y colgar llamadas bloqueadas</string>
     <string name="settings_answer_hang_up_desc">Las llamadas bloqueadas se contestan y se cuelgan de inmediato, así quien llama no puede dejar un mensaje de voz. El modo buzón de voz silencioso, el silenciado automático de baja confianza y el modo reunión siguen enviando llamadas al buzón, y una llamada que llega mientras ya estás en otra se rechaza como antes. Tu pantalla puede encenderse un momento. Al contestar, los marcadores automáticos saben que la línea está activa, así que algunos vuelven a llamar. Algunos operadores necesitan más demora para saltarse el buzón de voz, así que auméntala si el spam aún llega a tu buzón.</string>
     <string name="settings_hang_up_delay">Colgar después de</string>

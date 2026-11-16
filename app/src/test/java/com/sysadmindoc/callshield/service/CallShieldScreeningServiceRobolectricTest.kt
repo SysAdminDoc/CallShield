@@ -17,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.data.HardBlockStyle
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
@@ -483,6 +484,96 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
         awaitScopeIdle()
+    }
+
+    @Test
+    fun `a rejected call keeps its log entry and missed-call alert by default`() {
+        val response = CallShieldScreeningService.rejectResponse(HardBlockStyle.REJECT)
+
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.skipCallLog)
+        assertFalse(response.skipNotification)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `a quiet reject drops the missed-call alert but keeps the call log entry`() {
+        val response = CallShieldScreeningService.rejectResponse(HardBlockStyle.QUIET)
+
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.skipCallLog)
+        assertTrue(response.skipNotification)
+    }
+
+    @Test
+    fun `missed falls back to a plain reject below Android 37_2`() {
+        assertFalse(CallShieldScreeningService.canRejectAsMissed())
+
+        val response = CallShieldScreeningService.rejectResponse(HardBlockStyle.MISSED)
+
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.skipCallLog)
+        assertFalse(response.skipNotification)
+    }
+
+    @Test
+    fun `a blocked call follows the quiet setting`() {
+        val number = "+12125550191"
+        runBlocking {
+            repository.blockNumber(number, type = "test")
+            repository.setHardBlockStyle(HardBlockStyle.QUIET)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.rejectCall)
+        assertTrue(response.skipNotification)
+        assertFalse(response.skipCallLog)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `silent voicemail ignores the quiet setting, since the call still rings through`() {
+        val number = "+12125550192"
+        runBlocking {
+            repository.blockNumber(number, type = "test")
+            repository.setSilentVoicemail(true)
+            repository.setHardBlockStyle(HardBlockStyle.QUIET)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.silenceCall)
+        assertFalse(response.skipNotification)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `direct boot keeps a quiet reject quiet`() {
+        val number = "+12125550193"
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = listOf(SpamNumber(number = number, type = "test", isUserBlocked = true)),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = false,
+                silentVoicemailEnabled = false,
+                hardBlockStyle = HardBlockStyle.QUIET,
+            )
+        }
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.rejectCall)
+        assertTrue(response.skipNotification)
+        assertFalse(response.skipCallLog)
     }
 
     @Test

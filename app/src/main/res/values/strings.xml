@@ -765,6 +765,14 @@
     <string name="notification_screening_done">Done</string>
     <string name="settings_silent_voicemail">Silent voicemail mode</string>
     <string name="settings_silent_voicemail_desc">Blocked calls go to voicemail silently. Your phone stays quiet while callers hear normal ringing.</string>
+    <string name="settings_hard_block_style">How rejected calls show up</string>
+    <string name="hard_block_style_reject">Rejected</string>
+    <string name="hard_block_style_missed">Missed</string>
+    <string name="hard_block_style_quiet">Quiet</string>
+    <string name="hard_block_style_reject_desc">Your phone logs it as a rejected call and may show a missed-call alert.</string>
+    <string name="hard_block_style_missed_desc">Your phone logs it as a missed call instead of a rejected one.</string>
+    <string name="hard_block_style_missed_unsupported">This Android version can\'t log it as missed yet, so it\'s logged as rejected.</string>
+    <string name="hard_block_style_quiet_desc">No missed-call alert. It\'s still in your call log and CallShield\'s blocked log.</string>
     <string name="settings_answer_hang_up">Answer &amp; hang up blocked calls</string>
     <string name="settings_answer_hang_up_desc">Blocked calls are answered and hung up straight away, so the caller can\'t leave a voicemail. Silent voicemail mode, low-confidence auto-mute and meeting mode still send calls to voicemail, and a call that arrives while you\'re already on one is rejected as before. Your screen may light up for a moment. Answering tells autodialers the line is live, so some call back. Some carriers need a longer delay before voicemail is skipped, so raise it if spam still reaches your voicemail.</string>
     <string name="settings_hang_up_delay">Hang up after</string>

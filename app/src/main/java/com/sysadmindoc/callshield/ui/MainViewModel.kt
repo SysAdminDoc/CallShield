@@ -32,6 +32,7 @@ import com.sysadmindoc.callshield.data.DatabaseSourceFilter
 import com.sysadmindoc.callshield.data.DatabaseTypeFilter
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.FalsePositiveReport
+import com.sysadmindoc.callshield.data.HardBlockStyle
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
@@ -641,6 +642,7 @@ class MainViewModel
             repo.hangUpDelaySeconds.screenState(
                 AnswerHangUpController.DEFAULT_DELAY_SECONDS,
             )
+        val hardBlockStyle = repo.hardBlockStyle.screenState(HardBlockStyle.REJECT)
         val pushAlertEnabled = repo.pushAlertEnabled.screenState(true)
         val expectingCallUntil = repo.expectingCallUntil.screenState(0L)
         val appReleaseNotice = repo.appReleaseNotice.screenState(null)
@@ -1601,6 +1603,8 @@ class MainViewModel
         fun setAnswerHangUpEnabled(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAnswerHangUpEnabled(v) }
 
         fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch(actionFailed) { repo.setHangUpDelaySeconds(seconds) }
+
+        fun setHardBlockStyle(style: HardBlockStyle) = viewModelScope.launch(actionFailed) { repo.setHardBlockStyle(style) }
 
         fun setPushAlert(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setPushAlert(v) }
 

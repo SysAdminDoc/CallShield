@@ -92,6 +92,7 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
         silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
         answerHangUpEnabled = this[SpamRepository.KEY_ANSWER_HANG_UP] ?: false,
         hangUpDelaySeconds = clampHangUpDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
+        hardBlockStyle = HardBlockStyle.fromStorageKey(this[SpamRepository.KEY_HARD_BLOCK_STYLE]).storageKey,
         pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
         pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
         regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
@@ -195,6 +196,7 @@ internal fun BackupSettings.sanitized(): BackupSettings =
         dbPrefixMinMatches = dbPrefixMinMatches.coerceDbPrefixMinMatches(),
         cleanupDays = cleanupDays.coerceIn(1, 365),
         hangUpDelaySeconds = clampHangUpDelaySeconds(hangUpDelaySeconds),
+        hardBlockStyle = HardBlockStyle.fromStorageKey(hardBlockStyle).storageKey,
         pushAlertDisabledPackages =
             pushAlertDisabledPackages
                 .map { it.trim() }
@@ -278,6 +280,7 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
     preferences[SpamRepository.KEY_SILENT_VOICEMAIL] = silentVoicemailEnabled
     preferences[SpamRepository.KEY_ANSWER_HANG_UP] = answerHangUpEnabled
     preferences[SpamRepository.KEY_HANG_UP_DELAY_SECONDS] = hangUpDelaySeconds
+    preferences[SpamRepository.KEY_HARD_BLOCK_STYLE] = hardBlockStyle
     preferences[SpamRepository.KEY_PUSH_ALERT] = pushAlertEnabled
     if (pushAlertDisabledPackages.isEmpty()) {
         preferences.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED)

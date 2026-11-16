@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.CorruptionRescue
 import com.sysadmindoc.callshield.data.ExpectingCall
+import com.sysadmindoc.callshield.data.HardBlockStyle
 import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
@@ -585,13 +586,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 .setSkipNotification(false)
                 .build()
         } else {
-            CallResponse
-                .Builder()
-                .setDisallowCall(true)
-                .setRejectCall(true)
-                .setSkipCallLog(false)
-                .setSkipNotification(false)
-                .build()
+            rejectResponse(HardBlockStyle.fromStorageKey(prefs[SpamRepository.KEY_HARD_BLOCK_STYLE]))
         }
     }
 
@@ -694,13 +689,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         .setSkipNotification(false)
                         .build()
                 } else {
-                    CallResponse
-                        .Builder()
-                        .setDisallowCall(true)
-                        .setRejectCall(true)
-                        .setSkipCallLog(false)
-                        .setSkipNotification(false)
-                        .build()
+                    rejectResponse(snapshot.hardBlockStyle)
                 }
             responseGate.respond(response)
         } catch (exception: RuntimeException) {
@@ -822,6 +811,35 @@ class CallShieldScreeningService : CallScreeningService() {
                 categoryAction = categoryAction,
                 silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
             )
+
+        /**
+         * The reject a hard block sends. Every style keeps the call in the
+         * call log. QUIET drops the system's missed-call alert, and MISSED
+         * asks Android to log the call as missed where API 37.2 allows it
+         * and falls back to a plain reject below that.
+         */
+        internal fun rejectResponse(style: HardBlockStyle): CallScreeningService.CallResponse {
+            val builder =
+                CallScreeningService.CallResponse
+                    .Builder()
+                    .setDisallowCall(true)
+                    .setRejectCall(true)
+                    .setSkipCallLog(false)
+                    .setSkipNotification(style == HardBlockStyle.QUIET)
+            // Same check as canRejectAsMissed, written out so lint sees the guard.
+            if (style == HardBlockStyle.MISSED &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.CINNAMON_BUN_2
+            ) {
+                builder.setRejectedAsMissed(true)
+            }
+            return builder.build()
+        }
+
+        /** `setRejectedAsMissed` arrived in API 37.2, a minor release SDK_INT alone can't tell apart. */
+        internal fun canRejectAsMissed(): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.CINNAMON_BUN_2
 
         internal fun shouldAnswerAndHangUp(
             enabled: Boolean,

@@ -734,6 +734,14 @@
     <string name="notification_screening_done">Concluir</string>
     <string name="settings_silent_voicemail">Modo correio de voz silencioso</string>
     <string name="settings_silent_voicemail_desc">Chamadas bloqueadas vão em silêncio para o correio de voz. O seu telefone fica quieto, enquanto quem liga ouve o toque normal.</string>
+    <string name="settings_hard_block_style">Como as chamadas rejeitadas aparecem</string>
+    <string name="hard_block_style_reject">Rejeitada</string>
+    <string name="hard_block_style_missed">Perdida</string>
+    <string name="hard_block_style_quiet">Sem aviso</string>
+    <string name="hard_block_style_reject_desc">O seu telefone a registra como rejeitada e pode mostrar um aviso de chamada perdida.</string>
+    <string name="hard_block_style_missed_desc">O seu telefone a registra como perdida em vez de rejeitada.</string>
+    <string name="hard_block_style_missed_unsupported">Esta versão do Android ainda não registra como perdida, então ela fica como rejeitada.</string>
+    <string name="hard_block_style_quiet_desc">Sem aviso de chamada perdida. Ela continua no seu histórico de chamadas e no registro de bloqueios do CallShield.</string>
     <string name="settings_answer_hang_up">Atender e desligar chamadas bloqueadas</string>
     <string name="settings_answer_hang_up_desc">As chamadas bloqueadas são atendidas e desligadas na hora, para que quem liga não deixe recado no correio de voz. O modo correio de voz silencioso, o silenciamento automático de baixa confiança e o modo reunião continuam enviando chamadas ao correio de voz, e uma chamada que chega quando você já está em outra é rejeitada como antes. A tela pode acender por um instante. Atender avisa aos discadores automáticos que a linha está ativa, então alguns ligam de novo. Algumas operadoras precisam de um atraso maior para pular o correio de voz, então aumente-o se o spam ainda chegar ao seu correio de voz.</string>
     <string name="settings_hang_up_delay">Desligar após</string>

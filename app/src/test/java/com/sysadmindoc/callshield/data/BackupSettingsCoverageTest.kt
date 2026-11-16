@@ -161,6 +161,7 @@ class BackupSettingsCoverageTest {
                 silentVoicemailEnabled = true,
                 answerHangUpEnabled = true,
                 hangUpDelaySeconds = 4,
+                hardBlockStyle = "quiet",
                 pushAlertEnabled = false,
                 pushAlertDisabledPackages = listOf("com.example.chat"),
                 regionBlockEnabled = true,

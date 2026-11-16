@@ -45,6 +45,8 @@ val stageBundledAssets =
 android {
     namespace = "com.sysadmindoc.callshield"
     compileSdk = 37
+    // 37.2 adds CallResponse.Builder.setRejectedAsMissed. Calls to it stay behind an SDK_INT_FULL check.
+    compileSdkMinor = 2
 
     defaultConfig {
         applicationId = "com.sysadmindoc.callshield"

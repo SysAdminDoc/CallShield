@@ -67,6 +67,7 @@ class SettingsRenderCoverageTest {
             "KEY_AUTOMUTE_LOW_CONFIDENCE" to Control(Tab.ADVANCED, R.string.settings_automute_low_confidence),
             "KEY_ANSWER_HANG_UP" to Control(Tab.ADVANCED, R.string.settings_answer_hang_up),
             "KEY_HANG_UP_DELAY_SECONDS" to Control(Tab.ADVANCED, R.string.settings_hang_up_delay),
+            "KEY_HARD_BLOCK_STYLE" to Control(Tab.ADVANCED, R.string.settings_hard_block_style),
             "KEY_CATEGORY_CALL_ACTIONS" to Control(Tab.ADVANCED, R.string.settings_category_actions),
             "KEY_CONTACT_WHITELIST" to Control(Tab.BASIC, R.string.settings_contact_whitelist),
             "KEY_SELECTED_CONTACT_GROUPS" to Control(Tab.BASIC, R.string.settings_contact_scope),

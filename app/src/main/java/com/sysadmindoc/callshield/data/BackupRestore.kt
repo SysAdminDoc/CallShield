@@ -206,6 +206,7 @@ object BackupRestore {
         val silentVoicemailEnabled: Boolean = false,
         val answerHangUpEnabled: Boolean = false,
         val hangUpDelaySeconds: Int = AnswerHangUpController.DEFAULT_DELAY_SECONDS,
+        val hardBlockStyle: String = HardBlockStyle.REJECT.storageKey,
         val pushAlertEnabled: Boolean = true,
         val pushAlertDisabledPackages: List<String> = emptyList(),
         val regionBlockEnabled: Boolean = false,

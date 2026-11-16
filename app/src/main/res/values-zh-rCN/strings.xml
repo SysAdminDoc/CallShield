@@ -566,6 +566,14 @@
     <string name="notification_screening_done">完成</string>
     <string name="settings_silent_voicemail">静默语音信箱模式</string>
     <string name="settings_silent_voicemail_desc">被拦截的来电静默转入语音信箱。你的手机保持安静，而来电者听到正常响铃。</string>
+    <string name="settings_hard_block_style">被拒接来电的显示方式</string>
+    <string name="hard_block_style_reject">拒接</string>
+    <string name="hard_block_style_missed">未接</string>
+    <string name="hard_block_style_quiet">不提醒</string>
+    <string name="hard_block_style_reject_desc">手机将其记录为拒接来电，并可能显示未接来电提醒。</string>
+    <string name="hard_block_style_missed_desc">手机将其记录为未接来电，而不是拒接来电。</string>
+    <string name="hard_block_style_missed_unsupported">此 Android 版本暂不支持记录为未接，因此仍记录为拒接。</string>
+    <string name="hard_block_style_quiet_desc">不显示未接来电提醒。它仍会出现在通话记录和 CallShield 拦截日志中。</string>
     <string name="settings_answer_hang_up">接听并挂断被拦截的来电</string>
     <string name="settings_answer_hang_up_desc">被拦截的来电会被接听后立即挂断，来电者无法留下语音留言。静默语音信箱模式、低置信度自动静音和会议模式仍会把来电转入语音信箱。如果你正在通话中，被拦截的来电会像以前一样被拒接。屏幕可能会短暂亮起。接听会让自动拨号系统知道这条线路有人接听，因此有些会再次拨打。部分运营商需要更长的延迟才能跳过语音信箱，如果垃圾来电仍进入你的语音信箱，请调高延迟。</string>
     <string name="settings_hang_up_delay">多久后挂断</string>

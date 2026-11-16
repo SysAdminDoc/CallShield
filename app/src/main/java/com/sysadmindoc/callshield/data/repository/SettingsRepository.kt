@@ -21,6 +21,7 @@ import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.CommunityReportHistory
 import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.HardBlockStyle
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
@@ -234,6 +235,8 @@ class SettingsRepository(
         dataStore.data.map {
             AnswerHangUpController.clampDelaySeconds(it[SpamRepository.KEY_HANG_UP_DELAY_SECONDS])
         }
+    val hardBlockStyle: Flow<HardBlockStyle> =
+        dataStore.data.map { HardBlockStyle.fromStorageKey(it[SpamRepository.KEY_HARD_BLOCK_STYLE]) }
     val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT] ?: true }
     val pushAlertDisabledPackages: Flow<Set<String>> =
         dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
@@ -498,6 +501,8 @@ class SettingsRepository(
         dataStore.edit {
             it[SpamRepository.KEY_HANG_UP_DELAY_SECONDS] = AnswerHangUpController.clampDelaySeconds(seconds)
         }
+
+    suspend fun setHardBlockStyle(style: HardBlockStyle) = dataStore.edit { it[SpamRepository.KEY_HARD_BLOCK_STYLE] = style.storageKey }
 
     suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_PUSH_ALERT] = enabled }
 

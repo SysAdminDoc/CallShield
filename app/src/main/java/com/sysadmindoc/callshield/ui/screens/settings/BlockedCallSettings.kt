@@ -4,6 +4,7 @@ package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.Manifest
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.*
@@ -17,10 +18,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.HardBlockStyle
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.AnswerHangUpController
+import com.sysadmindoc.callshield.service.CallShieldScreeningService
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.rememberPermissionRequest
+import com.sysadmindoc.callshield.ui.singleChoiceChip
 import com.sysadmindoc.callshield.ui.theme.*
 
 /**
@@ -34,6 +38,7 @@ internal fun BlockedCallSettings(viewModel: MainViewModel) {
     val autoMuteLowConfidence by viewModel.autoMuteLowConfidenceEnabled.collectAsStateWithLifecycle()
     val answerHangUpEnabled by viewModel.answerHangUpEnabled.collectAsStateWithLifecycle()
     val hangUpDelaySeconds by viewModel.hangUpDelaySeconds.collectAsStateWithLifecycle()
+    val hardBlockStyle by viewModel.hardBlockStyle.collectAsStateWithLifecycle()
     val categoryCallActions by viewModel.categoryCallActions.collectAsStateWithLifecycle()
     var showCategoryCallActions by rememberSaveable { mutableStateOf(false) }
     val answerHangUpPermissions =
@@ -110,6 +115,10 @@ internal fun BlockedCallSettings(viewModel: MainViewModel) {
                 onValueChange = viewModel::setHangUpDelaySeconds,
             )
         }
+        if (!silentVoicemail) {
+            GradientDivider()
+            HardBlockStyleChooser(selected = hardBlockStyle, onSelect = viewModel::setHardBlockStyle)
+        }
         GradientDivider()
         SettingsLinkRow(
             title = stringResource(R.string.settings_category_actions),
@@ -126,5 +135,42 @@ internal fun BlockedCallSettings(viewModel: MainViewModel) {
             onActionChange = viewModel::setCategoryCallAction,
             onDismiss = { showCategoryCallActions = false },
         )
+    }
+}
+
+/** Rejected, missed or quiet: how a call CallShield rejects shows up afterwards. */
+@Composable
+private fun HardBlockStyleChooser(
+    selected: HardBlockStyle,
+    onSelect: (HardBlockStyle) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Text(stringResource(R.string.settings_hard_block_style), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            HardBlockStyle.entries.forEach { style ->
+                FilterChip(
+                    selected = selected == style,
+                    onClick = { onSelect(style) },
+                    label = { Text(stringResource(style.labelResId), style = MaterialTheme.typography.labelMedium) },
+                    modifier = Modifier.weight(1f).singleChoiceChip(),
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = CatGreen.copy(alpha = 0.18f),
+                            selectedLabelColor = CatText,
+                        ),
+                )
+            }
+        }
+        val description =
+            if (selected == HardBlockStyle.MISSED && !CallShieldScreeningService.canRejectAsMissed()) {
+                R.string.hard_block_style_missed_unsupported
+            } else {
+                selected.descriptionResId
+            }
+        Text(stringResource(description), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
     }
 }
