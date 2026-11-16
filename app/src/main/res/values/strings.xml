@@ -958,7 +958,7 @@
     <string name="stats_donut_total">Total</string>
     <string name="stats_monthly_trend">Monthly trend</string>
     <string name="stats_last_30_days">Last 30 days</string>
-    <string name="stats_last_30_days_hint">Tap a row to see those calls and texts in Blocked activity.</string>
+    <string name="stats_last_30_days_hint">Tap a row to open Blocked activity with just those calls and texts.</string>
     <string name="stats_group_database">Spam database</string>
     <string name="stats_group_community">Community reports</string>
     <string name="stats_group_your_rules">Your rules</string>
