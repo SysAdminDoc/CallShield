@@ -707,6 +707,7 @@
     <string name="settings_outgoing_call_hold_not_granted">Call redirection wasn\'t allowed.</string>
     <string name="settings_db_prefix_expansion">Database prefix expansion</string>
     <string name="settings_db_prefix_expansion_desc">Block campaign numbers sharing a known spam prefix</string>
+    <string name="settings_db_prefix_min_matches">Spam numbers needed</string>
     <string name="settings_detection_engines">Detection engines</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">Block calls failing carrier caller ID auth (Android 11+)</string>
@@ -1528,6 +1529,14 @@
         <item quantity="one">%d second</item>
         <item quantity="other">%d seconds</item>
     </plurals>
+    <plurals name="settings_db_prefix_min_matches_value">
+        <item quantity="one">%1$d number</item>
+        <item quantity="other">%1$d numbers</item>
+    </plurals>
+    <plurals name="block_reason_db_prefix_count">
+        <item quantity="one">Shares all but its last two digits with %1$d spam number</item>
+        <item quantity="other">Shares all but its last two digits with %1$d spam numbers</item>
+    </plurals>
     <plurals name="settings_answered_caller_window_value">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
@@ -1917,7 +1926,6 @@
     <string name="block_reason_carrier_unverified">Carrier could not verify caller identity</string>
     <string name="block_reason_system_block_list">Blocked via system block list</string>
     <string name="block_reason_temporary_block">Temporarily blocked</string>
-    <string name="block_reason_db_prefix">Number shares prefix with a known spam entry</string>
     <string name="block_reason_official_line_unverified">Scammers often fake this %1$s number, and your carrier didn\'t verify this call</string>
     <string name="block_reason_quiet_hours">Blocked during quiet hours</string>
     <plurals name="block_reason_frequency">

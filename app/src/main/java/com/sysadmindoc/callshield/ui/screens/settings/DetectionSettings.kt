@@ -25,6 +25,8 @@ import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MIN
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_MAX
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_MIN
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
 import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MAX
@@ -55,6 +57,7 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
     val freqThreshold by viewModel.freqThreshold.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
+    val dbPrefixMinMatches by viewModel.dbPrefixMinMatches.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
     val notificationMessageCapabilityStatus by viewModel.notificationMessageCapabilityStatus.collectAsStateWithLifecycle()
     val notificationScreeningPackages by viewModel.notificationScreeningPackages.collectAsStateWithLifecycle()
@@ -171,6 +174,22 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
             Icons.AutoMirrored.Filled.CallSplit,
             dbPrefixExpansion,
         ) { viewModel.setDbPrefixExpansion(it) }
+        if (dbPrefixExpansion) {
+            Spacer(Modifier.height(8.dp))
+            SettingsNumberStepper(
+                label = stringResource(R.string.settings_db_prefix_min_matches),
+                valueText =
+                    pluralStringResource(
+                        R.plurals.settings_db_prefix_min_matches_value,
+                        dbPrefixMinMatches,
+                        dbPrefixMinMatches,
+                    ),
+                value = dbPrefixMinMatches,
+                minValue = DB_PREFIX_MIN_MATCHES_MIN,
+                maxValue = DB_PREFIX_MIN_MATCHES_MAX,
+                onValueChange = { viewModel.setDbPrefixMinMatches(it) },
+            )
+        }
         GradientDivider()
         SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
         if (rcsFilter) {

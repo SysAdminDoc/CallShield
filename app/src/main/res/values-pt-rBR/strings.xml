@@ -676,6 +676,7 @@
     <string name="settings_outgoing_call_hold_not_granted">O redirecionamento de chamadas não foi permitido.</string>
     <string name="settings_db_prefix_expansion">Expansão de prefixos do banco de dados</string>
     <string name="settings_db_prefix_expansion_desc">Bloquear números de campanhas que compartilham um prefixo de spam conhecido</string>
+    <string name="settings_db_prefix_min_matches">Números de spam necessários</string>
     <string name="settings_detection_engines">Mecanismos de detecção</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">Bloquear chamadas que falham na autenticação do identificador de chamadas da operadora (Android 11+)</string>
@@ -1461,6 +1462,14 @@
         <item quantity="one">%d segundo</item>
         <item quantity="other">%d segundos</item>
     </plurals>
+    <plurals name="settings_db_prefix_min_matches_value">
+        <item quantity="one">%1$d número</item>
+        <item quantity="other">%1$d números</item>
+    </plurals>
+    <plurals name="block_reason_db_prefix_count">
+        <item quantity="one">Igual a %1$d número de spam, exceto pelos dois últimos dígitos</item>
+        <item quantity="other">Igual a %1$d números de spam, exceto pelos dois últimos dígitos</item>
+    </plurals>
     <plurals name="settings_answered_caller_window_value">
         <item quantity="one">%1$d dia</item>
         <item quantity="other">%1$d dias</item>
@@ -1833,7 +1842,6 @@
     <string name="block_reason_carrier_unverified">A operadora não conseguiu verificar a identidade do chamador</string>
     <string name="block_reason_system_block_list">Bloqueado pela lista de bloqueio do sistema</string>
     <string name="block_reason_temporary_block">Bloqueado temporariamente</string>
-    <string name="block_reason_db_prefix">O número tem o mesmo prefixo de um registro de spam conhecido</string>
     <string name="block_reason_official_line_unverified">Golpistas costumam falsificar este número de %1$s, e sua operadora não verificou esta chamada</string>
     <string name="block_reason_quiet_hours">Bloqueado durante o horário silencioso</string>
     <plurals name="block_reason_frequency">

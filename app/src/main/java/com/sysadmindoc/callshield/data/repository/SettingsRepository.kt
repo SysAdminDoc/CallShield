@@ -181,6 +181,8 @@ class SettingsRepository(
         dataStore.data.map { CategoryCallPolicy.decode(it[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty()) }
     val dbPrefixExpansionEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
+    val dbPrefixMinMatches: Flow<Int> =
+        dataStore.data.map { (it[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] ?: DB_PREFIX_MIN_MATCHES_DEFAULT).coerceDbPrefixMinMatches() }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
     val answeredCallerTrustEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true }
@@ -718,6 +720,8 @@ class SettingsRepository(
 
     suspend fun setDbPrefixExpansion(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
 
+    suspend fun setDbPrefixMinMatches(minimum: Int) = dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] = minimum.coerceDbPrefixMinMatches() }
+
     suspend fun setAggressiveMode(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AGGRESSIVE_MODE] = enabled }
 
     suspend fun setAnsweredCallerTrust(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = enabled }
@@ -1032,3 +1036,10 @@ internal const val ANSWERED_CALLER_WINDOW_DAYS_MIN = 1
 internal const val ANSWERED_CALLER_WINDOW_DAYS_MAX = 365
 internal const val EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN = 15
 internal const val EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX = 360
+
+/** How many listed spam numbers must share a caller's prefix before prefix expansion blocks it. */
+internal const val DB_PREFIX_MIN_MATCHES_DEFAULT = 1
+internal const val DB_PREFIX_MIN_MATCHES_MIN = 1
+internal const val DB_PREFIX_MIN_MATCHES_MAX = 10
+
+internal fun Int.coerceDbPrefixMinMatches() = coerceIn(DB_PREFIX_MIN_MATCHES_MIN, DB_PREFIX_MIN_MATCHES_MAX)

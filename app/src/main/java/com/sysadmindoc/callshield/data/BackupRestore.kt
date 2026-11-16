@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_DEFAULT
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -185,6 +186,7 @@ object BackupRestore {
         val contactWhitelistEnabled: Boolean = true,
         val contactsOnlyEnabled: Boolean = false,
         val dbPrefixExpansionEnabled: Boolean = false,
+        val dbPrefixMinMatches: Int = DB_PREFIX_MIN_MATCHES_DEFAULT,
         val aggressiveModeEnabled: Boolean = false,
         val answeredCallerTrustEnabled: Boolean = true,
         val answeredCallerThreshold: Int = CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD,

@@ -55,6 +55,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_DEFAULT
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
@@ -583,6 +584,7 @@ class MainViewModel
         val dbPrefixExpansionEnabled =
             repo.dbPrefixExpansionEnabled
                 .screenState(false)
+        val dbPrefixMinMatches = repo.dbPrefixMinMatches.screenState(DB_PREFIX_MIN_MATCHES_DEFAULT)
         val aggressiveModeEnabled = repo.aggressiveModeEnabled.screenState(false)
         val answeredCallerTrustEnabled =
             repo.answeredCallerTrustEnabled
@@ -1552,6 +1554,8 @@ class MainViewModel
         ) = viewModelScope.launch(actionFailed) { repo.setCategoryCallAction(category, action) }
 
         fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setDbPrefixExpansion(v) }
+
+        fun setDbPrefixMinMatches(v: Int) = viewModelScope.launch(actionFailed) { repo.setDbPrefixMinMatches(v) }
 
         fun setAggressiveMode(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setAggressiveMode(v) }
 

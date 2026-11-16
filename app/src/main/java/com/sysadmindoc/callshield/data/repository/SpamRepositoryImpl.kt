@@ -109,9 +109,19 @@ class SpamRepositoryImpl(
 
     internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision(wallClock())
 
-    internal suspend fun hasDbPrefixMatch(normalized: String): Boolean {
-        val prefix = dbExpansionPrefix(normalized) ?: return false
-        return dao.countByPrefix(prefix, System.currentTimeMillis()) > 0
+    /**
+     * How many different listed numbers share all but the last two digits with
+     * one of [forms]. A number listed in two spellings counts once.
+     */
+    internal suspend fun dbPrefixMatchCount(forms: List<String>): Int {
+        val now = System.currentTimeMillis()
+        return forms
+            .mapNotNull(::dbExpansionPrefix)
+            .distinct()
+            .flatMap { dao.numbersByPrefix(it, now, PREFIX_MATCH_ROW_LIMIT) }
+            .map(normalizePhone)
+            .distinct()
+            .size
     }
 
     internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> {
@@ -398,5 +408,8 @@ class SpamRepositoryImpl(
 
         /** The stored-number prefix a prefix-expansion match looks under, or null for a number too short to have one. */
         internal fun dbExpansionPrefix(normalized: String): String? = normalized.takeIf { it.length >= 9 }?.dropLast(2)
+
+        /** Enough rows to count past the highest minimum a user can pick. */
+        private const val PREFIX_MATCH_ROW_LIMIT = 200
     }
 }

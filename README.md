@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C512-f38ba8?style=flat-square" alt="51,512 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2221-94e2d5?style=flat-square" alt="2221 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2227-94e2d5?style=flat-square" alt="2227 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -146,7 +146,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
 |  5250 | **Regulatory Allow** | Allow | Protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices) and 1601 (utilities, logistics and courier companies), per TRAI. On by default with an Indian SIM, and you can turn each one off |
 |  5200 | **Spam Database** | Block | 51,512 imported spam numbers plus the trending-numbers feed |
-|  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
+|  5150 | **Database Prefix Expansion** | Block | Blocks last-two-digit siblings of confirmed database entries once enough of them are listed (one by default, up to ten in Settings) |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
 |  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
@@ -604,12 +604,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2221 tests
+./gradlew testDebugUnitTest   # 2227 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2221 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2227 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -646,8 +646,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2221 JVM unit tests (JUnit) |
-| Strings | 1845 string resources and 52 plural groups (translation-ready) |
+| Tests | 2227 JVM unit tests (JUnit) |
+| Strings | 1845 string resources and 54 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

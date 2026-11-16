@@ -216,6 +216,7 @@ class SpamRepository(
         internal const val CNAP_OBSERVATION_THRESHOLD = 20
         val KEY_CATEGORY_CALL_ACTIONS = stringSetPreferencesKey("category_call_actions")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
+        val KEY_DB_PREFIX_MIN_MATCHES = intPreferencesKey("db_prefix_expansion_min_matches")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         val KEY_ANSWERED_CALLER_TRUST = booleanPreferencesKey("answered_caller_trust_enabled")
         val KEY_ANSWERED_CALLER_THRESHOLD = intPreferencesKey("answered_caller_trust_threshold")
@@ -461,6 +462,7 @@ class SpamRepository(
     val cnapBlockPatterns: Flow<Set<String>> = settingsRepository.cnapBlockPatterns
     val categoryCallActions: Flow<Map<CallCategory, CategoryCallAction>> = settingsRepository.categoryCallActions
     val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
+    val dbPrefixMinMatches: Flow<Int> = settingsRepository.dbPrefixMinMatches
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
     val answeredCallerTrustEnabled: Flow<Boolean> = settingsRepository.answeredCallerTrustEnabled
     val answeredCallerThreshold: Flow<Int> = settingsRepository.answeredCallerThreshold
@@ -694,6 +696,8 @@ class SpamRepository(
     ) = settingsRepository.setCategoryCallAction(category, action)
 
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
+
+    suspend fun setDbPrefixMinMatches(minimum: Int) = settingsRepository.setDbPrefixMinMatches(minimum)
 
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
 

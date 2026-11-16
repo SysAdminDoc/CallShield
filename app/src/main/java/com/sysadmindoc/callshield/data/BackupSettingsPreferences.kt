@@ -9,6 +9,8 @@ import com.sysadmindoc.callshield.data.BackupRestore.BackupExternalBlocklist
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.remote.FeedMirror
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_DEFAULT
+import com.sysadmindoc.callshield.data.repository.coerceDbPrefixMinMatches
 import com.sysadmindoc.callshield.data.repository.sanitizeAppTheme
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -64,6 +66,7 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
         contactWhitelistEnabled = this[SpamRepository.KEY_CONTACT_WHITELIST] ?: true,
         contactsOnlyEnabled = this[SpamRepository.KEY_CONTACTS_ONLY] ?: false,
         dbPrefixExpansionEnabled = this[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false,
+        dbPrefixMinMatches = this[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] ?: DB_PREFIX_MIN_MATCHES_DEFAULT,
         aggressiveModeEnabled = this[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false,
         answeredCallerTrustEnabled = this[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true,
         answeredCallerThreshold =
@@ -189,6 +192,7 @@ internal fun BackupSettings.sanitized(): BackupSettings =
         timeBlockStartHour = BackupRestore.sanitizeScheduleHour(timeBlockStartHour),
         timeBlockEndHour = BackupRestore.sanitizeScheduleHour(timeBlockEndHour),
         frequencyThreshold = frequencyThreshold.coerceIn(1, 25),
+        dbPrefixMinMatches = dbPrefixMinMatches.coerceDbPrefixMinMatches(),
         cleanupDays = cleanupDays.coerceIn(1, 365),
         hangUpDelaySeconds = clampHangUpDelaySeconds(hangUpDelaySeconds),
         pushAlertDisabledPackages =
@@ -254,6 +258,7 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
     preferences[SpamRepository.KEY_CONTACTS_ONLY] = contactsOnlyEnabled
     preferences[SpamRepository.KEY_OUTGOING_RISK_WARNING] = outgoingRiskWarningEnabled
     preferences[SpamRepository.KEY_DB_PREFIX_EXPANSION] = dbPrefixExpansionEnabled
+    preferences[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] = dbPrefixMinMatches
     preferences[SpamRepository.KEY_AGGRESSIVE_MODE] = aggressiveModeEnabled
     preferences[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = answeredCallerTrustEnabled
     preferences[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD] = answeredCallerThreshold

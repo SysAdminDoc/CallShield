@@ -87,17 +87,19 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM spam_numbers")
     fun observeSpamCount(): Flow<Int>
 
+    /** Listed numbers starting with [prefix], at most [limit] of them, for prefix expansion. */
     @Query(
-        "SELECT COUNT(*) FROM spam_numbers " +
+        "SELECT number FROM spam_numbers " +
             "WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 " +
-            "AND (evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now) LIMIT 1",
+            "AND (evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now) LIMIT :limit",
     )
-    suspend fun countByPrefix(
+    suspend fun numbersByPrefix(
         prefix: String,
         now: Long,
-    ): Int
+        limit: Int,
+    ): List<String>
 
-    /** Where the rows a prefix-expansion match found came from, by the same filter as [countByPrefix]. */
+    /** Where the rows a prefix-expansion match found came from, by the same filter as [numbersByPrefix]. */
     @Query(
         "SELECT DISTINCT source FROM spam_numbers " +
             "WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 " +

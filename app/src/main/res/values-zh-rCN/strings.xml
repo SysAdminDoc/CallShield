@@ -519,6 +519,7 @@
     <string name="outgoing_hold_reason_flagged_text">该号码出现在 %1$s 被标记为垃圾信息的短信中。</string>
     <string name="settings_db_prefix_expansion">号码库前缀扩展</string>
     <string name="settings_db_prefix_expansion_desc">拦截共享已知垃圾前缀的营销号码</string>
+    <string name="settings_db_prefix_min_matches">所需垃圾号码数</string>
     <string name="settings_detection_engines">检测引擎</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">拦截运营商主叫身份验证失败的来电（Android 11+）</string>
@@ -570,6 +571,12 @@
     <string name="settings_hang_up_delay">多久后挂断</string>
     <plurals name="settings_hang_up_delay_value">
         <item quantity="other">%d 秒</item>
+    </plurals>
+    <plurals name="settings_db_prefix_min_matches_value">
+        <item quantity="other">%1$d 个号码</item>
+    </plurals>
+    <plurals name="block_reason_db_prefix_count">
+        <item quantity="other">与 %1$d 个垃圾号码仅最后两位不同</item>
     </plurals>
     <string name="settings_quiet_hours">勿扰时段</string>
     <string name="settings_quiet_hours_toggle">勿扰时段内拦截未知来电</string>
@@ -1375,7 +1382,6 @@
     <string name="block_reason_carrier_unverified">运营商无法验证来电者身份</string>
     <string name="block_reason_system_block_list">已通过系统拦截名单拦截</string>
     <string name="block_reason_temporary_block">临时拦截</string>
-    <string name="block_reason_db_prefix">号码与已知垃圾号码的前缀相同</string>
     <string name="block_reason_official_line_unverified">骗子经常冒用这个 %1$s 号码，而且运营商没有验证这通来电</string>
     <string name="block_reason_quiet_hours">在勿扰时段内拦截</string>
     <plurals name="block_reason_frequency">

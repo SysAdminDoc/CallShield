@@ -141,6 +141,7 @@ class BackupSettingsCoverageTest {
                 contactWhitelistEnabled = false,
                 contactsOnlyEnabled = true,
                 dbPrefixExpansionEnabled = true,
+                dbPrefixMinMatches = 3,
                 aggressiveModeEnabled = true,
                 answeredCallerTrustEnabled = false,
                 answeredCallerThreshold = 5,

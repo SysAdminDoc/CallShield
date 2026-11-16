@@ -26,7 +26,9 @@ import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_DEFAULT
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import com.sysadmindoc.callshield.data.repository.coerceDbPrefixMinMatches
 import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.describeIdentityEvidence
@@ -493,10 +495,12 @@ internal class DbPrefixExpansionChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (ctx.lookupForms.none { repo.hasDbPrefixMatch(it) }) return null
+        val minimum = (ctx.prefs[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] ?: DB_PREFIX_MIN_MATCHES_DEFAULT).coerceDbPrefixMinMatches()
+        val matched = repo.dbPrefixMatchCount(ctx.lookupForms)
+        if (matched < minimum) return null
         return BlockResult.block(
             "db_prefix_expansion",
-            description = ctx.appContext.getString(R.string.block_reason_db_prefix),
+            description = ctx.appContext.resources.getQuantityString(R.plurals.block_reason_db_prefix_count, matched, matched),
             confidence = 50,
         )
     }
