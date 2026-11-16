@@ -1080,6 +1080,7 @@
     <string name="nav_lookup">查询</string>
     <string name="nav_blocklist">拦截列表</string>
     <string name="nav_more">更多</string>
+    <string name="detail_pane_empty">点按一个号码，即可在这里查看详情。</string>
     <string name="search_placeholder">搜索号码、原因…</string>
     <string name="search_idle_title">搜索防护数据库</string>
     <string name="search_idle_subtitle">使用搜索直接跳入已知垃圾条目，无需离开当前标签页。</string>

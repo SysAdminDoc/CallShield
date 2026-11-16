@@ -1417,6 +1417,7 @@
     <string name="nav_lookup">Consultar</string>
     <string name="nav_blocklist">Reglas</string>
     <string name="nav_more">Más</string>
+    <string name="detail_pane_empty">Toca un número para ver sus detalles aquí.</string>
     <string name="search_placeholder">Buscar números, motivos…</string>
     <string name="search_idle_title">Buscar en la base de datos de protección</string>
     <string name="search_idle_subtitle">Usa la búsqueda para ir directo a entradas de spam conocidas sin salir de la pestaña actual.</string>

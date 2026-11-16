@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -38,6 +37,7 @@ import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.data.FileShareIntent
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.rememberPredictiveBack
 import com.sysadmindoc.callshield.ui.screens.main.rememberNowTick
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.settings.ThemePickerDialog
@@ -53,39 +53,41 @@ fun MoreScreen(
     onViewChange: (Int) -> Unit,
     onOpenLookup: () -> Unit = {},
 ) {
-    if (currentView != 0) BackHandler { onViewChange(0) }
+    val backGesture = rememberPredictiveBack(enabled = currentView != 0) { onViewChange(0) }
 
-    when (currentView) {
-        1 -> {
-            StatsScreen(viewModel)
-        }
+    Box(Modifier.fillMaxSize().then(backGesture).background(Black)) {
+        when (currentView) {
+            1 -> {
+                StatsScreen(viewModel)
+            }
 
-        2 -> {
-            SettingsScreen(viewModel)
-        }
+            2 -> {
+                SettingsScreen(viewModel)
+            }
 
-        3 -> {
-            ChangelogScreen()
-        }
+            3 -> {
+                ChangelogScreen()
+            }
 
-        4 -> {
-            ProtectionTestScreen()
-        }
+            4 -> {
+                ProtectionTestScreen()
+            }
 
-        MY_REPORTS_VIEW -> {
-            MyReportsScreen(viewModel)
-        }
+            MY_REPORTS_VIEW -> {
+                MyReportsScreen(viewModel)
+            }
 
-        else -> {
-            MoreHub(
-                viewModel = viewModel,
-                onStats = { onViewChange(1) },
-                onSettings = { onViewChange(2) },
-                onChangelog = { onViewChange(3) },
-                onTest = { onViewChange(4) },
-                onReports = { onViewChange(MY_REPORTS_VIEW) },
-                onReportNumber = onOpenLookup,
-            )
+            else -> {
+                MoreHub(
+                    viewModel = viewModel,
+                    onStats = { onViewChange(1) },
+                    onSettings = { onViewChange(2) },
+                    onChangelog = { onViewChange(3) },
+                    onTest = { onViewChange(4) },
+                    onReports = { onViewChange(MY_REPORTS_VIEW) },
+                    onReportNumber = onOpenLookup,
+                )
+            }
         }
     }
 }

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C518-f38ba8?style=flat-square" alt="51,518 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2263-94e2d5?style=flat-square" alt="2263 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2281-94e2d5?style=flat-square" alt="2281 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -260,6 +260,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - Blocked log with swipe-to-dismiss and Undo, a Clear log button that offers Undo, grouping with severity-scaled accent bars, and Calls, Texts and Reason filters.
   Swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
 - Long-press a call in Recent or the Blocked log to pick it, tap others to add them, then Block, Report or Not spam them all at once. One Undo takes back the whole batch, and Report still sends each number at most once a day
+- On a tablet held sideways, a number's page opens beside the tabs instead of over them. A half-open foldable splits along its hinge with nothing on the crease, and wider screens put the tabs in a rail down the side. The back swipe shrinks the page as you drag, and back closes search
 - Staggered entrance animations, shimmer loading skeletons
 
 ### Assistive Telephony
@@ -606,12 +607,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2263 tests
+./gradlew testDebugUnitTest   # 2281 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2263 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2281 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -637,7 +638,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Component | Technology |
 |-----------|-----------|
 | Language | Kotlin 2.4.21 |
-| UI | Jetpack Compose BOM 2026.09.00 + Material 3 |
+| UI | Jetpack Compose BOM 2026.09.00 + Material 3, Material 3 adaptive 1.3.0 |
 | Theme | System, Light, Graphite, and true-black AMOLED |
 | Database | Room 2.8.5 (SQLite), 10 entities |
 | Networking | OkHttp 5.5.1 + certificate pinning |
@@ -648,8 +649,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2263 JVM unit tests (JUnit) |
-| Strings | 1861 string resources and 63 plural groups (translation-ready) |
+| Tests | 2281 JVM unit tests (JUnit) |
+| Strings | 1862 string resources and 63 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

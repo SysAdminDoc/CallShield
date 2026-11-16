@@ -5,8 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +48,7 @@ import com.sysadmindoc.callshield.ui.areaCodeBlock
 import com.sysadmindoc.callshield.ui.blockAreaCodeWithUndo
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
+import com.sysadmindoc.callshield.ui.rememberPredictiveBack
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.showReportOutcome
@@ -69,7 +70,7 @@ fun NumberDetailScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
 ) {
-    BackHandler { onBack() }
+    val backGesture = rememberPredictiveBack(onBack = onBack)
     val context = LocalContext.current
     val numberCalls by
         remember(number) { viewModel.observeBlockedCallsForNumber(number) }
@@ -165,7 +166,7 @@ fun NumberDetailScreen(
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
     // window: without this the header ran under the status bar and the Undo
     // snackbar sat under the navigation bar, where a tap on Undo hit the bar.
-    Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+    Box(modifier = Modifier.fillMaxSize().then(backGesture).background(Black).safeDrawingPadding()) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),

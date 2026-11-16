@@ -5,28 +5,38 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.Posture
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -128,6 +138,7 @@ class MainActivity : AppCompatActivity() {
 fun CallShieldRoot(
     viewModel: MainViewModel = viewModel(),
     launchRequest: LaunchRequest = LaunchRequest(id = 0),
+    posture: Posture = currentWindowAdaptiveInfo().windowPosture,
 ) {
     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
     val reviewingSetup by viewModel.reviewingSetup.collectAsStateWithLifecycle()
@@ -151,8 +162,8 @@ fun CallShieldRoot(
         }
     }
 
-    // Opening a number detail replaces the tab shell rather than stacking on
-    // top of it, so CallShieldApp leaves composition entirely. rememberSaveable
+    // In one pane, opening a number detail replaces the tab shell rather than
+    // stacking on top of it, so CallShieldApp leaves composition entirely. rememberSaveable
     // only survives host recreation, not leaving composition, which meant every
     // detail visit reset the selected tab, search state, and all per-tab state.
     // Holding both branches in a SaveableStateHolder preserves each subtree's
@@ -176,29 +187,44 @@ fun CallShieldRoot(
                 )
             }
 
-            selectedNumber != null -> {
-                rootStateHolder.SaveableStateProvider(ROOT_STATE_DETAIL) {
-                    NumberDetailScreen(
-                        number = selectedNumber!!,
-                        viewModel = viewModel,
-                        onBack = { viewModel.closeNumberDetail() },
-                    )
-                }
-            }
-
             else -> {
-                rootStateHolder.SaveableStateProvider(ROOT_STATE_APP) {
-                    // Every tab's App info and Default apps hints show here,
-                    // above the navigation bar (CallShieldApp's snackbar slot),
-                    // so a tab change or a rotation doesn't drop them.
-                    val permissionHints = rememberPermissionHints()
-                    CompositionLocalProvider(LocalPermissionHints provides permissionHints) {
-                        CallShieldApp(
-                            viewModel = viewModel,
-                            startTab = initialTab,
-                            tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
-                            blockedLogRequestId = launchRequest.blockedLogRequestId(),
-                        )
+                val number = selectedNumber
+                val shell: @Composable () -> Unit = {
+                    rootStateHolder.SaveableStateProvider(ROOT_STATE_APP) {
+                        // Every tab's App info and Default apps hints show here,
+                        // above the navigation bar (CallShieldApp's snackbar slot),
+                        // so a tab change or a rotation doesn't drop them.
+                        val permissionHints = rememberPermissionHints()
+                        CompositionLocalProvider(LocalPermissionHints provides permissionHints) {
+                            CallShieldApp(
+                                viewModel = viewModel,
+                                startTab = initialTab,
+                                tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+                                blockedLogRequestId = launchRequest.blockedLogRequestId(),
+                            )
+                        }
+                    }
+                }
+                val detail: @Composable () -> Unit = {
+                    if (number == null) {
+                        DetailPanePlaceholder()
+                    } else {
+                        rootStateHolder.SaveableStateProvider(ROOT_STATE_DETAIL) {
+                            NumberDetailScreen(
+                                number = number,
+                                viewModel = viewModel,
+                                onBack = { viewModel.closeNumberDetail() },
+                            )
+                        }
+                    }
+                }
+                // Hinge bounds come in window pixels, so the layout needs to
+                // know where the root sits in the window.
+                var origin by remember { mutableStateOf(Offset.Zero) }
+                BoxWithConstraints(Modifier.fillMaxSize().onPlaced { origin = it.positionInWindow() }) {
+                    when (val layout = rootLayoutFor(maxWidth, maxHeight, posture, LocalDensity.current, origin)) {
+                        is RootLayout.TwoPane -> RootPanes(layout, maxWidth, shell, detail)
+                        RootLayout.OnePane -> if (number != null) detail() else shell()
                     }
                 }
             }
@@ -277,165 +303,275 @@ fun CallShieldApp(
                 }
             }
         }
+    val selectTab: (Int) -> Unit = { index ->
+        // Tapping More while inside one of its pages goes back to the More
+        // list, as reselecting a tab does in Android apps.
+        if (index == 4 && selectedTab == 4) moreView = 0
+        selectedTab = index
+    }
+    val closeSearch: () -> Unit = {
+        showSearch = false
+        viewModel.setSearchQuery("")
+    }
+    val searchBack = rememberPredictiveBack(enabled = showSearch, onBack = closeSearch)
     // Keep the shell unmistakably CallShield. Screen content can still use
     // semantic warning/error colours, but navigation should not become a
     // six-colour rainbow as users move through the app.
-    Scaffold(
-        topBar = {
-            AppChrome(
-                showSearch = showSearch,
-                showSearchAction = selectedTab != 4 || moreView != 2,
-                title = currentTitle,
-                accentColor = CatGreen,
-                searchQuery = searchQuery,
-                onSearchQueryChange = viewModel::setSearchQuery,
-                onOpenSearch = { showSearch = true },
-                onCloseSearch = {
-                    showSearch = false
-                    viewModel.setSearchQuery("")
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // The shell's own width decides, so a narrow pane beside a number's
+        // details keeps the bottom bar.
+        val useRail = maxWidth >= NAV_RAIL_MIN_WIDTH
+        Row(Modifier.fillMaxSize()) {
+            if (useRail) ShellNavRail(selectedTab, selectTab)
+            Scaffold(
+                modifier =
+                    Modifier.weight(1f).then(
+                        // The rail pads for the bars on its side.
+                        if (useRail) Modifier.consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Start)) else Modifier,
+                    ),
+                topBar = {
+                    AppChrome(
+                        showSearch = showSearch,
+                        showSearchAction = selectedTab != 4 || moreView != 2,
+                        title = currentTitle,
+                        accentColor = CatGreen,
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = viewModel::setSearchQuery,
+                        onOpenSearch = { showSearch = true },
+                        onCloseSearch = closeSearch,
+                        onBack = if (selectedTab == 4 && moreView != 0) ({ moreView = 0 }) else null,
+                    )
                 },
-                onBack = if (selectedTab == 4 && moreView != 0) ({ moreView = 0 }) else null,
-            )
-        },
-        bottomBar = {
-            Column {
-                HorizontalDivider(color = DividerColor)
-                Row(
-                    modifier = Modifier.fillMaxWidth().background(Black),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                ) {
-                    repeat(5) { index ->
-                        Box(
-                            modifier = Modifier.weight(1f).height(4.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (selectedTab == index) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(24.dp)
-                                            .height(3.dp)
-                                            .background(CatGreen),
-                                )
-                            }
-                        }
-                    }
-                }
-                NavigationBar(containerColor = Black, tonalElevation = 0.dp) {
-                    NavItem(
-                        selectedTab == 0,
-                        { selectedTab = 0 },
-                        Icons.Default.Home,
-                        stringResource(R.string.nav_home),
-                        CatGreen,
-                    )
-                    NavItem(
-                        selectedTab == 1,
-                        { selectedTab = 1 },
-                        Icons.Default.History,
-                        stringResource(R.string.nav_activity),
-                        CatGreen,
-                    )
-                    NavItem(
-                        selectedTab == 2,
-                        { selectedTab = 2 },
-                        Icons.Default.Search,
-                        stringResource(R.string.nav_lookup),
-                        CatGreen,
-                    )
-                    NavItem(
-                        selectedTab == 3,
-                        { selectedTab = 3 },
-                        Icons.Default.Tune,
-                        stringResource(R.string.nav_blocklist),
-                        CatGreen,
-                    )
-                    NavItem(
-                        selectedTab == 4,
-                        {
-                            // Tapping More while inside one of its pages goes back to
-                            // the More list, as reselecting a tab does in Android apps.
-                            if (selectedTab == 4) moreView = 0
-                            selectedTab = 4
-                        },
-                        Icons.Default.MoreHoriz,
-                        stringResource(R.string.nav_more),
-                        CatGreen,
-                    )
-                }
+                bottomBar = { if (!useRail) ShellNavBar(selectedTab, selectTab) },
+                snackbarHost = { LocalPermissionHints.current?.let { PermissionHintsHost(it) } },
+                containerColor = Black,
+            ) { padding ->
+                ShellContent(
+                    viewModel = viewModel,
+                    padding = padding,
+                    showSearch = showSearch,
+                    searchBack = searchBack,
+                    searchQuery = searchQuery,
+                    searchResults = searchResults,
+                    searchResultCount = searchResultCount,
+                    closeSearch = closeSearch,
+                    selectedTab = selectedTab,
+                    onSelectTab = { selectedTab = it },
+                    moreView = moreView,
+                    onMoreViewChange = { moreView = it },
+                    blockedLogRequestId = blockedLogRequestId,
+                )
             }
-        },
-        snackbarHost = { LocalPermissionHints.current?.let { PermissionHintsHost(it) } },
-        containerColor = Black,
-    ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            if (showSearch) {
+        }
+    }
+}
+
+@Suppress("LongParameterList", "LongMethod")
+@Composable
+private fun ShellContent(
+    viewModel: MainViewModel,
+    padding: PaddingValues,
+    showSearch: Boolean,
+    searchBack: Modifier,
+    searchQuery: String,
+    searchResults: LazyPagingItems<com.sysadmindoc.callshield.data.model.SpamNumber>,
+    searchResultCount: Int,
+    closeSearch: () -> Unit,
+    selectedTab: Int,
+    onSelectTab: (Int) -> Unit,
+    moreView: Int,
+    onMoreViewChange: (Int) -> Unit,
+    blockedLogRequestId: Int?,
+) {
+    Box(modifier = Modifier.padding(padding)) {
+        if (showSearch) {
+            Box(Modifier.fillMaxSize().then(searchBack).background(Black)) {
                 if (searchQuery.trim().length >= 2) {
                     SearchResultsView(
                         results = searchResults,
                         total = searchResultCount,
                         onTap = {
-                            showSearch = false
-                            viewModel.setSearchQuery("")
+                            closeSearch()
                             viewModel.openNumberDetail(it.number)
                         },
                     )
                 } else {
                     SearchIdleView()
                 }
-            } else {
-                // Each tab's composition state (scroll positions, filter
-                // toggles, typed lookup input, rememberSaveable values) lives
-                // in the SaveableStateHolder keyed by tab index. Without it,
-                // AnimatedContent discards a tab's whole saveable registry
-                // the moment it animates out — so switching Home → Recent →
-                // Home reset scroll, replayed entrance animations, and wiped
-                // filters/typed input on every revisit.
-                val tabStateHolder = rememberSaveableStateHolder()
-                AnimatedContent(targetState = selectedTab, transitionSpec = {
-                    val direction = if (targetState > initialState) 1 else -1
-                    (slideInHorizontally { direction * it / 6 } + fadeIn(tween(200)))
-                        .togetherWith(slideOutHorizontally { -direction * it / 6 } + fadeOut(tween(150)))
-                }, label = "tabs") { tab ->
-                    tabStateHolder.SaveableStateProvider(tab) {
-                        when (tab) {
-                            0 -> {
-                                DashboardScreen(
-                                    viewModel,
-                                    onOpenSettings = {
-                                        selectedTab = 4
-                                        moreView = 2
-                                    },
-                                )
-                            }
+            }
+        } else {
+            // Each tab's composition state (scroll positions, filter
+            // toggles, typed lookup input, rememberSaveable values) lives
+            // in the SaveableStateHolder keyed by tab index. Without it,
+            // AnimatedContent discards a tab's whole saveable registry
+            // the moment it animates out — so switching Home → Recent →
+            // Home reset scroll, replayed entrance animations, and wiped
+            // filters/typed input on every revisit.
+            val tabStateHolder = rememberSaveableStateHolder()
+            AnimatedContent(targetState = selectedTab, transitionSpec = {
+                val direction = if (targetState > initialState) 1 else -1
+                (slideInHorizontally { direction * it / 6 } + fadeIn(tween(200)))
+                    .togetherWith(slideOutHorizontally { -direction * it / 6 } + fadeOut(tween(150)))
+            }, label = "tabs") { tab ->
+                tabStateHolder.SaveableStateProvider(tab) {
+                    when (tab) {
+                        0 -> {
+                            DashboardScreen(
+                                viewModel,
+                                onOpenSettings = {
+                                    onSelectTab(4)
+                                    onMoreViewChange(2)
+                                },
+                            )
+                        }
 
-                            1 -> {
-                                ActivityScreen(viewModel, blockedLogRequestId = blockedLogRequestId)
-                            }
+                        1 -> {
+                            ActivityScreen(viewModel, blockedLogRequestId = blockedLogRequestId)
+                        }
 
-                            2 -> {
-                                LookupScreen(viewModel)
-                            }
+                        2 -> {
+                            LookupScreen(viewModel)
+                        }
 
-                            3 -> {
-                                BlocklistScreen(viewModel)
-                            }
+                        3 -> {
+                            BlocklistScreen(viewModel)
+                        }
 
-                            4 -> {
-                                MoreScreen(
-                                    viewModel,
-                                    currentView = moreView,
-                                    onViewChange = { moreView = it },
-                                    onOpenLookup = {
-                                        viewModel.requestLookupNumberField()
-                                        selectedTab = 2
-                                    },
-                                )
-                            }
+                        4 -> {
+                            MoreScreen(
+                                viewModel,
+                                currentView = moreView,
+                                onViewChange = onMoreViewChange,
+                                onOpenLookup = {
+                                    viewModel.requestLookupNumberField()
+                                    onSelectTab(2)
+                                },
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/** The five tabs, in the order the bottom bar and the rail show them. */
+private data class ShellTab(
+    val icon: ImageVector,
+    @StringRes val label: Int,
+)
+
+private val SHELL_TABS =
+    listOf(
+        ShellTab(Icons.Default.Home, R.string.nav_home),
+        ShellTab(Icons.Default.History, R.string.nav_activity),
+        ShellTab(Icons.Default.Search, R.string.nav_lookup),
+        ShellTab(Icons.Default.Tune, R.string.nav_blocklist),
+        ShellTab(Icons.Default.MoreHoriz, R.string.nav_more),
+    )
+
+@Composable
+private fun ShellNavBar(
+    selectedTab: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Column(Modifier.testTag(NAV_BAR_TAG)) {
+        HorizontalDivider(color = DividerColor)
+        Row(
+            modifier = Modifier.fillMaxWidth().background(Black),
+            horizontalArrangement = Arrangement.SpaceAround,
+        ) {
+            repeat(SHELL_TABS.size) { index ->
+                Box(
+                    modifier = Modifier.weight(1f).height(4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selectedTab == index) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .width(24.dp)
+                                    .height(3.dp)
+                                    .background(CatGreen),
+                        )
+                    }
+                }
+            }
+        }
+        NavigationBar(containerColor = Black, tonalElevation = 0.dp) {
+            SHELL_TABS.forEachIndexed { index, tab ->
+                NavItem(selectedTab == index, { onSelect(index) }, tab.icon, stringResource(tab.label), CatGreen)
+            }
+        }
+    }
+}
+
+/** The tabs down the side, for a shell at least [NAV_RAIL_MIN_WIDTH] wide. */
+@Composable
+private fun ShellNavRail(
+    selectedTab: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(Modifier.fillMaxHeight().testTag(NAV_RAIL_TAG)) {
+        NavigationRail(containerColor = Black) {
+            // Scrolls when the window is too short for all five, as in a
+            // half-open fold's top half at a large font size.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                SHELL_TABS.forEachIndexed { index, tab ->
+                    RailItem(selectedTab == index, { onSelect(index) }, tab.icon, stringResource(tab.label), CatGreen)
+                }
+            }
+        }
+        VerticalDivider(color = DividerColor)
+    }
+}
+
+@Composable
+private fun RailItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String,
+    color: Color,
+) {
+    val iconTint = selectedNavTint(color)
+    Box(contentAlignment = Alignment.CenterStart) {
+        NavigationRailItem(
+            selected = selected,
+            onClick = onClick,
+            // As in the bottom bar, Material hides the icon from screen readers
+            // while the label shows; with the label hidden the icon names the tab.
+            icon = { Icon(icon, contentDescription = label, tint = if (selected) iconTint else LocalContentColor.current) },
+            label = {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                )
+            },
+            colors =
+                NavigationRailItemDefaults.colors(
+                    selectedIconColor = iconTint,
+                    selectedTextColor = color,
+                    indicatorColor = Color.Transparent,
+                    unselectedIconColor = CatSubtext,
+                    unselectedTextColor = CatSubtext,
+                ),
+            alwaysShowLabel = LocalDensity.current.fontScale < 1.5f,
+        )
+        // The bottom bar marks the selected tab with a line above it; the
+        // rail marks it with a line at its side.
+        if (selected) {
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .height(24.dp)
+                    .background(color),
+            )
         }
     }
 }
@@ -823,20 +959,7 @@ fun RowScope.NavItem(
     label: String,
     color: androidx.compose.ui.graphics.Color,
 ) {
-    val iconTint =
-        if (selected) {
-            // Subtle brightness boost for selected icon
-            color.copy(alpha = 1f).let {
-                Color(
-                    red = (it.red * 1.12f).coerceAtMost(1f),
-                    green = (it.green * 1.12f).coerceAtMost(1f),
-                    blue = (it.blue * 1.12f).coerceAtMost(1f),
-                    alpha = it.alpha,
-                )
-            }
-        } else {
-            color
-        }
+    val iconTint = if (selected) selectedNavTint(color) else color
 
     NavigationBarItem(
         selected = selected,
@@ -864,6 +987,17 @@ fun RowScope.NavItem(
         alwaysShowLabel = LocalDensity.current.fontScale < 1.5f,
     )
 }
+
+/** A selected tab's icon, a little brighter than the accent. */
+private fun selectedNavTint(color: Color): Color =
+    color.copy(alpha = 1f).let {
+        Color(
+            red = (it.red * 1.12f).coerceAtMost(1f),
+            green = (it.green * 1.12f).coerceAtMost(1f),
+            blue = (it.blue * 1.12f).coerceAtMost(1f),
+            alpha = it.alpha,
+        )
+    }
 
 /**
  * Swap the window theme to match the user's cached app theme so the window
