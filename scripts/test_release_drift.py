@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -38,7 +39,7 @@ class ReleaseDriftTest(unittest.TestCase):
         self.assertEqual("1.13.0", report["version_name"])
         self.assertEqual(73, report["version_code"])
         self.assertEqual(9, report["sources"]["source_count"])
-        self.assertEqual(3, len(report["advisories"]))
+        self.assertEqual(6, len(report["advisories"]))
 
     def test_readme_resource_counts_must_match_the_resource_file(self) -> None:
         """A stale translation-readiness claim must fail the release gate.
@@ -310,6 +311,26 @@ class ReleaseDriftTest(unittest.TestCase):
             report, issues = verify_release_drift.advisory_audit(root, {"versions": {"kotlin": "2.3.21"}})
             self.assertEqual("GHSA-fixture", report[0]["id"])
             self.assertIn("Advisory GHSA-fixture has unsupported disposition unreviewed.", issues)
+
+    def test_wrapper_below_the_november_advisories_fails_the_release(self) -> None:
+        # Gradle's 2026-11-10 advisories (one critical: version catalog values
+        # ran as code in generated accessors) cover 9.0.0 through 9.9.0. The
+        # checked-in manifest must hold a 9.8.2 wrapper back from a release.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "scripts").mkdir()
+            (root / "gradle/wrapper").mkdir(parents=True)
+            shutil.copy(ROOT / "scripts/release_advisories.json", root / "scripts/release_advisories.json")
+            shutil.copy(ROOT / "gradle/libs.versions.toml", root / "gradle/libs.versions.toml")
+            (root / "gradle/wrapper/gradle-wrapper.properties").write_text("fixture", encoding="utf-8")
+            report, issues = verify_release_drift.advisory_audit(
+                root, {"versions": {"kotlin": "2.4.21"}, "wrapper": "9.8.2"}
+            )
+            failing = sorted(entry for entry in ("GHSA-3cfg-jpcr-gfp3", "GHSA-gqrr-4j89-5267", "GHSA-pcp8-98xm-c6pr")
+                             if f"Advisory {entry} is below fixed version 9.9.1 but is marked resolved." in issues)
+            self.assertEqual(["GHSA-3cfg-jpcr-gfp3", "GHSA-gqrr-4j89-5267", "GHSA-pcp8-98xm-c6pr"], failing, issues)
+            self.assertEqual(3, len(issues), issues)
+            self.assertEqual(6, len(report))
 
 
 if __name__ == "__main__":

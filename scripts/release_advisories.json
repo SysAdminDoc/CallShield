@@ -30,6 +30,36 @@
       "evidence_files": ["gradle/wrapper/gradle-wrapper.properties"],
       "source": "https://github.com/advisories/GHSA-w78c-w6vf-rw82",
       "rationale": "The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
+    },
+    {
+      "id": "GHSA-3cfg-jpcr-gfp3",
+      "component": "Gradle wrapper",
+      "dependency_key": "gradle_wrapper",
+      "fixed_in": "9.9.1",
+      "disposition": "resolved",
+      "evidence_files": ["gradle/wrapper/gradle-wrapper.properties", "gradle/libs.versions.toml"],
+      "source": "https://github.com/advisories/GHSA-3cfg-jpcr-gfp3",
+      "rationale": "Version catalog values ran as code in generated accessors, and libs.versions.toml drives every dependency here. The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
+    },
+    {
+      "id": "GHSA-gqrr-4j89-5267",
+      "component": "Gradle wrapper",
+      "dependency_key": "gradle_wrapper",
+      "fixed_in": "9.9.1",
+      "disposition": "resolved",
+      "evidence_files": ["gradle/wrapper/gradle-wrapper.properties"],
+      "source": "https://github.com/advisories/GHSA-gqrr-4j89-5267",
+      "rationale": "The client trusted whatever the daemon registry listed. The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
+    },
+    {
+      "id": "GHSA-pcp8-98xm-c6pr",
+      "component": "Gradle wrapper",
+      "dependency_key": "gradle_wrapper",
+      "fixed_in": "9.9.1",
+      "disposition": "resolved",
+      "evidence_files": ["gradle/wrapper/gradle-wrapper.properties"],
+      "source": "https://github.com/advisories/GHSA-pcp8-98xm-c6pr",
+      "rationale": "Stale daemon registry entries let another process take a daemon's port. The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
     }
   ]
 }
