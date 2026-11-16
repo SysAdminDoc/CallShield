@@ -706,6 +706,63 @@ def test_keyed_ftc_run_keeps_what_it_read_before_a_429():
         module.time.sleep = original_sleep
 
 
+def test_keyed_ftc_run_stays_under_the_per_minute_limit():
+    # On 2026-11-15 api.ftc.gov answered about half of a keyed run's pages with
+    # 429 (Retry-After 25 to 59) while X-Ratelimit-Remaining still read 19,300:
+    # a per-minute limit the headers never show. Pages 0.5s apart ran into it,
+    # retries 5, 10 and 20 seconds later ignored Retry-After, and the run gave
+    # up after 6,600 records with 105,000 still behind its cursor.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    clock = [0.0]
+    accepted = []
+    retry_waits = []
+    limited = [False]
+    try:
+        window_get, rows = _ftc_window_server(3_000, requests_seen)
+
+        def fake_get(url, **kwargs):
+            # Fifteen pages in any sixty seconds, like the clean run at one page
+            # every four seconds; Retry-After says when the oldest ages out.
+            recent = [stamp for stamp in accepted if stamp > clock[0] - 60]
+            if len(recent) >= 15:
+                limited[0] = True
+                retry_after = int(recent[0] + 60 - clock[0]) + 1
+                return FakeResponse(
+                    {"error": {"code": "OVER_RATE_LIMIT"}},
+                    status_code=429,
+                    headers={"X-Ratelimit-Remaining": "0", "Retry-After": str(retry_after)},
+                )
+            accepted.append(clock[0])
+            return window_get(url, **kwargs)
+
+        def fake_sleep(seconds):
+            if limited[0]:
+                retry_waits.append(seconds)
+                limited[0] = False
+            clock[0] += seconds
+
+        module.requests.get = fake_get
+        module.time.sleep = fake_sleep
+        cursor = {"timestamp": rows[0]["attributes"]["created-date"], "id": rows[0]["id"]}
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            result = module.fetch_ftc(cursor=cursor, api_key="a-key-of-its-own")
+
+        assert result.complete and result.error is None, result.error
+        newest = rows[-1]
+        assert result.cursor == {"timestamp": newest["attributes"]["created-date"], "id": newest["id"]}, result.cursor
+        assert sum(entry["reports"] for entry in result) == len(rows) - 1
+        # Every retry waited at least as long as the server asked.
+        assert all(wait >= 1 for wait in retry_waits), retry_waits
+        assert len(retry_waits) <= len(accepted) // 4, (len(retry_waits), len(accepted))
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
 def test_merge_summary_counts_only_numbers_that_stayed():
     # The 2026-09-25 refresh printed "Added: 294,619" while the total stood
     # still: every one of them was a single uncorroborated complaint that the

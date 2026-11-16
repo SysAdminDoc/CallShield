@@ -87,6 +87,11 @@ FTC_DEMO_KEY_REQUEST_BUDGET = 8
 # has an hourly limit (api.data.gov gives new keys 1,000). A run that ran into
 # a 429 instead recorded nothing and read as a failed import.
 FTC_SPARE_REQUESTS = 2
+# api.ftc.gov also limits pages per minute, and its headers never show it: on
+# 2026-11-15 about half the pages of a keyed run sent 0.5s apart came back 429
+# (Retry-After 25 to 59) while X-Ratelimit-Remaining still read 19,300. A page
+# every 4 seconds, response time included, ran clean.
+FTC_PAGE_INTERVAL = 3.0
 # A key of its own reads forward from its cursor until the window is empty.
 # Capped at 5,000 records, a run read about 14 hours of complaints (FTC
 # publishes about 8,600 a day), so the cursor fell further behind every run:
@@ -98,6 +103,8 @@ FTC_PROGRESS_EVERY = 10_000
 FCC_PAGE_SIZE = 5000
 SOURCE_CURSOR_SCHEMA_VERSION = 1
 RETRYABLE_STATUS_CODES = {403, 429}
+# A retry waits at least as long as the server's Retry-After asks, up to this.
+MAX_RETRY_DELAY_SECONDS = 60
 
 
 class SourceFetchResult(list[dict]):
@@ -203,7 +210,11 @@ def _get_with_backoff(
             return response, None
         if attempt == max_attempts - 1:
             return None, f"{label} returned HTTP {response.status_code} after {max_attempts} attempts"
-        delay = min(60, 5 * (2**attempt))
+        retry_after = str((getattr(response, "headers", None) or {}).get("Retry-After", "")).strip()
+        delay = min(
+            MAX_RETRY_DELAY_SECONDS,
+            max(5 * (2**attempt), int(retry_after) if retry_after.isdigit() else 0),
+        )
         print(f"  {label} HTTP {response.status_code}; waiting {delay}s (retry {attempt + 1}/{max_attempts - 1})...")
         time.sleep(delay)
     return None, f"{label} request did not complete"
@@ -494,7 +505,7 @@ def fetch_ftc(
             break
         if records_fetched % FTC_PROGRESS_EVERY < len(records):
             print(f"  ...{records_fetched:,} records read")
-        time.sleep(0.5)
+        time.sleep(FTC_PAGE_INTERVAL)
 
     next_cursor = _max_cursor(
         cursor_records,
