@@ -1,13 +1,24 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
+import android.content.Context
+import android.content.pm.PackageManager
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
@@ -90,12 +101,32 @@ class MeetingModeSettingsTest {
         }
 
         composeRule.onNodeWithText("Meeting apps").assertIsDisplayed()
-        // The emulator image ships none of the catalog apps, so the list is
-        // alphabetical and every row is locked. Discord sorts first.
-        val discordRow = "${MEETING_APP_TAG_PREFIX}com.discord"
+        // Which catalog apps are installed depends on the device (a phone may
+        // have Discord or WhatsApp, the emulator images have none), so ask the
+        // package manager and check every row against it.
+        val packageManager = ApplicationProvider.getApplicationContext<Context>().packageManager
+        val installed =
+            MeetingModeRegistry.MEETING_APPS.keys.associateWith { packageName ->
+                try {
+                    packageManager.getApplicationInfo(packageName, 0)
+                    true
+                } catch (_: PackageManager.NameNotFoundException) {
+                    false
+                }
+            }
+        val anyAppRow =
+            SemanticsMatcher("a meeting app row") { node ->
+                node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(MEETING_APP_TAG_PREFIX) == true
+            }
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodes(hasTestTag(discordRow)).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(anyAppRow).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithTag(discordRow).assertIsNotEnabled()
+        val list = composeRule.onNode(hasScrollToNodeAction() and hasAnyDescendant(anyAppRow))
+        installed.forEach { (packageName, isInstalled) ->
+            val row = hasTestTag(MEETING_APP_TAG_PREFIX + packageName)
+            list.performScrollToNode(row)
+            val node = composeRule.onNode(row)
+            if (isInstalled) node.assertIsEnabled() else node.assertIsNotEnabled()
+        }
     }
 }
