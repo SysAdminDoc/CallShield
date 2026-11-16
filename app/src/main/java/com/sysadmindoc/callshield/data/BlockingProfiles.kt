@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.service.ProtectionHold
 
 /** Presets for the call and message controls changed together by a profile. */
 object BlockingProfiles {
@@ -52,15 +53,14 @@ object BlockingProfiles {
         ),
     }
 
+    /** Switches that turn screening off wait while a call from someone the user doesn't know counts. */
     suspend fun apply(
         context: Context,
         profile: Profile,
-    ): Snapshot = SpamRepository.getInstance(context).replaceBlockingSettings(profile.settings, profile.name)
+    ): ProtectionHold.Replaced = ProtectionHold.replaceSettings(context, profile.settings, profile.name)
 
     suspend fun restore(
         context: Context,
         snapshot: Snapshot,
-    ) {
-        SpamRepository.getInstance(context).replaceBlockingSettings(snapshot.settings, snapshot.activeProfileName)
-    }
+    ): ProtectionHold.Outcome = ProtectionHold.replaceSettings(context, snapshot.settings, snapshot.activeProfileName).outcome
 }

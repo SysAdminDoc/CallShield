@@ -1804,6 +1804,10 @@
     <string name="widget_last_never">Última: nunca</string>
     <string name="tile_protection_on">Protección activada</string>
     <string name="tile_protection_off">Protección desactivada</string>
+    <string name="protection_hold_after_call">Este cambio se aplica 10 minutos después de que termine tu llamada. Los estafadores suelen convencer a la gente de desactivar la protección.</string>
+    <string name="protection_hold_at">Este cambio se aplica a las %1$s. Los estafadores suelen convencer a la gente de desactivar la protección.</string>
+    <string name="protection_hold_pending_after_call">Se aplica 10 minutos después de que termine tu llamada</string>
+    <string name="protection_hold_pending_at">Se aplica a las %1$s</string>
     <string name="expecting_call_title">Espero una llamada</string>
     <string name="release_notice_title">Ya salió CallShield %1$s</string>
     <string name="release_notice_body">Esta versión corrige cosas que tu copia aún tiene. La página de la versión tiene la descarga y los cambios.</string>

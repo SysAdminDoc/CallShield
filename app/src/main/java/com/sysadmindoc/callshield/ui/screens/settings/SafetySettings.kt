@@ -35,7 +35,10 @@ internal fun SafetySettings(
 ) {
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
-    val selectedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
+    val savedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
+    val hold by viewModel.protectionHold.collectAsStateWithLifecycle()
+    // Groups waiting for a call to be over show as picked; picking fewer drops the wait.
+    val selectedContactGroups = hold.contactGroups ?: savedContactGroups
     val contactGroups by viewModel.contactGroups.collectAsStateWithLifecycle()
     val contactGroupsLoading by viewModel.contactGroupsLoading.collectAsStateWithLifecycle()
     val outgoingRiskWarning by viewModel.outgoingRiskWarningEnabled.collectAsStateWithLifecycle()
@@ -92,6 +95,14 @@ internal fun SafetySettings(
                     }
                 },
             )
+            heldNote(hold, hold.contactGroups != null)?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                    modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                )
+            }
             if (!contactsPermissionGranted) {
                 Text(
                     stringResource(R.string.settings_contact_scope_degraded),

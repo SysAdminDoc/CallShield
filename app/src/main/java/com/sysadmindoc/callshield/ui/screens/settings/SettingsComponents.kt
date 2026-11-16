@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.MessageCapabilityState
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
+import com.sysadmindoc.callshield.service.ProtectionHold
 import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
@@ -217,6 +218,13 @@ internal fun SettingsViewTab(
     }
 }
 
+/** When a change waiting for a call to be over takes effect, or null when [held] is false. */
+@Composable
+internal fun heldNote(
+    hold: ProtectionHold.Pending,
+    held: Boolean,
+): String? = if (held) ProtectionHold.pendingNote(LocalContext.current, hold.releaseAt) else null
+
 @Composable
 fun SettingsToggle(
     title: String,
@@ -225,6 +233,7 @@ fun SettingsToggle(
     checked: Boolean,
     tintColor: androidx.compose.ui.graphics.Color = CatSubtext,
     toggleTag: String? = null,
+    note: String? = null,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
@@ -251,6 +260,7 @@ fun SettingsToggle(
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
+            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = CatPeach) }
             if (subtitle.isNotBlank()) {
                 // No line cap: these descriptions carry safety and privacy caveats,
                 // and any cap cut some of them off on 360-384dp phones.

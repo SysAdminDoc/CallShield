@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import android.widget.Toast
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -43,15 +44,24 @@ class CallShieldTileService : TileService() {
             // kill the whole process (and there is no DataStore self-heal
             // like the Room corruption recovery).
             try {
-                toggleMutex.withLock {
-                    val repo = SpamRepository.getInstance(applicationContext)
-                    val callsEnabled = repo.blockCallsEnabled.first()
-                    val smsEnabled = repo.blockSmsEnabled.first()
-                    val newState = !(callsEnabled || smsEnabled)
-                    repo.setBlockCalls(newState)
-                    repo.setBlockSms(newState)
+                val held =
+                    toggleMutex.withLock {
+                        val repo = SpamRepository.getInstance(applicationContext)
+                        val callsEnabled = repo.blockCallsEnabled.first()
+                        val smsEnabled = repo.blockSmsEnabled.first()
+                        val newState = !(callsEnabled || smsEnabled)
+                        // Turning off during a call from someone the user doesn't know waits for it to be over.
+                        listOf(ProtectionHold.Switch.BLOCK_CALLS, ProtectionHold.Switch.BLOCK_SMS)
+                            .map { ProtectionHold.setSwitch(applicationContext, it, newState, repo) }
+                            .filterIsInstance<ProtectionHold.Outcome.Held>()
+                            .firstOrNull()
+                    }
+                withContext(Dispatchers.Main) {
+                    held?.let {
+                        Toast.makeText(applicationContext, ProtectionHold.heldNotice(applicationContext, it.releaseAt), Toast.LENGTH_LONG).show()
+                    }
+                    updateTile()
                 }
-                withContext(Dispatchers.Main) { updateTile() }
             } catch (e: Exception) {
                 android.util.Log.w("CallShieldTile", "Tile toggle failed", e)
             }

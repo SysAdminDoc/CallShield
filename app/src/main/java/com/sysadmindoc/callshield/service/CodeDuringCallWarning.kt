@@ -69,6 +69,15 @@ internal object CodeDuringCallWarning {
         return notify(context, caller)
     }
 
+    /** The call from someone the user doesn't know that still counts, saved by an earlier process or not. */
+    fun openCall(
+        context: Context,
+        window: UnknownCallWindow = UnknownCallWindow.shared,
+    ): UnknownCallWindow.Open? {
+        restore(context, window)
+        return window.openCall()
+    }
+
     /** Whether [number] is on the allow list. When that can't be read, the call is watched. */
     suspend fun allowListed(
         repository: () -> SpamRepository,

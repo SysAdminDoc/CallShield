@@ -72,6 +72,7 @@ import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.NotificationHelper
+import com.sysadmindoc.callshield.service.ProtectionHold
 import com.sysadmindoc.callshield.service.SmsInboxScanner
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode
@@ -577,6 +578,9 @@ class MainViewModel
         val selectedContactGroups =
             repo.selectedContactGroups
                 .screenState(emptySet())
+
+        /** Changes waiting for a call from someone the user doesn't know to be over. */
+        val protectionHold: StateFlow<ProtectionHold.Pending> = ProtectionHold.pending(appContext)
         val outgoingRiskWarningEnabled =
             repo.outgoingRiskWarningEnabled
                 .screenState(false)
@@ -1483,9 +1487,24 @@ class MainViewModel
             if (appUpdateChecksEnabled.value && !strictOfflineEnabled.value) AppUpdateWorker.checkNow(appContext)
         }
 
-        fun setBlockCalls(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockCalls(v) }
+        fun setBlockCalls(v: Boolean) = setHeldSwitch(ProtectionHold.Switch.BLOCK_CALLS, v)
 
-        fun setBlockSms(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockSms(v) }
+        fun setBlockSms(v: Boolean) = setHeldSwitch(ProtectionHold.Switch.BLOCK_SMS, v)
+
+        private fun setHeldSwitch(
+            switch: ProtectionHold.Switch,
+            enabled: Boolean,
+        ) = viewModelScope.launch(actionFailed) {
+            announceHold(ProtectionHold.setSwitch(appContext, switch, enabled, repo))
+        }
+
+        /** On Main whoever calls it: [applyProfileHeld] and [undoProfile] are suspend funs any scope can call. */
+        private suspend fun announceHold(outcome: ProtectionHold.Outcome) {
+            if (outcome !is ProtectionHold.Outcome.Held) return
+            withContext(Dispatchers.Main.immediate) {
+                Toast.makeText(appContext, ProtectionHold.heldNotice(appContext, outcome.releaseAt), Toast.LENGTH_LONG).show()
+            }
+        }
 
         fun setBlockUnknown(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setBlockUnknown(v) }
 
@@ -1499,7 +1518,7 @@ class MainViewModel
 
         fun setHeuristics(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setHeuristics(v) }
 
-        fun setSmsContent(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setSmsContent(v) }
+        fun setSmsContent(v: Boolean) = setHeldSwitch(ProtectionHold.Switch.SMS_CONTENT, v)
 
         fun setSmsBurst(v: Boolean) = viewModelScope.launch(actionFailed) { repo.setSmsBurst(v) }
 
@@ -1517,8 +1536,7 @@ class MainViewModel
 
         fun setSelectedContactGroups(groupKeys: Set<String>) =
             viewModelScope.launch(actionFailed) {
-                repo.setSelectedContactGroups(groupKeys)
-                SpamHeuristics.clearContactCache()
+                announceHold(ProtectionHold.setContactGroups(appContext, groupKeys, repo))
             }
 
         fun setOutgoingRiskWarning(enabled: Boolean) =
@@ -1680,10 +1698,14 @@ class MainViewModel
                 .map { name -> name?.let { runCatching { BlockingProfiles.Profile.valueOf(it) }.getOrNull() } }
                 .screenState(null)
 
-        suspend fun applyProfile(profile: BlockingProfiles.Profile): BlockingProfiles.Snapshot = BlockingProfiles.apply(appContext, profile)
+        suspend fun applyProfile(profile: BlockingProfiles.Profile): BlockingProfiles.Snapshot = applyProfileHeld(profile).previous
+
+        /** Like [applyProfile], saying whether the switches it turns off are waiting for a call to be over. */
+        suspend fun applyProfileHeld(profile: BlockingProfiles.Profile): ProtectionHold.Replaced =
+            BlockingProfiles.apply(appContext, profile).also { announceHold(it.outcome) }
 
         suspend fun undoProfile(snapshot: BlockingProfiles.Snapshot) {
-            BlockingProfiles.restore(appContext, snapshot)
+            announceHold(BlockingProfiles.restore(appContext, snapshot))
         }
 
         // Anonymous community contribution

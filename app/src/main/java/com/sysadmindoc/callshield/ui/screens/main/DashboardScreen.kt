@@ -124,6 +124,7 @@ import com.sysadmindoc.callshield.data.model.AppReleaseNotice
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionStatus
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.service.ProtectionHold
 import com.sysadmindoc.callshield.ui.ContactsOnlyPausedNote
 import com.sysadmindoc.callshield.ui.ExchangeBlock
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -182,6 +183,7 @@ fun DashboardScreen(
     val strictOffline by viewModel.strictOfflineEnabled.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+    val protectionHold by viewModel.protectionHold.collectAsStateWithLifecycle()
     val blockHidden by viewModel.blockUnknownEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val quietHours by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
@@ -233,9 +235,12 @@ fun DashboardScreen(
         profileApplying = true
         profileScope.launch {
             try {
-                val previous = viewModel.applyProfile(profile)
+                val applied = viewModel.applyProfileHeld(profile)
+                val previous = applied.previous
                 profileApplying = false
                 profileSnackbar.currentSnackbarData?.dismiss()
+                // A toast already says when the held part takes effect, and picking another profile drops it.
+                if (applied.outcome is ProtectionHold.Outcome.Held) return@launch
                 if (profileSnackbar.showSnackbar(profileAppliedMessage, actionLabel = profileUndoLabel, duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     profileApplying = true
                     viewModel.undoProfile(previous)
@@ -835,16 +840,22 @@ fun DashboardScreen(
             Column(modifier = Modifier.padding(18.dp)) {
                 SectionHeader(stringResource(R.string.dashboard_quick_controls), CatGreen)
                 Spacer(Modifier.height(12.dp))
+                val callsHeld = ProtectionHold.Switch.BLOCK_CALLS in protectionHold.switchesOff
+                val smsHeld = ProtectionHold.Switch.BLOCK_SMS in protectionHold.switchesOff
+                val holdNote = ProtectionHold.pendingNote(context, protectionHold.releaseAt)
+                // A change waiting for a call to be over shows as made; turning it back on drops it.
                 QuickToggle(
                     icon = Icons.Default.Phone,
                     label = stringResource(R.string.dashboard_block_calls),
-                    checked = blockCallsEnabled,
+                    checked = blockCallsEnabled && !callsHeld,
+                    note = holdNote.takeIf { callsHeld },
                 ) { viewModel.setBlockCalls(it) }
                 GradientDivider(modifier = Modifier.padding(vertical = 4.dp))
                 QuickToggle(
                     icon = Icons.Default.Sms,
                     label = stringResource(R.string.dashboard_block_sms),
-                    checked = blockSmsEnabled,
+                    checked = blockSmsEnabled && !smsHeld,
+                    note = holdNote.takeIf { smsHeld },
                 ) { viewModel.setBlockSms(it) }
             }
         }
@@ -2095,6 +2106,7 @@ fun QuickToggle(
     icon: ImageVector,
     label: String,
     checked: Boolean,
+    note: String? = null,
     onChanged: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
@@ -2117,7 +2129,10 @@ fun QuickToggle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PremiumIconTile(icon = icon, color = tintColor, size = 38.dp, iconSize = 19.dp)
-        Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, fontWeight = FontWeight.Medium)
+            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = CatPeach) }
+        }
         Switch(
             checked = checked,
             onCheckedChange = null,

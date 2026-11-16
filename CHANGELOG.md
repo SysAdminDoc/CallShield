@@ -42,6 +42,7 @@ All notable changes to CallShield will be documented in this file.
 - A quiet day after a cleared feed no longer needs `--allow-collapse`. That flag turns the shrink check off for every feed the run writes, which was far more than a feed staying empty called for. Staying empty after a published clear deletes nothing, so the check lets it through now, and a feed with rows behind it still can't go empty without both flags.
 - The data pipeline's test runner now uses the first Python on PATH that has the pipeline's packages installed. With an older Python ahead of it on PATH, three suites used to fail on a missing cryptography or numpy.
 - `scripts/device_smoke.py` deletes its last screen dump before taking a new one. A dump that failed used to leave the old file in place, so a step could act on labels from the screen before.
+- Turning protection off during a call from a number you don't know now waits until 10 minutes after the call ends, since scam callers often talk people into it. That covers the call and text switches, SMS content analysis, trusting more contact groups, the Off profile and the Quick Settings tile. A toast says when the change takes effect. Until then the switch shows it as made, and turning it back on cancels it. With no such call around, changes apply right away.
 
 ## v1.13.0 (2026-10-30)
 

@@ -31,6 +31,7 @@ import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINU
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
 import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MIN
+import com.sysadmindoc.callshield.service.ProtectionHold
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -49,6 +50,7 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
+    val hold by viewModel.protectionHold.collectAsStateWithLifecycle()
     val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
     val remoteUrlLookup by viewModel.remoteUrlLookupEnabled.collectAsStateWithLifecycle()
     val liveCallerEnrichment by viewModel.liveCallerEnrichmentEnabled.collectAsStateWithLifecycle()
@@ -113,7 +115,14 @@ internal fun DetectionSettings(viewModel: MainViewModel) {
         GradientDivider()
         SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
         GradientDivider()
-        SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+        val contentHeld = ProtectionHold.Switch.SMS_CONTENT in hold.switchesOff
+        SettingsToggle(
+            stringResource(R.string.settings_sms_content),
+            stringResource(R.string.settings_sms_content_desc),
+            Icons.AutoMirrored.Filled.TextSnippet,
+            smsContent && !contentHeld,
+            note = heldNote(hold, contentHeld),
+        ) { viewModel.setSmsContent(it) }
         GradientDivider()
         SettingsToggle(
             stringResource(R.string.settings_remote_url_lookup),

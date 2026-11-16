@@ -99,6 +99,18 @@ class UnknownCallWindow(
     /** Whether there's a call a code could still be warned about. */
     fun isOpen(): Boolean = synchronized(lock) { call?.let(::isOpen) == true }
 
+    /** The open call, warned or not, or null when there's none. */
+    fun openCall(): Open? =
+        synchronized(lock) {
+            call?.takeIf(::isOpen)?.let { Open(it.caller, it.endedAt?.plus(AFTER_CALL_MS)) }
+        }
+
+    /** A call that still counts. [closesAt] is null while it's going. */
+    data class Open(
+        val caller: String,
+        val closesAt: Long?,
+    )
+
     internal fun clear() {
         synchronized(lock) { call = null }
     }

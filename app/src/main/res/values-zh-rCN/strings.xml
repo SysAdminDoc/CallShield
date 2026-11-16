@@ -1311,6 +1311,10 @@
     <string name="widget_last_never">最近：从未</string>
     <string name="tile_protection_on">防护已开启</string>
     <string name="tile_protection_off">防护已关闭</string>
+    <string name="protection_hold_after_call">此更改将在通话结束 10 分钟后生效。诈骗者常会诱导别人关闭防护。</string>
+    <string name="protection_hold_at">此更改将于 %1$s 生效。诈骗者常会诱导别人关闭防护。</string>
+    <string name="protection_hold_pending_after_call">通话结束 10 分钟后生效</string>
+    <string name="protection_hold_pending_at">将于 %1$s 生效</string>
     <string name="expecting_call_title">等待来电</string>
     <string name="release_notice_title">CallShield %1$s 已发布</string>
     <string name="release_notice_body">新版本修复了你当前版本中的问题。发布页面提供下载和更新说明。</string>
