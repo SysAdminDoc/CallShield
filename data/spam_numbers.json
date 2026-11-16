@@ -1,5 +1,5 @@
 {
-  "version": 67,
+  "version": 68,
   "updated": "2026-11-16",
   "description": "CallShield community spam number database",
   "sources": [
@@ -1533353,6 +1533353,32 @@
           "confidence_tier": "unverified",
           "parser_version": "legacy-v1",
           "expires_at_epoch_ms": 2110147200000
+        }
+      ]
+    },
+    {
+      "number": "+867668452820",
+      "type": "telemarketer",
+      "reports": 1,
+      "first_seen": "2026-11-16",
+      "last_seen": "2026-11-16",
+      "description": "Reviewed by the maintainer",
+      "sources": [
+        "maintainer_review"
+      ],
+      "evidence": [
+        {
+          "source_id": "maintainer_review",
+          "evidence_type": "maintainer_review",
+          "license": "CallShield database terms",
+          "attribution": "Reviewed by the CallShield maintainer against public reports",
+          "first_seen": "2026-11-16",
+          "last_seen": "2026-11-16",
+          "retrieved_at": "2026-11-16T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "curated",
+          "parser_version": "maintainer-review-v1",
+          "expires_at_epoch_ms": 1857859200000
         }
       ]
     }

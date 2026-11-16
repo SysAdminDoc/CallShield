@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "version": 67,
+  "version": 68,
   "updated": "2026-11-16",
   "legacy_path": "data/spam_numbers.json",
   "shard_directory": "data/spam_number_shards",
@@ -537,9 +537,9 @@
     {
       "id": "42",
       "path": "data/spam_number_shards/42.json",
-      "sha256": "efbe911ea22859e91a0db7c40c6ce0ea94553e1a51f5ae363698dbb6962860f1",
-      "bytes": 199771,
-      "numbers": 201,
+      "sha256": "47d221b7c6cd177ca9da447ff1f22f1733d855da3cf9b0eb343b0bd9f9ab96c4",
+      "bytes": 200622,
+      "numbers": 202,
       "prefixes": 0
     },
     {

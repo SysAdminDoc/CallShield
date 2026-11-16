@@ -14,6 +14,13 @@
       "reviewed_at": "2026-10-31",
       "reference": "https://github.com/SysAdminDoc/CallShield/issues/40",
       "note": "Italian mobile. tellows.it: 9 ratings dated 2026-10-20 to 2026-10-30 (scam 3, phone harassment 2, aggressive advertising 1), No. 763 on its blacklist, 739 searches last month, repeated evening calls selling energy contracts in Enel's name. PhoneBlock: 1 complaint. CallFilter: 2 mostly negative reviews."
+    },
+    {
+      "number": "+867668452820",
+      "type": "telemarketer",
+      "reviewed_at": "2026-11-16",
+      "reference": "https://github.com/SysAdminDoc/CallShield/issues/41",
+      "note": "Yunfu, Guangdong landline (0766). 360's number lookup (m.so.com): tagged as a harassment call by 27 users of its security app. Sogou, from dianhua.cn: tagged marketing. Baidu: user-tagged commercial marketing. The reporter got a call claiming to be a classmate's parent."
     }
   ]
 }

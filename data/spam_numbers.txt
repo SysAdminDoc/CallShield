@@ -1,4 +1,4 @@
-# CallShield spam numbers, database version 67 (updated 2026-11-16)
+# CallShield spam numbers, database version 68 (updated 2026-11-16)
 # One E.164 number per line. spam_numbers.txt.sig signs this file; data/README.md says how to check it.
 # Numbers come from US FCC and FTC complaint data and CallShield community reports.
 # Licence: MIT, with each source's terms in data/source-manifest.json.
@@ -51519,4 +51519,5 @@
 +498943780834
 +525511638689
 +573180492646
++867668452820
 +917003869903
