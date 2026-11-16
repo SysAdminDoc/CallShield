@@ -330,6 +330,10 @@ dependencies {
     implementation(libs.moshi.kotlin)
     // moshi-kotlin only asks for kotlin-reflect 1.8.21; keep it on the compiler's version.
     implementation(libs.kotlin.reflect)
+    // The AndroidX libraries only ask for coroutines 1.9.0. 1.11.0 stops R8 from
+    // collecting the coroutines behind shareIn and stateIn in release builds.
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
     debugImplementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit4)
