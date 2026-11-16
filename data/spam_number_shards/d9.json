@@ -4418,10 +4418,10 @@
     {
       "number": "+18302530523",
       "type": "robocall",
-      "reports": 3,
+      "reports": 6,
       "first_seen": "2026-10-30",
       "last_seen": "2026-11-12",
-      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Reducing your debt (credit cards, mortgage, student loans)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -4461,12 +4461,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -6443,11 +6443,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }

@@ -4740,10 +4740,10 @@
     {
       "number": "+18667716893",
       "type": "robocall",
-      "reports": 6,
+      "reports": 10,
       "first_seen": "2026-10-30",
       "last_seen": "2026-11-03",
-      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other; FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -4768,12 +4768,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-02",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -5477,10 +5477,10 @@
     {
       "number": "+19495653322",
       "type": "robocall",
-      "reports": 2,
+      "reports": 14,
       "first_seen": "2026-10-30",
-      "last_seen": "2026-11-02",
-      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-11",
+      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: No Subject Provided; FTC caller ID: Other; FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FTC caller ID: Calls pretending to be government, businesses, or family and friends",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -5505,12 +5505,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-11",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -5797,11 +5797,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5817,11 +5817,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }

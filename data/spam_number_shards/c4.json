@@ -5701,8 +5701,8 @@
       "type": "robocall",
       "reports": 2,
       "first_seen": "2015-01-13",
-      "last_seen": "2026-10-15",
-      "description": "FCC advertiser: Robocalls; FCC caller ID: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-10-30",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FTC caller ID: Reducing your debt (credit cards, mortgage, student loans)",
       "sources": [
         "legacy_import"
       ],
@@ -5736,6 +5736,21 @@
           "expires_at_epoch_ms": 1824829390000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-10-30",
+          "last_seen": "2026-10-30",
+          "retrieved_at": "2026-11-16T01:07:21+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826327241000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -6354,11 +6369,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6374,11 +6389,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6394,11 +6409,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6414,11 +6429,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }

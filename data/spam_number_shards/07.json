@@ -5810,8 +5810,8 @@
       "type": "robocall",
       "reports": 9,
       "first_seen": "2023-05-23",
-      "last_seen": "2025-12-14",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-12",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Dropped call or no message",
       "sources": [
         "legacy_import"
       ],
@@ -5845,6 +5845,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-12",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",

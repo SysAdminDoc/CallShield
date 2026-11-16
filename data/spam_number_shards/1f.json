@@ -2244,8 +2244,8 @@
       "type": "robocall",
       "reports": 7,
       "first_seen": "2016-05-22",
-      "last_seen": "2026-04-21",
-      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-03",
+      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -2279,6 +2279,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-03",
+          "last_seen": "2026-11-03",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -4466,10 +4481,10 @@
     {
       "number": "+18444804953",
       "type": "telemarketer",
-      "reports": 2,
+      "reports": 14,
       "first_seen": "2026-10-30",
-      "last_seen": "2026-11-10",
-      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-12",
+      "description": "FTC caller ID: Calls pretending to be government, businesses, or family and friends; FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other; FTC caller ID: Calls pretending to be government, businesses, or family and friends",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -4493,13 +4508,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
-          "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "first_seen": "2026-11-04",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -5757,11 +5772,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5777,11 +5792,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5797,11 +5812,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5817,11 +5832,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5837,11 +5852,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -5857,11 +5872,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }

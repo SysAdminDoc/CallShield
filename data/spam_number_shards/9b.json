@@ -5261,8 +5261,8 @@
       "type": "robocall",
       "reports": 20,
       "first_seen": "2026-10-01",
-      "last_seen": "2026-10-30",
-      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice)",
+      "last_seen": "2026-11-10",
+      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FTC caller ID: No Subject Provided; FTC caller ID: Other; FTC caller ID: Reducing your debt (credit cards, mortgage, student loans)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -5287,12 +5287,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-10",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }

@@ -2649,8 +2649,8 @@
       "type": "robocall",
       "reports": 179,
       "first_seen": "2016-05-10",
-      "last_seen": "2026-10-19",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-05",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -2684,6 +2684,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-05",
+          "last_seen": "2026-11-05",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -5750,10 +5765,10 @@
     {
       "number": "+18669231419",
       "type": "telemarketer",
-      "reports": 2,
+      "reports": 50,
       "first_seen": "2026-10-29",
       "last_seen": "2026-11-13",
-      "description": "FTC caller ID: Warranties  & protection plans; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Live Voice)",
+      "description": "FTC caller ID: Warranties  & protection plans; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Live Voice); FTC caller ID: Warranties  & protection plans; FTC caller ID: Calls pretending to be government, businesses, or family and friends; FTC caller ID: No Subject Provided; FTC caller ID: Other; FTC caller ID: Lotteries, prizes  & sweepstakes",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -5792,13 +5807,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
-          "first_seen": "2026-10-29",
-          "last_seen": "2026-10-29",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "first_seen": "2026-10-30",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1824922739000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -5836,9 +5851,9 @@
     {
       "number": "+18774420875",
       "type": "robocall",
-      "reports": 2,
+      "reports": 6,
       "first_seen": "2026-10-30",
-      "last_seen": "2026-10-30",
+      "last_seen": "2026-11-05",
       "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
@@ -5864,12 +5879,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-05",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }

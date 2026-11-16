@@ -4438,8 +4438,8 @@
       "type": "robocall",
       "reports": 170,
       "first_seen": "2014-12-31",
-      "last_seen": "2026-11-08",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Text Message); FTC caller ID: Other",
+      "last_seen": "2026-11-12",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Text Message); FTC caller ID: Other; FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -4479,13 +4479,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
-          "first_seen": "2026-10-08",
-          "last_seen": "2026-10-08",
-          "retrieved_at": "2026-10-10T00:42:01+00:00",
+          "first_seen": "2026-11-02",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1823128921000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         },
@@ -5321,8 +5321,8 @@
       "type": "robocall",
       "reports": 12,
       "first_seen": "2015-09-01",
-      "last_seen": "2026-09-25",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Telemarketing (including do not call and spoofing); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
+      "last_seen": "2026-11-09",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Telemarketing (including do not call and spoofing); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -5371,6 +5371,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-09",
+          "last_seen": "2026-11-09",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -5772,7 +5787,7 @@
       "type": "robocall",
       "reports": 9,
       "first_seen": "2026-10-29",
-      "last_seen": "2026-10-30",
+      "last_seen": "2026-11-04",
       "description": "FTC caller ID: Other; FCC caller_id: Unwanted Calls (Live Voice)",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
@@ -5797,13 +5812,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
-          "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "first_seen": "2026-11-04",
+          "last_seen": "2026-11-04",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -5843,8 +5858,8 @@
       "type": "robocall",
       "reports": 8,
       "first_seen": "2019-07-19",
-      "last_seen": "2026-10-13",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
+      "last_seen": "2026-11-04",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice); FTC caller ID: Calls pretending to be government, businesses, or family and friends",
       "sources": [
         "legacy_import"
       ],
@@ -5878,6 +5893,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-04",
+          "last_seen": "2026-11-04",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -6507,11 +6537,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6527,11 +6557,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6547,11 +6577,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }

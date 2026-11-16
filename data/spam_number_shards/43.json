@@ -4786,10 +4786,10 @@
     {
       "number": "+18445151649",
       "type": "robocall",
-      "reports": 2,
+      "reports": 16,
       "first_seen": "2026-09-28",
-      "last_seen": "2026-11-02",
-      "description": "FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: No Subject Provided; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-03",
+      "description": "FTC caller ID: Other; FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: No Subject Provided; FCC callback_business: Unwanted Calls (Prerecorded Voice); FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other",
       "complaint_role": "caller_id",
       "spoof_signal": "unverified_originating_number",
       "evidence": [
@@ -4814,12 +4814,12 @@
           "license": "US government public data",
           "attribution": "US Federal Trade Commission Do Not Call complaints",
           "first_seen": "2026-10-30",
-          "last_seen": "2026-10-30",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "last_seen": "2026-11-03",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "ftc-v3",
-          "expires_at_epoch_ms": 1826323231000,
+          "expires_at_epoch_ms": 1826328214000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_originating_number"
         }
@@ -4938,7 +4938,7 @@
       "reports": 5,
       "first_seen": "2023-10-06",
       "last_seen": "2026-11-04",
-      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice)",
+      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FTC caller ID: Calls pretending to be government, businesses, or family and friends",
       "sources": [
         "legacy_import"
       ],
@@ -4972,6 +4972,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-04",
+          "last_seen": "2026-11-04",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -5205,8 +5220,8 @@
       "type": "robocall",
       "reports": 4,
       "first_seen": "2015-12-09",
-      "last_seen": "2022-11-22",
-      "description": "FCC advertiser: Robocalls; FCC caller ID: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice)",
+      "last_seen": "2026-11-05",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
@@ -5225,6 +5240,21 @@
           "expires_at_epoch_ms": 1821977637000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-05",
+          "last_seen": "2026-11-05",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
         },
         {
           "source_id": "github_database",
@@ -5511,6 +5541,51 @@
           "parser_version": "legacy-v1",
           "expires_at_epoch_ms": 2105481600000
         }
+      ]
+    },
+    {
+      "number": "+18775783258",
+      "type": "robocall",
+      "reports": 54,
+      "first_seen": "2026-11-07",
+      "last_seen": "2026-11-12",
+      "description": "FTC caller ID: Reducing your debt (credit cards, mortgage, student loans); FTC caller ID: Other; FTC caller ID: No Subject Provided; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
+      "complaint_role": "caller_id",
+      "spoof_signal": "unverified_originating_number",
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-11-07",
+          "last_seen": "2026-11-07",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-09",
+          "last_seen": "2026-11-12",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
+        }
+      ],
+      "sources": [
+        "legacy_import"
       ]
     },
     {
@@ -5816,12 +5891,27 @@
       "type": "robocall",
       "reports": 5,
       "first_seen": "2015-01-15",
-      "last_seen": "2015-02-11",
-      "description": "FCC: Robocalls",
+      "last_seen": "2026-11-09",
+      "description": "FCC: Robocalls; FTC caller ID: Other",
       "sources": [
         "legacy_import"
       ],
       "evidence": [
+        {
+          "source_id": "ftc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Trade Commission Do Not Call complaints",
+          "first_seen": "2026-11-09",
+          "last_seen": "2026-11-09",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "ftc-v3",
+          "expires_at_epoch_ms": 1826328214000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_originating_number"
+        },
         {
           "source_id": "github_database",
           "evidence_type": "aggregate_database",
@@ -6137,11 +6227,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     },
@@ -6157,11 +6247,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "retrieved_at": "2026-11-16T01:23:34+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1802563231000
+          "expires_at_epoch_ms": 1802568214000
         }
       ]
     }
