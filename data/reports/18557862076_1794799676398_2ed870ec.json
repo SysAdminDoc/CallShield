@@ -1,0 +1,15 @@
+{
+  "number": "+18557862076",
+  "type": "sms_spam",
+  "reported_at": "2026-11-16T03:27:56.398Z",
+  "source": "community_app",
+  "reporter_bucket": "1f1ecafe6017ebb8",
+  "reporter_device": "1701c8f5fc153f97",
+  "report_id": "14fbfbe3-22a4-43e3-b65c-e9319651f8bb",
+  "sms_domains": [
+    "myalp.io"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
