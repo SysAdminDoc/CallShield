@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
+import com.sysadmindoc.callshield.data.BackupRestore.BackupInboundOnly
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
 import com.sysadmindoc.callshield.data.BackupRestore.BackupNumber
 import com.sysadmindoc.callshield.data.BackupRestore.BackupRangeRule
@@ -135,6 +136,11 @@ internal object CorruptionRescue {
                 ) {
                     BackupRangeRule(it.getString(0), it.getString(1), it.getInt(2) != 0, it.getInt(3), it.getInt(4), it.getInt(5))
                 },
+            // Missing before v22; readRows turns that into no rows.
+            inboundOnlyNumbers =
+                readRows(db, "SELECT number, description, addedAt FROM inbound_only_numbers") {
+                    BackupInboundOnly(it.getString(0), it.getString(1), it.longOrNull(2))
+                },
         )
 
     private fun <T> readRows(
@@ -162,9 +168,10 @@ internal object CorruptionRescue {
         wildcardRules = (first.wildcardRules + second.wildcardRules).distinct(),
         keywordRules = (first.keywordRules + second.keywordRules).distinct(),
         rangeRules = (first.rangeRules + second.rangeRules).distinct(),
+        inboundOnlyNumbers = (first.inboundOnlyNumbers + second.inboundOnlyNumbers).distinct(),
     )
 
-    private fun Backup.rowCount() = blockedNumbers.size + whitelistNumbers.size + wildcardRules.size + keywordRules.size + rangeRules.size
+    private fun Backup.rowCount() = blockedNumbers.size + inboundOnlyNumbers.size + whitelistNumbers.size + wildcardRules.size + keywordRules.size + rangeRules.size
 
     private fun file(context: Context) = File(context.noBackupFilesDir, FILE_NAME)
 

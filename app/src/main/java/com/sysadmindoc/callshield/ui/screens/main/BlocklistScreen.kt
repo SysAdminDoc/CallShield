@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.PhoneDisabled
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Share
@@ -137,6 +138,7 @@ import com.sysadmindoc.callshield.data.StandingRuleConflict
 import com.sysadmindoc.callshield.data.StandingRuleConflictKind
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -184,6 +186,7 @@ private const val BLOCKLIST_TAB_WHITELIST = 4
 private const val BLOCKLIST_TAB_DATABASE = 5
 internal const val BLOCKLIST_SWIPE_ITEM_TAG = "blocklist_swipe_item"
 internal const val BLOCKLIST_REGEX_CHECKBOX_TAG = "blocklist_regex_checkbox"
+internal const val BLOCKLIST_INBOUND_ONLY_CHECKBOX_TAG = "blocklist_inbound_only_checkbox"
 internal const val BLOCKLIST_SNACKBAR_HOST_TAG = "blocklist_snackbar_host"
 internal const val WHITELIST_RANGE_TAG = "whitelist_range"
 internal const val BLOCKLIST_SELECTABLE_ROW_TAG = "blocklist_selectable_row"
@@ -215,6 +218,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val wildcardRules by viewModel.wildcardRules.collectAsStateWithLifecycle()
     val hashWildcardRules by viewModel.hashWildcardRules.collectAsStateWithLifecycle()
     val whitelistEntries by viewModel.whitelistEntries.collectAsStateWithLifecycle()
+    val inboundOnlyNumbers by viewModel.inboundOnlyNumbers.collectAsStateWithLifecycle()
+    val inboundOnlyRemovedMessage = stringResource(R.string.inbound_only_removed)
     val ruleConflicts by viewModel.ruleConflicts.collectAsStateWithLifecycle()
     val keywordRules by viewModel.keywordRules.collectAsStateWithLifecycle()
     val importResult by viewModel.importResult.collectAsStateWithLifecycle()
@@ -359,7 +364,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 BlocklistWorkspaceModel(
                     title = stringResource(R.string.blocklist_overview_blocked_title),
                     subtitle = stringResource(R.string.blocklist_overview_blocked_subtitle),
-                    count = userBlocked.size,
+                    count = userBlocked.size + inboundOnlyNumbers.size,
                     accentColor = CatRed,
                     icon = Icons.Default.Block,
                     addActionLabel = stringResource(R.string.blocklist_action_add_number),
@@ -573,7 +578,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             Box(modifier = Modifier.weight(1f)) {
                 when (tabIndex) {
                     BLOCKLIST_TAB_BLOCKED -> {
-                        if (userBlocked.isEmpty()) {
+                        if (userBlocked.isEmpty() && inboundOnlyNumbers.isEmpty()) {
                             EmptyStateCard(
                                 compact = short,
                                 clearOfAddButton = true,
@@ -593,6 +598,28 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 // The chips scroll away with the list, so a short screen
                                 // keeps its rows clear of the Add button. One row has
                                 // nothing to sort.
+                                if (inboundOnlyNumbers.isNotEmpty()) {
+                                    item(key = "inbound_only_header") {
+                                        SectionHeader(stringResource(R.string.inbound_only_section), CatPeach)
+                                    }
+                                    items(inboundOnlyNumbers, key = { "inbound_only:${it.number}" }) { entry ->
+                                        InboundOnlyItem(
+                                            entry = entry,
+                                            onRemove = {
+                                                deleteWithUndo(
+                                                    delete = { viewModel.unmarkInboundOnly(entry.number) },
+                                                    restore = { viewModel.restoreInboundOnly(entry) },
+                                                    message = inboundOnlyRemovedMessage,
+                                                )
+                                            },
+                                        )
+                                    }
+                                    if (userBlocked.isNotEmpty()) {
+                                        item(key = "blocked_header") {
+                                            SectionHeader(stringResource(R.string.blocklist_overview_blocked_title), CatRed)
+                                        }
+                                    }
+                                }
                                 if (userBlocked.size > 1) {
                                     item(key = "sort") {
                                         ChoiceChipRow(
@@ -845,11 +872,21 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val emergencyContactsAddedMessage = stringResource(R.string.emergency_contacts_added)
     val numberWhitelistedMessage = stringResource(R.string.blocklist_number_whitelisted)
     val keywordRuleAddedMessage = stringResource(R.string.blocklist_keyword_rule_added)
+    val inboundOnlyMarkedMessage = stringResource(R.string.inbound_only_marked)
 
     if (showAddDialog) {
         AddNumberDialog(
             existingWhitelist = whitelistEntries,
             onDismiss = { showAddDialog = false },
+            onMarkInboundOnly = { number, description ->
+                showAddDialog = false
+                scope.launch {
+                    if (viewModel.markInboundOnly(number, description) != null) {
+                        hapticConfirm(context)
+                        snackbarHost.showSnackbar(inboundOnlyMarkedMessage, duration = SnackbarDuration.Short)
+                    }
+                }
+            },
         ) { number, description ->
             viewModel.blockNumber(number, description = description)
             showAddDialog = false
@@ -1486,6 +1523,45 @@ fun KeywordRuleItem(
     }
 }
 
+/** A number the user says never calls them: calls showing it are blocked, calling it still works. */
+@Composable
+internal fun InboundOnlyItem(
+    entry: InboundOnlyNumber,
+    onRemove: () -> Unit,
+) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatPeach) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.PhoneDisabled, null, tint = CatPeach, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(PhoneFormatter.formatIsolated(entry.number), fontWeight = FontWeight.SemiBold, color = CatText)
+                if (entry.description.isNotEmpty()) {
+                    Text(entry.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                }
+                StatusPill(
+                    text = stringResource(R.string.inbound_only_badge),
+                    color = CatPeach,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 4.dp,
+                    textStyle = MaterialTheme.typography.labelSmall,
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.RemoveCircleOutline, stringResource(R.string.cd_remove), tint = CatOverlay)
+            }
+        }
+    }
+}
+
 @Composable
 fun WhitelistItem(
     entry: WhitelistEntry,
@@ -1849,16 +1925,29 @@ fun DatabaseItem(number: SpamNumber) {
 fun AddNumberDialog(
     existingWhitelist: List<WhitelistEntry> = emptyList(),
     onDismiss: () -> Unit,
+    // Offered when set: the number is saved as one that never calls, so
+    // calling it out keeps working and no allow lets a call from it ring.
+    onMarkInboundOnly: ((String, String) -> Unit)? = null,
     onAdd: (String, String) -> Unit,
 ) {
     var number by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
+    var inboundOnly by rememberSaveable { mutableStateOf(false) }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
     val canConfirm = hasMinAsciiDigits(normalizedNumber)
     val conflict =
-        remember(normalizedNumber, existingWhitelist) {
-            if (canConfirm) RuleConflictAnalyzer.forExactBlock(normalizedNumber, existingWhitelist) else null
+        remember(normalizedNumber, existingWhitelist, inboundOnly) {
+            if (canConfirm && !inboundOnly) RuleConflictAnalyzer.forExactBlock(normalizedNumber, existingWhitelist) else null
         }
+
+    fun confirm() {
+        val markInboundOnly = onMarkInboundOnly
+        if (inboundOnly && markInboundOnly != null) {
+            markInboundOnly(normalizedNumber, description.trim())
+        } else {
+            onAdd(normalizedNumber, description.trim())
+        }
+    }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1902,7 +1991,7 @@ fun AddNumberDialog(
                     keyboardActions =
                         androidx.compose.foundation.text.KeyboardActions(
                             onDone = {
-                                if (canConfirm) onAdd(normalizedNumber, description.trim())
+                                if (canConfirm) confirm()
                             },
                         ),
                     colors =
@@ -1911,6 +2000,31 @@ fun AddNumberDialog(
                             cursorColor = CatGreen,
                         ),
                 )
+                if (onMarkInboundOnly != null) {
+                    // The whole row toggles, so TalkBack reads the label with the checkbox.
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .toggleable(
+                                    value = inboundOnly,
+                                    role = Role.Checkbox,
+                                    onValueChange = { inboundOnly = it },
+                                ).testTag(BLOCKLIST_INBOUND_ONLY_CHECKBOX_TAG),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = inboundOnly,
+                            onCheckedChange = null,
+                            colors = CheckboxDefaults.colors(checkedColor = CatPeach),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.inbound_only_mark), style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.inbound_only_mark_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -1918,7 +2032,7 @@ fun AddNumberDialog(
                 label = stringResource(R.string.dialog_block),
                 icon = Icons.Default.Block,
                 color = CatRed,
-                onClick = { onAdd(normalizedNumber, description.trim()) },
+                onClick = { confirm() },
                 enabled = canConfirm,
             )
         },

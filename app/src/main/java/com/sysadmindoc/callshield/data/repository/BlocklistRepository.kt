@@ -13,6 +13,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberSighting
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
@@ -970,6 +971,59 @@ class BlocklistRepository(
             }
         }
     }
+
+    fun observeInboundOnlyNumbers(): Flow<List<InboundOnlyNumber>> = dao.observeInboundOnlyNumbers()
+
+    suspend fun getInboundOnlyNumbers(): List<InboundOnlyNumber> = dao.getInboundOnlyNumbers()
+
+    /**
+     * The mark covering [number] in any of its stored spellings, or null. An
+     * emergency number never counts as marked, even if a row for one was
+     * restored from somewhere.
+     */
+    suspend fun findInboundOnly(number: String): InboundOnlyNumber? {
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank() || EmergencyNumberFloor.isProtected(normalized)) return null
+        return dao.findInboundOnly(equivalentForms(normalized))
+    }
+
+    /**
+     * Mark [number] as one that never calls the user. Blocks, allows and
+     * reports are left as they are, so removing the mark puts everything
+     * back. Null when the number can't take one: an emergency number, or
+     * too short to be a company's published line.
+     */
+    suspend fun markInboundOnly(
+        number: String,
+        description: String = "",
+        addedAt: Long = System.currentTimeMillis(),
+    ): InboundOnlyNumber? {
+        val normalized = normalizeNumber(number)
+        if (!InboundOnlyNumber.canMark(normalized) || EmergencyNumberFloor.isProtected(normalized)) return null
+        val entry = InboundOnlyNumber(normalized, description.trim(), addedAt)
+        runInTransaction {
+            // One row per number, whichever spelling an older mark was saved in.
+            dao.deleteInboundOnly(equivalentForms(normalized))
+            dao.insertInboundOnly(entry)
+        }
+        return entry
+    }
+
+    /** Remove the mark from [number] in every spelling; returns the removed row, for an Undo. */
+    suspend fun unmarkInboundOnly(number: String): InboundOnlyNumber? {
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return null
+        val forms = equivalentForms(normalized)
+        var removed: InboundOnlyNumber? = null
+        runInTransaction {
+            removed = dao.findInboundOnly(forms)
+            dao.deleteInboundOnly(forms)
+        }
+        return removed
+    }
+
+    /** Put back a row [unmarkInboundOnly] removed, with its note and date. */
+    suspend fun restoreInboundOnly(entry: InboundOnlyNumber) = dao.insertInboundOnly(entry)
 
     /** Clears the blocks an allow expiring at [allowExpiresAt] overrides: all of them, or only temporary ones for a temporary allow. */
     private suspend fun clearBlocksForAllow(

@@ -20,4 +20,5 @@ private val NUMBER_DESCRIPTIONS =
         BlockReasonCode.PREFIX,
         BlockReasonCode.WILDCARD,
         BlockReasonCode.HASH_WILDCARD,
+        BlockReasonCode.INBOUND_ONLY,
     )

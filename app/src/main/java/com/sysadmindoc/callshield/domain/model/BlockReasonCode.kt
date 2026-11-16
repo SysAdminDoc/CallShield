@@ -22,6 +22,7 @@ enum class BlockReasonCode(
     TEMPORARY_BLOCK("temporary_block"),
     SYSTEM_BLOCK_LIST("system_block_list"),
     USER_BLOCKLIST("user_blocklist"),
+    INBOUND_ONLY("inbound_only"),
     HIDDEN_NUMBER("hidden_number"),
     DATABASE("database"),
     DB_PREFIX_EXPANSION("db_prefix_expansion"),

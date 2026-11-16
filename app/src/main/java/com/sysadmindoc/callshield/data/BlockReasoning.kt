@@ -50,7 +50,10 @@ object BlockReasoning {
     fun isProbabilistic(reasonCode: BlockReasonCode): Boolean = reasonCode in probabilisticReasons
 
     /** A personal block is reversible by removing the user's saved rule. */
-    fun isUserRule(reasonCode: BlockReasonCode): Boolean = reasonCode == BlockReasonCode.USER_BLOCKLIST || reasonCode == BlockReasonCode.TEMPORARY_BLOCK
+    fun isUserRule(reasonCode: BlockReasonCode): Boolean =
+        reasonCode == BlockReasonCode.USER_BLOCKLIST ||
+            reasonCode == BlockReasonCode.TEMPORARY_BLOCK ||
+            reasonCode == BlockReasonCode.INBOUND_ONLY
 
     /**
      * @param matchReason from `BlockedCall.matchReason` or `SpamCheckResult.matchSource`
@@ -230,6 +233,14 @@ object BlockReasoning {
                     reasoning(
                         s(R.string.reasoning_user_blocklist_headline),
                         s(R.string.reasoning_user_blocklist_detail),
+                        description.labeled(R.string.reasoning_note),
+                    )
+                }
+
+                BlockReasonCode.INBOUND_ONLY -> {
+                    reasoning(
+                        s(R.string.reasoning_inbound_only_headline),
+                        s(R.string.reasoning_inbound_only_detail),
                         description.labeled(R.string.reasoning_note),
                     )
                 }

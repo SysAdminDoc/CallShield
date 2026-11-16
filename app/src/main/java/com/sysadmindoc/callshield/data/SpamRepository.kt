@@ -930,6 +930,23 @@ class SpamRepository(
 
     suspend fun restoreWhitelistEntry(entry: WhitelistEntry) = blocklistRepository.restoreWhitelistEntry(entry)
 
+    // ── Numbers that never call the user ───────────────────────────────
+    fun observeInboundOnlyNumbers(): Flow<List<InboundOnlyNumber>> = blocklistRepository.observeInboundOnlyNumbers()
+
+    suspend fun getInboundOnlyNumbers(): List<InboundOnlyNumber> = blocklistRepository.getInboundOnlyNumbers()
+
+    suspend fun findInboundOnly(number: String): InboundOnlyNumber? = blocklistRepository.findInboundOnly(number)
+
+    suspend fun markInboundOnly(
+        number: String,
+        description: String = "",
+        addedAt: Long = System.currentTimeMillis(),
+    ): InboundOnlyNumber? = blocklistRepository.markInboundOnly(number, description, addedAt)
+
+    suspend fun unmarkInboundOnly(number: String): InboundOnlyNumber? = blocklistRepository.unmarkInboundOnly(number)
+
+    suspend fun restoreInboundOnly(entry: InboundOnlyNumber) = blocklistRepository.restoreInboundOnly(entry)
+
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = blocklistRepository.getAllWildcardRules()
 

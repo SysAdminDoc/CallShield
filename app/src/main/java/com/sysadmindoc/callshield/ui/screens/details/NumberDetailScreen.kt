@@ -36,6 +36,7 @@ import com.sysadmindoc.callshield.data.SourceDescriptions
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
@@ -80,6 +81,9 @@ fun NumberDetailScreen(
 
     val forms = remember(number) { viewModel.lookupForms(number) }
     val isBlocked = userBlocked.any { it.number in forms }
+    val inboundOnly by viewModel.inboundOnlyNumbers.collectAsStateWithLifecycle()
+    val inboundOnlyMark = inboundOnly.firstOrNull { it.number in forms }
+    val canMarkInboundOnly = remember(number) { InboundOnlyNumber.canMark(number) }
     val callCount = numberCalls.count { it.isCall }
     val smsCount = numberCalls.count { !it.isCall }
     val firstSeen = numberCalls.minByOrNull { it.timestamp }?.timestamp
@@ -134,7 +138,8 @@ fun NumberDetailScreen(
     // number in place (tapping a notification while another detail is open)
     // doesn't show the previous number's gauge/reputation.
     var liveResult by remember(number) { mutableStateOf<SpamCheckResult?>(null) }
-    LaunchedEffect(number) {
+    // Asked again when the never-calls mark changes, since it decides the verdict.
+    LaunchedEffect(number, inboundOnlyMark != null) {
         try {
             liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number, realtimeCall = false) }
         } catch (_: Exception) {
@@ -154,6 +159,8 @@ fun NumberDetailScreen(
     // A second Not spam here restarts the first one's wait, so the last tap is the only one to show.
     var notSpamRequestId by rememberSaveable(number) { mutableStateOf<Long?>(null) }
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
+    val inboundOnlyMarkedMessage = stringResource(R.string.inbound_only_marked)
+    val inboundOnlyRemovedMessage = stringResource(R.string.inbound_only_removed)
 
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
     // window: without this the header ran under the status bar and the Undo
@@ -345,6 +352,45 @@ fun NumberDetailScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             outlined = true,
+                        )
+                    }
+                    if (canMarkInboundOnly || inboundOnlyMark != null) {
+                        PremiumActionButton(
+                            label = stringResource(if (inboundOnlyMark != null) R.string.inbound_only_unmark else R.string.inbound_only_mark),
+                            icon = if (inboundOnlyMark != null) Icons.Default.Call else Icons.Default.PhoneDisabled,
+                            color = CatPeach,
+                            onClick = {
+                                val removed = inboundOnlyMark
+                                coroutineScope.launch {
+                                    if (removed != null) {
+                                        viewModel.unmarkInboundOnly(number)
+                                        hapticTick(context)
+                                        val result =
+                                            snackbarHostState.showSnackbar(
+                                                message = inboundOnlyRemovedMessage,
+                                                actionLabel = undoLabel,
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        if (result == SnackbarResult.ActionPerformed) viewModel.restoreInboundOnly(removed)
+                                    } else if (viewModel.markInboundOnly(number) != null) {
+                                        hapticConfirm(context)
+                                        val result =
+                                            snackbarHostState.showSnackbar(
+                                                message = inboundOnlyMarkedMessage,
+                                                actionLabel = undoLabel,
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        if (result == SnackbarResult.ActionPerformed) viewModel.unmarkInboundOnly(number)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            outlined = true,
+                        )
+                        Text(
+                            stringResource(R.string.inbound_only_mark_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext,
                         )
                     }
                 }

@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.checker.MeetingModeChecker
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.di.ApplicationScope
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
@@ -186,6 +187,14 @@ class CallShieldScreeningService : CallScreeningService() {
                             } else {
                                 respondBlock(callDetails, responseGate, number, source, prefs = prefs)
                             }
+                            return@withTimeoutOrNull
+                        }
+
+                        // A number the user marked as never calling them (a bank's published
+                        // line) is spoofed when it rings, so it's turned away ahead of the
+                        // contact fast path: that number is often a saved contact.
+                        if (repository.findInboundOnly(number) != null) {
+                            respondBlock(callDetails, responseGate, number, BlockReasonCode.INBOUND_ONLY.wireValue, prefs = prefs)
                             return@withTimeoutOrNull
                         }
 
@@ -669,7 +678,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 if (number.isBlank()) {
                     snapshot.rejectsHiddenCaller()
                 } else {
-                    snapshot.isBlocked(number)
+                    snapshot.isBlocked(number) || number in snapshot.inboundOnlyNumbers
                 }
             if (!shouldBlock) {
                 respondAllow(responseGate)

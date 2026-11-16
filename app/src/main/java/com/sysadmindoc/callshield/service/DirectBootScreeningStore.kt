@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -22,6 +23,8 @@ internal object DirectBootScreeningStore {
         val blockedNumbers: Map<String, Long?> = emptyMap(),
         /** An "Expecting a call" window survives a reboot, so hidden callers ring until it ends. */
         val expectingCallUntil: Long = 0L,
+        /** Numbers the user says never call them; a call from one is turned away before unlock too. */
+        val inboundOnlyNumbers: Set<String> = emptySet(),
     ) {
         fun rejectsHiddenCaller(now: Long = System.currentTimeMillis()): Boolean = blockUnknownEnabled && expectingCallUntil <= now
 
@@ -40,6 +43,7 @@ internal object DirectBootScreeningStore {
         val blockUnknownEnabled: Boolean,
         val silentVoicemailEnabled: Boolean,
         val expectingCallUntil: Long,
+        val inboundOnlyNumbers: List<InboundOnlyNumber> = emptyList(),
     )
 
     private const val PREFS_NAME = "direct_boot_screening"
@@ -49,6 +53,7 @@ internal object DirectBootScreeningStore {
     private const val KEY_SILENT_VOICEMAIL = "silent_voicemail"
     private const val KEY_BLOCKED_NUMBERS = "blocked_numbers"
     private const val KEY_EXPECTING_CALL_UNTIL = "expecting_call_until"
+    private const val KEY_INBOUND_ONLY = "inbound_only_numbers"
     private const val ENTRY_SEPARATOR = '|'
 
     suspend fun observeAndMirror(
@@ -63,6 +68,8 @@ internal object DirectBootScreeningStore {
             repository.expectingCallUntil,
         ) { blockedNumbers, blockCalls, blockUnknown, silentVoicemail, expectingCallUntil ->
             MirrorInput(blockedNumbers, blockCalls, blockUnknown, silentVoicemail, expectingCallUntil)
+        }.combine(repository.observeInboundOnlyNumbers()) { input, inboundOnly ->
+            input.copy(inboundOnlyNumbers = inboundOnly)
         }.collectLatest { input ->
             write(
                 context = context,
@@ -71,6 +78,7 @@ internal object DirectBootScreeningStore {
                 blockUnknownEnabled = input.blockUnknownEnabled,
                 silentVoicemailEnabled = input.silentVoicemailEnabled,
                 expectingCallUntil = input.expectingCallUntil,
+                inboundOnlyNumbers = input.inboundOnlyNumbers,
             )
         }
     }
@@ -82,6 +90,7 @@ internal object DirectBootScreeningStore {
         blockUnknownEnabled: Boolean,
         silentVoicemailEnabled: Boolean,
         expectingCallUntil: Long = 0L,
+        inboundOnlyNumbers: List<InboundOnlyNumber> = emptyList(),
     ) = withContext(Dispatchers.IO) {
         val entries =
             blockedNumbers
@@ -99,6 +108,7 @@ internal object DirectBootScreeningStore {
                 .putBoolean(KEY_SILENT_VOICEMAIL, silentVoicemailEnabled)
                 .putStringSet(KEY_BLOCKED_NUMBERS, entries)
                 .putLong(KEY_EXPECTING_CALL_UNTIL, expectingCallUntil)
+                .putStringSet(KEY_INBOUND_ONLY, inboundOnlyNumbers.map { it.number }.filter(String::isNotBlank).toSet())
                 .commit(),
         ) { "Failed to persist the direct-boot screening mirror" }
     }
@@ -118,6 +128,7 @@ internal object DirectBootScreeningStore {
             silentVoicemailEnabled = prefs.getBoolean(KEY_SILENT_VOICEMAIL, false),
             blockedNumbers = blocked,
             expectingCallUntil = prefs.getLong(KEY_EXPECTING_CALL_UNTIL, 0L),
+            inboundOnlyNumbers = prefs.getStringSet(KEY_INBOUND_ONLY, emptySet()).orEmpty().toSet(),
         )
     }
 

@@ -23,6 +23,7 @@ import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.UnknownCallWindow
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.CommunityWatchNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
@@ -482,6 +483,64 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
         awaitScopeIdle()
+    }
+
+    @Test
+    fun `a number marked as never calling is rejected even when it's a saved contact`() {
+        val number = "+12125550187"
+        runBlocking {
+            repository.setContactWhitelist(true)
+            repository.markInboundOnly("212-555-0187", "card line")
+        }
+        service.contactLookup = { _, _, _ -> true }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        awaitScopeIdle()
+        assertEquals(
+            listOf(number to "inbound_only"),
+            runBlocking { fixture.dao.getAllCallLogOnce() }.map { it.number to it.matchReason },
+        )
+    }
+
+    @Test
+    fun `a saved contact nobody marked still rings`() {
+        runBlocking {
+            repository.setContactWhitelist(true)
+            repository.markInboundOnly("+12125550188")
+        }
+        service.contactLookup = { _, _, _ -> true }
+
+        service.onScreenCall(callDetails("+12125550189"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `direct boot rejects a mirrored number marked as never calling`() {
+        val number = "+12125550190"
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = emptyList(),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = false,
+                silentVoicemailEnabled = false,
+                inboundOnlyNumbers = listOf(InboundOnlyNumber(number)),
+            )
+        }
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
     }
 
     @Test

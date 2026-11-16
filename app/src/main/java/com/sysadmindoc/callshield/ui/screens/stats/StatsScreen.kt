@@ -909,7 +909,7 @@ private fun reasonCodeColor(reasonCode: BlockReasonCode): Color =
         BlockReasonCode.RCS_FILTER -> CatLavender
         BlockReasonCode.STIR_SHAKEN_FAILED, BlockReasonCode.STIR_SHAKEN_TRUSTED, BlockReasonCode.WILDCARD -> CatYellow
         BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK, BlockReasonCode.REGULATORY_PREFIX, BlockReasonCode.FREQUENCY -> CatPeach
-        BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> CatRed
+        BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK, BlockReasonCode.INBOUND_ONLY -> CatRed
         BlockReasonCode.TIME_BLOCK, BlockReasonCode.MEETING_MODE -> CatMauve
         else -> CatSubtext
     }

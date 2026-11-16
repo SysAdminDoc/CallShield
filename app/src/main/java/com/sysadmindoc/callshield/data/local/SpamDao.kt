@@ -8,6 +8,7 @@ import com.sysadmindoc.callshield.data.model.CampaignObservation
 import com.sysadmindoc.callshield.data.model.FlaggedTextNumber
 import com.sysadmindoc.callshield.data.model.FlaggedTextSighting
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberCount
 import com.sysadmindoc.callshield.data.model.NumberSighting
@@ -724,6 +725,25 @@ interface SpamDao {
 
     @Query("DELETE FROM whitelist WHERE expiresAt IS NOT NULL AND expiresAt <= :now")
     suspend fun deleteExpiredWhitelistEntries(now: Long): Int
+
+    // Numbers that never call the user
+    @Query("SELECT * FROM inbound_only_numbers ORDER BY addedAt DESC")
+    fun observeInboundOnlyNumbers(): Flow<List<InboundOnlyNumber>>
+
+    @Query("SELECT * FROM inbound_only_numbers ORDER BY addedAt DESC")
+    suspend fun getInboundOnlyNumbers(): List<InboundOnlyNumber>
+
+    @Query("SELECT * FROM inbound_only_numbers WHERE number IN (:numbers) LIMIT 1")
+    suspend fun findInboundOnly(numbers: List<String>): InboundOnlyNumber?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInboundOnly(entry: InboundOnlyNumber)
+
+    @Query("DELETE FROM inbound_only_numbers WHERE number IN (:numbers)")
+    suspend fun deleteInboundOnly(numbers: List<String>): Int
+
+    @Query("DELETE FROM inbound_only_numbers")
+    suspend fun clearInboundOnly()
 
     // Auto-cleanup
     @Query("DELETE FROM call_log WHERE timestamp < :before")

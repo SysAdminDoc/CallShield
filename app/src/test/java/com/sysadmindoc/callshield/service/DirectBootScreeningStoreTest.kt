@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.service
 import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -58,6 +59,25 @@ class DirectBootScreeningStoreTest {
             assertTrue(snapshot.isBlocked("+12125550102", now))
             assertFalse(snapshot.isBlocked("+12125550102", now + 120_000L))
             assertFalse(snapshot.isBlocked("+12125550103", now))
+        }
+
+    @Test
+    fun `the mirror keeps numbers marked as never calling`() =
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = emptyList(),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = false,
+                silentVoicemailEnabled = false,
+                inboundOnlyNumbers = listOf(InboundOnlyNumber("+12125550150", "card line")),
+            )
+
+            val snapshot = DirectBootScreeningStore.read(context)
+
+            assertTrue(snapshot.ready)
+            assertTrue("+12125550150" in snapshot.inboundOnlyNumbers)
+            assertFalse(snapshot.isBlocked("+12125550150"))
         }
 
     @Test

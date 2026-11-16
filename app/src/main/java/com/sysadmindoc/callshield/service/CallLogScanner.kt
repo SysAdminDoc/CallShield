@@ -5,6 +5,7 @@ import android.provider.CallLog
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +78,9 @@ object CallLogScanner {
                 // CampaignDetector with old numbers or trigger caller-ID overlays
                 // for calls that already happened.
                 val result = checkSpam(number, realtimeCall = false)
-                if (result.isSpam) {
+                // The log mixes in the user's own calls, and calling a number
+                // marked as never calling them is what the mark is for.
+                if (result.isSpam && result.reasonCode != BlockReasonCode.INBOUND_ONLY) {
                     spamList.add(ScannedSpam(number, callCount, result.matchSource, result.type))
                 }
             }

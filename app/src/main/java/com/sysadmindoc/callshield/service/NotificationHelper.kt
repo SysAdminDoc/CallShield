@@ -684,6 +684,7 @@ object NotificationHelper {
             BlockReasonCode.CONTACTS_ONLY,
             BlockReasonCode.STIR_SHAKEN_FAILED,
             BlockReasonCode.USER_BLOCKLIST,
+            BlockReasonCode.INBOUND_ONLY,
             BlockReasonCode.SYSTEM_BLOCK_LIST,
             BlockReasonCode.WILDCARD,
             BlockReasonCode.HASH_WILDCARD,
@@ -711,6 +712,7 @@ object NotificationHelper {
             BlockReasonCode.FREQUENCY -> R.string.stats_reason_repeat_caller
             BlockReasonCode.TIME_BLOCK -> R.string.stats_reason_quiet_hours
             BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.stats_reason_manual_block
+            BlockReasonCode.INBOUND_ONLY -> R.string.lookup_checker_inbound_only
             BlockReasonCode.CATEGORY_POLICY -> R.string.stats_reason_category_policy
             BlockReasonCode.HIDDEN_NUMBER -> R.string.stats_reason_hidden_number
             else -> R.string.stats_reason_unknown

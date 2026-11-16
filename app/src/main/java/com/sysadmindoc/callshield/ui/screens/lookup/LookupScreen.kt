@@ -100,6 +100,7 @@ import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.areaCodeBlock
@@ -573,7 +574,11 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     when {
                                         userRule -> {
                                             // By number, so a block saved in another spelling of it goes too.
-                                            viewModel.unblockByNumber(resultNumber)
+                                            if (lookupResult.reasonCode == BlockReasonCode.INBOUND_ONLY) {
+                                                viewModel.unmarkInboundOnly(resultNumber)
+                                            } else {
+                                                viewModel.unblockByNumber(resultNumber)
+                                            }
                                             hapticTick(context)
                                             scope.launch {
                                                 snackbarHostState.showSnackbar(resources.getString(R.string.lookup_rule_removed))

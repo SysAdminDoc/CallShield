@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C512-f38ba8?style=flat-square" alt="51,512 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2208-94e2d5?style=flat-square" alt="2208 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2221-94e2d5?style=flat-square" alt="2221 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -163,6 +163,8 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 |  1500 | **Meeting Mode** | Silence | Opt-in. While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail. Runs on notification access, with no calendar permission |
 
+One check runs before the ladder for calls. A number you marked as never calling you (a bank's published line, say) is blocked right away, ahead of your contacts and your allow list, because a call showing it has to be spoofed. Emergency numbers can't be marked.
+
 SMS-specific layers run after the shared chain, in their own priority order: **SMS Keyword Rules** (5400, with schedules) → **Carrier Scam Label** (4750, a sender your carrier renamed to its scam label, such as Singapore's Likely-SCAM) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900, with 30+ regex patterns, URL shorteners, suspicious TLDs and the spam-domain list). Both SMS rule layers read the text after fullwidth letters, invisible characters and Cyrillic or Greek letters posing as Latin are undone, and a link or brand name hiding such characters counts against the message. A stranger's first text that fishes for a reply without a link counts too: "Hi mum, this is my new number", "Is this Sarah?", "sorry, wrong number". It has to come from a phone number you've never texted or heard from, and on its own it only blocks in aggressive mode, because a real kid with a new phone writes the same words.
 
 > **A flagged text still reaches your inbox.** Calls are different from
@@ -270,6 +272,7 @@ The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset
 - Regex validation before adding wildcard rules
 - Inline priority-conflict warnings name the whitelist, emergency allow, or block rule that wins before an overlapping rule is saved
 - A trusted number can also let its number block through, for an office or a practice that calls from a row of lines. Pick the numbers that differ only in the last 2 or 3 digits and the entry reads `(555) 234-56XX`. It's off until you pick it, and a number in the block that you blocked by itself stays blocked
+- Mark a bank's published line as one that never calls you (from the number's page, or the checkbox when you add a number). A call showing it is blocked even when it's saved in your contacts, since the real bank never calls from it. Calling it yourself still works, and its texts aren't touched
 
 ### Statistics
 - Weekly bar chart with daily breakdown
@@ -601,12 +604,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2208 tests
+./gradlew testDebugUnitTest   # 2221 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2208 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2221 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -643,8 +646,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2208 JVM unit tests (JUnit) |
-| Strings | 1833 string resources and 52 plural groups (translation-ready) |
+| Tests | 2221 JVM unit tests (JUnit) |
+| Strings | 1845 string resources and 52 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

@@ -46,6 +46,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.ListCatalogEntry
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberSighting
@@ -367,6 +368,12 @@ class MainViewModel
         val whitelistEntries: StateFlow<List<WhitelistEntry>> =
             repo
                 .getAllWhitelist()
+                .screenState(emptyList())
+
+        /** Numbers the user says never call them, newest first. */
+        val inboundOnlyNumbers: StateFlow<List<InboundOnlyNumber>> =
+            repo
+                .observeInboundOnlyNumbers()
                 .screenState(emptyList())
 
         private val liveRuleConflicts: Flow<List<StandingRuleConflict>> =
@@ -1265,6 +1272,44 @@ class MainViewModel
         fun restoreWhitelistEntry(entry: WhitelistEntry) {
             viewModelScope.launch(actionFailed) { repo.restoreWhitelistEntry(entry) }
         }
+
+        /**
+         * Mark [number] as one that never calls. Returns once the mark is
+         * written, so the caller never offers Undo for a mark that didn't
+         * happen: null when the number can't take one (an emergency number
+         * or a short code, each with its own message) or the write failed.
+         */
+        suspend fun markInboundOnly(
+            number: String,
+            description: String = "",
+        ): InboundOnlyNumber? {
+            if (EmergencyNumberFloor.isProtected(number)) {
+                Toast.makeText(appContext, appContext.getString(R.string.emergency_number_block_refused), Toast.LENGTH_LONG).show()
+                return null
+            }
+            return try {
+                repo.markInboundOnly(number, description).also { mark ->
+                    // A short code is too short to be a company's published line.
+                    if (mark == null) {
+                        Toast.makeText(appContext, appContext.getString(R.string.inbound_only_too_short), Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Marking a number as never calling failed", e)
+                Toast.makeText(appContext, appContext.getString(R.string.action_failed), Toast.LENGTH_LONG).show()
+                null
+            }
+        }
+
+        /** Remove the mark from [number] in every spelling. Also the Undo for [markInboundOnly]. */
+        fun unmarkInboundOnly(number: String) {
+            viewModelScope.launch(actionFailed) { repo.unmarkInboundOnly(number) }
+        }
+
+        /** Undo a removed mark, keeping its note and date. */
+        fun restoreInboundOnly(entry: InboundOnlyNumber) = launchUndo("a never-calls mark") { repo.restoreInboundOnly(entry) }
 
         // Export/import
         fun exportBlocklist() {

@@ -189,6 +189,8 @@ class BlockedAlertActionsTest {
             BlockReasonCode.SYSTEM_BLOCK_LIST,
             BlockReasonCode.WILDCARD,
             BlockReasonCode.HASH_WILDCARD,
+            // Screening checks the mark before any allow.
+            BlockReasonCode.INBOUND_ONLY,
         ).forEach { assertFalse(it.name, NotificationHelper.notSpamCanAllow("+12125550113", it)) }
         listOf(
             BlockReasonCode.DATABASE,

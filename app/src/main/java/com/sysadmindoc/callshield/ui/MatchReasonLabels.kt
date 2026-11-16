@@ -173,6 +173,7 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
         "expecting_call" -> R.string.lookup_checker_expecting_call
         "system_block_list" -> R.string.lookup_checker_system_block_list
         "user_blocklist" -> R.string.lookup_checker_user_blocklist
+        "inbound_only" -> R.string.lookup_checker_inbound_only
         "database" -> R.string.lookup_checker_database
         "db_prefix_expansion" -> R.string.lookup_checker_db_prefix_expansion
         "prefix" -> R.string.lookup_checker_prefix
@@ -256,6 +257,7 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.TEMPORARY_BLOCK -> R.string.accessibility_reason_temporary_block
         BlockReasonCode.SYSTEM_BLOCK_LIST -> R.string.accessibility_reason_system_block_list
         BlockReasonCode.USER_BLOCKLIST -> R.string.accessibility_reason_user_blocklist
+        BlockReasonCode.INBOUND_ONLY -> R.string.accessibility_reason_inbound_only
         BlockReasonCode.HIDDEN_NUMBER -> R.string.accessibility_reason_hidden_number
         BlockReasonCode.DATABASE -> R.string.accessibility_reason_database
         BlockReasonCode.DB_PREFIX_EXPANSION -> R.string.accessibility_reason_database_prefix

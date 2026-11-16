@@ -39,7 +39,16 @@ class BlockReasoningTest {
     fun `user rule classification is limited to reversible saved blocks`() {
         assertTrue(BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.USER_BLOCKLIST))
         assertTrue(BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.TEMPORARY_BLOCK))
+        assertTrue(BlockReasoning.isUserRule(BlockReasonCode.INBOUND_ONLY))
         assertTrue(!BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.DATABASE))
+    }
+
+    @Test
+    fun `a never-calls block says the user marked it and keeps their note`() {
+        val r = BlockReasoning.explain(context, "inbound_only", "Chase card line", 100)
+        assertEquals(context.getString(R.string.reasoning_inbound_only_headline), r.headline)
+        assertTrue(r.bullets.any { it.contains("saved contact") })
+        assertTrue(r.bullets.any { it.contains("Chase card line") })
     }
 
     @Test

@@ -5,6 +5,7 @@ import android.os.Build
 import android.provider.CallLog
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SenderProvenanceResolver
 import com.sysadmindoc.callshield.data.checker.CheckContext
@@ -23,6 +24,7 @@ import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.toSpamCheckResult
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
@@ -243,6 +245,19 @@ class SpamRepositoryImpl(
     ): SpamCheckResult {
         val normalized = normalizePhone(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
+
+        // A call from a number the user says never calls them is a spoof,
+        // whatever any allow says. Lookup and the number screen ask here
+        // too, so they show the same verdict the phone acts on. Texts don't.
+        if (smsBody == null && !EmergencyNumberFloor.isProtected(normalized)) {
+            dao.findInboundOnly(equivalentForms(normalized))?.let { mark ->
+                return SpamCheckResult(
+                    isSpam = true,
+                    matchSource = BlockReasonCode.INBOUND_ONLY.wireValue,
+                    description = mark.description,
+                )
+            }
+        }
 
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
         val ctx =

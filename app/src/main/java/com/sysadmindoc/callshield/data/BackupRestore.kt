@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.InboundOnlyNumber
 import com.sysadmindoc.callshield.data.model.ListNumberPlan
 import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -50,7 +51,9 @@ import java.util.UUID
  *   number, so the version stays 9. The settings block may also carry
  *   `externalBlocklists`, the subscribed lists without this phone's fetch
  *   state; an older reader ignores it, and a backup without it leaves the
- *   phone's lists alone.
+ *   phone's lists alone. The blocked-numbers section may also carry
+ *   `inboundOnlyNumbers`, the numbers the user says never call them; an
+ *   older reader ignores those too.
  *   The reader accepts v1-v9; the writer emits v9.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
@@ -103,6 +106,14 @@ object BackupRestore {
         val rangeRules: List<BackupRangeRule> = emptyList(),
         val settings: BackupSettings? = null,
         val logs: List<BackupLogEntry> = emptyList(),
+        /** Restored with [BackupSection.BLOCKED_NUMBERS]. */
+        val inboundOnlyNumbers: List<BackupInboundOnly> = emptyList(),
+    )
+
+    data class BackupInboundOnly(
+        val number: String,
+        val description: String = "",
+        val addedAt: Long? = null,
     )
 
     data class BackupNumber(
@@ -277,11 +288,13 @@ object BackupRestore {
         val rangeRules: List<BackupRangeRule> = emptyList(),
         val settings: BackupSettings? = null,
         val logs: List<BackupLogEntry> = emptyList(),
+        val inboundOnlyNumbers: List<BackupInboundOnly> = emptyList(),
     ) {
         val counts: RestoreCounts
             get() =
                 RestoreCounts(
-                    blockedNumbers = blockedNumbers.size,
+                    // A never-calls mark is a block for calls, so it counts with them.
+                    blockedNumbers = blockedNumbers.size + inboundOnlyNumbers.size,
                     whitelistNumbers = whitelistNumbers.size,
                     wildcardRules = wildcardRules.size,
                     keywordRules = keywordRules.size,
@@ -376,6 +389,12 @@ object BackupRestore {
             } else {
                 emptyList()
             }
+        val inboundOnly =
+            if (BackupSection.BLOCKED_NUMBERS in sections) {
+                dao.getInboundOnlyNumbers().map { BackupInboundOnly(it.number, it.description, it.addedAt) }
+            } else {
+                emptyList()
+            }
         val whitelist =
             if (BackupSection.WHITELIST in sections) {
                 dao.getAllWhitelist().first().map {
@@ -438,7 +457,7 @@ object BackupRestore {
                 null
             }
         val nonLogRows =
-            numbers.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
+            numbers.size + inboundOnly.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
                 if (settings != null) 1 else 0
         val logBudget = (rowCap - nonLogRows).coerceAtLeast(0)
         // Keep the export within the same row cap that restore enforces, so a
@@ -460,6 +479,7 @@ object BackupRestore {
             rangeRules = ranges,
             settings = settings,
             logs = logs,
+            inboundOnlyNumbers = inboundOnly,
         )
     }
 
@@ -848,6 +868,14 @@ object BackupRestore {
                         }
                     }
 
+                    // A mark already on this phone keeps its own note.
+                    for (m in payload.inboundOnlyNumbers) {
+                        if (repo.findInboundOnly(m.number) != null) continue
+                        if (repo.markInboundOnly(m.number, m.description, m.addedAt ?: System.currentTimeMillis()) != null) {
+                            numbersRestored++
+                        }
+                    }
+
                     for (w in payload.whitelistNumbers) {
                         val applied =
                             repo.addToWhitelist(
@@ -1016,6 +1044,7 @@ object BackupRestore {
         }
         if (
             backup.blockedNumbers.isEmpty() &&
+            backup.inboundOnlyNumbers.isEmpty() &&
             backup.whitelistNumbers.isEmpty() &&
             backup.wildcardRules.isEmpty() &&
             backup.keywordRules.isEmpty() &&
@@ -1054,6 +1083,7 @@ object BackupRestore {
 
     private fun Backup.rawItemCount(): Long =
         blockedNumbers.size.toLong() +
+            inboundOnlyNumbers.size +
             whitelistNumbers.size +
             wildcardRules.size +
             keywordRules.size +
@@ -1079,6 +1109,7 @@ object BackupRestore {
             rangeRules = if (BackupSection.RANGE_RULES in sections) rangeRules else emptyList(),
             settings = if (BackupSection.SETTINGS in sections) settings else null,
             logs = if (BackupSection.LOGS in sections) logs else emptyList(),
+            inboundOnlyNumbers = if (BackupSection.BLOCKED_NUMBERS in sections) inboundOnlyNumbers else emptyList(),
         )
 
     private fun Backup.toRestorePayload(
@@ -1089,6 +1120,12 @@ object BackupRestore {
             blockedNumbers =
                 if (BackupSection.BLOCKED_NUMBERS in sections) {
                     blockedNumbers.mapNotNull { it.sanitized(nowMillis) }
+                } else {
+                    emptyList()
+                },
+            inboundOnlyNumbers =
+                if (BackupSection.BLOCKED_NUMBERS in sections) {
+                    inboundOnlyNumbers.mapNotNull { it.sanitized() }
                 } else {
                     emptyList()
                 },
@@ -1195,6 +1232,13 @@ object BackupRestore {
         }
     }
 
+    /** A mark needs a full number, and an emergency line never takes one. */
+    private fun BackupInboundOnly.sanitized(): BackupInboundOnly? {
+        val normalizedNumber = normalizeImportedNumber(number) ?: return null
+        if (!InboundOnlyNumber.canMark(normalizedNumber) || EmergencyNumberFloor.isProtected(normalizedNumber)) return null
+        return copy(number = normalizedNumber, description = description.trim(), addedAt = addedAt?.takeIf { it > 0L })
+    }
+
     private fun BackupWhitelist.sanitized(nowMillis: Long): BackupWhitelist? {
         val normalizedNumber =
             if (expiresAt == null || expiresAt > nowMillis) normalizeImportedNumber(number) else null
@@ -1262,9 +1306,13 @@ object BackupRestore {
             }
         val existingLogs =
             if (payload.logs.isEmpty()) emptySet() else dao.getBlockedCallConflictKeysSync().toSet()
+        val existingInboundOnly =
+            if (payload.inboundOnlyNumbers.isEmpty()) emptySet() else dao.getInboundOnlyNumbers().map { it.number }.toSet()
 
         return RestoreCounts(
-            blockedNumbers = payload.blockedNumbers.count { it.number in existingBlocks || it.number in existingWhitelist },
+            blockedNumbers =
+                payload.blockedNumbers.count { it.number in existingBlocks || it.number in existingWhitelist } +
+                    payload.inboundOnlyNumbers.count { it.number in existingInboundOnly },
             whitelistNumbers = payload.whitelistNumbers.count { it.number in existingWhitelist || it.number in existingBlocks },
             wildcardRules = payload.wildcardRules.count { (it.pattern to it.isRegex) in existingWildcards },
             keywordRules = payload.keywordRules.count { (it.keyword to it.caseSensitive) in existingKeywords },
@@ -1281,6 +1329,7 @@ object BackupRestore {
         if (BackupSection.BLOCKED_NUMBERS in sections) {
             dao.clearUserBlockFlagsOnSyncedNumbers()
             dao.deleteUserOwnedBlockedNumbers()
+            dao.clearInboundOnly()
         }
         if (BackupSection.WHITELIST in sections) dao.clearWhitelist()
         if (BackupSection.WILDCARD_RULES in sections) dao.clearWildcardRules()

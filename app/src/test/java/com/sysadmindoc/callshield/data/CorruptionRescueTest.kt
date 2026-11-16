@@ -115,6 +115,17 @@ class CorruptionRescueTest {
         assertFalse(CorruptionRescue.isPending(context))
     }
 
+    @Test
+    fun `a number marked as never calling survives the rebuild`() {
+        runBlocking { damaged.repository.markInboundOnly("+12125550150", "card line", addedAt = 1_000L) }
+
+        CorruptionRescue.save(context, damaged.sqlite)
+        assertTrue(importIntoRebuilt())
+
+        val marks = runBlocking { rebuilt.dao.getInboundOnlyNumbers() }
+        assertEquals(listOf(Triple("+12125550150", "card line", 1_000L)), marks.map { Triple(it.number, it.description, it.addedAt) })
+    }
+
     private fun importIntoRebuilt() = runBlocking { CorruptionRescue.importPending(context, rebuilt.dao, rebuilt.repository) }
 
     private fun seedUserRows() =
