@@ -587,6 +587,26 @@ def assert_collapse_guard(data_dir: Path) -> None:
         if json.loads((data_dir / name).read_text(encoding="utf-8")).get("cleared") is not True:
             raise AssertionError(f"{name} lost its clear on the next quiet run")
 
+    # Staying empty after a published clear deletes nothing, so it doesn't need
+    # --allow-collapse, which would switch the guard off for every feed the run
+    # writes. Naming the feed is enough, and so is a run with neither flag.
+    run_script("extract_spam_domains.py", data_dir, ["--cleared", "domains"])
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    for name in ("hot_numbers.json", "hot_ranges.json", "spam_domains.json"):
+        if json.loads((data_dir / name).read_text(encoding="utf-8")).get("cleared") is not True:
+            raise AssertionError(f"{name} lost its clear on a quiet run without --allow-collapse")
+
+    # A feed with rows behind it still can't go empty in that kind of run. The
+    # cleared ranges feed doesn't carry the numbers feed through with it.
+    write_json(data_dir / "hot_numbers.json", previous_outputs["hot_numbers.json"])
+    hot_before = {name: (data_dir / name).read_bytes() for name in ("hot_numbers.json", "hot_ranges.json")}
+    if run_script_result("generate_hot_list.py", data_dir, ["--cleared", "ranges"]).returncode == 0:
+        raise AssertionError("--cleared ranges let the numbers feed collapse without --allow-collapse")
+    for name, original in hot_before.items():
+        if (data_dir / name).read_bytes() != original:
+            raise AssertionError(f"a refused collapse still replaced {name}")
+
     # A typo must fail loudly rather than quietly approving nothing.
     typo = run_script_result(
         "generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "rangez"]

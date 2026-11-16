@@ -203,7 +203,7 @@ python scripts/extract_spam_domains.py                     # trending spam domai
 # cleared=true as an outage (they retry every sync and Protection test warns), so
 # the generators refuse to write one. It's per feed on purpose: approving an
 # empty numbers feed must not wipe campaign ranges. A feed that was already
-# published empty and cleared stays cleared without being named again.
+# published empty and cleared can stay empty on a quiet day without either flag.
 python scripts/generate_hot_list.py --allow-collapse --cleared numbers,ranges
 python scripts/extract_spam_domains.py --allow-collapse --cleared domains
 

@@ -84,18 +84,28 @@ def ensure_feed_not_collapsed(
     protects a previously healthy artifact from a source outage or an ordering
     mistake. An explicit ``--allow-collapse`` is required to publish a known
     empty/small result.
+
+    An empty feed replacing one already published empty and cleared passes
+    without it: staying empty deletes nothing, and ``--allow-collapse`` would
+    switch the guard off for every other feed the run writes.
     """
     if allow_collapse:
         return
     current_count = _payload_count(payload, item_key)
     path = Path(path)
     previous_count = 0
+    previous_cleared = False
     if path.exists():
         try:
             with path.open(encoding="utf-8") as existing_file:
-                previous_count = _payload_count(json.load(existing_file), item_key)
+                previous = json.load(existing_file)
+            previous_count = _payload_count(previous, item_key)
         except (OSError, ValueError, FeedCollapseError) as error:
             raise FeedCollapseError(f"cannot safely replace unreadable feed {path}: {error}") from error
+        previous_cleared = previous.get("cleared") is True
+
+    if current_count == 0 and previous_count == 0 and previous_cleared:
+        return
 
     relative_floor = math.ceil(previous_count * previous_ratio)
     floor = max(absolute_floor, relative_floor)
