@@ -211,6 +211,8 @@ class RcsNotificationListenerTest {
                 context.getString(R.string.notif_phishing_app_text, "WhatsApp", "Dana", urlThreatLabels(context, listOf(PHISHING_LINK))),
                 phishingAlerts().single().extras.getString(Notification.EXTRA_TEXT),
             )
+            val bigText = phishingAlerts().single().extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
+            assertTrue(bigText, bigText.endsWith(context.getString(R.string.link_opened_title) + " " + context.getString(R.string.link_opened_steps)))
             assertEquals(listOf(true), onDeviceOnlyAsked.distinct())
             assertEquals(0, callLogRows())
         } finally {

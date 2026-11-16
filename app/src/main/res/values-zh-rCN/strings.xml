@@ -335,6 +335,8 @@
     <string name="lookup_message_clean_title">未发现可疑迹象</string>
     <string name="lookup_message_score">内容评分 %1$d，达到 %2$d 即标记短信。</string>
     <string name="lookup_message_dangerous_link">已知的%1$s链接：%2$s</string>
+    <string name="link_opened_title">已经打开了？</string>
+    <string name="link_opened_steps">不要在那个页面上输入任何内容。如果你在那里输入过密码，请立即修改。如果它问过你的银行或银行卡信息，请拨打银行卡背面的电话。</string>
     <string name="lookup_message_clean_body">CallShield 的规则均未匹配。新的诈骗仍可能绕过这些规则，请勿点击意料之外的链接。</string>
     <string name="lookup_message_below_bar">仅凭这些迹象还不足以标记短信。</string>
     <string name="lookup_phone_number">电话号码</string>

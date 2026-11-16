@@ -2,12 +2,16 @@ package com.sysadmindoc.callshield.ui.screens.lookup
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PastedMessageVerdict
+import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.remote.UrlThreatSource
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -24,9 +28,35 @@ class PastedMessageVerdictCardTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
 
-    private fun show(body: String) {
-        val verdict = PastedMessageVerdict.of(body, aggressive = false, dangerousLinks = emptyList())
+    private fun show(
+        body: String,
+        dangerousLinks: List<UrlSafetyChecker.UrlCheckResult> = emptyList(),
+    ) {
+        val verdict = PastedMessageVerdict.of(body, aggressive = false, dangerousLinks = dangerousLinks)
         composeRule.setContent { CallShieldTheme { PastedMessageVerdictCard(verdict) } }
+    }
+
+    @Test
+    fun `a dangerous link says what to do if it was already opened`() {
+        val link =
+            UrlSafetyChecker.UrlCheckResult(
+                url = "https://parcel-desk.example.invalid/a1",
+                isMalicious = true,
+                threat = "phishing",
+                source = UrlThreatSource.OPENPHISH,
+            )
+        show("Your parcel is held, pay the fee at https://parcel-desk.example.invalid/a1", listOf(link))
+
+        // A heading, so TalkBack's headings navigation lands on it.
+        composeRule.onNode(hasText(app.getString(R.string.link_opened_title)) and isHeading()).assertIsDisplayed()
+        composeRule.onNodeWithText(app.getString(R.string.link_opened_steps)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a text with no dangerous link has no already opened steps`() {
+        show("Your parcel is held. Dial *21*+12125550143# to release it")
+
+        assertEquals(0, composeRule.onAllNodesWithText(app.getString(R.string.link_opened_title)).fetchSemanticsNodes().size)
     }
 
     @Test

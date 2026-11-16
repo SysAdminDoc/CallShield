@@ -95,6 +95,10 @@ class SmsReceiverRobolectricTest {
         val text = notification.extras.getString(Notification.EXTRA_TEXT).orEmpty()
         assertTrue(text, text.contains(context.getString(com.sysadmindoc.callshield.R.string.url_threat_spam)))
         assertFalse(text, text.contains("known_spam_domain"))
+        // Expanded, it also says what to do if the link was already opened.
+        val bigText = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
+        assertTrue(bigText, bigText.contains(context.getString(com.sysadmindoc.callshield.R.string.link_opened_title)))
+        assertTrue(bigText, bigText.contains(context.getString(com.sysadmindoc.callshield.R.string.link_opened_steps)))
     }
 
     @Test

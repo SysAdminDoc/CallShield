@@ -255,6 +255,21 @@ internal fun PastedMessageVerdictCard(verdict: PastedMessageVerdict) {
                     tint = CatRed,
                 )
             }
+            if (verdict.dangerousLinks.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        stringResource(R.string.link_opened_title),
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = CatText,
+                    )
+                    Text(
+                        stringResource(R.string.link_opened_steps),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatText,
+                    )
+                }
+            }
             signals.forEach { signal ->
                 VerdictReasonRow(icon = Icons.Default.Flag, text = signalLabel(context, signal), tint = accent)
             }

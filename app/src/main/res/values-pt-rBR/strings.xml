@@ -437,6 +437,8 @@
     <string name="lookup_message_clean_title">Nenhum sinal de alerta encontrado</string>
     <string name="lookup_message_score">Pontuação do conteúdo: %1$d. SMS são sinalizados a partir de %2$d.</string>
     <string name="lookup_message_dangerous_link">Link de %1$s conhecido: %2$s</string>
+    <string name="link_opened_title">Já abriu o link?</string>
+    <string name="link_opened_steps">Não digite nada nessa página. Se você digitou uma senha lá, troque agora. Se ela pediu dados do banco ou do cartão, ligue para o número que está no verso do seu cartão.</string>
     <string name="lookup_message_clean_body">Nenhuma regra do CallShield correspondeu. Um golpe novo ainda pode passar, então não toque em um link que você não esperava.</string>
     <string name="lookup_message_below_bar">Esses sinais, sozinhos, não bastam para sinalizar um SMS.</string>
     <string name="lookup_phone_number">Número de telefone</string>

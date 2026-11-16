@@ -437,6 +437,8 @@
     <string name="lookup_message_clean_title">No se encontraron señales de alerta</string>
     <string name="lookup_message_score">Puntuación del contenido: %1$d. Los SMS se marcan a partir de %2$d.</string>
     <string name="lookup_message_dangerous_link">Enlace de %1$s conocido: %2$s</string>
+    <string name="link_opened_title">¿Ya lo abriste?</string>
+    <string name="link_opened_steps">No escribas nada en esa página. Si pusiste una contraseña ahí, cámbiala ahora. Si te pidió datos del banco o de la tarjeta, llama al número que aparece en el reverso de tu tarjeta.</string>
     <string name="lookup_message_clean_body">Ninguna regla de CallShield coincidió. Una estafa nueva aún puede pasar, así que no toques un enlace que no esperabas.</string>
     <string name="lookup_message_below_bar">Estas señales no bastan por sí solas para marcar un SMS.</string>
     <string name="lookup_phone_number">Número de teléfono</string>

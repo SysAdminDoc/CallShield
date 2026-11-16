@@ -862,6 +862,8 @@ object NotificationHelper {
                     context.getString(R.string.notif_phishing_app_big_text, sourceName, sender, threats),
                 )
             }
+        // The expanded alert also says what to do for someone who already tapped the link.
+        val alreadyOpened = context.getString(R.string.link_opened_title) + " " + context.getString(R.string.link_opened_steps)
 
         val builder =
             NotificationCompat
@@ -869,7 +871,7 @@ object NotificationHelper {
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_phishing_title))
                 .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(bigText + "\n\n" + alreadyOpened))
                 .setContentIntent(openIntent)
                 .setAutoCancel(true)
 

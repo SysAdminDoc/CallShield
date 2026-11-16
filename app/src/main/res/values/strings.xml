@@ -458,6 +458,9 @@
     <string name="lookup_message_score">Content score %1$d. Texts are flagged at %2$d.</string>
     <!-- %1$s is a kind of threat from url_threat_*, such as "phishing"; %2$s is the link. -->
     <string name="lookup_message_dangerous_link">Known %1$s link: %2$s</string>
+    <!-- Heading over the steps for someone who already opened a dangerous link. -->
+    <string name="link_opened_title">Already opened it?</string>
+    <string name="link_opened_steps">Don\'t type anything on that page. If you entered a password there, change it now. If it asked about your bank or card, call the number on the back of your card.</string>
     <string name="lookup_message_clean_body">None of CallShield\'s rules matched. A new scam can still get past them, so don\'t tap a link you weren\'t expecting.</string>
     <string name="lookup_message_below_bar">These signs aren\'t enough to flag a text on their own.</string>
     <string name="lookup_phone_number">Phone number</string>
