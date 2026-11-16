@@ -914,6 +914,27 @@ private object SmsDisguises {
     }
 }
 
+/** Undoes the TSV escaping the sampler scripts write: a backslash before t, n, r or itself. */
+private fun unescapeTsvField(field: String): String =
+    buildString {
+        var i = 0
+        while (i < field.length) {
+            val c = field[i]
+            if (c == '\\' && i + 1 < field.length) {
+                when (val next = field[i + 1]) {
+                    't' -> append('\t')
+                    'n' -> append('\n')
+                    'r' -> append('\r')
+                    else -> append(next)
+                }
+                i += 2
+            } else {
+                append(c)
+                i++
+            }
+        }
+    }
+
 /**
  * A stratified sample of the IMC 2025 smishing reports (Agarwal, Papasavva,
  * Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0), drawn by
@@ -1045,31 +1066,11 @@ private object Imc25Sample {
         val lines = stream.bufferedReader(Charsets.UTF_8).use { it.readLines() }
         check(lines.first() == HEADER) { "unexpected header ${lines.first()}" }
         return lines.drop(1).filter(String::isNotEmpty).map { line ->
-            val fields = line.split('\t').map(::unescape)
+            val fields = line.split('\t').map(::unescapeTsvField)
             check(fields.size == 6) { "row has ${fields.size} fields: $line" }
             Row(fields[0].toInt(), fields[1], fields[2], fields[3], fields[4], fields[5])
         }
     }
-
-    private fun unescape(field: String): String =
-        buildString {
-            var i = 0
-            while (i < field.length) {
-                val c = field[i]
-                if (c == '\\' && i + 1 < field.length) {
-                    when (val next = field[i + 1]) {
-                        't' -> append('\t')
-                        'n' -> append('\n')
-                        'r' -> append('\r')
-                        else -> append(next)
-                    }
-                    i += 2
-                } else {
-                    append(c)
-                    i++
-                }
-            }
-        }
 
     fun reportLanguage(tag: String): String = if (rows.count { it.languageTag == tag } >= MIN_LANGUAGE_ROWS) tag else OTHER
 
@@ -1148,6 +1149,115 @@ private data class Imc25Report(
         append(" precision=").append(if (clean == 0) "n/a" else metrics.precision?.let(::format4) ?: "n/a")
         append(" fpr=").appendLine(if (clean == 0) "n/a" else format4(metrics.falsePositiveRate))
     }
+
+    private fun format4(value: Double): String = String.format(Locale.ROOT, "%.4f", value)
+}
+
+/**
+ * Mishra and Soni's SMS Phishing Dataset (Mendeley Data V1, 2022, CC BY 4.0),
+ * written out by scripts/sample_mendeley_sms_corpus.py. It comes from a
+ * different collection than the IMC 2025 sample, and most of its spam is UK
+ * prize and ringtone texts from 2003 to 2012, so recall here says whether the
+ * rules hold up on scams they weren't written against. Its clean texts are
+ * real messages, which the hand-written clean set isn't. No rule was tuned on
+ * it. Keep it that way, or tune on even rows only as with the IMC sample.
+ * See sms-corpus/MENDELEY-NOTICE.txt.
+ */
+private object MendeleySmsSet {
+    data class Row(
+        val row: Int,
+        val label: String,
+        val text: String,
+    ) {
+        /** The source already had placeholders such as <#> where it dropped a number. */
+        val body: String
+            get() = PLACEHOLDER.replace(text) { match -> STAND_INS.getValue(match.groupValues[1]) }
+    }
+
+    const val HAM = "ham"
+    const val SMISHING = "smishing"
+    const val SPAM = "spam"
+    private const val RESOURCE = "sms-corpus/mendeley-sms.tsv"
+    private const val HEADER = "row\tlabel\ttext"
+    private val PLACEHOLDER = Regex("<(#|DECIMAL|TIME|URL|UKP|EMAIL)>")
+    private val STAND_INS =
+        mapOf(
+            "#" to "2",
+            "DECIMAL" to "2.5",
+            "TIME" to "3:30",
+            "URL" to "https://example.com/a1B2c3",
+            "UKP" to "£",
+            "EMAIL" to "someone@example.com",
+        )
+
+    /** Recall each label kept when the set landed (2026-11-16), before any rule read it. A floor only moves up. */
+    val recallFloors =
+        mapOf(
+            SMISHING to 0.38,
+            SPAM to 0.14,
+        )
+
+    /** Clean texts flagged when the set landed. The ceiling only moves down. */
+    const val MAX_CLEAN_FLAGGED = 28
+
+    val rows: List<Row> by lazy(::load)
+
+    private fun load(): List<Row> {
+        val stream = requireNotNull(MendeleySmsSet::class.java.classLoader?.getResourceAsStream(RESOURCE)) { "$RESOURCE is missing" }
+        val lines = stream.bufferedReader(Charsets.UTF_8).use { it.readLines() }
+        check(lines.first() == HEADER) { "unexpected header ${lines.first()}" }
+        return lines.drop(1).filter(String::isNotEmpty).map { line ->
+            val fields = line.split('\t').map(::unescapeTsvField)
+            check(fields.size == 3) { "row has ${fields.size} fields: $line" }
+            check(fields[1] in setOf(HAM, SMISHING, SPAM)) { "row ${fields[0]} has label ${fields[1]}" }
+            Row(fields[0].toInt(), fields[1], fields[2])
+        }
+    }
+
+    fun evaluate(analyzer: SmsContentAnalyzer = SmsContentAnalyzer()): MendeleyReport {
+        // The set doesn't say who sent each text, so none is scored as a stranger's first text.
+        val flagged = rows.filter { analyzer.analyze(it.body, firstContact = false).score >= SmsEvaluationCorpus.SCORE_THRESHOLD }.toSet()
+        val clean = rows.filter { it.label == HAM }
+        val cleanFlagged = clean.filter { it in flagged }
+
+        fun metrics(label: String): SmsCorpusMetrics {
+            val scams = rows.filter { it.label == label }
+            val caught = scams.count { it in flagged }
+            return SmsCorpusMetrics(
+                examples = scams.size + clean.size,
+                actualPositives = scams.size,
+                predictedPositives = caught + cleanFlagged.size,
+                truePositives = caught,
+                falsePositives = cleanFlagged.size,
+                trueNegatives = clean.size - cleanFlagged.size,
+                falseNegatives = scams.size - caught,
+            )
+        }
+
+        return MendeleyReport(
+            byLabel = mapOf(SMISHING to metrics(SMISHING), SPAM to metrics(SPAM)),
+            clean = clean.size,
+            cleanFlaggedRows = cleanFlagged.map(Row::row),
+        )
+    }
+}
+
+private data class MendeleyReport(
+    val byLabel: Map<String, SmsCorpusMetrics>,
+    val clean: Int,
+    val cleanFlaggedRows: List<Int>,
+) {
+    fun format(): String =
+        buildString {
+            appendLine("Mendeley SMS set, ${byLabel.values.sumOf { it.actualPositives }} scam texts and $clean clean")
+            byLabel.forEach { (label, metrics) ->
+                append(label).append(" texts=").append(metrics.actualPositives)
+                append(" recall=").appendLine(metrics.recall?.let(::format4) ?: "n/a")
+            }
+            append("clean flagged=").append(cleanFlaggedRows.size).append(" of ").append(clean)
+            append(" fpr=").append(format4(cleanFlaggedRows.size.toDouble() / clean.coerceAtLeast(1)))
+            appendLine(" rows=${cleanFlaggedRows.joinToString(",")}")
+        }
 
     private fun format4(value: Double): String = String.format(Locale.ROOT, "%.4f", value)
 }
@@ -1320,5 +1430,41 @@ class SmsEvaluationCorpusTest {
         listOf("CC BY 4.0", "Agarwal", "a6175560b57387199871e51fbef6bc523d2516b4", "10.1145/3730567.3764431").forEach {
             assertTrue(it, it in notice)
         }
+    }
+
+    @Test
+    fun `both smishing sets report recall beside the clean texts flagged`() {
+        val report = MendeleySmsSet.evaluate()
+        val imc = Imc25Sample.evaluate()
+        val handWrittenClean = SmsEvaluationCorpus.examples.count { !it.expectedSpam }
+        println(report.format())
+        println("--- both smishing sets ---")
+        println("IMC 2025 recall=${imc.all.recall} of ${imc.all.actualPositives} reports")
+        report.byLabel.forEach { (label, metrics) -> println("Mendeley $label recall=${metrics.recall} of ${metrics.actualPositives}") }
+        println(
+            "clean flagged: hand-written ${SmsEvaluationCorpus.evaluate().falseAlarms.size} of $handWrittenClean, " +
+                "Mendeley ${report.cleanFlaggedRows.size} of ${report.clean}",
+        )
+
+        val counts = MendeleySmsSet.rows.groupingBy { it.label }.eachCount()
+        assertTrue("$counts", (counts[MendeleySmsSet.HAM] ?: 0) >= 4_000)
+        assertTrue("$counts", (counts[MendeleySmsSet.SMISHING] ?: 0) >= 500)
+        assertTrue("$counts", (counts[MendeleySmsSet.SPAM] ?: 0) >= 400)
+        assertEquals(
+            "texts are distinct",
+            MendeleySmsSet.rows.size,
+            MendeleySmsSet.rows
+                .map { it.text }
+                .toSet()
+                .size,
+        )
+        MendeleySmsSet.recallFloors.forEach { (label, floor) ->
+            val recall = requireNotNull(report.byLabel.getValue(label).recall)
+            assertTrue("$label recall $recall fell below its floor $floor", recall >= floor)
+        }
+        assertTrue(
+            "${report.cleanFlaggedRows.size} clean texts flagged, over the ceiling ${MendeleySmsSet.MAX_CLEAN_FLAGGED}: rows ${report.cleanFlaggedRows}",
+            report.cleanFlaggedRows.size <= MendeleySmsSet.MAX_CLEAN_FLAGGED,
+        )
     }
 }

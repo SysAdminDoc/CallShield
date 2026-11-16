@@ -1,0 +1,26 @@
+Mendeley SMS phishing set (mendeley-sms.tsv)
+
+mendeley-sms.tsv holds 5,831 texts from the dataset published as:
+
+  Sandhya Mishra and Devpriya Soni. SMS Phishing Dataset for Machine
+  Learning and Pattern Recognition. Mendeley Data, V1, 2022.
+  https://doi.org/10.17632/f45bkkt8pr.1
+
+Source: https://data.mendeley.com/datasets/f45bkkt8pr/1
+  Dataset_5971.zip (file edb361de-918d-469f-9106-e84823830665)
+  SHA-256 9bbf3188fdad81495d8e82825648b9b63b53fc86841a3d26c02629990b233cc3
+
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://creativecommons.org/licenses/by/4.0/
+The rest of CallShield's code and data keep their own licenses. This license
+covers only mendeley-sms.tsv.
+
+Changes: scripts/sample_mendeley_sms_corpus.py kept three fields (row number,
+label and message text) and one row per distinct text, trimmed of spaces and
+tabs at either end. Labels were folded to lower case, and the 34 texts filed
+as both smishing and spam kept the smishing label. HTML entities such as
+&lt;#&gt; were decoded. In clean texts, runs of seven or more digits became 555
+numbers of the same length, since those can be people's own numbers. Nothing
+else in the text was changed. SmsEvaluationCorpusTest swaps the placeholders
+the source already had, such as <#> and <TIME>, for neutral stand-ins when it
+reads a row.
