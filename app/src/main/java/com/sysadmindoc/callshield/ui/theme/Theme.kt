@@ -161,7 +161,9 @@ private val AmoledPalette =
         teal = Color(0xFF94E2D5),
         lavender = Color(0xFFB4BEFE),
         text = Color(0xFFF2F3F0),
-        subtext = Color(0xFFB2C0C2),
+        // AA on a row tinted 12% green under Material 3's 10% focus layer, on
+        // every surface (the previous #B2C0C2 fell to 4.0:1 on surfaceElevated).
+        subtext = Color(0xFFC1CCCE),
         // Secondary body text. Chosen so it clears WCAG AA (4.5:1) against
         // every surface in this palette, including surfaceElevated — the
         // previous value only reached 3.90:1 there.
@@ -187,7 +189,9 @@ private val GraphitePalette =
         teal = Color(0xFF82CEC7),
         lavender = Color(0xFFABB9FF),
         text = Color(0xFFF3F6F8),
-        subtext = Color(0xFFB1BBC5),
+        // AA on a row tinted 12% green under Material 3's 10% focus layer, on
+        // every surface (the previous #B1BBC5 fell to 3.8:1 on surfaceElevated).
+        subtext = Color(0xFFC5CDD4),
         // AA against surfaceElevated too (was 3.60:1).
         overlay = Color(0xFF939FAC),
         muted = Color(0xFF333D48),
@@ -214,7 +218,9 @@ private val LightPalette =
         teal = Color(0xFF126B66),
         lavender = Color(0xFF4E5F9E),
         text = Color(0xFF0A1932),
-        subtext = Color(0xFF536176),
+        // AA on a row tinted 12% green under Material 3's 10% focus layer (the
+        // previous #536176 fell to 3.7:1 there, 4.4:1 on plain surfaceBright).
+        subtext = Color(0xFF475365),
         // AA on surfaceBright under the 3% tint muted rows use (the previous
         // value reached only 4.29:1 on plain surfaceBright).
         overlay = Color(0xFF5B697A),

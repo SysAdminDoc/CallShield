@@ -91,6 +91,24 @@ class AppThemeModeTest {
     }
 
     @Test
+    fun `secondary text keeps AA on a focused row in every theme`() {
+        listOf(AppThemeMode.Light, AppThemeMode.Graphite, AppThemeMode.Amoled).forEach { mode ->
+            val palette = paletteFor(mode, systemDark = false)
+            val surfaces =
+                listOf(palette.background, palette.surface, palette.surfaceVariant, palette.surfaceBright, palette.surfaceElevated)
+            surfaces.forEachIndexed { index, surface ->
+                // A picked row tints up to 12% green (the Rules list; contact groups use 10%).
+                listOf(surface, palette.primary.copy(alpha = 0.12f).compositeOver(surface)).forEach { row ->
+                    // Material 3 draws keyboard focus as a 10% layer of the content color.
+                    val focused = palette.text.copy(alpha = 0.10f).compositeOver(row)
+                    val ratio = contrastRatio(palette.subtext, focused)
+                    assertTrue("$mode subtext on a focused row over surface #$index: $ratio", ratio >= 4.5f)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `text on the heavier accent tints keeps AA in every theme`() {
         listOf(AppThemeMode.Light, AppThemeMode.Graphite, AppThemeMode.Amoled).forEach { mode ->
             val palette = paletteFor(mode, systemDark = false)
