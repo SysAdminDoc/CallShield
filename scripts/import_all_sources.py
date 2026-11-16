@@ -82,10 +82,19 @@ FTC_PAGE_SIZE = 50
 # arrived between runs beyond the budget is skipped.
 FTC_DEMO_KEY = "DEMO_KEY"
 FTC_DEMO_KEY_REQUEST_BUDGET = 8
-# The budget is shared with anything else on this address, so a keyless run
-# also stops once X-Ratelimit-Remaining says this many are left. A run that
-# ran into a 429 instead recorded nothing and read as a failed import.
-FTC_DEMO_KEY_SPARE_REQUESTS = 2
+# A run stops once X-Ratelimit-Remaining says this many are left. DEMO_KEY's
+# budget is shared with anything else on this address, and a key of its own
+# has an hourly limit (api.data.gov gives new keys 1,000). A run that ran into
+# a 429 instead recorded nothing and read as a failed import.
+FTC_SPARE_REQUESTS = 2
+# A key of its own reads forward from its cursor until the window is empty.
+# Capped at 5,000 records, a run read about 14 hours of complaints (FTC
+# publishes about 8,600 a day), so the cursor fell further behind every run:
+# 2026-10-28, 10-29, 10-30 while the newest record stood at 11-12, and the
+# liveness check flagged FTC as stale. This ceiling only bounds one run, at
+# 5,000 requests. A run that reaches it keeps its place and the next resumes.
+FTC_KEYED_MAX_RECORDS = 250_000
+FTC_PROGRESS_EVERY = 10_000
 FCC_PAGE_SIZE = 5000
 SOURCE_CURSOR_SCHEMA_VERSION = 1
 RETRYABLE_STATUS_CODES = {403, 429}
@@ -347,7 +356,7 @@ def ftc_api_key() -> str:
 
 
 def fetch_ftc(
-    max_records: int = 5000,
+    max_records: int = FTC_KEYED_MAX_RECORDS,
     cursor: dict[str, str] | None = None,
     api_key: str | None = None,
 ) -> SourceFetchResult:
@@ -460,11 +469,19 @@ def fetch_ftc(
         if len(records) < page_size:
             break
         if records_fetched >= max_records:
+            if not newest_first:
+                print(
+                    f"  Stopped at the {max_records:,}-record ceiling before the window was empty; "
+                    "the next run resumes from here"
+                )
             break
         remaining = str((getattr(response, "headers", None) or {}).get("X-Ratelimit-Remaining", "")).strip()
-        if key == FTC_DEMO_KEY and remaining.isdigit() and int(remaining) <= FTC_DEMO_KEY_SPARE_REQUESTS:
-            print(f"  DEMO_KEY has {remaining} requests left today; stopping at {records_fetched:,} records")
+        if remaining.isdigit() and int(remaining) <= FTC_SPARE_REQUESTS:
+            label = "DEMO_KEY" if key == FTC_DEMO_KEY else "The FTC key"
+            print(f"  {label} has {remaining} requests left; stopping at {records_fetched:,} records")
             break
+        if records_fetched % FTC_PROGRESS_EVERY < len(records):
+            print(f"  ...{records_fetched:,} records read")
         time.sleep(0.5)
 
     next_cursor = _max_cursor(
@@ -1187,8 +1204,8 @@ def main():
     cursors = load_source_cursors()
     next_cursors = dict(cursors)
 
-    ftc = fetch_ftc(  # FTC API is slow; bulk is via CSV
-        max_records=min(args.max, 5000),
+    ftc = fetch_ftc(
+        max_records=min(args.max, FTC_KEYED_MAX_RECORDS),
         cursor=cursors.get("ftc_complaints"),
     )
     attach_source_evidence(ftc, manifest, "ftc_complaints", retrieved_at=retrieved_at)

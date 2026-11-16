@@ -291,11 +291,14 @@ def test_keyless_ftc_run_stops_before_the_shared_budget_runs_out():
         assert len(requests_seen) == 4, len(requests_seen)
         assert len(result) == 4 * module.FTC_PAGE_SIZE
 
-        # A key of its own isn't stopped by the shared budget's header.
+        # A key of its own has an hourly limit too. A keyed run that ran into it
+        # failed on the 429 and threw away everything it had read.
         remaining = iter(range(5, -1, -1))
         requests_seen.clear()
-        module.fetch_ftc(max_records=300, api_key="a-key-of-its-own")
-        assert len(requests_seen) == 6, len(requests_seen)
+        result = module.fetch_ftc(max_records=300, api_key="a-key-of-its-own")
+        assert result.complete, result.error
+        assert len(requests_seen) == 4, len(requests_seen)
+        assert result.cursor is not None
     finally:
         module.requests.get = original_get
         module.time.sleep = original_sleep
@@ -581,6 +584,73 @@ def test_ftc_demo_key_run_stays_inside_the_hourly_budget():
         module.time.sleep = original_sleep
 
 
+def _ftc_window_server(total, requests_seen):
+    """Fake api.ftc.gov holding `total` complaints, one a minute from 2026-11-01."""
+
+    def created(n):
+        return f"2026-11-{1 + n // 1440:02d}T{n // 60 % 24:02d}:{n % 60:02d}:00Z"
+
+    rows = [
+        {"id": f"ftc-{n:06d}", "attributes": {"created-date": created(n),
+                                             "company-phone-number": f"+1212558{n % 10000:04d}",
+                                             "subject": "Robocall"}}
+        for n in range(total)
+    ]
+
+    def fake_get(url, **kwargs):
+        params = kwargs["params"]
+        requests_seen.append(params)
+        lower = params.get("created_date_from", '""').strip('"')
+        window = [row for row in rows if row["attributes"]["created-date"] >= lower]
+        if params["sort_order"] == "desc":
+            window.reverse()
+        page = window[params["offset"]:params["offset"] + params["items_per_page"]]
+        return FakeResponse({"data": page}, headers={"X-Ratelimit-Remaining": "19000"})
+
+    return fake_get, rows
+
+
+def test_keyed_ftc_run_reads_its_whole_backlog():
+    # Capped at 5,000 records, a keyed run read about 14 hours of the 8,600
+    # complaints FTC publishes a day, so its cursor went 2026-10-28, 10-29,
+    # 10-30 while the newest record stood at 11-12, and liveness flagged FTC.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    try:
+        fake_get, rows = _ftc_window_server(12_000, requests_seen)
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+        cursor = {"timestamp": rows[0]["attributes"]["created-date"], "id": rows[0]["id"]}
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            result = module.fetch_ftc(cursor=cursor, api_key="a-key-of-its-own")
+
+        assert result.complete, result.error
+        assert {params["sort_order"] for params in requests_seen} == {"asc"}
+        newest = rows[-1]
+        assert result.cursor == {"timestamp": newest["attributes"]["created-date"], "id": newest["id"]}, result.cursor
+        assert module._fetch_stats(result, "2026-11-15T00:00:00+00:00")["newest_record_date"] == "2026-11-09"
+        assert sum(entry["reports"] for entry in result) == len(rows) - 1
+
+        # The run ceiling bounds one run without skipping anything: the next
+        # run picks up right after the last record the first one read.
+        requests_seen.clear()
+        with contextlib.redirect_stdout(io.StringIO()):
+            first = module.fetch_ftc(max_records=500, cursor=cursor, api_key="a-key-of-its-own")
+            second = module.fetch_ftc(max_records=500, cursor=first.cursor, api_key="a-key-of-its-own")
+        # Each window starts with the cursor's own record again (the lower bound
+        # is inclusive), which counts toward the 500 but isn't kept.
+        assert first.cursor == {"timestamp": rows[499]["attributes"]["created-date"], "id": rows[499]["id"]}, first.cursor
+        assert second.cursor["id"] == rows[998]["id"], second.cursor
+        kept = [entry["number"] for run in (first, second) for entry in run for _ in range(entry["reports"])]
+        assert sorted(kept) == sorted(row["attributes"]["company-phone-number"] for row in rows[1:999])
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
 def test_merge_summary_counts_only_numbers_that_stayed():
     # The 2026-09-25 refresh printed "Added: 294,619" while the total stood
     # still: every one of them was a single uncorroborated complaint that the
@@ -637,6 +707,7 @@ def main():
     test_import_moves_old_evidence_onto_the_manifest_lifetime()
     test_new_complaints_require_independent_caller_corroboration()
     test_ftc_demo_key_run_stays_inside_the_hourly_budget()
+    test_keyed_ftc_run_reads_its_whole_backlog()
     test_merge_summary_counts_only_numbers_that_stayed()
     print("incremental source tests: OK")
 
