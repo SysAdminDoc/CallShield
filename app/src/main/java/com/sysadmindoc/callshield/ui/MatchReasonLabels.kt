@@ -312,7 +312,7 @@ fun blockReasonAccessibilityLabelRes(
 
             BlockReasonCode.HOT_LIST -> R.string.accessibility_message_reason_recent_reports
 
-            BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.accessibility_message_reason_user_rule
+            BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK, BlockReasonCode.INBOUND_ONLY -> R.string.accessibility_message_reason_user_rule
 
             BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.accessibility_message_reason_saved_pattern
 
