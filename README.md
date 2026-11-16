@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C512-f38ba8?style=flat-square" alt="51,512 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2243-94e2d5?style=flat-square" alt="2243 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2253-94e2d5?style=flat-square" alt="2253 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -185,7 +185,7 @@ SMS-specific layers run after the shared chain, in their own priority order: **S
 - **Codes during unknown calls**. When a one-time code arrives during a call from someone who isn't in your contacts, or in the 10 minutes after it, CallShield warns you not to read it out. Bank imposters ask for exactly that code. It warns once per call and never for a contact or a number you've allowed. Silenced calls and calls that rang without a check count too, because you can still pick them up.
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. So is a number that showed up in a text CallShield flagged as spam in the last 30 days. The notification names the day that text came in, since "call us back" scams pair a fake text with the number to call. Marking the sender Not spam lets those numbers ring again. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
-- **Answer & hang up**. Opt-in. A call CallShield would reject is answered without video and hung up after a delay you set (1 to 10 seconds), so spam can't leave a voicemail. Silent voicemail mode, auto-mute and a meeting-mode silence still go to voicemail, and the short answered call never counts toward trusting the caller. Contributed by tikkamasalla
+- **Answer & hang up**. Opt-in. A call CallShield would reject is answered without video and hung up after a delay you set (1 to 10 seconds), so spam can't leave a voicemail. Your microphone stays muted while it's connected, and a second spam call that comes in during that delay gets the same treatment right after. Silent voicemail mode, auto-mute and a meeting-mode silence still go to voicemail, and the short answered call never counts toward trusting the caller. Contributed by tikkamasalla
 - **How rejected calls show up**. In Settings under When a call is blocked, pick Rejected (the default), Missed or Quiet. Quiet turns off the phone's missed-call alert for calls CallShield rejects, and the call still shows in your call log and the blocked log. Missed logs the call as missed instead of rejected on Android versions that support it (API 37.2) and stays rejected on older ones. Silent voicemail mode ignores it, since those calls still ring through.
 - **After-Call Feedback**. "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report, call-back and save-contact actions
 
@@ -605,12 +605,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2243 tests
+./gradlew testDebugUnitTest   # 2253 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2243 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2253 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -647,7 +647,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2243 JVM unit tests (JUnit) |
+| Tests | 2253 JVM unit tests (JUnit) |
 | Strings | 1860 string resources and 57 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

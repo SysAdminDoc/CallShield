@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.service
 
 import android.content.Intent
+import android.media.AudioManager
 import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
@@ -17,15 +18,19 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class AnswerHangUpControllerTest {
     private lateinit var clock: FakeClock
+    private lateinit var events: MutableList<String>
     private lateinit var callControl: FakeCallControl
+    private lateinit var microphone: FakeMicrophone
     private lateinit var scheduler: FakeScheduler
 
     @Before
     fun setUp() {
         clock = FakeClock()
-        callControl = FakeCallControl()
+        events = mutableListOf()
+        callControl = FakeCallControl(events)
+        microphone = FakeMicrophone(events)
         scheduler = FakeScheduler(clock)
-        AnswerHangUpController.setTestDependencies(clock::now, callControl, scheduler)
+        AnswerHangUpController.setTestDependencies(clock::now, callControl, scheduler, microphone)
     }
 
     @After
@@ -305,6 +310,204 @@ class AnswerHangUpControllerTest {
     }
 
     @Test
+    fun `a second spam call during the delay is answered and hung up after the first`() {
+        connect("5551234567", 5)
+        scheduler.advanceBy(1_000)
+
+        // The second call reaches screening while the first is connected. The phone still
+        // reads as on a call while the first one disconnects, and that call doesn't count.
+        AnswerHangUpController.onIncomingScreeningStarted()
+        assertTrue(AnswerHangUpController.isHandingOff())
+        assertFalse(
+            CallShieldScreeningService.answerHangUpBusy(
+                controllerBusy = AnswerHangUpController.isBusy(),
+                handingOff = AnswerHangUpController.isHandingOff(),
+                telephonyOffhook = true,
+                audioInCall = true,
+            ),
+        )
+        arm("5557654321", 2)
+        assertFalse(AnswerHangUpController.isHandingOff())
+
+        // The first call going idle must not drop the second one's arm.
+        callControl.currentState = TelephonyManager.CALL_STATE_IDLE
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertEquals(AnswerHangUpController.Phase.ARMED, AnswerHangUpController.phaseForTest())
+
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, "5557654321")
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_OFFHOOK, "5557654321")
+        callControl.currentState = TelephonyManager.CALL_STATE_OFFHOOK
+        repeat(7) { scheduler.advanceBy(250) }
+        assertEquals(1, callControl.endCalls)
+        scheduler.advanceBy(250)
+
+        assertEquals(listOf("accept", "mute", "end", "unmute", "accept", "mute", "end", "unmute"), events)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+    }
+
+    @Test
+    fun `a caller who hangs up first cancels only their own hang-up`() {
+        // An arm with no call ahead of it goes when the line goes idle.
+        arm("5551234567", 1)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+
+        // Behind a handed-off call, only the first caller is gone when the line first goes idle.
+        connect("5551234567", 5)
+        AnswerHangUpController.onIncomingScreeningStarted()
+        arm("5557654321", 2)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertEquals(AnswerHangUpController.Phase.ARMED, AnswerHangUpController.phaseForTest())
+
+        // The second caller gives up once their call has rung: their arm goes and nothing
+        // else is ended.
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, null, hasIncomingNumber = false)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+        assertEquals(1, callControl.audioOnlyAcceptCalls)
+        assertEquals(1, callControl.endCalls)
+    }
+
+    @Test
+    fun `the handoff ends with its window, the next screening or an outgoing call`() {
+        connect("5551234567", 5)
+        AnswerHangUpController.onIncomingScreeningStarted()
+        assertTrue(AnswerHangUpController.isHandingOff())
+        clock.advanceBy(5_000)
+        assertFalse(AnswerHangUpController.isHandingOff())
+
+        connect("5551234567", 5)
+        AnswerHangUpController.onIncomingScreeningStarted()
+        AnswerHangUpController.onIncomingScreeningStarted()
+        assertFalse(AnswerHangUpController.isHandingOff())
+
+        connect("5551234567", 5)
+        AnswerHangUpController.onIncomingScreeningStarted()
+        AnswerHangUpController.onOutgoingCallStarted()
+        assertFalse(AnswerHangUpController.isHandingOff())
+    }
+
+    @Test
+    fun `the microphone is muted only while the spam call is connected`() {
+        arm("5551234567", 1)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, "5551234567")
+        // Telecom unmutes a call as it's answered, so the mute waits for offhook.
+        assertFalse(microphone.micMuted)
+
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_OFFHOOK, "5551234567")
+        callControl.currentState = TelephonyManager.CALL_STATE_OFFHOOK
+        assertTrue(microphone.micMuted)
+        assertTrue(microphone.heldMute)
+
+        repeat(4) { scheduler.advanceBy(250) }
+
+        assertEquals(listOf("accept", "mute", "end", "unmute"), events)
+        assertFalse(microphone.micMuted)
+        assertFalse(microphone.heldMute)
+    }
+
+    @Test
+    fun `a microphone something else muted is left as it was`() {
+        microphone.micMuted = true
+
+        connect("5551234567", 1)
+        repeat(4) { scheduler.advanceBy(250) }
+
+        assertEquals(listOf("accept", "end"), events)
+        assertTrue(microphone.micMuted)
+    }
+
+    @Test
+    fun `every way out of the call puts the microphone back`() {
+        val exits =
+            listOf<Pair<String, () -> Unit>>(
+                "caller hung up" to {
+                    callControl.currentState = TelephonyManager.CALL_STATE_IDLE
+                    scheduler.advanceBy(250)
+                },
+                "outgoing call" to { AnswerHangUpController.onOutgoingCallStarted() },
+                "next screening" to { AnswerHangUpController.onIncomingScreeningStarted() },
+                "state unreadable" to {
+                    callControl.throwOnStateRead = true
+                    scheduler.advanceBy(250)
+                },
+            )
+        for ((name, exit) in exits) {
+            connect("5551234567", 5)
+            assertTrue(name, microphone.micMuted)
+
+            exit()
+
+            assertFalse(name, AnswerHangUpController.hasPendingCall())
+            assertFalse(name, microphone.micMuted)
+            assertFalse(name, microphone.heldMute)
+        }
+    }
+
+    @Test
+    fun `a spam call left connected for a waiting call stays muted until the line is idle`() {
+        connect("5551234567", 5)
+        callControl.currentState = TelephonyManager.CALL_STATE_RINGING
+        scheduler.advanceBy(250)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+        assertTrue(microphone.micMuted)
+        assertTrue(AnswerHangUpController.wantsPhoneState())
+
+        // An idle broadcast the phone has moved past changes nothing.
+        callControl.currentState = TelephonyManager.CALL_STATE_OFFHOOK
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertTrue(microphone.micMuted)
+
+        callControl.currentState = TelephonyManager.CALL_STATE_IDLE
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_IDLE, null)
+        assertFalse(microphone.micMuted)
+        assertFalse(AnswerHangUpController.wantsPhoneState())
+        assertEquals(0, callControl.endCalls)
+    }
+
+    @Test
+    fun `a new screening while an unscreened call rings leaves the spam call to its caller`() {
+        connect("5551234567", 5)
+        callControl.currentState = TelephonyManager.CALL_STATE_RINGING
+
+        AnswerHangUpController.onIncomingScreeningStarted()
+
+        assertEquals(0, callControl.endCalls)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+        assertFalse(AnswerHangUpController.isHandingOff())
+        assertTrue(microphone.micMuted)
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun `a mute left by a process that died is undone on the next idle broadcast`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val audioManager = context.getSystemService(AudioManager::class.java)
+        val record = context.getSharedPreferences("answer_hang_up", android.content.Context.MODE_PRIVATE)
+        AnswerHangUpController.configure(context)
+        AnswerHangUpController.setTestDependencies(clock::now, callControl, scheduler)
+        connect("5551234567", 5)
+        assertTrue(audioManager.isMicrophoneMute)
+        assertTrue(record.getBoolean("mic_muted", false))
+
+        // The process dies mid-call; a new one starts for the idle broadcast.
+        AnswerHangUpController.resetForTest()
+        callControl = FakeCallControl(events).apply { currentState = TelephonyManager.CALL_STATE_IDLE }
+        AnswerHangUpController.setTestDependencies(clock::now, callControl, scheduler)
+        assertTrue(audioManager.isMicrophoneMute)
+
+        AnswerHangUpReceiver().onReceive(
+            context,
+            Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED).apply {
+                putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_IDLE)
+            },
+        )
+
+        assertFalse(audioManager.isMicrophoneMute)
+        assertFalse(record.getBoolean("mic_muted", false))
+    }
+
+    @Test
     fun `delay clamp enforces supported range`() {
         assertEquals(1, AnswerHangUpController.clampDelaySeconds(0))
         assertEquals(10, AnswerHangUpController.clampDelaySeconds(99))
@@ -318,6 +521,18 @@ class AnswerHangUpControllerTest {
         assertTrue(AnswerHangUpController.tryArm(number, delaySeconds))
     }
 
+    /** Arms, answers and connects a spam call, leaving it waiting out its delay. */
+    private fun connect(
+        number: String,
+        delaySeconds: Int,
+    ) {
+        arm(number, delaySeconds)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, number)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_OFFHOOK, number)
+        callControl.currentState = TelephonyManager.CALL_STATE_OFFHOOK
+        assertEquals(AnswerHangUpController.Phase.HANGING_UP, AnswerHangUpController.phaseForTest())
+    }
+
     private class FakeClock {
         private var currentMillis = 0L
 
@@ -328,7 +543,9 @@ class AnswerHangUpControllerTest {
         }
     }
 
-    private class FakeCallControl : AnswerHangUpController.CallControl {
+    private class FakeCallControl(
+        private val events: MutableList<String> = mutableListOf(),
+    ) : AnswerHangUpController.CallControl {
         var audioOnlyAcceptCalls = 0
         var endCalls = 0
         var currentState = TelephonyManager.CALL_STATE_RINGING
@@ -339,18 +556,34 @@ class AnswerHangUpControllerTest {
         override fun acceptRingingCallAudioOnly(): Boolean {
             if (throwOnAccept) error("accept")
             audioOnlyAcceptCalls += 1
+            events += "accept"
             return true
         }
 
         override fun endCall(): Boolean {
             if (throwOnEnd) error("end")
             endCalls += 1
+            events += "end"
             return true
         }
 
         override fun currentCallState(): Int {
             if (throwOnStateRead) error("state")
             return currentState
+        }
+    }
+
+    private class FakeMicrophone(
+        private val events: MutableList<String>,
+    ) : AnswerHangUpController.Microphone {
+        var micMuted = false
+        override var heldMute = false
+
+        override fun isMuted(): Boolean = micMuted
+
+        override fun setMuted(muted: Boolean) {
+            micMuted = muted
+            events += if (muted) "mute" else "unmute"
         }
     }
 

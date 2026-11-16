@@ -35,6 +35,32 @@ class CallShieldScreeningServiceAnswerHangUpTest {
     }
 
     @Test
+    fun `only the spam call just handed off is ignored by the busy check`() {
+        for (bits in 0 until 16) {
+            val controllerBusy = bits and 1 != 0
+            val handingOff = bits and 2 != 0
+            val telephonyOffhook = bits and 4 != 0
+            val audioInCall = bits and 8 != 0
+            // A call the controller is still answering always counts. Otherwise the phone
+            // reading as on a call counts, unless that call is the one just ended for this one.
+            val expected = controllerBusy || (!handingOff && (telephonyOffhook || audioInCall))
+            assertEquals(
+                "combination $bits",
+                expected,
+                CallShieldScreeningService.answerHangUpBusy(
+                    controllerBusy = controllerBusy,
+                    handingOff = handingOff,
+                    telephonyOffhook = telephonyOffhook,
+                    audioInCall = audioInCall,
+                ),
+            )
+        }
+        // The case this exists for: offhook and in-call audio from the call being ended.
+        assertFalse(CallShieldScreeningService.answerHangUpBusy(false, true, true, true))
+        assertTrue(CallShieldScreeningService.answerHangUpBusy(false, false, true, false))
+    }
+
+    @Test
     fun `a meeting-mode silence is never answered and hung up`() {
         // Meeting mode says nothing against the caller, so with every delivery
         // setting off its verdict still has to read as a silence here, or an

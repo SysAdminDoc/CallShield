@@ -628,14 +628,15 @@ class CallShieldScreeningService : CallScreeningService() {
         try {
             @Suppress("DEPRECATION")
             val callState = getSystemService(android.telephony.TelephonyManager::class.java)?.callState
-            val telephonyBusy = callState == android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
-            if (telephonyBusy || AnswerHangUpController.isBusy()) {
-                true
-            } else {
-                val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
-                audioMode == android.media.AudioManager.MODE_IN_CALL ||
-                    audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION
-            }
+            val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
+            answerHangUpBusy(
+                controllerBusy = AnswerHangUpController.isBusy(),
+                handingOff = AnswerHangUpController.isHandingOff(),
+                telephonyOffhook = callState == android.telephony.TelephonyManager.CALL_STATE_OFFHOOK,
+                audioInCall =
+                    audioMode == android.media.AudioManager.MODE_IN_CALL ||
+                        audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION,
+            )
         } catch (_: SecurityException) {
             true
         }
@@ -848,6 +849,18 @@ class CallShieldScreeningService : CallScreeningService() {
             busy: Boolean,
             roaming: Boolean,
         ): Boolean = enabled && !silenceWins && permissionsGranted && !busy && !roaming
+
+        /**
+         * Whether the phone is on a call that answering this one would disturb. Right after
+         * answer and hang up ended its own spam call for this one, the phone can still read
+         * as on that call while it disconnects, and that call doesn't count.
+         */
+        internal fun answerHangUpBusy(
+            controllerBusy: Boolean,
+            handingOff: Boolean,
+            telephonyOffhook: Boolean,
+            audioInCall: Boolean,
+        ): Boolean = controllerBusy || (!handingOff && (telephonyOffhook || audioInCall))
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

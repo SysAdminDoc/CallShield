@@ -793,7 +793,7 @@
     <string name="hard_block_style_missed_unsupported">This Android version can\'t log it as missed yet, so it\'s logged as rejected.</string>
     <string name="hard_block_style_quiet_desc">No missed-call alert. It\'s still in your call log and CallShield\'s blocked log.</string>
     <string name="settings_answer_hang_up">Answer &amp; hang up blocked calls</string>
-    <string name="settings_answer_hang_up_desc">Blocked calls are answered and hung up straight away, so the caller can\'t leave a voicemail. Silent voicemail mode, low-confidence auto-mute and meeting mode still send calls to voicemail, and a call that arrives while you\'re already on one is rejected as before. Your screen may light up for a moment. Answering tells autodialers the line is live, so some call back. Some carriers need a longer delay before voicemail is skipped, so raise it if spam still reaches your voicemail.</string>
+    <string name="settings_answer_hang_up_desc">Blocked calls are answered and hung up straight away, so the caller can\'t leave a voicemail. Silent voicemail mode, low-confidence auto-mute and meeting mode still send calls to voicemail, and a call that arrives while you\'re already on one is rejected as before. Your screen may light up for a moment, and your microphone stays muted while the call is connected. Answering tells autodialers the line is live, so some call back. Some carriers need a longer delay before voicemail is skipped, so raise it if spam still reaches your voicemail.</string>
     <string name="settings_hang_up_delay">Hang up after</string>
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
