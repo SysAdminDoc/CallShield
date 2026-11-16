@@ -378,6 +378,7 @@ def fetch_ftc(
     records_fetched = 0
     previous_cursor = _valid_cursor(cursor)
     newest_first = previous_cursor is None or key == FTC_DEMO_KEY
+    stop_error = None
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     while records_fetched < max_records:
@@ -395,22 +396,33 @@ def fetch_ftc(
             params["created_date_from"] = f'"{previous_cursor["timestamp"]}"'
             params["created_date_to"] = f'"{now}"'
 
-        response, error = _get_with_backoff(
+        response, failure = _get_with_backoff(
             FTC_API_URL,
             params=params,
             timeout=30,
             label="FTC",
         )
-        if response is None:
-            return _failed_fetch("FTC", previous_cursor, error or "request failed")
-        try:
-            response.raise_for_status()
-            payload = response.json()
-            records = payload.get("data", [])
-            if not isinstance(records, list):
-                raise ValueError("FTC response data is not an array")
-        except Exception as exc:
-            return _failed_fetch("FTC", previous_cursor, str(exc))
+        records = []
+        if response is not None:
+            try:
+                response.raise_for_status()
+                payload = response.json()
+                records = payload.get("data", [])
+                if not isinstance(records, list):
+                    raise ValueError("FTC response data is not an array")
+            except Exception as exc:
+                failure = str(exc)
+        elif not failure:
+            failure = "request failed"
+        if failure:
+            # Read oldest-first, every record already in hand is older than the
+            # page that failed, so keeping them and moving the cursor skips
+            # nothing. A newest-first read leaves a gap behind it and keeps none.
+            if newest_first or not records_fetched:
+                return _failed_fetch("FTC", previous_cursor, failure)
+            print(f"  FTC stopped after {records_fetched:,} records ({failure}); keeping them, the next run resumes from here")
+            stop_error = failure
+            break
         if not records:
             break
 
@@ -494,6 +506,7 @@ def fetch_ftc(
         list(numbers.values()),
         cursor=next_cursor,
         complete=True,
+        error=stop_error,
     )
 
 

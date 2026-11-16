@@ -584,8 +584,12 @@ def test_ftc_demo_key_run_stays_inside_the_hourly_budget():
         module.time.sleep = original_sleep
 
 
-def _ftc_window_server(total, requests_seen):
-    """Fake api.ftc.gov holding `total` complaints, one a minute from 2026-11-01."""
+def _ftc_window_server(total, requests_seen, budget=None):
+    """Fake api.ftc.gov holding `total` complaints, one a minute from 2026-11-01.
+
+    `budget` is a dict whose "left" count drops on every request; at zero the
+    server answers 429 the way api.ftc.gov did on 2026-11-15.
+    """
 
     def created(n):
         return f"2026-11-{1 + n // 1440:02d}T{n // 60 % 24:02d}:{n % 60:02d}:00Z"
@@ -600,6 +604,14 @@ def _ftc_window_server(total, requests_seen):
     def fake_get(url, **kwargs):
         params = kwargs["params"]
         requests_seen.append(params)
+        if budget is not None:
+            if budget["left"] <= 0:
+                return FakeResponse(
+                    {"error": {"code": "OVER_RATE_LIMIT"}},
+                    status_code=429,
+                    headers={"X-Ratelimit-Remaining": "0", "Retry-After": "1601"},
+                )
+            budget["left"] -= 1
         lower = params.get("created_date_from", '""').strip('"')
         window = [row for row in rows if row["attributes"]["created-date"] >= lower]
         if params["sort_order"] == "desc":
@@ -646,6 +658,49 @@ def test_keyed_ftc_run_reads_its_whole_backlog():
         assert second.cursor["id"] == rows[998]["id"], second.cursor
         kept = [entry["number"] for run in (first, second) for entry in run for _ in range(entry["reports"])]
         assert sorted(kept) == sorted(row["attributes"]["company-phone-number"] for row in rows[1:999])
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
+def test_keyed_ftc_run_keeps_what_it_read_before_a_429():
+    # On 2026-11-15 a keyed catch-up read 10,000 records oldest-first, then
+    # api.ftc.gov answered 429 with X-Ratelimit-Remaining 0. The run threw all
+    # 10,000 away and kept the 10-30 cursor, so the backlog never shrank.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    budget = {"left": 100}
+    try:
+        fake_get, rows = _ftc_window_server(12_000, requests_seen, budget)
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+        cursor = {"timestamp": rows[0]["attributes"]["created-date"], "id": rows[0]["id"]}
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            first = module.fetch_ftc(cursor=cursor, api_key="a-key-of-its-own")
+
+        assert first.complete, first.error
+        assert "429" in (first.error or ""), first.error
+        assert first.cursor == {"timestamp": rows[4999]["attributes"]["created-date"], "id": rows[4999]["id"]}, first.cursor
+        stats = module._fetch_stats(first, "2026-11-15T00:00:00+00:00")
+        assert stats["status"] == "ok" and stats["newest_record_date"] == "2026-11-04", stats
+
+        # Once the window frees up, the next run resumes right after the last
+        # record kept: nothing skipped, nothing counted twice.
+        budget["left"] = 10_000
+        with contextlib.redirect_stdout(io.StringIO()):
+            second = module.fetch_ftc(cursor=first.cursor, api_key="a-key-of-its-own")
+        assert second.complete and second.error is None, second.error
+        kept = [entry["number"] for run in (first, second) for entry in run for _ in range(entry["reports"])]
+        assert sorted(kept) == sorted(row["attributes"]["company-phone-number"] for row in rows[1:])
+
+        # Newest-first has a gap behind it, so a 429 there still keeps nothing.
+        budget["left"] = 1
+        with contextlib.redirect_stdout(io.StringIO()):
+            unkeyed = module.fetch_ftc(max_records=100, api_key=module.FTC_DEMO_KEY)
+        assert not unkeyed.complete and list(unkeyed) == [] and unkeyed.cursor is None, unkeyed.cursor
     finally:
         module.requests.get = original_get
         module.time.sleep = original_sleep
@@ -708,6 +763,7 @@ def main():
     test_new_complaints_require_independent_caller_corroboration()
     test_ftc_demo_key_run_stays_inside_the_hourly_budget()
     test_keyed_ftc_run_reads_its_whole_backlog()
+    test_keyed_ftc_run_keeps_what_it_read_before_a_429()
     test_merge_summary_counts_only_numbers_that_stayed()
     print("incremental source tests: OK")
 
