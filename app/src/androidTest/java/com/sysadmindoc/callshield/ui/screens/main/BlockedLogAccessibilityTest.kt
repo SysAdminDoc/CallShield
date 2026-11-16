@@ -30,6 +30,7 @@ class BlockedLogAccessibilityTest {
                 onTap = {},
                 onTemporaryAllow = { _: TemporaryDecisionDuration -> },
                 onTemporaryBlock = { _: TemporaryDecisionDuration -> },
+                onSelect = {},
             )
         }
 

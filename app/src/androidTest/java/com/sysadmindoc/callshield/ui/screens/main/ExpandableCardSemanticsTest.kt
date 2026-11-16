@@ -30,6 +30,7 @@ class ExpandableCardSemanticsTest {
                 onTap = {},
                 onTemporaryAllow = {},
                 onTemporaryBlock = {},
+                onSelect = {},
             )
         }
 
