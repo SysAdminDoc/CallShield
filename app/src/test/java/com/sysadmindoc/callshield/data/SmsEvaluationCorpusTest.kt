@@ -1268,6 +1268,15 @@ class SmsEvaluationCorpusTest {
     }
 
     @Test
+    fun `the political texts preset matches no clean message`() {
+        val rules = KeywordPreset.POLITICAL.newRules(KeywordPreset.POLITICAL.phrases)
+        val clean = SmsEvaluationCorpus.examples.filterNot { it.expectedSpam }
+
+        assertTrue("only ${clean.size} clean examples", clean.size >= 146)
+        assertEquals(emptyList<String>(), clean.filter { example -> rules.any { it.matches(example.body) } }.map { it.id })
+    }
+
+    @Test
     fun `IMC 2025 sample reports precision, recall and false-positive rate per language`() {
         val report = Imc25Sample.evaluate()
         println(report.format())

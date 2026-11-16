@@ -1285,6 +1285,8 @@ class SpamRepository(
         schedule: TimeSchedule = TimeSchedule(),
     ) = blocklistRepository.addKeywordRule(keyword, caseSensitive, description, schedule)
 
+    suspend fun addKeywordPreset(preset: KeywordPreset): Int = blocklistRepository.addKeywordPreset(preset)
+
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) = blocklistRepository.deleteKeywordRule(rule)
 
     suspend fun toggleKeywordRule(

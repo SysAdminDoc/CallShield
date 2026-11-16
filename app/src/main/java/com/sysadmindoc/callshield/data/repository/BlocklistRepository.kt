@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.paging.PagingSource
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamNumberWhitelistResolution
@@ -1103,6 +1104,19 @@ class BlocklistRepository(
             ),
         )
         invalidateKeywordCache()
+    }
+
+    /**
+     * Adds the phrases of [preset] the list doesn't have yet, matched without
+     * regard to case or spacing, and returns how many it added. A keyword the
+     * user already has keeps their rule as it is.
+     */
+    suspend fun addKeywordPreset(preset: KeywordPreset): Int {
+        val missing = preset.missingFrom(dao.getAllKeywords())
+        if (missing.isEmpty()) return 0
+        dao.insertKeywordRulesIfAbsent(preset.newRules(missing))
+        invalidateKeywordCache()
+        return missing.size
     }
 
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) {

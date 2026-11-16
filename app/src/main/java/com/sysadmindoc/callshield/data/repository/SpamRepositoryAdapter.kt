@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
@@ -139,6 +140,8 @@ class SpamRepositoryAdapter(
     ) {
         repository.addKeywordRule(keyword, caseSensitive, description, schedule)
     }
+
+    override suspend fun addKeywordPreset(preset: KeywordPreset): Int = repository.addKeywordPreset(preset)
 
     override suspend fun deleteKeywordRule(rule: SmsKeywordRule) {
         repository.deleteKeywordRule(rule)

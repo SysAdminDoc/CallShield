@@ -260,6 +260,25 @@
     <string name="blocklist_rule_added">规则已添加</string>
     <string name="blocklist_number_whitelisted">号码已加入可信</string>
     <string name="blocklist_keyword_rule_added">关键词规则已添加</string>
+    <string name="keyword_preset_political_title">政治短信</string>
+    <string name="keyword_preset_political_tag">政治短信预设</string>
+    <string name="keyword_preset_political_add">添加政治短信预设</string>
+    <string name="keyword_preset_political_remove">移除政治短信预设</string>
+    <string name="keyword_preset_add">添加</string>
+    <string name="keyword_preset_remove">移除</string>
+    <string name="keyword_preset_political_already">列表中已包含此预设的所有短语</string>
+    <plurals name="keyword_preset_political_offer">
+        <item quantity="one">添加 %d 个竞选和政治行动委员会募款短信常用的短语，例如“paid for by”。每个短语都会成为一条可以关闭或删除的规则。</item>
+        <item quantity="other">添加 %d 个竞选和政治行动委员会募款短信常用的短语，例如“paid for by”。每个短语都会成为一条可以关闭或删除的规则。</item>
+    </plurals>
+    <plurals name="keyword_preset_political_in_list">
+        <item quantity="one">列表中有 %d 个来自此预设的短语。移除预设只会删除这些短语。</item>
+        <item quantity="other">列表中有 %d 个来自此预设的短语。移除预设只会删除这些短语。</item>
+    </plurals>
+    <plurals name="keyword_preset_political_added">
+        <item quantity="one">已添加 %d 个政治短语</item>
+        <item quantity="other">已添加 %d 个政治短语</item>
+    </plurals>
     <string name="blocklist_regex">正则</string>
     <string name="blocklist_wildcard">通配符</string>
     <string name="blocklist_case_sensitive">区分大小写</string>

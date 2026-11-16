@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.domain.usecase
 
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -69,6 +70,8 @@ class ManageBlocklistUseCase
             description: String = "",
             schedule: TimeSchedule = TimeSchedule(),
         ) = repository.addKeywordRule(keyword, caseSensitive, description, schedule)
+
+        suspend fun addKeywordPreset(preset: KeywordPreset) = repository.addKeywordPreset(preset)
 
         suspend fun deleteKeywordRule(rule: SmsKeywordRule) = repository.deleteKeywordRule(rule)
 

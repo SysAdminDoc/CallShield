@@ -343,6 +343,25 @@
     <string name="blocklist_rule_added">Regra adicionada</string>
     <string name="blocklist_number_whitelisted">Número adicionado aos confiáveis</string>
     <string name="blocklist_keyword_rule_added">Regra de palavra-chave adicionada</string>
+    <string name="keyword_preset_political_title">Textos políticos</string>
+    <string name="keyword_preset_political_tag">Conjunto de textos políticos</string>
+    <string name="keyword_preset_political_add">Adicionar o conjunto de textos políticos</string>
+    <string name="keyword_preset_political_remove">Remover o conjunto de textos políticos</string>
+    <string name="keyword_preset_add">Adicionar</string>
+    <string name="keyword_preset_remove">Remover</string>
+    <string name="keyword_preset_political_already">Sua lista já tem todas as frases deste conjunto</string>
+    <plurals name="keyword_preset_political_offer">
+        <item quantity="one">Adiciona %d frase de mensagens de arrecadação de campanhas e PACs, como “paid for by”. Ela vira uma regra que você pode desativar ou excluir.</item>
+        <item quantity="other">Adiciona %d frases de mensagens de arrecadação de campanhas e PACs, como “paid for by”. Cada uma vira uma regra que você pode desativar ou excluir.</item>
+    </plurals>
+    <plurals name="keyword_preset_political_in_list">
+        <item quantity="one">%d das frases está na sua lista. Remover o conjunto tira só essa.</item>
+        <item quantity="other">%d das frases estão na sua lista. Remover o conjunto tira só essas.</item>
+    </plurals>
+    <plurals name="keyword_preset_political_added">
+        <item quantity="one">%d frase política adicionada</item>
+        <item quantity="other">%d frases políticas adicionadas</item>
+    </plurals>
     <string name="blocklist_regex">Regex</string>
     <string name="blocklist_wildcard">Curinga</string>
     <string name="blocklist_case_sensitive">Diferencia maiúsculas e minúsculas</string>

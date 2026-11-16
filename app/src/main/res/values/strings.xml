@@ -353,6 +353,25 @@
     <string name="blocklist_rule_added">Rule added</string>
     <string name="blocklist_number_whitelisted">Number added to trusted</string>
     <string name="blocklist_keyword_rule_added">Keyword rule added</string>
+    <string name="keyword_preset_political_title">Political texts</string>
+    <string name="keyword_preset_political_tag">Political texts preset</string>
+    <string name="keyword_preset_political_add">Add political texts preset</string>
+    <string name="keyword_preset_political_remove">Remove political texts preset</string>
+    <string name="keyword_preset_add">Add</string>
+    <string name="keyword_preset_remove">Remove</string>
+    <string name="keyword_preset_political_already">Your list already has every phrase in this preset</string>
+    <plurals name="keyword_preset_political_offer">
+        <item quantity="one">Adds %d phrase from campaign and PAC fundraising texts, like “paid for by”. It becomes a rule you can turn off or delete.</item>
+        <item quantity="other">Adds %d phrases from campaign and PAC fundraising texts, like “paid for by”. Each one becomes a rule you can turn off or delete.</item>
+    </plurals>
+    <plurals name="keyword_preset_political_in_list">
+        <item quantity="one">%d of its phrases is in your list. Removing the preset takes out only that one.</item>
+        <item quantity="other">%d of its phrases are in your list. Removing the preset takes out only those.</item>
+    </plurals>
+    <plurals name="keyword_preset_political_added">
+        <item quantity="one">Added %d political phrase</item>
+        <item quantity="other">Added %d political phrases</item>
+    </plurals>
     <string name="blocklist_regex">Regex</string>
     <string name="blocklist_wildcard">Wildcard</string>
     <string name="blocklist_case_sensitive">Case-sensitive</string>

@@ -33,6 +33,7 @@ import com.sysadmindoc.callshield.data.DatabaseTypeFilter
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.FalsePositiveReport
 import com.sysadmindoc.callshield.data.HardBlockStyle
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
@@ -1210,6 +1211,14 @@ class MainViewModel
             schedule: TimeSchedule = TimeSchedule(),
         ) {
             viewModelScope.launch(actionFailed) { manageBlocklist.addKeywordRule(keyword, caseSensitive, description, schedule) }
+        }
+
+        /** Adds [preset]'s missing phrases, then hands [onAdded] how many went in. */
+        fun addKeywordPreset(
+            preset: KeywordPreset,
+            onAdded: (Int) -> Unit,
+        ) {
+            viewModelScope.launch(actionFailed) { onAdded(manageBlocklist.addKeywordPreset(preset)) }
         }
 
         fun deleteKeywordRule(rule: SmsKeywordRule) {

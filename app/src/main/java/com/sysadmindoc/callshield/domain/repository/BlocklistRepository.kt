@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.domain.repository
 
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -63,6 +64,9 @@ interface BlocklistRepository {
         description: String,
         schedule: TimeSchedule,
     )
+
+    /** Adds the phrases of [preset] the list doesn't have yet and returns how many it added. */
+    suspend fun addKeywordPreset(preset: KeywordPreset): Int
 
     suspend fun deleteKeywordRule(rule: SmsKeywordRule)
 

@@ -761,6 +761,13 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertKeywordRule(rule: SmsKeywordRule)
 
+    @Query("SELECT keyword FROM sms_keyword_rules")
+    suspend fun getAllKeywords(): List<String>
+
+    /** Adds [rules] in one transaction, leaving any keyword already stored as it is. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertKeywordRulesIfAbsent(rules: List<SmsKeywordRule>)
+
     @Query("DELETE FROM sms_keyword_rules")
     suspend fun clearKeywordRules()
 

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -129,6 +130,7 @@ import com.sysadmindoc.callshield.data.DatabaseSourceFilter
 import com.sysadmindoc.callshield.data.DatabaseTypeFilter
 import com.sysadmindoc.callshield.data.ExistingBlockRules
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
+import com.sysadmindoc.callshield.data.KeywordPreset
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.RuleConflict
 import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
@@ -311,6 +313,38 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 viewModel.restoreBlockedNumber(number)
             }
         }
+    }
+
+    val politicalPreset = KeywordPreset.POLITICAL
+    val politicalPresetRules = remember(keywordRules) { politicalPreset.rulesIn(keywordRules) }
+    val politicalPresetMissing = remember(keywordRules) { politicalPreset.missingFrom(keywordRules.map { it.keyword }).size }
+
+    fun addPoliticalPreset() {
+        val resources = context.resources
+        viewModel.addKeywordPreset(politicalPreset) { added ->
+            hapticTick(context)
+            val message =
+                if (added == 0) {
+                    resources.getString(R.string.keyword_preset_political_already)
+                } else {
+                    resources.getQuantityString(R.plurals.keyword_preset_political_added, added, added)
+                }
+            scope.launch {
+                snackbarHost.currentSnackbarData?.dismiss()
+                snackbarHost.showSnackbar(message, duration = SnackbarDuration.Short)
+            }
+        }
+    }
+
+    /** Takes out only the rules the preset added, with one Undo for all of them. */
+    fun removePoliticalPreset() {
+        val rows = politicalPresetRules
+        if (rows.isEmpty()) return
+        deleteWithUndo(
+            delete = { rows.forEach { viewModel.deleteKeywordRule(it) } },
+            restore = { rows.forEach { viewModel.restoreKeywordRule(it) } },
+            message = context.resources.getQuantityString(R.plurals.blocklist_selection_removed, rows.size, rows.size),
+        )
     }
 
     /** Unblocks or deletes every selected row with one Undo that brings them all back. */
@@ -733,12 +767,27 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 subtitle = stringResource(R.string.blocklist_empty_keywords_sub),
                                 icon = Icons.Default.TextFields,
                                 accentColor = CatMauve,
+                                action = {
+                                    TextButton(onClick = { addPoliticalPreset() }) {
+                                        Text(stringResource(R.string.keyword_preset_political_add), color = CatMauve)
+                                    }
+                                },
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                if (!selecting) {
+                                    item(key = KEYWORD_PRESET_CARD_KEY) {
+                                        KeywordPresetCard(
+                                            rulesInList = politicalPresetRules.size,
+                                            missing = politicalPresetMissing,
+                                            onAdd = { addPoliticalPreset() },
+                                            onRemove = { removePoliticalPreset() },
+                                        )
+                                    }
+                                }
                                 items(keywordRules, key = { it.id }) { rule ->
                                     SelectableRuleRow(
                                         label = rule.keyword,
@@ -1139,6 +1188,7 @@ private fun EmptyStateCard(
     onRetry: (() -> Unit)? = null,
     compact: Boolean = false,
     clearOfAddButton: Boolean = false,
+    action: (@Composable () -> Unit)? = null,
 ) {
     FramedEmptyState(
         title = title,
@@ -1150,7 +1200,7 @@ private fun EmptyStateCard(
         modifier = if (clearOfAddButton) Modifier.padding(bottom = 70.dp) else Modifier,
         compact = compact,
         action =
-            onRetry?.let { retry ->
+            action ?: onRetry?.let { retry ->
                 {
                     TextButton(onClick = retry) {
                         Text(stringResource(R.string.blocklist_retry), color = accentColor)
@@ -1491,8 +1541,15 @@ fun KeywordRuleItem(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text("\"${rule.keyword}\"", fontWeight = FontWeight.SemiBold, color = CatText)
-                if (rule.description.isNotEmpty()) {
-                    Text(rule.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                // A preset's rules carry its marker, which is English, so they show the label instead.
+                val description =
+                    if (rule.description == KeywordPreset.POLITICAL.marker) {
+                        stringResource(R.string.keyword_preset_political_tag)
+                    } else {
+                        rule.description
+                    }
+                if (description.isNotEmpty()) {
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 }
                 StatusPill(
                     text = stringResource(if (rule.caseSensitive) R.string.blocklist_case_sensitive else R.string.blocklist_case_insensitive),
@@ -1518,6 +1575,64 @@ fun KeywordRuleItem(
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Close, stringResource(R.string.cd_delete_rule), tint = CatRed.copy(alpha = 0.7f))
+            }
+        }
+    }
+}
+
+internal const val KEYWORD_PRESET_CARD_KEY = "keyword-preset-political"
+
+/**
+ * The political texts preset at the top of the Keywords tab. With none of its
+ * rules in the list it offers to add the [missing] phrases. Once some are in,
+ * it says how many and offers to take out only those.
+ */
+@Composable
+private fun KeywordPresetCard(
+    rulesInList: Int,
+    missing: Int,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatMauve) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.Campaign, null, tint = CatMauve, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(stringResource(R.string.keyword_preset_political_title), fontWeight = FontWeight.SemiBold, color = CatText)
+                Text(
+                    text =
+                        when {
+                            rulesInList > 0 -> pluralStringResource(R.plurals.keyword_preset_political_in_list, rulesInList, rulesInList)
+                            missing > 0 -> pluralStringResource(R.plurals.keyword_preset_political_offer, missing, missing)
+                            else -> stringResource(R.string.keyword_preset_political_already)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+            }
+            // The short label fits beside the text; TalkBack hears which preset it acts on.
+            if (rulesInList > 0) {
+                Spacer(Modifier.width(8.dp))
+                val label = stringResource(R.string.keyword_preset_political_remove)
+                TextButton(onClick = onRemove, modifier = Modifier.semantics { contentDescription = label }) {
+                    Text(stringResource(R.string.keyword_preset_remove), color = CatRed)
+                }
+            } else if (missing > 0) {
+                Spacer(Modifier.width(8.dp))
+                val label = stringResource(R.string.keyword_preset_political_add)
+                TextButton(onClick = onAdd, modifier = Modifier.semantics { contentDescription = label }) {
+                    Text(stringResource(R.string.keyword_preset_add), color = CatMauve)
+                }
             }
         }
     }
