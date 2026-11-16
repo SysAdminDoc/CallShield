@@ -55,18 +55,18 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
-            "1.13.0",
-            "Reports that block, and a Rules screen that sorts",
+            "1.14.0",
+            "New languages, an offline switch and room on tablets",
             isLatest = true,
-            date = "October 30, 2026",
-            summary = "Report blocks the number on your phone too, the Rules screen sorts and acts on many rows at once, and links in chat apps stay on your phone.",
+            date = "November 16, 2026",
+            summary = "Spanish and Brazilian Portuguese join the language picker, a strict offline switch stops every network request, and a tablet held sideways shows a number next to the tabs.",
             changes =
                 listOf(
-                    "Report on a number's screen or in Lookup blocks the number on your phone too, with Undo",
-                    "The Blocked list sorts by newest, number or most blocked, and a long press picks several rows to unblock or delete at once",
-                    "With link checks on, links in WhatsApp, Signal, Gmail and other chat apps are checked only against the OpenPhish list on your phone",
-                    "On Android 15 and later, a one-time code Android hides is left alone, and a code during a call from an unknown number still warns you",
-                    "Dual SIM phones keep the caller ID popup up on the second SIM, and the post-call screen has a Call back button",
+                    "Spanish and Brazilian Portuguese are in the app, and the language picker lists Simplified Chinese too",
+                    "A strict offline switch under Advanced stops every network request, and blocking keeps using the database you have",
+                    "Long-press calls in Recent or the Blocked log to block, report or mark several as not spam at once",
+                    "Mark a number that never calls you, like the one on your bank card, and a call faking it is blocked even from your contacts",
+                    "Texts that ask you to dial a call forwarding code get a warning, and Statistics has a map and a Last 30 days card",
                 ),
         )
         Spacer(Modifier.height(14.dp))
@@ -108,6 +108,20 @@ fun ChangelogScreen() {
         }
         AnimatedVisibility(visible = showHistory) {
             Column(modifier = Modifier.padding(top = 14.dp)) {
+                VersionEntry(
+                    "1.13.0",
+                    "Reports that block, and a Rules screen that sorts",
+                    date = "October 30, 2026",
+                    summary = "Report blocks the number on your phone too, the Rules screen sorts and acts on many rows at once, and links in chat apps stay on your phone.",
+                    changes =
+                        listOf(
+                            "Report on a number's screen or in Lookup blocks the number on your phone too, with Undo",
+                            "The Blocked list sorts by newest, number or most blocked, and a long press picks several rows to unblock or delete at once",
+                            "With link checks on, links in WhatsApp, Signal, Gmail and other chat apps are checked only against the OpenPhish list on your phone",
+                            "On Android 15 and later, a one-time code Android hides is left alone, and a code during a call from an unknown number still warns you",
+                            "Dual SIM phones keep the caller ID popup up on the second SIM, and the post-call screen has a Call back button",
+                        ),
+                )
                 VersionEntry(
                     "1.12.0",
                     "Community labels and reports that count",

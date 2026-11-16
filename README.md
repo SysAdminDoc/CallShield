@@ -78,6 +78,17 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware.** It won't block a number you recently called or keep answering, a callback after a local emergency call, or a caller who tries twice in five minutes.
 6. **Community-driven.** One-tap anonymous reports go through a Cloudflare Worker, and the maintainer merges them into the database.
 
+## v1.14.0 Highlights
+
+Two new languages, and a switch that keeps the app off the network entirely.
+
+- **Spanish and Brazilian Portuguese.** Both are in the language picker now, along with Simplified Chinese, and a language you set in Android's own settings sticks the first time the app opens.
+- **Strict offline.** One switch under Advanced stops every network request. Blocking keeps running on the database you already have.
+- **Many calls at once.** Long-press a call in Recent or the Blocked log, tap more, then block, report or mark them not spam together. One Undo takes the batch back.
+- **Numbers that never call.** Mark a line like the one on the back of your bank card, and a call faking it is blocked even when the number is in your contacts.
+- **Tablets and foldables.** On a tablet held sideways a number's page opens next to the tabs, and a half-open foldable splits the two along its hinge.
+- **Around the app.** Texts that ask you to dial a call forwarding code get a warning, Statistics has a spam map and a Last 30 days card, and on an Indian SIM the 1600 and 1601 numbers ring through. Text screening catches more than twice as many scam texts on a sample its rules weren't written against.
+
 ## v1.13.0 Highlights
 
 Report now blocks the number for you, the Rules screen handles many rows at once, and links in chat apps stay on your phone.
@@ -111,19 +122,9 @@ Better at the calls and texts scams lead to, and your own lists survive a damage
 - **Trusted number blocks.** A doctor's office that calls from a different line each time can be allowed by its last 2 or 3 digits.
 - **Around the app.** Home shows a card when a new release is out. Clearing the log or blocking an area code happens at once, with Undo. Outside North America, a ten-digit number the phone couldn't place isn't scored by North American rules, and Settings lists recommended blocklists for Colombia, Chile and Turkey.
 
-## v1.10.0 Highlights
-
-Let unknown callers ring when you're waiting for a call, and a fix that keeps the spam database blocking between updates.
-
-- **Expecting a call.** From Home or its own Quick Settings tile, unknown and hidden callers ring for an hour, three hours or until midnight. Your blocked numbers, wildcard rules and a failed caller ID check still block, and a countdown notification offers End now. On a locked phone the tile asks you to unlock first.
-- **The database keeps working.** Every number's evidence was due to expire in October, and a phone stops matching a number once that happens. Complaint evidence now lasts a year, and the weekly data check warns a month ahead. Phones on 1.9.0 get this with their next sync.
-- **Reviewed numbers.** A number the maintainer checks by hand can join the database when no imported source covers it, starting with a Munich number reported on GitHub.
-- **Easier to use.** The caller ID popup works with TalkBack, the Blocked log and Blocklist fit small screens with large text, and a blocked-call alert offers Not spam for a day.
-- **Texts and hang-ups.** Texts sent under a carrier's scam label are flagged, and Answer and hang up handles national-format numbers and rejects instead of answering while roaming.
-
 Earlier releases are in [CHANGELOG.md](CHANGELOG.md).
 
-## Detection Pipeline (v1.13.0)
+## Detection Pipeline (v1.14.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order through `CheckerPipeline.run`. The first layer with a verdict wins, and each layer is tested on its own. Priorities are stable numbers, and the ladder below is the live order.
 
