@@ -27,7 +27,11 @@ internal class IsolatedRepositoryFixture(
     // Its own scorer: a test that boots CallShieldApp loads the bundled model
     // into SpamMLScorer.shared from appScope, which can land mid-way through a
     // later test in the same sandbox and turn its verdicts into ml_scorer blocks.
-    checkerDependencies: CheckerDependencies = CheckerDependencies(spamMLScorer = SpamMLScorer()),
+    // Its own campaign detector too: every realtime check records the caller in
+    // CampaignDetector.shared, so five 212-555 numbers screened by earlier tests
+    // in the same sandbox read as a live campaign_burst within the hour.
+    checkerDependencies: CheckerDependencies =
+        CheckerDependencies(spamMLScorer = SpamMLScorer(), campaignDetector = CampaignDetector()),
     unreadableSettings: Boolean = false,
 ) : AutoCloseable {
     init {
