@@ -47,55 +47,58 @@ internal fun clampHangUpDelaySeconds(value: Int?): Int =
         AnswerHangUpController.MAX_DELAY_SECONDS,
     ) ?: AnswerHangUpController.DEFAULT_DELAY_SECONDS
 
+/** The stored value for [key], or [default] when it was never written. */
+private fun <T> Preferences.valueOr(
+    key: Preferences.Key<T>,
+    default: T,
+): T = this[key] ?: default
+
 @Suppress("LongMethod")
 internal fun Preferences.toBackupSettings(): BackupSettings =
     BackupSettings(
-        blockCallsEnabled = this[SpamRepository.KEY_BLOCK_CALLS] ?: true,
-        blockSmsEnabled = this[SpamRepository.KEY_BLOCK_SMS] ?: true,
-        blockUnknownEnabled = this[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false,
-        stirShakenEnabled = this[SpamRepository.KEY_STIR_SHAKEN] ?: true,
-        stirTrustedAllowEnabled = this[SpamRepository.KEY_STIR_TRUSTED_ALLOW] ?: true,
-        autoMuteLowConfidenceEnabled = this[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false,
-        neighborSpoofEnabled = this[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true,
-        heuristicsEnabled = this[SpamRepository.KEY_HEURISTICS] ?: true,
-        smsContentEnabled = this[SpamRepository.KEY_SMS_CONTENT] ?: true,
-        smsBurstEnabled = this[SpamRepository.KEY_SMS_BURST] ?: true,
-        urlhausStripQueryEnabled = this[SpamRepository.KEY_URL_STRIP_QUERY] ?: true,
-        urlhausRemoteLookupEnabled = this[SpamRepository.KEY_REMOTE_URL_LOOKUP] ?: false,
-        liveCallerEnrichmentEnabled = this[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false,
-        contactWhitelistEnabled = this[SpamRepository.KEY_CONTACT_WHITELIST] ?: true,
-        contactsOnlyEnabled = this[SpamRepository.KEY_CONTACTS_ONLY] ?: false,
-        dbPrefixExpansionEnabled = this[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false,
-        dbPrefixMinMatches = this[SpamRepository.KEY_DB_PREFIX_MIN_MATCHES] ?: DB_PREFIX_MIN_MATCHES_DEFAULT,
-        aggressiveModeEnabled = this[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false,
-        answeredCallerTrustEnabled = this[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true,
+        blockCallsEnabled = valueOr(SpamRepository.KEY_BLOCK_CALLS, true),
+        blockSmsEnabled = valueOr(SpamRepository.KEY_BLOCK_SMS, true),
+        blockUnknownEnabled = valueOr(SpamRepository.KEY_BLOCK_UNKNOWN, false),
+        stirShakenEnabled = valueOr(SpamRepository.KEY_STIR_SHAKEN, true),
+        stirTrustedAllowEnabled = valueOr(SpamRepository.KEY_STIR_TRUSTED_ALLOW, true),
+        autoMuteLowConfidenceEnabled = valueOr(SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE, false),
+        neighborSpoofEnabled = valueOr(SpamRepository.KEY_NEIGHBOR_SPOOF, true),
+        heuristicsEnabled = valueOr(SpamRepository.KEY_HEURISTICS, true),
+        smsContentEnabled = valueOr(SpamRepository.KEY_SMS_CONTENT, true),
+        smsBurstEnabled = valueOr(SpamRepository.KEY_SMS_BURST, true),
+        urlhausStripQueryEnabled = valueOr(SpamRepository.KEY_URL_STRIP_QUERY, true),
+        urlhausRemoteLookupEnabled = valueOr(SpamRepository.KEY_REMOTE_URL_LOOKUP, false),
+        liveCallerEnrichmentEnabled = valueOr(SpamRepository.KEY_LIVE_CALLER_ENRICHMENT, false),
+        contactWhitelistEnabled = valueOr(SpamRepository.KEY_CONTACT_WHITELIST, true),
+        contactsOnlyEnabled = valueOr(SpamRepository.KEY_CONTACTS_ONLY, false),
+        dbPrefixExpansionEnabled = valueOr(SpamRepository.KEY_DB_PREFIX_EXPANSION, false),
+        dbPrefixMinMatches = valueOr(SpamRepository.KEY_DB_PREFIX_MIN_MATCHES, DB_PREFIX_MIN_MATCHES_DEFAULT),
+        aggressiveModeEnabled = valueOr(SpamRepository.KEY_AGGRESSIVE_MODE, false),
+        answeredCallerTrustEnabled = valueOr(SpamRepository.KEY_ANSWERED_CALLER_TRUST, true),
         answeredCallerThreshold =
-            this[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD]
-                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD,
+            valueOr(SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD, CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD),
         answeredCallerWindowDays =
-            this[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
-                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
-        emergencyCallbackGraceEnabled = this[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] ?: true,
+            valueOr(SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS, CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS),
+        emergencyCallbackGraceEnabled = valueOr(SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE, true),
         emergencyCallbackWindowMinutes =
-            this[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES]
-                ?: CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES,
-        timeBlockEnabled = this[SpamRepository.KEY_TIME_BLOCK] ?: false,
-        timeBlockStartHour = this[SpamRepository.KEY_TIME_BLOCK_START] ?: 22,
-        timeBlockEndHour = this[SpamRepository.KEY_TIME_BLOCK_END] ?: 7,
-        frequencyEscalationEnabled = this[SpamRepository.KEY_FREQ_ESCALATION] ?: true,
-        frequencyThreshold = this[SpamRepository.KEY_FREQ_THRESHOLD] ?: 3,
-        autoCleanupEnabled = this[SpamRepository.KEY_AUTO_CLEANUP] ?: false,
-        cleanupDays = this[SpamRepository.KEY_CLEANUP_DAYS] ?: 30,
-        mlScorerEnabled = this[SpamRepository.KEY_ML_SCORER] ?: true,
-        rcsFilterEnabled = this[SpamRepository.KEY_RCS_FILTER] ?: true,
-        postCallScreenEnabled = this[SpamRepository.KEY_POST_CALL_SCREEN] ?: false,
-        silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
-        answerHangUpEnabled = this[SpamRepository.KEY_ANSWER_HANG_UP] ?: false,
+            valueOr(SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES, CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES),
+        timeBlockEnabled = valueOr(SpamRepository.KEY_TIME_BLOCK, false),
+        timeBlockStartHour = valueOr(SpamRepository.KEY_TIME_BLOCK_START, 22),
+        timeBlockEndHour = valueOr(SpamRepository.KEY_TIME_BLOCK_END, 7),
+        frequencyEscalationEnabled = valueOr(SpamRepository.KEY_FREQ_ESCALATION, true),
+        frequencyThreshold = valueOr(SpamRepository.KEY_FREQ_THRESHOLD, 3),
+        autoCleanupEnabled = valueOr(SpamRepository.KEY_AUTO_CLEANUP, false),
+        cleanupDays = valueOr(SpamRepository.KEY_CLEANUP_DAYS, 30),
+        mlScorerEnabled = valueOr(SpamRepository.KEY_ML_SCORER, true),
+        rcsFilterEnabled = valueOr(SpamRepository.KEY_RCS_FILTER, true),
+        postCallScreenEnabled = valueOr(SpamRepository.KEY_POST_CALL_SCREEN, false),
+        silentVoicemailEnabled = valueOr(SpamRepository.KEY_SILENT_VOICEMAIL, false),
+        answerHangUpEnabled = valueOr(SpamRepository.KEY_ANSWER_HANG_UP, false),
         hangUpDelaySeconds = clampHangUpDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
         hardBlockStyle = HardBlockStyle.fromStorageKey(this[SpamRepository.KEY_HARD_BLOCK_STYLE]).storageKey,
-        pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
+        pushAlertEnabled = valueOr(SpamRepository.KEY_PUSH_ALERT, true),
         pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
-        regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
+        regionBlockEnabled = valueOr(SpamRepository.KEY_REGION_BLOCK, false),
         allowedRegions =
             RegionRules.normalizeRegionCodes(this[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()).sorted(),
         cnapTrustPatterns =
@@ -108,7 +111,7 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
             ContactGroupCatalog
                 .preserveScope(this[SpamRepository.KEY_SELECTED_CONTACT_GROUPS].orEmpty())
                 .sorted(),
-        outgoingRiskWarningEnabled = this[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false,
+        outgoingRiskWarningEnabled = valueOr(SpamRepository.KEY_OUTGOING_RISK_WARNING, false),
         activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
         // Preserve "never customized" as null: resolving the default
         // set into a concrete list here (and writing it back on
@@ -128,12 +131,12 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
                 .filter { it.onByDefaultAtHome && this[it.key] == false }
                 .map { it.key.name }
                 .sorted(),
-        meetingModeEnabled = this[SpamRepository.KEY_MEETING_MODE] ?: false,
+        meetingModeEnabled = valueOr(SpamRepository.KEY_MEETING_MODE, false),
         meetingModeApps = this[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty().sorted(),
-        outgoingCallHoldEnabled = this[SpamRepository.KEY_OUTGOING_CALL_HOLD] ?: false,
+        outgoingCallHoldEnabled = valueOr(SpamRepository.KEY_OUTGOING_CALL_HOLD, false),
         appTheme = sanitizeAppTheme(this[SpamRepository.KEY_APP_THEME]),
-        appUpdateChecksEnabled = this[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false,
-        strictOfflineEnabled = this[SpamRepository.KEY_STRICT_OFFLINE] ?: false,
+        appUpdateChecksEnabled = valueOr(SpamRepository.KEY_APP_UPDATE_CHECKS, false),
+        strictOfflineEnabled = valueOr(SpamRepository.KEY_STRICT_OFFLINE, false),
         feedMirrorUrl = this[SpamRepository.KEY_FEED_MIRROR_URL].orEmpty(),
         externalBlocklists =
             externalBlocklistSubscriptions().map {

@@ -664,32 +664,11 @@ class SmsContentAnalyzer
             val replyBait = firstContact && SmsReplyBait.matches(ruleText, urls, visibleText.length)
             val otherSignal = score > 0 || shouting || callback || specialHeavy || shortWithUrl || replyBait
 
-            // Check spam keyword patterns
-            var patternHits = 0
-            val countPatternHit = {
-                patternHits++
-                if (patternHits == 1) {
-                    score += 25
-                    reasons.add("spam_keywords")
-                } else {
-                    score += 15 // Each additional pattern is more damning
-                }
-            }
-            for (pattern in spamPatterns) {
-                if (patternHits >= 3) break // Cap pattern contribution
-                if (pattern.containsMatchIn(ruleText)) countPatternHit()
-            }
-            val urgentWithStakes =
-                urgentWord.containsMatchIn(ruleText) &&
-                    !urgencyPattern.containsMatchIn(ruleText) &&
-                    (urls.isNotEmpty() || callback || urgentStakes.containsMatchIn(ruleText))
-            // Once per text, like the rule it came out of.
-            if (patternHits < 3 && urgentWithStakes) countPatternHit()
-            if (patternHits > 0 || otherSignal || !namesItsSender(ruleText)) {
-                for (cue in responseCues) {
-                    if (patternHits >= 3) break
-                    if (cue.containsMatchIn(ruleText)) countPatternHit()
-                }
+            // Spam keyword patterns: 25 for the first, 15 for each one after.
+            val patternHits = countPatternHits(ruleText, urls, callback, otherSignal)
+            if (patternHits > 0) {
+                score += 25 + 15 * (patternHits - 1)
+                reasons.add("spam_keywords")
             }
 
             // All caps text (>50% of message) — shouting is a spam signal
@@ -726,6 +705,37 @@ class SmsContentAnalyzer
             return SmsAnalysisResult(score.coerceAtMost(100), reasons)
         }
 
+        /**
+         * How many spam keyword patterns [ruleText] hits, at most
+         * [MAX_PATTERN_HITS]. The response cues only count when something
+         * else already looks off or the text never says who it's from.
+         */
+        private fun countPatternHits(
+            ruleText: String,
+            urls: List<String>,
+            callback: Boolean,
+            otherSignal: Boolean,
+        ): Int {
+            var patternHits = 0
+            for (pattern in spamPatterns) {
+                if (patternHits >= MAX_PATTERN_HITS) break // Cap pattern contribution
+                if (pattern.containsMatchIn(ruleText)) patternHits++
+            }
+            val urgentWithStakes =
+                urgentWord.containsMatchIn(ruleText) &&
+                    !urgencyPattern.containsMatchIn(ruleText) &&
+                    (urls.isNotEmpty() || callback || urgentStakes.containsMatchIn(ruleText))
+            // Once per text, like the rule it came out of.
+            if (patternHits < MAX_PATTERN_HITS && urgentWithStakes) patternHits++
+            if (patternHits > 0 || otherSignal || !namesItsSender(ruleText)) {
+                for (cue in responseCues) {
+                    if (patternHits >= MAX_PATTERN_HITS) break
+                    if (cue.containsMatchIn(ruleText)) patternHits++
+                }
+            }
+            return patternHits
+        }
+
         companion object {
             val shared: SmsContentAnalyzer = SmsContentAnalyzer()
 
@@ -736,6 +746,9 @@ class SmsContentAnalyzer
             // the default one (50): a real child with a new phone writes the
             // same words, so it takes a second signal to block by default.
             internal const val REPLY_BAIT_SCORE = 30
+
+            // Keyword patterns stop counting after this many.
+            private const val MAX_PATTERN_HITS = 3
 
             // "won" as in a prize, never the start of "won't" or "wont".
             private const val WON = "won(?!['’]?t\\b)"

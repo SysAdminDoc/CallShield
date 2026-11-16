@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class StrictOfflineInterceptorTest {
     private val connections = AtomicInteger()
     private val server = ServerSocket(0, 5, InetAddress.getLoopbackAddress())
-    private val acceptor =
+
+    init {
         Thread {
             while (!server.isClosed) {
                 try {
@@ -46,6 +47,7 @@ class StrictOfflineInterceptorTest {
             isDaemon = true
             start()
         }
+    }
 
     private val url = "http://127.0.0.1:${server.localPort}/check"
 

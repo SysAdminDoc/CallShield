@@ -26,6 +26,7 @@ import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallSuspicion
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import dagger.hilt.android.AndroidEntryPoint
@@ -203,48 +204,16 @@ class CallShieldScreeningService : CallScreeningService() {
                         // Fast-path shortcut before we run the pipeline: a contact never
                         // needs any of the 13 downstream checks, and skipping them saves
                         // tens of milliseconds against the 5 s deadline.
-                        val contactIsKnown =
-                            if (prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) {
-                                val selectedContactGroups =
-                                    prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
-                                        ?.let(ContactGroupCatalog::preserveScope)
-                                contactLookup?.invoke(appContext, number, selectedContactGroups)
-                                    ?: heuristics.isInContacts(appContext, number, selectedContactGroups)
-                            } else {
-                                false
-                            }
-                        if (contactIsKnown) {
+                        if (isKnownContact(appContext, number, prefs, heuristics)) {
                             respondAllow(responseGate)
                             return@withTimeoutOrNull
                         }
 
-                        // STIR/SHAKEN now lives in the pipeline as StirShakenChecker so a
-                        // MANUAL_WHITELIST or CONTACT_WHITELIST entry can override it. We
-                        // just forward the verification status through the pipeline.
-                        val verificationStatus: Int? =
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                callDetails.callerNumberVerificationStatus
-                            } else {
-                                null
-                            }
-                        val callerName =
-                            callDetails.callerDisplayName?.takeIf {
-                                callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
-                                    it.isNotBlank()
-                            }
-                        val carrierExtras = StirShakenParser.readExtras(callDetails.extras)
-                        val callerIdentity =
-                            CallerIdentity(
-                                verificationStatus = verificationStatus,
-                                presentedName = callerName,
-                                passport = carrierExtras.passport,
-                                dnoStatus = carrierExtras.dnoStatus,
-                                lineType = carrierExtras.lineType,
-                            )
+                        val callerIdentity = callerIdentityOf(callDetails)
 
                         applicationScope.launch {
                             try {
-                                repository.recordCallerNamePresence(callerName != null)
+                                repository.recordCallerNamePresence(callerIdentity.presentedName != null)
                             } catch (_: Exception) {
                             }
                         }
@@ -280,55 +249,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                 )
                             }
                         } else {
-                            val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
-                            val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
-                            val suspicion = result.suspicion
-                            if (suspicion != null) {
-                                showSuspicion(number, suspicion, prefs)
-                            } else {
-                                // Unknown non-contact caller — area-code-only caller ID overlay.
-                                // A number other users reported gets it even with no area code
-                                // to name, since the popup is where its label shows.
-                                val location =
-                                    AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
-                                        ?: "".takeIf { heuristics().communityWatchReporterCount(appContext, number) >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS }
-                                if (location != null) {
-                                    try {
-                                        incomingOverlayLauncher(appContext, number, 0, location, false)
-                                    } catch (_: Exception) {
-                                    }
-                                }
-                            }
-                            respondAllow(responseGate)
-                            CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, result.matchSource)
-                            logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
-
-                            if (repeatedUrgentAllow) {
-                                NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
-                            } else if (!suppressFeedback) {
-                                // After-call feedback notification, deferred. Must run on
-                                // appScope since the service is typically unbound by the
-                                // time 10 s has passed. Contact status is re-checked at
-                                // post-time in case the user just added the caller.
-                                applicationScope.launch {
-                                    try {
-                                        if (waitForFeedbackWindow(appContext) &&
-                                            !heuristics.isInContacts(
-                                                appContext,
-                                                number,
-                                                prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
-                                                    ?.let(ContactGroupCatalog::preserveScope),
-                                            )
-                                        ) {
-                                            NotificationHelper.notifyAfterCall(appContext, number)
-                                        }
-                                    } catch (failure: CancellationException) {
-                                        throw failure
-                                    } catch (failure: Exception) {
-                                        Log.w(TAG, "After-call feedback failed", failure)
-                                    }
-                                }
-                            }
+                            handleAllowedResult(responseGate, appContext, repository, heuristics, number, result, prefs)
                         }
                     } catch (failure: CancellationException) {
                         throw failure
@@ -353,6 +274,112 @@ class CallShieldScreeningService : CallScreeningService() {
                 // explicit response; otherwise it waits until its hard timeout.
                 withContext(NonCancellable) {
                     allowUnscreened(responseGate, callDetails)
+                }
+            }
+        }
+    }
+
+    /**
+     * A saved contact, when the contact whitelist is on. Cached inside
+     * SpamHeuristics, so this stays cheap on the 5 s deadline.
+     */
+    private fun isKnownContact(
+        appContext: android.content.Context,
+        number: String,
+        prefs: androidx.datastore.preferences.core.Preferences,
+        heuristics: SpamHeuristics,
+    ): Boolean {
+        if (!(prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true)) return false
+        val selectedContactGroups =
+            prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                ?.let(ContactGroupCatalog::preserveScope)
+        return contactLookup?.invoke(appContext, number, selectedContactGroups)
+            ?: heuristics.isInContacts(appContext, number, selectedContactGroups)
+    }
+
+    /**
+     * What the network says about the caller. STIR/SHAKEN lives in the
+     * pipeline as StirShakenChecker, so a MANUAL_WHITELIST or CONTACT_WHITELIST
+     * entry can override it. This only forwards the verification status.
+     */
+    private fun callerIdentityOf(callDetails: Call.Details): CallerIdentity {
+        val verificationStatus: Int? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                callDetails.callerNumberVerificationStatus
+            } else {
+                null
+            }
+        val callerName =
+            callDetails.callerDisplayName?.takeIf {
+                callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
+                    it.isNotBlank()
+            }
+        val carrierExtras = StirShakenParser.readExtras(callDetails.extras)
+        return CallerIdentity(
+            verificationStatus = verificationStatus,
+            presentedName = callerName,
+            passport = carrierExtras.passport,
+            dnoStatus = carrierExtras.dnoStatus,
+            lineType = carrierExtras.lineType,
+        )
+    }
+
+    /** A call the checks let ring: its overlay, the response, then after-call feedback. */
+    private suspend fun handleAllowedResult(
+        responseGate: ScreeningResponseGate<CallResponse>,
+        appContext: android.content.Context,
+        repository: SpamRepository,
+        heuristics: SpamHeuristics,
+        number: String,
+        result: SpamCheckResult,
+        prefs: androidx.datastore.preferences.core.Preferences,
+    ) {
+        val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
+        val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
+        val suspicion = result.suspicion
+        if (suspicion != null) {
+            showSuspicion(number, suspicion, prefs)
+        } else {
+            // Unknown non-contact caller — area-code-only caller ID overlay.
+            // A number other users reported gets it even with no area code
+            // to name, since the popup is where its label shows.
+            val location =
+                AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
+                    ?: "".takeIf { heuristics().communityWatchReporterCount(appContext, number) >= SpamHeuristics.COMMUNITY_WATCH_MIN_REPORTERS }
+            if (location != null) {
+                try {
+                    incomingOverlayLauncher(appContext, number, 0, location, false)
+                } catch (_: Exception) {
+                }
+            }
+        }
+        respondAllow(responseGate)
+        CodeDuringCallWarning.onCallAllowed(applicationScope, appContext, number, result.matchSource)
+        logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
+
+        if (repeatedUrgentAllow) {
+            NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
+        } else if (!suppressFeedback) {
+            // After-call feedback notification, deferred. Must run on
+            // appScope since the service is typically unbound by the
+            // time 10 s has passed. Contact status is re-checked at
+            // post-time in case the user just added the caller.
+            applicationScope.launch {
+                try {
+                    if (waitForFeedbackWindow(appContext) &&
+                        !heuristics.isInContacts(
+                            appContext,
+                            number,
+                            prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                                ?.let(ContactGroupCatalog::preserveScope),
+                        )
+                    ) {
+                        NotificationHelper.notifyAfterCall(appContext, number)
+                    }
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (failure: Exception) {
+                    Log.w(TAG, "After-call feedback failed", failure)
                 }
             }
         }

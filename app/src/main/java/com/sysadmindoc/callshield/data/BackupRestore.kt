@@ -1045,16 +1045,7 @@ object BackupRestore {
         if (backup.version !in OLDEST_SUPPORTED_VERSION..CURRENT_BACKUP_VERSION) {
             return RestoreValidation.Invalid(RestoreFailure.UNSUPPORTED_VERSION, backup.version)
         }
-        if (
-            backup.blockedNumbers.isEmpty() &&
-            backup.inboundOnlyNumbers.isEmpty() &&
-            backup.whitelistNumbers.isEmpty() &&
-            backup.wildcardRules.isEmpty() &&
-            backup.keywordRules.isEmpty() &&
-            backup.rangeRules.isEmpty() &&
-            backup.settings == null &&
-            backup.logs.isEmpty()
-        ) {
+        if (backup.rawItemCount() == 0L) {
             return RestoreValidation.Invalid(RestoreFailure.EMPTY)
         }
         if (backup.rawItemCount() > MAX_BACKUP_RESTORE_ROWS.toLong()) {

@@ -7,7 +7,7 @@ complexity:
     threshold: 8
   CyclomaticComplexMethod:
     active: true
-    threshold: 45
+    threshold: 30
     excludes: ['**/ui/**']
     ignoreSingleWhenExpression: true
     ignoreSimpleWhenEntries: true
@@ -16,7 +16,7 @@ complexity:
     threshold: 1000
   LongMethod:
     active: true
-    threshold: 250
+    threshold: 150
     excludes: ['**/ui/**']
   LongParameterList:
     active: true

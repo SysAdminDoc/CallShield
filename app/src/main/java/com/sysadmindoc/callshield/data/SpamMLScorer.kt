@@ -527,8 +527,8 @@ class SpamMLScorer
 
             // Check raw number properties before normalizing to 10 digits
             val rawDigits = filterAsciiDigits(number)
-            val plusOnePrefix = if (compact.startsWith("+1")) 1.0 else 0.0
-            val shortNumber = if (rawDigits.length in 1..6) 1.0 else 0.0
+            val plusOnePrefix = oneIf(compact.startsWith("+1"))
+            val shortNumber = oneIf(rawDigits.length in 1..6)
 
             var digits = rawDigits
             if (digits.length == 11 && digits.startsWith("1")) digits = digits.drop(1)
@@ -541,9 +541,9 @@ class SpamMLScorer
             val nxxInt = nxx.toIntOrNull() ?: 0
 
             // ── Features 1–8 (original) ──────────────────────────────────
-            val tollFree = if (npa in tollFreePrefixes) 1.0 else 0.0
-            val highSpamNpa = if (npa in highSpamNpas) 1.0 else 0.0
-            val voipRange = if (npanxx in highSpamVoipNpanxx) 1.0 else 0.0
+            val tollFree = oneIf(npa in tollFreePrefixes)
+            val highSpamNpa = oneIf(npa in highSpamNpas)
+            val voipRange = oneIf(npanxx in highSpamVoipNpanxx)
 
             val digitCounts = digits.groupingBy { it }.eachCount()
             val repeatedRatio = (digitCounts.values.maxOrNull() ?: 1) / 10.0
@@ -551,36 +551,36 @@ class SpamMLScorer
             val seqAsc = (0 until 9).count { digits[it + 1].digitToInt() == digits[it].digitToInt() + 1 }
             val seqAscRatio = seqAsc / 9.0
 
-            val allSame = if (digits.toSet().size == 1) 1.0 else 0.0
-            val is555 = if (nxx == "555") 1.0 else 0.0
-            val last4Zero = if (sub == "0000") 1.0 else 0.0
+            val allSame = oneIf(digits.toSet().size == 1)
+            val is555 = oneIf(nxx == "555")
+            val last4Zero = oneIf(sub == "0000")
 
             // ── Features 9–15 ───────────────────────────────────────────
             // NXX must start with 2–9 in NANP; 0 or 1 = spoofed/invalid
-            val invalidNxx = if (nxx.firstOrNull().let { it == '0' || it == '1' }) 1.0 else 0.0
+            val invalidNxx = oneIf(nxx.firstOrNull().let { it == '0' || it == '1' })
 
             // Subscriber (last 4) all same digit: 9999, 1111, etc.
-            val subAllSame = if (sub.toSet().size == 1) 1.0 else 0.0
+            val subAllSame = oneIf(sub.toSet().size == 1)
 
             // Alternating: even-indexed and odd-indexed digits are each uniform
             // but different from each other (e.g. 5050505050, 1212121212)
             val evenSet = (0 until 10 step 2).map { digits[it] }.toSet()
             val oddSet = (1 until 10 step 2).map { digits[it] }.toSet()
-            val alternating = if (evenSet.size == 1 && oddSet.size == 1 && evenSet != oddSet) 1.0 else 0.0
+            val alternating = oneIf(evenSet.size == 1 && oddSet.size == 1 && evenSet != oddSet)
 
             val seqDesc = (0 until 9).count { digits[it + 1].digitToInt() == digits[it].digitToInt() - 1 }
             val seqDescRatio = seqDesc / 9.0
 
             // NXX below 200 — many unassigned or rarely-used-legitimately ranges
-            val nxxBelow200 = if (nxxInt < 200) 1.0 else 0.0
+            val nxxBelow200 = oneIf(nxxInt < 200)
 
             // Low entropy — fewer than 4 distinct digits in the entire number
-            val lowEntropy = if (digitCounts.size < 4) 1.0 else 0.0
+            val lowEntropy = oneIf(digitCounts.size < 4)
 
             // Subscriber sequential — last 4 form a fully ascending or descending run
             val subAsc = (0 until 3).count { sub[it + 1].digitToInt() == sub[it].digitToInt() + 1 }
             val subDesc = (0 until 3).count { sub[it + 1].digitToInt() == sub[it].digitToInt() - 1 }
-            val subSeq = if (subAsc == 3 || subDesc == 3) 1.0 else 0.0
+            val subSeq = oneIf(subAsc == 3 || subDesc == 3)
 
             // ── Features 16–20 (behavioral & temporal) ──────────────────
             // Cyclical time-of-day encoding. Production passes the device hour;
@@ -600,8 +600,7 @@ class SpamMLScorer
             // area code) is roadmap item 2.2.4; the feature name/position is
             // kept stable so existing trained model weights stay valid.
             val callerNpa = npa.toIntOrNull() ?: 0
-            val geoDist =
-                if (kotlin.math.abs(callerNpa - REFERENCE_NPA) > 200) 1.0 else 0.0
+            val geoDist = oneIf(kotlin.math.abs(callerNpa - REFERENCE_NPA) > 200)
 
             return doubleArrayOf(
                 tollFree,
@@ -627,6 +626,9 @@ class SpamMLScorer
                 plusOnePrefix,
             )
         }
+
+        /** A yes/no feature as the model reads it: 1.0 or 0.0. */
+        private fun oneIf(condition: Boolean): Double = if (condition) 1.0 else 0.0
 
         private fun sigmoid(x: Double): Double =
             if (x >= 0) {

@@ -116,6 +116,146 @@ internal fun liveLookupScore(
         else -> -1
     }
 
+/** The overlay's header before any live lookup answers. */
+internal fun overlayInitialHeaderRes(
+    outgoingRiskWarning: Boolean,
+    confidence: Int,
+): Int =
+    when {
+        outgoingRiskWarning -> R.string.overlay_header_outgoing_risk
+        confidence > 0 -> R.string.overlay_header_possible_spam
+        else -> R.string.overlay_header_incoming_call
+    }
+
+/** The status line before any live lookup answers. */
+internal fun overlayInitialStatusRes(
+    outgoingRiskWarning: Boolean,
+    liveEnrichmentEnabled: Boolean,
+): Int =
+    when {
+        outgoingRiskWarning -> R.string.overlay_outgoing_risk_status
+        liveEnrichmentEnabled -> R.string.overlay_status_querying
+        else -> R.string.overlay_status_local_only
+    }
+
+/** The header once the live lookups give the call a [score]. */
+internal fun overlayScoredHeaderRes(score: Int): Int =
+    when {
+        score >= 50 -> R.string.overlay_header_likely_spam
+        score > 0 -> R.string.overlay_header_suspicious
+        else -> R.string.overlay_header_safe
+    }
+
+/** The status line once every live lookup source has finished. */
+internal fun overlayFinishedStatusRes(snapshot: LiveLookupSnapshot): Int =
+    when {
+        snapshot.uncategorized && !snapshot.anySpam && snapshot.totalReports == 0 -> R.string.remote_lookup_status_uncategorized
+        snapshot.definitive > 0 -> R.string.overlay_status_complete
+        else -> R.string.detail_no_definitive_source_result
+    }
+
+/** The score's color: red from 70, orange from 40, yellow above 0, green at 0. */
+internal fun overlayScoreColor(
+    score: Int,
+    palette: CallerIdOverlayPalette,
+): Int =
+    when {
+        score >= 70 -> palette.error
+        score >= 40 -> palette.peach
+        score > 0 -> palette.warning
+        else -> palette.primary
+    }
+
+/** The mark in front of one source's row in the overlay. */
+internal fun overlaySourceIcon(result: ExternalLookup.SourceResult): String =
+    when {
+        result.isSpam -> "\u26A0"
+        result.status == RemoteLookupStatus.UNCATEGORIZED -> "!"
+        result.status.isFallback -> "!"
+        else -> "\u2713"
+    }
+
+/** The color of one source's row: red for spam, muted for an answer that isn't one. */
+internal fun overlaySourceColor(
+    result: ExternalLookup.SourceResult,
+    palette: CallerIdOverlayPalette,
+): Int =
+    when {
+        result.isSpam -> palette.error
+        result.status == RemoteLookupStatus.UNCATEGORIZED -> palette.overlay
+        result.status.isFallback -> palette.overlay
+        else -> palette.primary
+    }
+
+/** What the live lookups have said so far. */
+internal data class LiveLookupSnapshot(
+    val completed: Int,
+    val totalReports: Int,
+    val anySpam: Boolean,
+    /** Sources that answered FOUND or CLEAN, as opposed to failing. */
+    val definitive: Int,
+    val uncategorized: Boolean = false,
+)
+
+/**
+ * The live lookups' running count. Sources answer on different threads, so
+ * every read and change goes through this object's lock.
+ */
+internal class LiveLookupTally {
+    private var completed = 0
+    private var totalReports = 0
+    private var anySpam = false
+    private var definitive = 0
+    private var uncategorized = false
+    private var warmHitShown = false
+
+    /** Counts one finished source; [result] is null when it gave no answer. */
+    @Synchronized
+    fun record(result: ExternalLookup.SourceResult?): LiveLookupSnapshot {
+        completed++
+        if (result != null) {
+            totalReports += result.reports
+            if (result.isSpam) anySpam = true
+            if (result.status == RemoteLookupStatus.FOUND || result.status == RemoteLookupStatus.CLEAN) definitive++
+            if (result.status == RemoteLookupStatus.UNCATEGORIZED) uncategorized = true
+        }
+        return LiveLookupSnapshot(completed, totalReports, anySpam, definitive, uncategorized)
+    }
+
+    /** True once, for the first fast hit, and never after a source has said spam. */
+    @Synchronized
+    fun claimWarmHit(): Boolean {
+        if (warmHitShown || anySpam) return false
+        warmHitShown = true
+        return true
+    }
+}
+
+private fun goneIf(hidden: Boolean): Int = if (hidden) android.view.View.GONE else android.view.View.VISIBLE
+
+/** One of the overlay's buttons, with the full touch target. */
+private fun Context.overlayButton(
+    label: Int,
+    textColor: Int,
+    backgroundColor: Int,
+    verticalPadding: Float,
+    minTouchWidth: Boolean = true,
+): Button =
+    Button(this).apply {
+        text = context.getString(label)
+        setTextColor(textColor)
+        setBackgroundColor(backgroundColor)
+        textSize = OVERLAY_TEXT_SP
+        isAllCaps = false
+        minHeight = context.touchTargetPx()
+        minimumHeight = context.touchTargetPx()
+        if (minTouchWidth) {
+            minWidth = context.touchTargetPx()
+            minimumWidth = context.touchTargetPx()
+        }
+        setPadding(context.overlayDp(20f), context.overlayDp(verticalPadding), context.overlayDp(20f), context.overlayDp(verticalPadding))
+    }
+
 internal fun overlayReasonLabelRes(reason: String): Int? {
     val normalized = reason.trim().lowercase().replace(' ', '_')
     return when (normalized) {
@@ -496,14 +636,7 @@ class CallerIdOverlayService : Service() {
                 // Header — updates based on lookup results
                 headerText =
                     TextView(context).apply {
-                        text =
-                            if (outgoingRiskWarning) {
-                                context.getString(R.string.overlay_header_outgoing_risk)
-                            } else if (confidence > 0) {
-                                context.getString(R.string.overlay_header_possible_spam)
-                            } else {
-                                context.getString(R.string.overlay_header_incoming_call)
-                            }
+                        text = context.getString(overlayInitialHeaderRes(outgoingRiskWarning, confidence))
                         setTextColor(if (confidence > 0) palette.error else palette.primary)
                         textSize = OVERLAY_TEXT_SP
                         typeface = Typeface.DEFAULT_BOLD
@@ -528,16 +661,7 @@ class CallerIdOverlayService : Service() {
                 // Score — updates live
                 scoreText =
                     TextView(context).apply {
-                        text =
-                            if (outgoingRiskWarning) {
-                                context.getString(R.string.overlay_outgoing_risk_score, confidence)
-                            } else if (confidence > 0) {
-                                overlayVerdictLine(context, confidence, displayReason)
-                            } else if (liveEnrichmentEnabled) {
-                                context.getString(R.string.overlay_score_loading)
-                            } else {
-                                context.getString(R.string.overlay_score_local_clear)
-                            }
+                        text = initialScoreText(confidence, displayReason, outgoingRiskWarning, liveEnrichmentEnabled)
                         setTextColor(palette.peach)
                         textSize = OVERLAY_TEXT_SP
                         typeface = Typeface.DEFAULT_BOLD
@@ -550,12 +674,7 @@ class CallerIdOverlayService : Service() {
                 progressBar =
                     ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
                         setPadding(0, context.overlayDp(10f), 0, 0)
-                        visibility =
-                            if (outgoingRiskWarning || !liveEnrichmentEnabled) {
-                                android.view.View.GONE
-                            } else {
-                                android.view.View.VISIBLE
-                            }
+                        visibility = goneIf(outgoingRiskWarning || !liveEnrichmentEnabled)
                     }
                 addView(progressBar)
 
@@ -570,16 +689,7 @@ class CallerIdOverlayService : Service() {
                 // Status text
                 statusText =
                     TextView(context).apply {
-                        text =
-                            context.getString(
-                                if (outgoingRiskWarning) {
-                                    R.string.overlay_outgoing_risk_status
-                                } else if (liveEnrichmentEnabled) {
-                                    R.string.overlay_status_querying
-                                } else {
-                                    R.string.overlay_status_local_only
-                                },
-                            )
+                        text = context.getString(overlayInitialStatusRes(outgoingRiskWarning, liveEnrichmentEnabled))
                         setTextColor(palette.overlay)
                         textSize = OVERLAY_TEXT_SP
                         letterSpacing = 0.02f
@@ -588,111 +698,10 @@ class CallerIdOverlayService : Service() {
                 addView(statusText)
 
                 // Buttons — row 1
-                addView(
-                    LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        actionRow = this
-                        setPadding(0, context.overlayDp(16f), 0, 0)
-
-                        // Google search
-                        addView(
-                            Button(context).apply {
-                                text = context.getString(R.string.overlay_action_search)
-                                setTextColor(palette.blue)
-                                setBackgroundColor(palette.surfaceVariant)
-                                textSize = OVERLAY_TEXT_SP
-                                isAllCaps = false
-                                minHeight = context.touchTargetPx()
-                                minimumHeight = context.touchTargetPx()
-                                minWidth = context.touchTargetPx()
-                                minimumWidth = context.touchTargetPx()
-                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
-                                setOnClickListener {
-                                    try {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(overlaySearchUrl(context, digits))).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-                                    } catch (_: Exception) {
-                                    }
-                                    dismiss(sessionId)
-                                }
-                            },
-                        )
-
-                        addView(android.view.View(context).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
-
-                        // Block button
-                        addView(
-                            Button(context).apply {
-                                text = context.getString(R.string.overlay_action_block)
-                                setTextColor(palette.error)
-                                setBackgroundColor(palette.surfaceVariant)
-                                textSize = OVERLAY_TEXT_SP
-                                isAllCaps = false
-                                minHeight = context.touchTargetPx()
-                                minimumHeight = context.touchTargetPx()
-                                minWidth = context.touchTargetPx()
-                                minimumWidth = context.touchTargetPx()
-                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
-                                visibility =
-                                    if (outgoingRiskWarning) {
-                                        android.view.View.GONE
-                                    } else {
-                                        android.view.View.VISIBLE
-                                    }
-                                setOnClickListener {
-                                    isEnabled = false
-                                    blockFromOverlay(number, sessionId)
-                                }
-                            },
-                        )
-
-                        addView(android.view.View(context).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
-
-                        // Dismiss
-                        addView(
-                            Button(context).apply {
-                                text = context.getString(R.string.overlay_action_dismiss)
-                                setTextColor(palette.overlay)
-                                setBackgroundColor(Color.TRANSPARENT)
-                                textSize = OVERLAY_TEXT_SP
-                                isAllCaps = false
-                                minHeight = context.touchTargetPx()
-                                minimumHeight = context.touchTargetPx()
-                                minWidth = context.touchTargetPx()
-                                minimumWidth = context.touchTargetPx()
-                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
-                                setOnClickListener { dismiss(sessionId) }
-                            },
-                        )
-                    },
-                )
+                addView(actionRowView(context, palette, number, digits, outgoingRiskWarning, sessionId))
 
                 // Buttons — row 2: SIT tone
-                addView(
-                    Button(context).apply {
-                        text = context.getString(R.string.overlay_action_sit_tone)
-                        sitToneButton = this
-                        setTextColor(palette.subtext)
-                        setBackgroundColor(palette.surfaceVariant)
-                        textSize = OVERLAY_TEXT_SP
-                        isAllCaps = false
-                        minHeight = context.touchTargetPx()
-                        minimumHeight = context.touchTargetPx()
-                        setPadding(context.overlayDp(20f), context.overlayDp(6f), context.overlayDp(20f), context.overlayDp(6f))
-                        visibility =
-                            if (outgoingRiskWarning) {
-                                android.view.View.GONE
-                            } else {
-                                android.view.View.VISIBLE
-                            }
-                        layoutParams =
-                            LinearLayout
-                                .LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                                ).apply { topMargin = context.overlayDp(8f) }
-                        setOnClickListener { playSitToneFromOverlay() }
-                    },
-                )
+                addView(sitToneButtonView(context, palette, outgoingRiskWarning))
 
                 // In place of the buttons after Block, while Undo is offered
                 addView(blockedStripView(context, palette, sessionId))
@@ -734,6 +743,88 @@ class CallerIdOverlayService : Service() {
         registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId
     }
+
+    /** The score line before any live lookup answers. */
+    private fun initialScoreText(
+        confidence: Int,
+        displayReason: String,
+        outgoingRiskWarning: Boolean,
+        liveEnrichmentEnabled: Boolean,
+    ): String =
+        when {
+            outgoingRiskWarning -> getString(R.string.overlay_outgoing_risk_score, confidence)
+            confidence > 0 -> overlayVerdictLine(this, confidence, displayReason)
+            liveEnrichmentEnabled -> getString(R.string.overlay_score_loading)
+            else -> getString(R.string.overlay_score_local_clear)
+        }
+
+    /** Search, Block and Dismiss, in one row under the overlay's text. */
+    private fun actionRowView(
+        context: Context,
+        palette: CallerIdOverlayPalette,
+        number: String,
+        digits: String,
+        outgoingRiskWarning: Boolean,
+        sessionId: Long,
+    ): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            actionRow = this
+            setPadding(0, context.overlayDp(16f), 0, 0)
+
+            // Google search
+            addView(
+                context.overlayButton(R.string.overlay_action_search, palette.blue, palette.surfaceVariant, 8f).apply {
+                    setOnClickListener {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(overlaySearchUrl(context, digits))).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                        } catch (_: Exception) {
+                        }
+                        dismiss(sessionId)
+                    }
+                },
+            )
+
+            addView(android.view.View(context).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
+
+            // Block button
+            addView(
+                context.overlayButton(R.string.overlay_action_block, palette.error, palette.surfaceVariant, 8f).apply {
+                    visibility = goneIf(outgoingRiskWarning)
+                    setOnClickListener {
+                        isEnabled = false
+                        blockFromOverlay(number, sessionId)
+                    }
+                },
+            )
+
+            addView(android.view.View(context).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
+
+            // Dismiss
+            addView(
+                context.overlayButton(R.string.overlay_action_dismiss, palette.overlay, Color.TRANSPARENT, 8f).apply {
+                    setOnClickListener { dismiss(sessionId) }
+                },
+            )
+        }
+
+    /** The SIT tone button, on its own row under the others. */
+    private fun sitToneButtonView(
+        context: Context,
+        palette: CallerIdOverlayPalette,
+        outgoingRiskWarning: Boolean,
+    ): Button =
+        context.overlayButton(R.string.overlay_action_sit_tone, palette.subtext, palette.surfaceVariant, 6f, minTouchWidth = false).apply {
+            sitToneButton = this
+            visibility = goneIf(outgoingRiskWarning)
+            layoutParams =
+                LinearLayout
+                    .LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { topMargin = context.overlayDp(8f) }
+            setOnClickListener { playSitToneFromOverlay() }
+        }
 
     private fun localizedOverlayReason(reason: String): String =
         overlayReasonLabelRes(reason)?.let(::getString)
@@ -889,26 +980,11 @@ class CallerIdOverlayService : Service() {
         sessionId: Long,
         palette: CallerIdOverlayPalette,
     ) {
-        data class LookupSnapshot(
-            val completed: Int,
-            val totalReports: Int,
-            val anySpam: Boolean,
-            /** Sources that answered FOUND or CLEAN, as opposed to failing. */
-            val definitive: Int,
-            val uncategorized: Boolean = false,
-        )
-
         val spamSources = ExternalLookup.spamLookupSources()
         val totalSources = spamSources.size
-        val stateLock = Any()
-        var completed = 0
-        var totalReports = 0
-        var anySpam = false
-        var definitive = 0
-        var uncategorized = false
-        var warmHitShown = false
+        val tally = LiveLookupTally()
 
-        fun scoreFor(snapshot: LookupSnapshot): Int =
+        fun scoreFor(snapshot: LiveLookupSnapshot): Int =
             liveLookupScore(
                 totalReports = snapshot.totalReports,
                 anySpam = snapshot.anySpam,
@@ -916,24 +992,10 @@ class CallerIdOverlayService : Service() {
                 definitive = snapshot.definitive,
             )
 
-        fun colorFor(score: Int): Int =
-            when {
-                score >= 70 -> palette.error
-
-                // Red
-                score >= 40 -> palette.peach
-
-                // Orange
-                score > 0 -> palette.warning
-
-                // Yellow
-                else -> palette.primary // Green
-            }
-
-        fun renderScore(snapshot: LookupSnapshot) {
+        fun renderScore(snapshot: LiveLookupSnapshot) {
             val score = scoreFor(snapshot)
             if (score >= 0) {
-                val color = colorFor(score)
+                val color = overlayScoreColor(score, palette)
                 scoreText?.text =
                     this@CallerIdOverlayService.getString(
                         R.string.overlay_spam_score,
@@ -946,70 +1008,29 @@ class CallerIdOverlayService : Service() {
                         },
                     )
                 scoreText?.setTextColor(color)
-                headerText?.text =
-                    when {
-                        score >= 50 -> this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
-                        score > 0 -> this@CallerIdOverlayService.getString(R.string.overlay_header_suspicious)
-                        else -> this@CallerIdOverlayService.getString(R.string.overlay_header_safe)
-                    }
+                headerText?.text = this@CallerIdOverlayService.getString(overlayScoredHeaderRes(score))
                 headerText?.setTextColor(color)
             }
             if (snapshot.completed >= totalSources) {
                 progressBar?.visibility = android.view.View.GONE
-                statusText?.text =
-                    this@CallerIdOverlayService.getString(
-                        if (snapshot.uncategorized && !snapshot.anySpam && snapshot.totalReports == 0) {
-                            R.string.remote_lookup_status_uncategorized
-                        } else if (snapshot.definitive > 0) {
-                            R.string.overlay_status_complete
-                        } else {
-                            R.string.detail_no_definitive_source_result
-                        },
-                    )
+                statusText?.text = this@CallerIdOverlayService.getString(overlayFinishedStatusRes(snapshot))
             }
         }
 
-        fun recordCompletion(result: ExternalLookup.SourceResult?): LookupSnapshot =
-            synchronized(stateLock) {
-                completed++
-                if (result != null) {
-                    totalReports += result.reports
-                    if (result.isSpam) anySpam = true
-                    if (result.status == RemoteLookupStatus.FOUND || result.status == RemoteLookupStatus.CLEAN) definitive++
-                    if (result.status == RemoteLookupStatus.UNCATEGORIZED) uncategorized = true
-                }
-                LookupSnapshot(completed, totalReports, anySpam, definitive, uncategorized)
-            }
-
         fun addSourceResult(result: ExternalLookup.SourceResult) {
-            val snapshot = recordCompletion(result)
+            val snapshot = tally.record(result)
             handler.post {
                 if (!isCurrentSession(sessionId)) return@post
                 sourcesContainer?.addView(
                     TextView(this).apply {
-                        val isFallback = result.status.isFallback
-                        val icon =
-                            when {
-                                result.isSpam -> "\u26A0"
-                                result.status == RemoteLookupStatus.UNCATEGORIZED -> "!"
-                                isFallback -> "!"
-                                else -> "\u2713"
-                            }
                         val info =
                             when {
                                 result.reports > 0 -> formatReports(result.reports)
                                 result.isSpam -> this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
                                 else -> sourceStatusText(result)
                             }
-                        text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)
-                        setTextColor(
-                            when {
-                                result.isSpam -> palette.error
-                                result.status == RemoteLookupStatus.UNCATEGORIZED -> palette.overlay
-                                isFallback -> palette.overlay
-                                else -> palette.primary
-                            },
-                        )
+                        text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, overlaySourceIcon(result), result.source, info)
+                        setTextColor(overlaySourceColor(result, palette))
                         textSize = OVERLAY_TEXT_SP
                         setPadding(0, context.overlayDp(3f), 0, context.overlayDp(3f))
                     },
@@ -1019,7 +1040,7 @@ class CallerIdOverlayService : Service() {
         }
 
         fun markSourceFinished() {
-            val snapshot = recordCompletion(null)
+            val snapshot = tally.record(null)
             handler.post {
                 if (!isCurrentSession(sessionId)) return@post
                 renderScore(snapshot)
@@ -1027,20 +1048,11 @@ class CallerIdOverlayService : Service() {
         }
 
         fun publishWarmHit(result: ExternalLookup.SourceResult) {
-            val shouldPublish =
-                synchronized(stateLock) {
-                    if (warmHitShown || anySpam) {
-                        false
-                    } else {
-                        warmHitShown = true
-                        true
-                    }
-                }
-            if (!shouldPublish) return
+            if (!tally.claimWarmHit()) return
 
             val score =
                 scoreFor(
-                    LookupSnapshot(
+                    LiveLookupSnapshot(
                         completed = totalSources,
                         totalReports = result.reports,
                         anySpam = result.isSpam || result.reports >= 3,
@@ -1049,7 +1061,7 @@ class CallerIdOverlayService : Service() {
                 ).coerceAtLeast(50)
             handler.post {
                 if (!isCurrentSession(sessionId)) return@post
-                val color = colorFor(score)
+                val color = overlayScoreColor(score, palette)
                 val reportText =
                     if (result.reports > 0) {
                         formatReports(result.reports)
@@ -1254,32 +1266,12 @@ class CallerIdOverlayService : Service() {
                 },
             )
             addView(
-                Button(context).apply {
-                    text = context.getString(R.string.blocked_log_undo)
-                    setTextColor(palette.primary)
-                    setBackgroundColor(palette.surfaceVariant)
-                    textSize = OVERLAY_TEXT_SP
-                    isAllCaps = false
-                    minHeight = context.touchTargetPx()
-                    minimumHeight = context.touchTargetPx()
-                    minWidth = context.touchTargetPx()
-                    minimumWidth = context.touchTargetPx()
-                    setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
+                context.overlayButton(R.string.blocked_log_undo, palette.primary, palette.surfaceVariant, 8f).apply {
                     blockedStripUndo = this
                 },
             )
             addView(
-                Button(context).apply {
-                    text = context.getString(R.string.overlay_action_dismiss)
-                    setTextColor(palette.overlay)
-                    setBackgroundColor(Color.TRANSPARENT)
-                    textSize = OVERLAY_TEXT_SP
-                    isAllCaps = false
-                    minHeight = context.touchTargetPx()
-                    minimumHeight = context.touchTargetPx()
-                    minWidth = context.touchTargetPx()
-                    minimumWidth = context.touchTargetPx()
-                    setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
+                context.overlayButton(R.string.overlay_action_dismiss, palette.overlay, Color.TRANSPARENT, 8f).apply {
                     setOnClickListener { dismiss(sessionId) }
                 },
             )

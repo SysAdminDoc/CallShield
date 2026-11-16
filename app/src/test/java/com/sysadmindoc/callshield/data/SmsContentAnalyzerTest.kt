@@ -275,6 +275,21 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `the first keyword adds 25, each one after adds 15, and a fourth adds nothing`() {
+        val one = SmsContentAnalyzer.analyze("this is your final notice")
+        val two = SmsContentAnalyzer.analyze("final notice about your debt relief")
+        val three = SmsContentAnalyzer.analyze("final notice about your debt relief, you are pre-approved")
+        val four = SmsContentAnalyzer.analyze("final notice about your debt relief, you are pre-approved for a miracle cure")
+
+        assertEquals(listOf("spam_keywords"), one.reasons)
+        assertEquals(25, one.score)
+        assertEquals(40, two.score)
+        assertEquals(55, three.score)
+        assertEquals(55, four.score)
+        assertEquals(listOf("spam_keywords"), four.reasons)
+    }
+
+    @Test
     fun `analyze detects act now urgency`() {
         val result = SmsContentAnalyzer.analyze("Act now! Limited time offer expires today. Don't miss out on this deal!")
         assertTrue(result.reasons.contains("spam_keywords"))
