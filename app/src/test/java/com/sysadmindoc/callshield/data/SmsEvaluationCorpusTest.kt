@@ -1197,8 +1197,11 @@ private object MendeleySmsSet {
             SPAM to 0.14,
         )
 
-    /** Clean texts flagged when the set landed. The ceiling only moves down. */
-    const val MAX_CLEAN_FLAGGED = 23
+    /**
+     * Clean texts flagged: 23 when the set landed, 4 once a lone "urgent" stopped
+     * counting (2026-11-16). The ceiling only moves down.
+     */
+    const val MAX_CLEAN_FLAGGED = 4
 
     val rows: List<Row> by lazy(::load)
 

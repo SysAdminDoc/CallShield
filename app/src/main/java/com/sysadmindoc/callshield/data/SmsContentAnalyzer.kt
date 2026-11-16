@@ -71,6 +71,26 @@ class SmsContentAnalyzer
                 ".pw",
             )
 
+        // "Urgent" on its own is everyday speech ("message me if it's urgent"),
+        // so it counts as a spam keyword only beside what a scam is after: a
+        // link, a number to call, money, an account or card, or a "new number".
+        // The rest of the old urgency rule still counts on its own.
+        private val urgencyPattern = Regex("(?i)(immediate action|account (suspended|locked|compromised|closed))")
+        private val urgentWord = Regex("(?i)urgent")
+        private val urgentStakes =
+            Regex(
+                "(?i)$JOB_MONEY" +
+                    "|(?<!\\d)\\d(?:[ \\t()-]?\\d){6,}(?!\\d)" +
+                    "|$WORD_START(?:new|temp|temporary|spare)${SPACE}number$WORD_END" +
+                    "|$WORD_START(?:n.mero${SPACE}nuevo|nuevo${SPACE}n.mero|n.mero${SPACE}novo|novo${SPACE}n.mero" +
+                    "|nuovo${SPACE}numero|numero${SPACE}nuovo)$WORD_END" +
+                    "|$WORD_START(?:account|bank|card|credit|debit|payment|invoice|fee|tax|debt|loan|balance|refund" +
+                    "|prize|reward|password|login|otp|verify|verification|security" +
+                    "|cuenta|banco|tarjeta|pago|pagar|factura|deuda|premio" +
+                    "|cart.o|pagamento|fatura|d.vida|pr.mio|conto|banca|carta|fattura|debito" +
+                    "|compte|banque|carte|paiement|facture|solde|imp.ts?|rekening|betaling|betalen)$WORD_END",
+            )
+
         // Spam keyword patterns (case-insensitive)
         private val spamPatterns =
             listOf(
@@ -83,7 +103,7 @@ class SmsContentAnalyzer
                 Regex("(?i)(bitcoin|btc|ethereum|eth|usdt).{0,20}(send|transfer|pay|wallet)"),
                 // Urgency / pressure tactics
                 Regex("(?i)(act (now|fast|immediately|today)|limited time|expires? (today|soon|now))"),
-                Regex("(?i)(urgent|immediate action|account (suspended|locked|compromised|closed))"),
+                urgencyPattern,
                 Regex("(?i)(verify (your|the) (account|identity|information|ssn|social))"),
                 Regex("(?i)(your (package|delivery|shipment) (has|is|was) (held|delayed|stopped))"),
                 Regex("(?i)(final (notice|warning|attempt|reminder))"),
@@ -659,6 +679,12 @@ class SmsContentAnalyzer
                 if (patternHits >= 3) break // Cap pattern contribution
                 if (pattern.containsMatchIn(ruleText)) countPatternHit()
             }
+            val urgentWithStakes =
+                urgentWord.containsMatchIn(ruleText) &&
+                    !urgencyPattern.containsMatchIn(ruleText) &&
+                    (urls.isNotEmpty() || callback || urgentStakes.containsMatchIn(ruleText))
+            // Once per text, like the rule it came out of.
+            if (patternHits < 3 && urgentWithStakes) countPatternHit()
             if (patternHits > 0 || otherSignal || !namesItsSender(ruleText)) {
                 for (cue in responseCues) {
                     if (patternHits >= 3) break

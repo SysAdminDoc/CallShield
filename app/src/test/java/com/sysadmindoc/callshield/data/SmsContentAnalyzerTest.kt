@@ -287,6 +287,39 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `a lone urgent in a personal text is not a spam keyword`() {
+        // On its own this used to clear aggressive mode's bar of 25.
+        for (body in listOf(
+            "Can't talk now, stuck in an urgent meeting. I'll ring you after",
+            "Message me if it's urgent, I'm driving",
+            "Es urgente, llámame cuando puedas",
+        )) {
+            assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `urgent still counts next to a link, a number, money, an account or a new number`() {
+        for (body in listOf(
+            "Urgent: see the details at https://example.com/a1B2c3",
+            "Urgent, ring 212 555 0199 before 5",
+            "Urgent, send \$200 today",
+            "URGENT. Your card ending 4417 is on hold",
+            "Urgente: su cuenta será cerrada hoy",
+            "Hi mum, this is my new number, message me on WhatsApp it's urgent",
+        )) {
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `urgent beside account suspended counts once, as it always did`() {
+        val both = SmsContentAnalyzer.analyze("Urgent, account suspended until you sign in again")
+        val alone = SmsContentAnalyzer.analyze("Your account suspended until you sign in again")
+        assertEquals(alone.score, both.score)
+    }
+
+    @Test
     fun `analyze detects final notice`() {
         val result = SmsContentAnalyzer.analyze("FINAL NOTICE: Your payment is overdue. Contact us immediately to avoid collection.")
         assertTrue(result.reasons.contains("spam_keywords"))
