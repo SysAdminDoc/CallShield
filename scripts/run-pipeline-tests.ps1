@@ -100,7 +100,7 @@ function Get-PipelinePython {
 }
 $python = Get-PipelinePython
 if ($python) {
-    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py', 'test_probe_live_sources.py', 'test_feed_signing.py', 'test_write_app_release.py', 'test_list_catalog.py', 'test_device_smoke.py', 'test_sample_mendeley_sms_corpus.py')) {
+    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py', 'test_probe_live_sources.py', 'test_feed_signing.py', 'test_write_app_release.py', 'test_list_catalog.py', 'test_device_smoke.py', 'test_sample_mendeley_sms_corpus.py', 'test_neighbor_spoof_report.py')) {
         $path = Join-Path $PSScriptRoot $test
         if (-not (Test-Path $path)) { continue }
         Write-Host "Running $test..."
