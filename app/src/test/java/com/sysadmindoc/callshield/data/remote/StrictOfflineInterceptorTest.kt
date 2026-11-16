@@ -62,8 +62,7 @@ class StrictOfflineInterceptorTest {
         StrictOffline.resetForTest()
     }
 
-    private fun get(): String =
-        derived.newCall(Request.Builder().url(url).build()).execute().use { it.body.string() }
+    private fun get(): String = derived.newCall(Request.Builder().url(url).build()).execute().use { it.body.string() }
 
     @Test
     fun `a client derived from the shared one is refused when offline mode is on, and nothing reaches the server`() {

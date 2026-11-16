@@ -112,8 +112,16 @@ class RightToLeftDrawingTest {
     fun `a day's label sits centered under its bar`() {
         val bar = renderChart(LayoutDirection.Ltr)
 
-        val label = composeRule.onNodeWithText("Sun").fetchSemanticsNode().boundsInRoot.center.x
-        val width = composeRule.onRoot().fetchSemanticsNode().size.width
+        val label =
+            composeRule
+                .onNodeWithText("Sun")
+                .fetchSemanticsNode()
+                .boundsInRoot.center.x
+        val width =
+            composeRule
+                .onRoot()
+                .fetchSemanticsNode()
+                .size.width
 
         assertEquals(bar, label / width, 0.01f)
     }

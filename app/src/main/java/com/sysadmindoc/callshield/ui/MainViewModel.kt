@@ -533,6 +533,7 @@ class MainViewModel
         val remoteUrlLookupEnabled =
             repo.remoteUrlLookupEnabled
                 .screenState(false)
+
         /** Strict offline mode: no network request is made while this is on. */
         val strictOfflineEnabled = repo.strictOfflineEnabled.screenState(false)
         val liveCallerEnrichmentEnabled =

@@ -81,12 +81,18 @@ object AppLanguage {
         val tag = languageTag.trim()
         return when {
             tag == ENGLISH_TAG -> ENGLISH_TAG
+
             tag == CHINESE_SIMPLIFIED_TAG -> CHINESE_SIMPLIFIED_TAG
+
             tag == PORTUGUESE_BRAZIL_TAG -> PORTUGUESE_BRAZIL_TAG
+
             // values-es has no region, so Android's own picker can hand back es-MX.
             tag == SPANISH_TAG || tag.startsWith("$SPANISH_TAG-") -> SPANISH_TAG
+
             tag == ACCENTED_PSEUDO_TAG -> ACCENTED_PSEUDO_TAG
+
             tag == RTL_PSEUDO_TAG -> RTL_PSEUDO_TAG
+
             else -> SYSTEM_DEFAULT_TAG
         }
     }

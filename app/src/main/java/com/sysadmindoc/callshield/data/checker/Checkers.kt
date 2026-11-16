@@ -533,8 +533,7 @@ internal class RegulatoryPrefixChecker(
     override val priority = CheckerPriority.REGULATORY_PREFIX
     override val name = "regulatory_prefix"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        RegulatoryPrefix.entries.any { !it.allows && it.isOn(ctx.prefs) { homeRegion(ctx.appContext) } }
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = RegulatoryPrefix.entries.any { !it.allows && it.isOn(ctx.prefs) { homeRegion(ctx.appContext) } }
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = false) { homeRegion(ctx.appContext) }?.let { range ->
@@ -549,8 +548,7 @@ internal class RegulatoryAllowChecker(
     override val priority = CheckerPriority.REGULATORY_ALLOW
     override val name = "regulatory_allow"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        RegulatoryPrefix.entries.any { it.allows && it.isOn(ctx.prefs) { homeRegion(ctx.appContext) } }
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = RegulatoryPrefix.entries.any { it.allows && it.isOn(ctx.prefs) { homeRegion(ctx.appContext) } }
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = true) { homeRegion(ctx.appContext) }?.let { series ->

@@ -35,11 +35,11 @@ import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
-import com.sysadmindoc.callshield.data.remote.StrictOffline
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
+import com.sysadmindoc.callshield.data.remote.StrictOffline
+import com.sysadmindoc.callshield.data.remote.isStrictOffline
 import com.sysadmindoc.callshield.data.remote.sha256Hex
 import com.sysadmindoc.callshield.data.remote.spamShardIdFor
-import com.sysadmindoc.callshield.data.remote.isStrictOffline
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget

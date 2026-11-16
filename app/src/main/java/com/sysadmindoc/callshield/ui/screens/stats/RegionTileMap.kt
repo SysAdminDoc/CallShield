@@ -66,8 +66,7 @@ private val CANADA_ROWS = parseTileRows("NT BC AB SK MB ON QC NB NS NL ..")
 private val CANADA_REGIONS = CANADA_ROWS.flatten().filterNotNull().toSet()
 private val MAPPED_REGIONS = US_ROWS.flatten().filterNotNull().toSet() + CANADA_REGIONS
 
-private fun parseTileRows(vararg rows: String): List<List<String?>> =
-    rows.map { row -> row.split(" ").map { cell -> cell.takeUnless { it == EMPTY_CELL } } }
+private fun parseTileRows(vararg rows: String): List<List<String?>> = rows.map { row -> row.split(" ").map { cell -> cell.takeUnless { it == EMPTY_CELL } } }
 
 /**
  * The log's area code counts added up by state or province. A code with no
@@ -82,8 +81,7 @@ internal fun countsByRegion(areaCodeCounts: List<Pair<String, Int>>): Map<String
         .mapValues { (_, counts) -> counts.sum() }
 
 /** The map's rows, with Canada's on top only when the log holds a Canadian number. */
-internal fun regionTileRows(counts: Map<String, Int>): List<List<String?>> =
-    if (counts.keys.any { it in CANADA_REGIONS }) CANADA_ROWS + US_ROWS else US_ROWS
+internal fun regionTileRows(counts: Map<String, Int>): List<List<String?>> = if (counts.keys.any { it in CANADA_REGIONS }) CANADA_ROWS + US_ROWS else US_ROWS
 
 /** How dark a tile is, 0 for no calls. The square root keeps one busy state from washing out the rest. */
 internal fun shadeStep(

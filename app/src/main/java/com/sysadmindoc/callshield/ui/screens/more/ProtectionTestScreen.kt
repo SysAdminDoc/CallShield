@@ -855,24 +855,28 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 name = context.getString(R.string.protection_test_hot_list_data),
                 passed = hotDataHealthy || hotDataPaused,
                 detail =
-                    if (hotDataPaused) context.getString(R.string.protection_test_hot_offline) else when (hotDataState) {
-                        HotFeedFreshness.State.UNREACHABLE -> {
-                            hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
-                        }
+                    if (hotDataPaused) {
+                        context.getString(R.string.protection_test_hot_offline)
+                    } else {
+                        when (hotDataState) {
+                            HotFeedFreshness.State.UNREACHABLE -> {
+                                hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
+                            }
 
-                        HotFeedFreshness.State.STALLED -> {
-                            hotDataStalledDetail(context, hotDataHealth, hotDataNow)
-                        }
+                            HotFeedFreshness.State.STALLED -> {
+                                hotDataStalledDetail(context, hotDataHealth, hotDataNow)
+                            }
 
-                        HotFeedFreshness.State.REFUSED -> {
-                            context.getString(R.string.protection_test_hot_refused)
-                        }
+                            HotFeedFreshness.State.REFUSED -> {
+                                context.getString(R.string.protection_test_hot_refused)
+                            }
 
-                        HotFeedFreshness.State.CURRENT -> {
-                            when {
-                                hotRangesLoaded -> context.getString(R.string.protection_test_hot_pass)
-                                hotRangesCleared -> context.getString(R.string.protection_test_hot_cleared)
-                                else -> context.getString(R.string.protection_test_hot_fail)
+                            HotFeedFreshness.State.CURRENT -> {
+                                when {
+                                    hotRangesLoaded -> context.getString(R.string.protection_test_hot_pass)
+                                    hotRangesCleared -> context.getString(R.string.protection_test_hot_cleared)
+                                    else -> context.getString(R.string.protection_test_hot_fail)
+                                }
                             }
                         }
                     },
