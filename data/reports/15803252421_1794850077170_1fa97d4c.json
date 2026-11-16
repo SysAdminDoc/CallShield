@@ -1,0 +1,9 @@
+{
+  "number": "+15803252421",
+  "type": "sms_spam",
+  "reported_at": "2026-11-16T17:27:57.170Z",
+  "source": "community_app",
+  "reporter_bucket": "8bbef5bf081db148",
+  "reporter_device": "0b425c9c5caf7d58",
+  "report_id": "055efabd-a245-470f-a4ef-f3572da0ea0f"
+}
