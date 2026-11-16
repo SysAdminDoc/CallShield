@@ -64,9 +64,9 @@ import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.applySelectionAction
 import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
+import com.sysadmindoc.callshield.ui.blockReasonGroupLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.firstPageFailed
-import com.sysadmindoc.callshield.ui.blockReasonGroupLabelRes
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -307,13 +307,20 @@ fun BlockedLogScreen(
                             label = {
                                 Text(
                                     when {
-                                        selectedGroup != null ->
+                                        selectedGroup != null -> {
                                             stringResource(
                                                 R.string.blocked_log_filter_group,
                                                 stringResource(blockReasonGroupLabelRes(selectedGroup)),
                                             )
-                                        selectedReasonCode != null -> friendlyMatchReasonLabel(selectedReasonCode.wireValue)
-                                        else -> stringResource(R.string.blocked_log_filter_reason)
+                                        }
+
+                                        selectedReasonCode != null -> {
+                                            friendlyMatchReasonLabel(selectedReasonCode.wireValue)
+                                        }
+
+                                        else -> {
+                                            stringResource(R.string.blocked_log_filter_reason)
+                                        }
                                     },
                                 )
                             },

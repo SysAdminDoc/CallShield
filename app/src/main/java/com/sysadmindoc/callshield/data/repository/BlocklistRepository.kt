@@ -771,11 +771,9 @@ class BlocklistRepository(
 
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = dao.observeRecentLog(limit)
 
-    fun pageBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCall> =
-        dao.pageBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
+    fun pageBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCall> = dao.pageBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
 
-    fun pageGroupedBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCallGroup> =
-        dao.pageGroupedBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
+    fun pageGroupedBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCallGroup> = dao.pageGroupedBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
 
     fun observeLogReasonCodes(): Flow<List<String>> = dao.observeLogReasonCodes()
 

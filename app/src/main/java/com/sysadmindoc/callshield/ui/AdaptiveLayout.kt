@@ -175,7 +175,12 @@ internal fun RootPanes(
 @Composable
 internal fun DetailPanePlaceholder() {
     Box(
-        modifier = Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Black)
+                .safeDrawingPadding()
+                .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(

@@ -1701,8 +1701,7 @@ class MainViewModel
         suspend fun applyProfile(profile: BlockingProfiles.Profile): BlockingProfiles.Snapshot = applyProfileHeld(profile).previous
 
         /** Like [applyProfile], saying whether the switches it turns off are waiting for a call to be over. */
-        suspend fun applyProfileHeld(profile: BlockingProfiles.Profile): ProtectionHold.Replaced =
-            BlockingProfiles.apply(appContext, profile).also { announceHold(it.outcome) }
+        suspend fun applyProfileHeld(profile: BlockingProfiles.Profile): ProtectionHold.Replaced = BlockingProfiles.apply(appContext, profile).also { announceHold(it.outcome) }
 
         suspend fun undoProfile(snapshot: BlockingProfiles.Snapshot) {
             announceHold(BlockingProfiles.restore(appContext, snapshot))

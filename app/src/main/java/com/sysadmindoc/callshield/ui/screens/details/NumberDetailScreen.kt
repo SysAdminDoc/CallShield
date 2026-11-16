@@ -166,7 +166,14 @@ fun NumberDetailScreen(
     // The detail replaces the tab shell, so no Scaffold pads it for the edge-to-edge
     // window: without this the header ran under the status bar and the Undo
     // snackbar sat under the navigation bar, where a tap on Undo hit the bar.
-    Box(modifier = Modifier.fillMaxSize().then(backGesture).background(Black).safeDrawingPadding()) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .then(backGesture)
+                .background(Black)
+                .safeDrawingPadding(),
+    ) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
