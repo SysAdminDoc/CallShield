@@ -1,8 +1,6 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
-import android.content.Intent
-import androidx.core.content.FileProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import kotlinx.coroutines.Dispatchers
@@ -182,17 +180,9 @@ object LogExporter {
                     return@withContext null
                 }
 
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent =
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "text/csv"
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        putExtra(Intent.EXTRA_SUBJECT, context.getString(subject))
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                Intent
-                    .createChooser(intent, context.getString(chooserTitle))
-                    .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    FileShareIntent.forFile(context, file, mimeType = "text/csv", subject = context.getString(subject))
+                FileShareIntent.chooser(intent, context.getString(chooserTitle))
             } ?: return false
 
         withContext(Dispatchers.Main) {

@@ -2,10 +2,9 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
-import androidx.core.content.FileProvider
 import com.sysadmindoc.callshield.BuildConfig
+import com.sysadmindoc.callshield.data.FileShareIntent
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -85,18 +84,7 @@ object CrashReporter {
     /** Build a share intent for the latest crash. Returns null if there's nothing to share. */
     fun shareLatestCrashIntent(context: Context): Intent? {
         val file = latestCrash(context) ?: return null
-        val uri: Uri =
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file,
-            )
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "CallShield crash log ${file.name}")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        return FileShareIntent.forFile(context, file, mimeType = "text/plain", subject = "CallShield crash log ${file.name}")
     }
 
     /** Delete all stored crash logs. Called from a user-facing "Clear crash logs" action. */

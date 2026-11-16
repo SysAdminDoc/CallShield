@@ -1,10 +1,8 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import androidx.core.content.FileProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -63,17 +61,14 @@ object BlocklistExporter {
                 val file = File(dir, "callshield_blocklist_${System.currentTimeMillis()}.json")
                 file.writeText(json)
 
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val shareIntent =
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "application/json"
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.blocklist_export_subject))
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                Intent.createChooser(shareIntent, context.getString(R.string.blocklist_export_chooser_title)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                    FileShareIntent.forFile(
+                        context = context,
+                        file = file,
+                        mimeType = "application/json",
+                        subject = context.getString(R.string.blocklist_export_subject),
+                    )
+                FileShareIntent.chooser(shareIntent, context.getString(R.string.blocklist_export_chooser_title))
             }
 
         withContext(Dispatchers.Main) {

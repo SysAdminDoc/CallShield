@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.AppUpdateStatus
+import com.sysadmindoc.callshield.data.FileShareIntent
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.main.rememberNowTick
@@ -295,11 +296,7 @@ fun MoreHub(
                 onClick = {
                     val intent = CrashReporter.shareLatestCrashIntent(context)
                     if (intent != null) {
-                        context.startActivity(
-                            Intent.createChooser(intent, null).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            },
-                        )
+                        context.startActivity(FileShareIntent.chooser(intent, null))
                     } else {
                         Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
                     }

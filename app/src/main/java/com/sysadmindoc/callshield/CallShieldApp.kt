@@ -5,8 +5,10 @@ import android.app.Application
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.StrictMode
 import android.os.SystemClock
 import android.os.UserManager
 import android.provider.BlockedNumberContract
@@ -72,11 +74,28 @@ class CallShieldApp :
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) logImplicitUriGrants()
         appScope = applicationScope
         // Before anything that could start a request: until the collector below has a
         // value, the HTTP client reads the stored switch itself and treats a failure as on.
         StrictOffline.installReader { runBlocking { SpamRepository.readStrictOffline(this@CallShieldApp) } }
         initializeAfterUserUnlock()
+    }
+
+    /**
+     * Android 18 stops granting a share's EXTRA_STREAM file to the receiving app
+     * unless the intent carries it in ClipData (FileShareIntent does). A debug
+     * build logs any intent that still leans on the old implicit grant.
+     */
+    private fun logImplicitUriGrants() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy
+                .Builder()
+                .detectImplicitUriPermissionGrant()
+                .penaltyLog()
+                .build(),
+        )
     }
 
     internal fun initializeAfterUserUnlock() {

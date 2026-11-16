@@ -1,10 +1,8 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import androidx.core.content.FileProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.R
@@ -470,7 +468,15 @@ object BackupRestore {
         sections: Set<BackupSection> = defaultExportSections,
         passphrase: CharArray? = null,
     ) {
-        val json = createBackup(context, sections)
+        shareBackupJson(context, createBackup(context, sections), passphrase)
+    }
+
+    /** Writes [json] (encrypted when [passphrase] is set) to the share cache and opens the share sheet. */
+    internal suspend fun shareBackupJson(
+        context: Context,
+        json: String,
+        passphrase: CharArray?,
+    ) {
         val chooserIntent =
             withContext(Dispatchers.IO) {
                 val dir = File(context.cacheDir, "backups")
@@ -496,17 +502,14 @@ object BackupRestore {
                     file.writeText(json)
                 }
 
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent =
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = if (encrypted) "application/octet-stream" else "application/json"
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.backup_subject))
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                Intent.createChooser(intent, context.getString(R.string.backup_chooser_title)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                    FileShareIntent.forFile(
+                        context = context,
+                        file = file,
+                        mimeType = if (encrypted) "application/octet-stream" else "application/json",
+                        subject = context.getString(R.string.backup_subject),
+                    )
+                FileShareIntent.chooser(intent, context.getString(R.string.backup_chooser_title))
             }
 
         withContext(Dispatchers.Main) {
