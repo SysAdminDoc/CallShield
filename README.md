@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C518-f38ba8?style=flat-square" alt="51,518 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2282-94e2d5?style=flat-square" alt="2282 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2283-94e2d5?style=flat-square" alt="2283 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -245,7 +245,7 @@ SMS content regressions use a separate CC0 corpus that CallShield wrote itself. 
 
 The same test runs 5,000 real smishing reports sampled from the IMC 2025 dataset (Agarwal, Papasavva, Suarez-Tangil and Vasek, "Fishing for Smishing", CC BY 4.0) in 63 languages. It prints recall for each language, with precision and false alarms taken from the clean messages above, and each large language has a floor it can't drop below. The number is humbling. Content rules alone catch 30% of those reports, and 27% of the wrong number and "hi mum" scams. On the half of the sample the rules weren't written against it's 26%, and that's the fairer number. Part of the gap is the dataset: it replaced every link with a placeholder, so the link rules see a link but never its host. `python scripts/sample_imc25_corpus.py` redraws the sample from a pinned copy of the dataset, and `IMC25-NOTICE.txt` next to it in `app/src/test/resources/sms-corpus/` credits it.
 
-A second set keeps the rules honest. Mishra and Soni's SMS Phishing Dataset (Mendeley Data, 2022, CC BY 4.0) comes from a different collection, and no rule was written against it. It has 562 phishing texts, 435 older prize and ringtone spam texts (mostly UK and India, 2003 to 2012) and 4,834 real clean ones. Both sets are scored at aggressive mode's bar. There the rules catch 38% of the phishing and 14% of the spam, and they flag 28 of the clean texts. Recall can't drop below those numbers and the clean count can't rise. `python scripts/sample_mendeley_sms_corpus.py` rebuilds it from the pinned download, and `MENDELEY-NOTICE.txt` credits it.
+A second set keeps the rules honest. Mishra and Soni's SMS Phishing Dataset (Mendeley Data, 2022, CC BY 4.0) comes from a different collection, and no rule was written against it. It has 562 phishing texts, 435 older prize and ringtone spam texts (mostly UK and India, 2003 to 2012) and 4,834 real clean ones. Both sets are scored at aggressive mode's bar. There the rules catch 38% of the phishing and 14% of the spam, and they flag 23 of the clean texts. Recall can't drop below those numbers and the clean count can't rise. `python scripts/sample_mendeley_sms_corpus.py` rebuilds it from the pinned download, and `MENDELEY-NOTICE.txt` credits it.
 
 ## Features
 
@@ -609,12 +609,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2282 tests
+./gradlew testDebugUnitTest   # 2283 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2282 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2283 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -651,7 +651,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2282 JVM unit tests (JUnit) |
+| Tests | 2283 JVM unit tests (JUnit) |
 | Strings | 1862 string resources and 63 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

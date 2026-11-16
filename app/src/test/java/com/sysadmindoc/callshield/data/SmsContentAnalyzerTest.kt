@@ -878,6 +878,29 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `you won't is not you won`() {
+        listOf(
+            "You won't believe how long the queue was at the post office",
+            "Don't fret. I'll send them to you. You wont get them til like march.",
+            "Congrats on the new job, you won't regret it",
+            "Ha, you won${Char(0x2019)}t feel bad when I take you out to dinner",
+            "If you won't be home by 6 I'll leave the key under the mat",
+            "Congrats! You won't regret it, confirm the time when you can",
+            "You won't believe the cash I found in my old coat",
+        ).forEach { body ->
+            assertEquals(body, 0, SmsContentAnalyzer.analyze(body).score)
+        }
+        listOf(
+            "You won a free iPhone! Claim your prize at https://prize-desk.example.invalid/a1",
+            "Congratulations! You have won a cash prize. Tap https://claim.example.invalid/a1 to claim",
+            "You've won tickets to the final. Reply YES to claim them",
+            "Congrats, you won! Tap https://claim.example.invalid/a1 to claim",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
     fun `a blocked account lure needs a link, and a broken phone needs a new number`() {
         listOf(
             "BMO has suspended your account for security reasons. Visit : https://bmo-secure.example.invalid/a1 to reactivate",

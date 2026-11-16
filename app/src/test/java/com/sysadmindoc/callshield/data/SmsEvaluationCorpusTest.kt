@@ -1198,7 +1198,7 @@ private object MendeleySmsSet {
         )
 
     /** Clean texts flagged when the set landed. The ceiling only moves down. */
-    const val MAX_CLEAN_FLAGGED = 28
+    const val MAX_CLEAN_FLAGGED = 23
 
     val rows: List<Row> by lazy(::load)
 

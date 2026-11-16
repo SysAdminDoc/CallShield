@@ -75,7 +75,7 @@ class SmsContentAnalyzer
         private val spamPatterns =
             listOf(
                 // Financial scams
-                Regex("(?i)(you('ve| have)? (won|been selected|been chosen))"),
+                Regex("(?i)(you('ve| have)? ($WON|been selected|been chosen))"),
                 Regex("(?i)(claim (your|the) (prize|reward|gift|money))"),
                 Regex("(?i)(free (gift|money|cash|iphone|samsung|card))"),
                 Regex("(?i)(\\$\\d{2,}[,.]?\\d*\\s*(cash|reward|prize|gift))"),
@@ -106,7 +106,7 @@ class SmsContentAnalyzer
                 Regex("(?i)(lose \\d+ (lbs?|pounds|kg) (in|fast|quick))"),
                 Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order)"),
                 // Generic spam signals
-                Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
+                Regex("(?i)(congratulations|congrats).{0,20}($WON|winner|selected|chosen)"),
                 // ── Spanish ────────────────────────────────────────────────
                 // "Has ganado", "te ha tocado" and "ha sido seleccionada" are ordinary
                 // Spanish (a match result, loyalty points, a work shift, a job
@@ -311,9 +311,9 @@ class SmsContentAnalyzer
                 Regex("(?is)(income ?tax ?department|dvla|hmrc|council tax).{0,150}(refund|claim|click|https?|overdue)"),
                 Regex("(?is)(loan|credit score|credit limit).{0,50}(approved|generated).{0,80}(confirm now|check (the )?(status|details)|click|apply now|https?)"),
                 Regex("(?is)kyc.{0,60}(hold|pending|expire|update|block|suspend|submit)"),
-                Regex("(?is)you (have |'ve )?(won|win)\\b.{0,60}(prize|lottery|iphone|cash|rs[. -]?\\d)"),
+                Regex("(?is)you (have |'ve )?($WON|win)\\b.{0,60}(prize|lottery|iphone|cash|rs[. -]?\\d)"),
                 Regex("(?is)(apple|icloud|paypal|netflix|amazon|facebook) (id|acc?o+unt).{0,50}(locked|suspended|disabled|limited|on hold).{0,80}(details|here|click|verify|https?|submit)"),
-                Regex("(?is)(congrat\\w*|you have unlocked).{0,80}(won|unlocked|cashback|scratch card|approved|generated).{0,100}(click|tap|redeem|confirm|https?|claim)"),
+                Regex("(?is)(congrat\\w*|you have unlocked).{0,80}($WON|unlocked|cashback|scratch card|approved|generated).{0,100}(click|tap|redeem|confirm|https?|claim)"),
                 Regex("(?is)(lost|missing) (iphone|ipad|macbook|device).{0,80}(located|found|location).{0,60}(https?|click|check)"),
                 Regex("(?is)(donation|inheritance|grant) (for you|in your name|of).{0,80}(total sum|gbp|usd|million|\\\$|£)"),
                 Regex("(?is)wallet.{0,40}(accessed|linked|connected).{0,100}(confirm|review|https?|verify)"),
@@ -710,6 +710,9 @@ class SmsContentAnalyzer
             // the default one (50): a real child with a new phone writes the
             // same words, so it takes a second signal to block by default.
             internal const val REPLY_BAIT_SCORE = 30
+
+            // "won" as in a prize, never the start of "won't" or "wont".
+            private const val WON = "won(?!['’]?t\\b)"
             private const val MAX_VERIFICATION_BODY_LENGTH = 1_024
             private const val MIN_REPORT_DOMAIN_LENGTH = 5
             private const val MAX_REPORT_DOMAIN_LENGTH = 253
