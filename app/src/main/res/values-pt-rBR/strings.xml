@@ -180,6 +180,7 @@
     <string name="blocked_log_filter_sms">SMS</string>
     <string name="blocked_log_filter_reason">Motivo</string>
     <string name="blocked_log_filter_all_reasons">Todos os motivos</string>
+    <string name="blocked_log_filter_group">%1$s, últimos 30 dias</string>
     <string name="blocked_log_search_hint">Buscar por número</string>
     <string name="blocked_log_search_empty">Nenhum resultado</string>
     <string name="blocked_log_search_empty_body">Nenhuma chamada bloqueada ou SMS sinalizado corresponde a esse número.</string>
@@ -922,6 +923,15 @@
     <string name="stats_source_breakdown">Detalhamento por fonte</string>
     <string name="stats_donut_total">Total</string>
     <string name="stats_monthly_trend">Tendência mensal</string>
+    <string name="stats_last_30_days">Últimos 30 dias</string>
+    <string name="stats_last_30_days_hint">Toque em uma linha para ver essas chamadas e mensagens em Atividade bloqueada.</string>
+    <string name="stats_group_database">Banco de dados de spam</string>
+    <string name="stats_group_community">Denúncias da comunidade</string>
+    <string name="stats_group_your_rules">Suas regras</string>
+    <string name="stats_group_ml">Aprendizado de máquina</string>
+    <string name="stats_group_campaigns">Campanhas de spam</string>
+    <string name="stats_group_other">Outras verificações</string>
+    <string name="stats_group_open_log">ver em Atividade bloqueada</string>
     <string name="stats_this_month">Este mês</string>
     <string name="stats_last_month">Mês passado</string>
     <string name="stats_trend_up">Variação em relação ao mês passado: +%d</string>

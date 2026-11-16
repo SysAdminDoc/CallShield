@@ -34,6 +34,7 @@ import com.sysadmindoc.callshield.data.repository.SyncRepository
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.BlocklistSort
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.LogFilter
 import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SyncResult
@@ -1116,15 +1117,9 @@ class SpamRepository(
 
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = blocklistRepository.observeRecentLog(limit)
 
-    fun pageBlockedCalls(
-        isCall: Int?,
-        reasonCode: String?,
-    ): PagingSource<Int, BlockedCall> = blocklistRepository.pageBlockedCalls(isCall, reasonCode)
+    fun pageBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCall> = blocklistRepository.pageBlockedCalls(filter)
 
-    fun pageGroupedBlockedCalls(
-        isCall: Int?,
-        reasonCode: String?,
-    ): PagingSource<Int, BlockedCallGroup> = blocklistRepository.pageGroupedBlockedCalls(isCall, reasonCode)
+    fun pageGroupedBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCallGroup> = blocklistRepository.pageGroupedBlockedCalls(filter)
 
     fun observeLogReasonCodes(): Flow<List<String>> = blocklistRepository.observeLogReasonCodes()
 
@@ -1135,6 +1130,8 @@ class SpamRepository(
     fun observeLogSmsCount(): Flow<Int> = blocklistRepository.observeLogSmsCount()
 
     fun observeLogReasonCounts(): Flow<List<LogAggregate>> = blocklistRepository.observeLogReasonCounts()
+
+    fun observeLogReasonCountsSince(since: Long): Flow<List<LogAggregate>> = blocklistRepository.observeLogReasonCountsSince(since)
 
     fun observeLogHourCounts(): Flow<List<LogAggregate>> = blocklistRepository.observeLogHourCounts()
 

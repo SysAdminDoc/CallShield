@@ -25,6 +25,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.resolveSpamNumberForWhitelist
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.LogFilter
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -770,15 +771,11 @@ class BlocklistRepository(
 
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = dao.observeRecentLog(limit)
 
-    fun pageBlockedCalls(
-        isCall: Int?,
-        reasonCode: String?,
-    ): PagingSource<Int, BlockedCall> = dao.pageBlockedCalls(isCall, reasonCode)
+    fun pageBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCall> =
+        dao.pageBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
 
-    fun pageGroupedBlockedCalls(
-        isCall: Int?,
-        reasonCode: String?,
-    ): PagingSource<Int, BlockedCallGroup> = dao.pageGroupedBlockedCalls(isCall, reasonCode)
+    fun pageGroupedBlockedCalls(filter: LogFilter): PagingSource<Int, BlockedCallGroup> =
+        dao.pageGroupedBlockedCalls(filter.isCall, filter.reasonCodes == null, filter.reasonCodes.orEmpty(), filter.since)
 
     fun observeLogReasonCodes(): Flow<List<String>> = dao.observeLogReasonCodes()
 
@@ -789,6 +786,8 @@ class BlocklistRepository(
     fun observeLogSmsCount(): Flow<Int> = dao.observeLogSmsCount()
 
     fun observeLogReasonCounts(): Flow<List<LogAggregate>> = dao.observeLogReasonCounts()
+
+    fun observeLogReasonCountsSince(since: Long): Flow<List<LogAggregate>> = dao.observeLogReasonCountsSince(since)
 
     fun observeLogHourCounts(): Flow<List<LogAggregate>> = dao.observeLogHourCounts()
 

@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlockReasonGroup
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.domain.model.IdentityEvidence
@@ -207,6 +208,17 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
 /** Localized label that never exposes checker implementation identifiers. */
 @Composable
 fun friendlyPipelineCheckerLabel(checkerName: String): String = stringResource(pipelineCheckerLabelRes(checkerName))
+
+/** Label for one of the Statistics 30-day groups. */
+fun blockReasonGroupLabelRes(group: BlockReasonGroup): Int =
+    when (group) {
+        BlockReasonGroup.DATABASE -> R.string.stats_group_database
+        BlockReasonGroup.COMMUNITY -> R.string.stats_group_community
+        BlockReasonGroup.YOUR_RULES -> R.string.stats_group_your_rules
+        BlockReasonGroup.ML -> R.string.stats_group_ml
+        BlockReasonGroup.CAMPAIGNS -> R.string.stats_group_campaigns
+        BlockReasonGroup.OTHER -> R.string.stats_group_other
+    }
 
 /** Stable localized label mapping used by every log/statistics surface. */
 fun reasonCodeLabelRes(reasonCode: BlockReasonCode): Int =

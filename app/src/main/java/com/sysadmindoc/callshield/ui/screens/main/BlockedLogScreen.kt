@@ -52,6 +52,8 @@ import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlockReasonGroup
+import com.sysadmindoc.callshield.domain.model.LogFilter
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.NumberSelectionBar
 import com.sysadmindoc.callshield.ui.SelectableRow
@@ -64,6 +66,7 @@ import com.sysadmindoc.callshield.ui.applyTemporaryDecision
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.firstPageFailed
+import com.sysadmindoc.callshield.ui.blockReasonGroupLabelRes
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -90,6 +93,9 @@ fun BlockedLogScreen(
     val availableReasonCodes by viewModel.logReasonCodes.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
     var selectedReasonCodeWire by rememberSaveable { mutableStateOf("") }
+    // A Statistics row opens the log at one group of reasons, from its start of day.
+    var selectedGroupKey by rememberSaveable { mutableStateOf("") }
+    var groupSince by rememberSaveable { mutableLongStateOf(0L) }
     var showReasonMenu by rememberSaveable { mutableStateOf(false) }
     var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
@@ -105,7 +111,7 @@ fun BlockedLogScreen(
 
     // Picked by number, so every row of a picked number shows as picked. A new
     // filter, grouping or search starts over.
-    var selectedNumbers by rememberSaveable(filterMode, selectedReasonCodeWire, grouped, logSearchQuery) {
+    var selectedNumbers by rememberSaveable(filterMode, selectedReasonCodeWire, selectedGroupKey, grouped, logSearchQuery) {
         mutableStateOf(emptySet<String>())
     }
     val selecting = selectedNumbers.isNotEmpty()
@@ -148,26 +154,45 @@ fun BlockedLogScreen(
         }
     }
     val selectedReasonCode = BlockReasonCode.fromStored(selectedReasonCodeWire).takeIf { selectedReasonCodeWire.isNotBlank() }
+    val selectedGroup = BlockReasonGroup.fromKey(selectedGroupKey)
     val mediaFilter =
         when (filterMode) {
             1 -> 1
             2 -> 0
             else -> null
         }
-    val reasonFilter = selectedReasonCode?.wireValue
+    val logFilter =
+        LogFilter(
+            isCall = mediaFilter,
+            reasonCodes =
+                selectedGroup?.codes?.map { it.wireValue }?.sorted()
+                    ?: selectedReasonCode?.let { listOf(it.wireValue) },
+            since = if (selectedGroup != null) groupSince else 0L,
+        )
     // One pager per list in the view model follows these chips. The tab's
     // saved state and the view model live alike, so they only differ after
     // process death, when this sets the filter before the lists first load.
-    SideEffect { viewModel.setLogFilter(mediaFilter, reasonFilter) }
+    SideEffect { viewModel.setLogFilter(logFilter) }
+    val drillDown by viewModel.logDrillDown.collectAsStateWithLifecycle()
+    LaunchedEffect(drillDown?.id) {
+        val request = drillDown ?: return@LaunchedEffect
+        filterMode = 0
+        selectedReasonCodeWire = ""
+        selectedGroupKey = request.group.key
+        groupSince = request.since
+        viewModel.setLogSearchQuery("")
+        viewModel.consumeLogDrillDown(request)
+    }
     val pagedCalls = viewModel.blockedCalls.collectAsLazyPagingItems()
     val groupedCalls = viewModel.groupedBlockedCalls.collectAsLazyPagingItems()
     // A new filter starts at the top of its list.
-    val listState = rememberSaveable(filterMode, selectedReasonCodeWire, saver = LazyListState.Saver) { LazyListState() }
-    val groupedListState = rememberSaveable(filterMode, selectedReasonCodeWire, saver = LazyListState.Saver) { LazyListState() }
+    val listState = rememberSaveable(filterMode, selectedReasonCodeWire, selectedGroupKey, saver = LazyListState.Saver) { LazyListState() }
+    val groupedListState =
+        rememberSaveable(filterMode, selectedReasonCodeWire, selectedGroupKey, saver = LazyListState.Saver) { LazyListState() }
     val activeItemCount = if (grouped) groupedCalls.itemCount else pagedCalls.itemCount
     val activeRefreshState = if (grouped) groupedCalls.loadState.refresh else pagedCalls.loadState.refresh
     // Right after a chip changes, the rows on screen are still the last filter's.
-    val stale = if (grouped) groupedCalls.isStaleFor(mediaFilter to reasonFilter) else pagedCalls.isStaleFor(mediaFilter to reasonFilter)
+    val stale = if (grouped) groupedCalls.isStaleFor(logFilter) else pagedCalls.isStaleFor(logFilter)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -270,19 +295,26 @@ fun BlockedLogScreen(
                 }
             }
 
-            if (availableReasonCodes.isNotEmpty()) {
+            if (availableReasonCodes.isNotEmpty() || selectedGroup != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Box {
                         FilterChip(
-                            selected = selectedReasonCode != null,
+                            selected = selectedReasonCode != null || selectedGroup != null,
                             onClick = { showReasonMenu = true },
                             label = {
                                 Text(
-                                    selectedReasonCode?.let { friendlyMatchReasonLabel(it.wireValue) }
-                                        ?: stringResource(R.string.blocked_log_filter_reason),
+                                    when {
+                                        selectedGroup != null ->
+                                            stringResource(
+                                                R.string.blocked_log_filter_group,
+                                                stringResource(blockReasonGroupLabelRes(selectedGroup)),
+                                            )
+                                        selectedReasonCode != null -> friendlyMatchReasonLabel(selectedReasonCode.wireValue)
+                                        else -> stringResource(R.string.blocked_log_filter_reason)
+                                    },
                                 )
                             },
                             // It opens the reason menu, so it reads as a drop-down, not a check box.
@@ -305,6 +337,7 @@ fun BlockedLogScreen(
                                 text = { Text(stringResource(R.string.blocked_log_filter_all_reasons)) },
                                 onClick = {
                                     selectedReasonCodeWire = ""
+                                    selectedGroupKey = ""
                                     showReasonMenu = false
                                 },
                             )
@@ -313,6 +346,7 @@ fun BlockedLogScreen(
                                     text = { Text(friendlyMatchReasonLabel(reasonCode.wireValue)) },
                                     onClick = {
                                         selectedReasonCodeWire = reasonCode.wireValue
+                                        selectedGroupKey = ""
                                         showReasonMenu = false
                                     },
                                 )
@@ -381,6 +415,7 @@ fun BlockedLogScreen(
                     onAction = {
                         filterMode = 0
                         selectedReasonCodeWire = ""
+                        selectedGroupKey = ""
                         if (grouped) groupedCalls.retry() else pagedCalls.retry()
                     },
                 )
@@ -412,6 +447,7 @@ fun BlockedLogScreen(
                             {
                                 filterMode = 0
                                 selectedReasonCodeWire = ""
+                                selectedGroupKey = ""
                             }
                         },
                 )

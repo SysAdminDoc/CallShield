@@ -336,17 +336,21 @@ interface SpamDao {
     @Query("SELECT * FROM call_log WHERE number = :number ORDER BY timestamp DESC, id DESC")
     fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>>
 
+    // [anyReason] skips the reason test, since Room can't bind a null list.
     @Query(
         """
         SELECT * FROM call_log
         WHERE (:isCall IS NULL OR isCall = :isCall)
-          AND (:reasonCode IS NULL OR reasonCode = :reasonCode)
+          AND (:anyReason OR reasonCode IN (:reasonCodes))
+          AND timestamp >= :since
         ORDER BY timestamp DESC, id DESC
         """,
     )
     fun pageBlockedCalls(
         isCall: Int?,
-        reasonCode: String?,
+        anyReason: Boolean,
+        reasonCodes: List<String>,
+        since: Long,
     ): PagingSource<Int, BlockedCall>
 
     @Query(
@@ -359,19 +363,23 @@ interface SpamDao {
             FROM call_log AS candidate
             WHERE candidate.number = latest.number
               AND (:isCall IS NULL OR candidate.isCall = :isCall)
-              AND (:reasonCode IS NULL OR candidate.reasonCode = :reasonCode)
+              AND (:anyReason OR candidate.reasonCode IN (:reasonCodes))
+              AND candidate.timestamp >= :since
             ORDER BY candidate.timestamp DESC, candidate.id DESC
             LIMIT 1
         )
           AND (:isCall IS NULL OR grouped.isCall = :isCall)
-          AND (:reasonCode IS NULL OR grouped.reasonCode = :reasonCode)
+          AND (:anyReason OR grouped.reasonCode IN (:reasonCodes))
+          AND grouped.timestamp >= :since
         GROUP BY latest.id
         ORDER BY occurrences DESC, latest.timestamp DESC, latest.id DESC
         """,
     )
     fun pageGroupedBlockedCalls(
         isCall: Int?,
-        reasonCode: String?,
+        anyReason: Boolean,
+        reasonCodes: List<String>,
+        since: Long,
     ): PagingSource<Int, BlockedCallGroup>
 
     @Query(
@@ -394,6 +402,12 @@ interface SpamDao {
             "GROUP BY reasonCode ORDER BY `count` DESC, `key` ASC",
     )
     fun observeLogReasonCounts(): Flow<List<LogAggregate>>
+
+    @Query(
+        "SELECT reasonCode AS `key`, COUNT(*) AS `count` FROM call_log " +
+            "WHERE timestamp >= :since GROUP BY reasonCode ORDER BY `count` DESC, `key` ASC",
+    )
+    fun observeLogReasonCountsSince(since: Long): Flow<List<LogAggregate>>
 
     @Query(
         "SELECT strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') AS `key`, " +

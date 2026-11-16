@@ -266,6 +266,12 @@ fun CallShieldApp(
         }
     }
 
+    // A Statistics row opens the Blocked log, which lives on the Activity tab.
+    val logDrillDown by viewModel.logDrillDown.collectAsStateWithLifecycle()
+    LaunchedEffect(logDrillDown?.id) {
+        if (logDrillDown != null) selectedTab = 1
+    }
+
     // Close search when switching tabs
     LaunchedEffect(selectedTab) {
         if (showSearch) {

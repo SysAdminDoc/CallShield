@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
@@ -57,6 +58,11 @@ fun ActivityScreen(
             handledBlockedLogRequest = blockedLogRequestId
             selectedView = ACTIVITY_BLOCKED
         }
+    }
+    // A Statistics row wants the Blocked log, which takes its filter and clears the request.
+    val drillDown by viewModel.logDrillDown.collectAsStateWithLifecycle()
+    LaunchedEffect(drillDown?.id) {
+        if (drillDown != null) selectedView = ACTIVITY_BLOCKED
     }
     val stateHolder = rememberSaveableStateHolder()
 

@@ -185,6 +185,7 @@
     <string name="blocked_log_filter_sms">Texts</string>
     <string name="blocked_log_filter_reason">Reason</string>
     <string name="blocked_log_filter_all_reasons">All reasons</string>
+    <string name="blocked_log_filter_group">%1$s, last 30 days</string>
     <string name="blocked_log_search_hint">Search by number</string>
     <string name="blocked_log_search_empty">No results</string>
     <string name="blocked_log_search_empty_body">No blocked calls or flagged texts match that number.</string>
@@ -956,6 +957,15 @@
     <string name="stats_source_breakdown">Source breakdown</string>
     <string name="stats_donut_total">Total</string>
     <string name="stats_monthly_trend">Monthly trend</string>
+    <string name="stats_last_30_days">Last 30 days</string>
+    <string name="stats_last_30_days_hint">Tap a row to see those calls and texts in Blocked activity.</string>
+    <string name="stats_group_database">Spam database</string>
+    <string name="stats_group_community">Community reports</string>
+    <string name="stats_group_your_rules">Your rules</string>
+    <string name="stats_group_ml">Machine learning</string>
+    <string name="stats_group_campaigns">Spam campaigns</string>
+    <string name="stats_group_other">Other checks</string>
+    <string name="stats_group_open_log">see them in Blocked activity</string>
     <string name="stats_this_month">This month</string>
     <string name="stats_last_month">Last month</string>
     <string name="stats_trend_up">Change vs last month: +%d</string>

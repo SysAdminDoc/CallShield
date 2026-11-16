@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C518-f38ba8?style=flat-square" alt="51,518 Numbers">
-  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2285-94e2d5?style=flat-square" alt="2285 JVM unit tests">
+  <img src="https://img.shields.io/badge/JVM%20unit%20tests-2290-94e2d5?style=flat-square" alt="2290 JVM unit tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -283,6 +283,7 @@ A second set keeps the rules honest. Mishra and Soni's SMS Phishing Dataset (Men
 - Weekly bar chart with daily breakdown
 - Detection source donut chart
 - Monthly trend line
+- Last 30 days by what caught each entry (spam database, community reports, your rules, machine learning, campaigns). Tap a row to open just those entries in the Blocked log
 - Top offenders, area code heatmap, hourly heatmap
 - A tile map of US states and Canadian provinces shaded by blocked calls
 - Protection Test shows local WorkManager attempts and Android stop reasons, with a warning when background quota repeatedly defers protection refreshes
@@ -609,12 +610,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 2285 tests
+./gradlew testDebugUnitTest   # 2290 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **2285 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **2290 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -651,8 +652,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data, with optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 2285 JVM unit tests (JUnit) |
-| Strings | 1864 string resources and 63 plural groups (translation-ready) |
+| Tests | 2290 JVM unit tests (JUnit) |
+| Strings | 1874 string resources and 63 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

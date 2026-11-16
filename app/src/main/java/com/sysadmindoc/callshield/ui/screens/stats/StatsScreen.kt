@@ -2,11 +2,13 @@ package com.sysadmindoc.callshield.ui.screens.stats
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -23,8 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -37,7 +41,9 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlockReasonGroup
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.blockReasonGroupLabelRes
 import com.sysadmindoc.callshield.ui.countsByAreaCode
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberHomeRegion
@@ -49,6 +55,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+internal const val THIRTY_DAY_CARD_TAG = "stats_thirty_days"
 
 private data class DailyStat(
     val label: String,
@@ -144,6 +152,20 @@ fun StatsScreen(viewModel: MainViewModel) {
     val monthlyTrend =
         remember(thisMonthCount, lastMonthCount) { Pair(thisMonthCount, lastMonthCount) }
 
+    // Today and the 29 days before it. The Blocked log gets the same start, so
+    // a row opens exactly the entries it counted.
+    val thirtyDayStart = dayOffset(todayStart, -29)
+    val thirtyDayAggregates by
+        remember(thirtyDayStart) { viewModel.observeLogReasonCountsSince(thirtyDayStart) }
+            .collectAsStateWithLifecycle(initialValue = emptyList<LogAggregate>())
+    val thirtyDayGroups =
+        remember(thirtyDayAggregates) {
+            BlockReasonGroup
+                .totals(thirtyDayAggregates.associate { it.key to it.count })
+                .filter { (group, count) -> group != BlockReasonGroup.OTHER || count > 0 }
+                .toList()
+        }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -199,6 +221,25 @@ fun StatsScreen(viewModel: MainViewModel) {
                                 if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
                             },
                     )
+                }
+            }
+
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp).testTag(THIRTY_DAY_CARD_TAG)) {
+                    SectionHeader(stringResource(R.string.stats_last_30_days), CatPeach)
+                    Text(
+                        stringResource(R.string.stats_last_30_days_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    thirtyDayGroups.forEach { (group, count) ->
+                        ThirtyDayGroupRow(
+                            label = stringResource(blockReasonGroupLabelRes(group)),
+                            count = numberFormatter.format(count),
+                            onOpen = if (count > 0) ({ viewModel.openBlockedLog(group, thirtyDayStart) }) else null,
+                        )
+                    }
                 }
             }
 
@@ -616,6 +657,47 @@ private fun StatsInsightRow(
                 fontWeight = FontWeight.SemiBold,
                 color = CatText,
             )
+        }
+    }
+}
+
+/**
+ * One group's 30-day count. TalkBack reads the label and count together, and a
+ * row with entries says it opens them in the Blocked log.
+ */
+@Composable
+private fun ThirtyDayGroupRow(
+    label: String,
+    count: String,
+    onOpen: (() -> Unit)?,
+) {
+    val openLabel = stringResource(R.string.stats_group_open_log)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .then(
+                    if (onOpen != null) {
+                        Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen)
+                    } else {
+                        Modifier.semantics(mergeDescendants = true) {}
+                    },
+                ).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = CatText)
+        Text(
+            count,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (onOpen != null) CatText else CatSubtext,
+        )
+        Spacer(Modifier.width(4.dp))
+        if (onOpen != null) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = CatOverlay)
+        } else {
+            Spacer(Modifier.width(24.dp))
         }
     }
 }

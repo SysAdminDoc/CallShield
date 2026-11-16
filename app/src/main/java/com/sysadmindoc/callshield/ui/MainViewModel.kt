@@ -61,7 +61,9 @@ import com.sysadmindoc.callshield.data.repository.DB_PREFIX_MIN_MATCHES_DEFAULT
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.BlockReasonGroup
 import com.sysadmindoc.callshield.domain.model.BlocklistSort
+import com.sysadmindoc.callshield.domain.model.LogFilter
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
@@ -100,6 +102,13 @@ import javax.inject.Inject
 data class StatusMessage(
     val text: String,
     val success: Boolean,
+)
+
+/** One request from Statistics to open the Blocked log at [group], counting from [since]. */
+data class LogDrillDown(
+    val id: Int,
+    val group: BlockReasonGroup,
+    val since: Long,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -309,29 +318,45 @@ class MainViewModel
                 }
             }
 
-        // The block log's media and reason filter; both of its lists follow it.
-        private val logFilter = MutableStateFlow<Pair<Int?, String?>>(null to null)
+        // The block log's media, reason and time filter; both of its lists follow it.
+        private val logFilter = MutableStateFlow(LogFilter())
 
-        fun setLogFilter(
-            isCall: Int?,
-            reasonCode: String?,
-        ) {
-            logFilter.value = isCall to reasonCode
+        fun setLogFilter(filter: LogFilter) {
+            logFilter.value = filter
         }
 
-        val blockedCalls: Flow<PagingData<Filtered<Pair<Int?, String?>, BlockedCall>>> =
-            logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
+        val blockedCalls: Flow<PagingData<Filtered<LogFilter, BlockedCall>>> =
+            logFilter.pagedWith(viewModelScope) { filter ->
                 Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                    repo.pageBlockedCalls(isCall, reasonCode)
+                    repo.pageBlockedCalls(filter)
                 }.flow
             }
 
-        val groupedBlockedCalls: Flow<PagingData<Filtered<Pair<Int?, String?>, BlockedCallGroup>>> =
-            logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
+        val groupedBlockedCalls: Flow<PagingData<Filtered<LogFilter, BlockedCallGroup>>> =
+            logFilter.pagedWith(viewModelScope) { filter ->
                 Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                    repo.pageGroupedBlockedCalls(isCall, reasonCode)
+                    repo.pageGroupedBlockedCalls(filter)
                 }.flow
             }
+
+        // A Statistics row asks for the Blocked log filtered to its group. The shell
+        // switches to the log for it and the log takes the filter, then clears it.
+        private val _logDrillDown = MutableStateFlow<LogDrillDown?>(null)
+        val logDrillDown: StateFlow<LogDrillDown?> = _logDrillDown
+        private var drillDownRequests = 0
+
+        fun openBlockedLog(
+            group: BlockReasonGroup,
+            since: Long,
+        ) {
+            _logDrillDown.value = LogDrillDown(++drillDownRequests, group, since)
+        }
+
+        fun consumeLogDrillDown(request: LogDrillDown) {
+            _logDrillDown.compareAndSet(request, null)
+        }
+
+        fun observeLogReasonCountsSince(since: Long): Flow<List<LogAggregate>> = repo.observeLogReasonCountsSince(since)
 
         fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>> = repo.observeLogDayCounts(since)
 

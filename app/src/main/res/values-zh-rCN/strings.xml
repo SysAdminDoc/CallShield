@@ -749,6 +749,15 @@
     <string name="stats_source_breakdown">来源明细</string>
     <string name="stats_donut_total">总计</string>
     <string name="stats_monthly_trend">月度趋势</string>
+    <string name="stats_last_30_days">最近 30 天</string>
+    <string name="stats_last_30_days_hint">点按某一行，即可在拦截活动中查看这些来电和短信。</string>
+    <string name="stats_group_database">垃圾号码库</string>
+    <string name="stats_group_community">社区举报</string>
+    <string name="stats_group_your_rules">你的规则</string>
+    <string name="stats_group_ml">机器学习</string>
+    <string name="stats_group_campaigns">垃圾营销活动</string>
+    <string name="stats_group_other">其他检查</string>
+    <string name="stats_group_open_log">在拦截活动中查看</string>
     <string name="stats_this_month">本月</string>
     <string name="stats_last_month">上月</string>
     <string name="stats_trend_up">较上月变化：+%d</string>
@@ -1700,6 +1709,7 @@
     <string name="cd_blocked_call">已拦截来电</string>
     <string name="cd_voicemail_call">语音信箱</string>
     <string name="blocked_log_filter_all_reasons">全部原因</string>
+    <string name="blocked_log_filter_group">%1$s，最近 30 天</string>
     <string name="blocked_log_filter_reason">原因</string>
     <string name="blocked_log_pipeline_diagnostic">防护警告：%s</string>
     <string name="blocked_log_safety_exempted">由安全兜底规则放行</string>

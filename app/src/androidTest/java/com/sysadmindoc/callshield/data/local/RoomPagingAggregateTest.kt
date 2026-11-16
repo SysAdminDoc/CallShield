@@ -84,15 +84,15 @@ class RoomPagingAggregateTest {
             assertEquals(listOf("+15551230001", "+15551230002"), databasePage.data.map { it.number })
             assertNotNull(databasePage.nextKey)
 
-            val logPage = dao.pageBlockedCalls(null, null).refreshPage(loadSize = 2)
+            val logPage = dao.pageBlockedCalls(null, true, emptyList(), 0L).refreshPage(loadSize = 2)
             assertEquals(2, logPage.data.size)
             assertEquals(300L, logPage.data.first().timestamp)
 
-            val wildcardCalls = dao.pageBlockedCalls(1, BlockReasonCode.WILDCARD.wireValue).refreshPage(loadSize = 10)
+            val wildcardCalls = dao.pageBlockedCalls(1, false, listOf(BlockReasonCode.WILDCARD.wireValue), 0L).refreshPage(loadSize = 10)
             assertEquals(2, wildcardCalls.data.size)
             assertTrue(wildcardCalls.data.all { it.reasonCode == BlockReasonCode.WILDCARD && it.isCall })
 
-            val groupedPage = dao.pageGroupedBlockedCalls(null, null).refreshPage(loadSize = 10)
+            val groupedPage = dao.pageGroupedBlockedCalls(null, true, emptyList(), 0L).refreshPage(loadSize = 10)
             assertEquals(2, groupedPage.data.size)
             val firstGroup = groupedPage.data.first()
             assertEquals("+15551230001", firstGroup.call.number)
