@@ -3273,6 +3273,17 @@
       ]
     },
     {
+      "number": "+17078797534",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-11-14",
+      "last_seen": "2026-11-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+17132216000",
       "type": "robocall",
       "reports": 3,
@@ -5426,26 +5437,5 @@
       ]
     }
   ],
-  "prefixes": [
-    {
-      "prefix": "+33525457",
-      "type": "telemarketer",
-      "description": "Saracroche: Iagility",
-      "evidence": [
-        {
-          "source_id": "saracroche_prefixes",
-          "evidence_type": "curated_range",
-          "license": "CC BY-NC-SA",
-          "attribution": "Saracroche French telemarketing range list",
-          "first_seen": "",
-          "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
-          "geography": "FR",
-          "confidence_tier": "curated",
-          "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
-        }
-      ]
-    }
-  ]
+  "prefixes": []
 }

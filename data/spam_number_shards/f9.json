@@ -5183,6 +5183,17 @@
       ]
     },
     {
+      "number": "+18448780139",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-11-04",
+      "last_seen": "2026-11-04",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+18449247733",
       "type": "robocall",
       "reports": 2,
@@ -6591,11 +6602,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6611,11 +6622,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6631,11 +6642,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6651,11 +6662,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     }

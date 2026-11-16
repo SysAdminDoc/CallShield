@@ -5216,8 +5216,8 @@
       "type": "robocall",
       "reports": 8,
       "first_seen": "2015-01-14",
-      "last_seen": "2026-10-22",
-      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Live Voice)",
+      "last_seen": "2026-11-13",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
       ],
@@ -5227,13 +5227,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-10-09",
-          "last_seen": "2026-10-22",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "first_seen": "2026-11-05",
+          "last_seen": "2026-11-13",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1824829390000,
+          "expires_at_epoch_ms": 1826323231000,
           "complaint_role": "callback_business",
           "spoof_signal": "callback_number_only"
         },
@@ -5242,13 +5242,13 @@
           "evidence_type": "unverified_complaint",
           "license": "US government public data",
           "attribution": "US Federal Communications Commission unwanted calls dataset",
-          "first_seen": "2026-10-22",
-          "last_seen": "2026-10-22",
-          "retrieved_at": "2026-10-29T17:03:10+00:00",
+          "first_seen": "2026-11-05",
+          "last_seen": "2026-11-13",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "US",
           "confidence_tier": "unverified",
           "parser_version": "fcc-v3",
-          "expires_at_epoch_ms": 1824829390000,
+          "expires_at_epoch_ms": 1826323231000,
           "complaint_role": "caller_id",
           "spoof_signal": "unverified_caller_id"
         },
@@ -5969,11 +5969,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -5989,11 +5989,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6009,11 +6009,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6029,11 +6029,31 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
+        }
+      ]
+    },
+    {
+      "prefix": "+33412460",
+      "type": "telemarketer",
+      "description": "Saracroche: Iagility",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     },
@@ -6049,11 +6069,11 @@
           "attribution": "Saracroche French telemarketing range list",
           "first_seen": "",
           "last_seen": "",
-          "retrieved_at": "2026-10-30T18:58:59+00:00",
+          "retrieved_at": "2026-11-16T00:00:31+00:00",
           "geography": "FR",
           "confidence_tier": "curated",
           "parser_version": "saracroche-v2",
-          "expires_at_epoch_ms": 1801162739000
+          "expires_at_epoch_ms": 1802563231000
         }
       ]
     }
