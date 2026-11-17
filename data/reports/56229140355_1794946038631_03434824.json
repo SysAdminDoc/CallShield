@@ -1,0 +1,9 @@
+{
+  "number": "+56229140355",
+  "type": "sms_spam",
+  "reported_at": "2026-11-17T20:07:18.631Z",
+  "source": "community_app",
+  "reporter_bucket": "4bb437dd4df75b0c",
+  "reporter_device": "ec84aeab94fde42c",
+  "report_id": "f7fbe482-6862-4809-9b6c-b5164326ad5a"
+}
