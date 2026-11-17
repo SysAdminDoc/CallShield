@@ -1,0 +1,15 @@
+{
+  "number": "+18337226817",
+  "type": "sms_spam",
+  "reported_at": "2026-11-17T23:51:35.820Z",
+  "source": "community_app",
+  "reporter_bucket": "ce83a51946282f05",
+  "reporter_device": "3ef4c16128a98416",
+  "report_id": "05f5ec97-1f59-49b8-a72a-70334191da80",
+  "sms_domains": [
+    "me.axoraauto.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
