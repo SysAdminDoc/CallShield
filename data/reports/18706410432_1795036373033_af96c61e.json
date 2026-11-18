@@ -1,0 +1,14 @@
+{
+  "number": "+18706410432",
+  "type": "sms_spam",
+  "reported_at": "2026-11-18T21:12:53.033Z",
+  "source": "community_app",
+  "reporter_bucket": "242d9783760cde2f",
+  "reporter_device": "252f18891b149616",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
