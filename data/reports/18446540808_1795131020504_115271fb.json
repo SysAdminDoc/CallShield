@@ -1,0 +1,9 @@
+{
+  "number": "+18446540808",
+  "type": "sms_spam",
+  "reported_at": "2026-11-19T23:30:20.504Z",
+  "source": "community_app",
+  "reporter_bucket": "5f2538bc57eb4b0e",
+  "reporter_device": "591787ea03dd20b7",
+  "report_id": "db14df19-a0ec-4a37-9c6a-5c745646cdc5"
+}
