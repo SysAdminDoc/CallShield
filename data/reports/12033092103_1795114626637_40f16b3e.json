@@ -1,0 +1,14 @@
+{
+  "number": "+12033092103",
+  "type": "sms_spam",
+  "reported_at": "2026-11-19T18:57:06.637Z",
+  "source": "community_app",
+  "reporter_bucket": "5a0317aa6c88299a",
+  "reporter_device": "23803352b213de5f",
+  "sms_domains": [
+    "americares.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
