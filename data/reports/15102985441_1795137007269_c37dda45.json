@@ -1,0 +1,14 @@
+{
+  "number": "+15102985441",
+  "type": "sms_spam",
+  "reported_at": "2026-11-20T01:10:07.269Z",
+  "source": "community_app",
+  "reporter_bucket": "89daa51b8e77fe1a",
+  "reporter_device": "cc835ea15a2466dd",
+  "sms_domains": [
+    "sierraclub.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
