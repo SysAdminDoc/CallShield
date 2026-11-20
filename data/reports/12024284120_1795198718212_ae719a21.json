@@ -1,0 +1,14 @@
+{
+  "number": "+12024284120",
+  "type": "sms_spam",
+  "reported_at": "2026-11-20T18:18:38.212Z",
+  "source": "community_app",
+  "reporter_bucket": "89daa51b8e77fe1a",
+  "reporter_device": "cc835ea15a2466dd",
+  "sms_domains": [
+    "go.cbcpac.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
