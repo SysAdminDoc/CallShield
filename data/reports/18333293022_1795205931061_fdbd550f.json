@@ -1,0 +1,14 @@
+{
+  "number": "+18333293022",
+  "type": "sms_spam",
+  "reported_at": "2026-11-20T20:18:51.061Z",
+  "source": "community_app",
+  "reporter_bucket": "89daa51b8e77fe1a",
+  "reporter_device": "cc835ea15a2466dd",
+  "sms_domains": [
+    "shortlink.doctor"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
