@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { createHmac } from "node:crypto";
+import test, { mock } from "node:test";
+import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import worker, {
@@ -18,6 +18,8 @@ import worker, {
   takeWorkerBudget,
   getClientIp,
   checkDedup,
+  dedupTtl,
+  duplicateRetryAfter,
   deriveReporterBucket,
   deriveReporterDevice,
   recordDedup,
@@ -690,6 +692,35 @@ test("a corrective not_spam report is not a duplicate of the report it corrects"
   assert.equal(await checkDedup("1.2.3.4", "+12125551234", "not_spam", env), false);
 });
 
+test("another spam type is the same vote, so it's a duplicate too", async () => {
+  // The merge counts a reporter once a day per number whichever type it picks.
+  // Keyed on the type, one address could store a number once for each of them.
+  const env = { RATE_LIMIT: createMockKV() };
+
+  await recordDedup("1.2.3.4", "+12125551234", "spam", env);
+
+  for (const type of ["robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "ai_voice", "unknown"]) {
+    assert.equal(await checkDedup("1.2.3.4", "+12125551234", type, env), true, type);
+  }
+});
+
+test("a dedup marker lasts to the next UTC midnight, and at least five minutes", () => {
+  assert.equal(dedupTtl(Date.UTC(2026, 10, 24, 10, 0, 0)), 14 * 60 * 60);
+  assert.equal(dedupTtl(Date.UTC(2026, 10, 24, 0, 0, 0)), 24 * 60 * 60);
+  assert.equal(dedupTtl(Date.UTC(2026, 10, 24, 23, 54, 59)), 301);
+  assert.equal(dedupTtl(Date.UTC(2026, 10, 24, 23, 58, 0)), 300);
+  assert.equal(dedupTtl(Date.UTC(2026, 10, 24, 23, 59, 59, 500)), 300);
+});
+
+test("a marker the five-minute Worker wrote answers with that window", async () => {
+  // Markers written before this change hold "1" and are gone five minutes after the deploy.
+  const kv = createMockKV();
+  await kv.put(`dedup:${clientKey("1.2.3.4", 64)}:spam:+12125551234`, "1", { expirationTtl: 300 });
+
+  assert.equal(await duplicateRetryAfter("1.2.3.4", "+12125551234", "spam", { RATE_LIMIT: kv }), 300);
+  assert.equal(await duplicateRetryAfter("1.2.3.4", "+12125551234", "not_spam", { RATE_LIMIT: kv }), 0);
+});
+
 test("dedup covers every address in one IPv6 /64 and no other /64", async () => {
   const env = { RATE_LIMIT: createMockKV() };
 
@@ -1019,7 +1050,11 @@ test("a report resent under its id from another network is a duplicate", async (
   assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env), false);
 });
 
-/** POSTs one report through the whole handler, with GitHub played by `answer`. */
+/**
+ * POSTs one report through the whole handler, with GitHub played by `answer`.
+ * A request with an `at` (epoch ms) arrives at that moment: the clock is faked
+ * for the whole run, and the KV stub expires its keys by the same clock.
+ */
 async function postReports(requests, answer) {
   const originalFetch = globalThis.fetch;
   const originalError = console.error;
@@ -1031,9 +1066,12 @@ async function postReports(requests, answer) {
   };
   console.error = () => {};
   const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  const timed = requests.some((request) => request.at !== undefined);
+  if (timed) mock.timers.enable({ apis: ["Date"], now: requests[0].at });
   try {
     const responses = [];
-    for (const { ip, body } of requests) {
+    for (const { ip, body, at } of requests) {
+      if (at !== undefined) mock.timers.setTime(at);
       const response = await worker.fetch(
         new Request("https://reports.example", {
           method: "POST",
@@ -1042,10 +1080,15 @@ async function postReports(requests, answer) {
         }),
         env,
       );
-      responses.push({ status: response.status, body: await response.json() });
+      responses.push({
+        status: response.status,
+        body: await response.json(),
+        retryAfter: response.headers.get("Retry-After"),
+      });
     }
     return { responses, stored };
   } finally {
+    if (timed) mock.timers.reset();
     globalThis.fetch = originalFetch;
     console.error = originalError;
   }
@@ -1086,6 +1129,61 @@ test("a second report of a number from a shared address isn't answered as alread
   assert.equal(responses[1].status, 429);
   assert.equal(responses[1].body.already_stored, undefined);
   assert.equal(stored.length, 1);
+});
+
+test("one address stores a number once a UTC day, whatever type or report id comes with it", async () => {
+  // What this stops: one address sending the same numbers every ten minutes
+  // with a new report id each time. The merge counts that address once a day
+  // per number, so only the first report of the day is worth a commit.
+  const report = (type) => ({ number: "+12122340101", type, report_id: randomUUID() });
+  const { responses, stored } = await postReports(
+    [
+      { at: Date.UTC(2026, 10, 24, 10, 0, 0), ip: "203.0.113.81", body: report("spam") },
+      { at: Date.UTC(2026, 10, 24, 10, 6, 0), ip: "203.0.113.81", body: report("spam") },
+      { at: Date.UTC(2026, 10, 24, 18, 30, 0), ip: "203.0.113.81", body: report("robocall") },
+      { at: Date.UTC(2026, 10, 24, 18, 31, 0), ip: "203.0.113.81", body: report("not_spam") },
+      { at: Date.UTC(2026, 10, 24, 18, 32, 0), ip: "203.0.113.82", body: report("spam") },
+      { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.81", body: report("spam") },
+    ],
+    () => 201,
+  );
+
+  assert.deepEqual(
+    responses.map((response) => response.status),
+    [200, 429, 429, 200, 200, 200],
+  );
+  // Six minutes in, past the old five-minute window, with the rest of the day still to wait.
+  assert.equal(responses[1].retryAfter, String(14 * 60 * 60 - 6 * 60));
+  assert.equal(responses[1].body.already_stored, undefined);
+  assert.equal(responses[2].retryAfter, String(5 * 60 * 60 + 30 * 60));
+  assert.deepEqual(
+    stored.map((entry) => [entry.type, entry.reported_at.slice(0, 10)]),
+    [
+      ["spam", "2026-11-24"],
+      ["not_spam", "2026-11-24"],
+      ["spam", "2026-11-24"],
+      ["spam", "2026-11-25"],
+    ],
+  );
+});
+
+test("a report just before midnight still holds its number for five minutes", async () => {
+  const report = () => ({ number: "+12122340101", type: "spam", report_id: randomUUID() });
+  const { responses, stored } = await postReports(
+    [
+      { at: Date.UTC(2026, 10, 24, 23, 58, 0), ip: "203.0.113.83", body: report() },
+      { at: Date.UTC(2026, 10, 25, 0, 1, 0), ip: "203.0.113.83", body: report() },
+      { at: Date.UTC(2026, 10, 25, 0, 3, 1), ip: "203.0.113.83", body: report() },
+    ],
+    () => 201,
+  );
+
+  assert.deepEqual(
+    responses.map((response) => response.status),
+    [200, 429, 200],
+  );
+  assert.equal(responses[1].retryAfter, "120");
+  assert.equal(stored.length, 2);
 });
 
 test("a stored report keeps its id, and its resend is answered as already stored", async () => {

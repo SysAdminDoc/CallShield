@@ -168,8 +168,9 @@ def main(argv: list[str] | None = None) -> int:
     input_report_digest = report_queue_digest(REPORTS_DIR)
 
     # Count DISTINCT reported numbers per domain, not report files. The worker
-    # dedups per (IP, number) for only 5 minutes, so one reporter re-submitting
-    # the same number could otherwise manufacture the MIN_REPORTS quorum for an
+    # dedups per (IP, number) for one UTC day (five minutes before 2026-11-24),
+    # so one reporter re-submitting the same number on later days, or from
+    # another address, could otherwise manufacture the MIN_REPORTS quorum for an
     # arbitrary domain and have it flagged malicious on every device.
     domain_numbers: dict[str, set[str]] = {}
     # Reporters count per /48 group here, not per /64 device as on the hot list:

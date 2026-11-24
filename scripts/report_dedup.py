@@ -14,7 +14,8 @@ Both consumers of `data/reports/` therefore need a backstop:
   and a burst of `not_spam` votes can de-list a genuine community row one vote
   at a time.
 
-The burst window is deliberately much tighter than the Worker's 300 seconds:
+The burst window is deliberately much tighter than the 300 seconds the Worker
+held a repeat for when those reports came in (a UTC day since 2026-11-24):
 within a minute a legacy repeat is more likely one person double-tapping, while
 reports further apart are retained for the durable database (but never count as
 independent evidence for a hot-list/domain promotion).

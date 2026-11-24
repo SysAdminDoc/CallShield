@@ -9,8 +9,9 @@ import java.util.concurrent.TimeUnit
  * Without it the same report went out again whenever someone tapped report
  * twice or retried after a slow response: issue #10's report arrived three
  * times minutes apart, and one number arrived 12 times on 2026-08-31. The
- * Worker's own dedup lasts five minutes and keys on the network address, so it
- * catches neither.
+ * Worker's own dedup lasted five minutes then and keys on the network address,
+ * so it caught neither. Since 2026-11-24 it lasts the UTC day, but a phone that
+ * changes network between taps still gets past it.
  */
 internal object CommunityReportLedger {
     val WINDOW_MILLIS = TimeUnit.HOURS.toMillis(24)

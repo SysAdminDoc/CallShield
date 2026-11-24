@@ -188,9 +188,11 @@ const GITHUB_MAX_RETRY_AFTER_S = 3600;
 // Reports are a phone number, a type and a few redacted SMS indicators.
 const MAX_BODY_BYTES = 10000;
 
-// Per-number dedup window: the same client cannot re-report the same
-// normalized number with the same type within this window. Prevents replay
-// flooding.
+// Per-number dedup: one client reports a number once a UTC day per vote (spam
+// or not spam). That is how the merge counts it, one reporter for one number
+// on one day, so a second report that day would be folded away there and is
+// not stored here. The marker lasts until the next UTC midnight and never less
+// than this window, so a replay that straddles midnight still waits.
 const DEDUP_WINDOW_S = 300;
 
 // The app gives each report an id and keeps it for every attempt. Its
@@ -618,11 +620,21 @@ async function consumeBudget({ limiter, key: limiterKey, kvKey: key, max }, env)
 }
 
 /**
- * The type is part of the key so a corrective `not_spam` isn't rejected as a
- * duplicate of the spam report it corrects.
+ * The vote is part of the key so a corrective `not_spam` isn't rejected as a
+ * duplicate of the spam report it corrects. Every spam type is the same vote,
+ * as it is in the merge: keyed on the type, one client could store a number
+ * once per type, nine times a day.
  */
 function dedupKey(ip, normalizedNumber, type) {
-  return `dedup:${clientKey(ip, LIMITER_PREFIX_BITS)}:${type}:${normalizedNumber}`;
+  const vote = type === "not_spam" ? "not_spam" : "spam";
+  return `dedup:${clientKey(ip, LIMITER_PREFIX_BITS)}:${vote}:${normalizedNumber}`;
+}
+
+/** Seconds a dedup marker written at `now` lasts: to the next UTC midnight, and at least DEDUP_WINDOW_S. */
+export function dedupTtl(now = Date.now()) {
+  const day = 24 * 60 * 60 * 1000;
+  const untilMidnight = Math.ceil((Math.floor(now / day) * day + day - now) / 1000);
+  return Math.max(DEDUP_WINDOW_S, untilMidnight);
 }
 
 function reportIdKey(reportId) {
@@ -637,22 +649,36 @@ export function validatedReportId(value) {
 }
 
 /**
- * Check per-client + per-number + per-type dedup against KV (read-only).
- * Returns true if this client already reported the number with this type
- * recently. The marker is written by recordDedup ONLY after the report is
- * durably stored — writing it up front turned any failed GitHub PUT into a
- * 5-minute "Duplicate report" lockout that silently dropped the report on
- * retry.
+ * Seconds until this client may report the number with this vote again, or 0
+ * when it hasn't reported it today (read-only). The marker holds the second it
+ * expires. A marker from before that (a bare "1", kept five minutes) answers
+ * with the old window.
  */
-export async function checkDedup(ip, normalizedNumber, type, env, reportId = "") {
+export async function duplicateRetryAfter(ip, normalizedNumber, type, env) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
-    if (allowsUnlimitedReports(env)) return false;
+    if (allowsUnlimitedReports(env)) return 0;
     throw new Error("RATE_LIMIT binding is required");
   }
 
   const existing = await env.RATE_LIMIT.get(dedupKey(ip, normalizedNumber, type));
-  if (existing !== null) return true;
+  if (existing === null) return 0;
+  const expiresAt = Number(existing);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isInteger(expiresAt) || expiresAt <= now || expiresAt - now > 24 * 60 * 60) return DEDUP_WINDOW_S;
+  return expiresAt - now;
+}
+
+/**
+ * Check per-client + per-number + per-vote dedup against KV (read-only).
+ * Returns true if this client already reported the number with this vote
+ * today. The marker is written by recordDedup ONLY after the report is
+ * durably stored — writing it up front turned any failed GitHub PUT into a
+ * "Duplicate report" lockout that silently dropped the report on retry.
+ */
+export async function checkDedup(ip, normalizedNumber, type, env, reportId = "") {
+  if ((await duplicateRetryAfter(ip, normalizedNumber, type, env)) > 0) return true;
+  if (!env?.RATE_LIMIT) return false;
   // The handler calls isStoredReport(reportId) first, so when the handler
   // reaches checkDedup the reportId is always empty (its default). The
   // branch below is retained for direct callers and test coverage.
@@ -674,14 +700,18 @@ export async function isStoredReport(reportId, env) {
   return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
 }
 
-/** Mark this (client, number, type), and the report's id, as reported. Call after a successful store. */
+/** Mark this (client, number, vote), and the report's id, as reported. Call after a successful store. */
 export async function recordDedup(ip, normalizedNumber, type, env, reportId = "") {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return;
     throw new Error("RATE_LIMIT binding is required");
   }
-  await env.RATE_LIMIT.put(dedupKey(ip, normalizedNumber, type), "1", { expirationTtl: DEDUP_WINDOW_S });
+  const now = Date.now();
+  const ttl = dedupTtl(now);
+  await env.RATE_LIMIT.put(dedupKey(ip, normalizedNumber, type), String(Math.floor(now / 1000) + ttl), {
+    expirationTtl: ttl,
+  });
   if (reportId) {
     await env.RATE_LIMIT.put(reportIdKey(reportId), "1", { expirationTtl: REPORT_ID_DEDUP_S });
   }
@@ -707,9 +737,9 @@ export async function recordDedup(ip, normalizedNumber, type, env, reportId = ""
  *
  * Rate limiting: per-client burst limit (5 reports/60 s) via the atomic
  * REPORT_LIMITER rate-limiting binding declared in wrangler.toml (KV counter
- * fallback when unbound), plus per-client+number+type dedup in KV (the same
- * report cannot be repeated from the same client within 5 min). A client is
- * an IPv4 address or an IPv6 /64.
+ * fallback when unbound), plus per-client+number+vote dedup in KV (one client
+ * reports a number as spam, or as not spam, once a UTC day). A client is an
+ * IPv4 address or an IPv6 /64.
  */
 
 export default {
@@ -846,12 +876,14 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 
       // The report's own id catches a resend, even from another network, and
       // only that match means this very report is stored, which the app treats
-      // as sent. The per-client + per-number + per-type marker stops a replay,
-      // but a household or carrier NAT shares one client key, so its match can
-      // be someone else's report: that answer is a plain "try later". Both
+      // as sent. The per-client + per-number + per-vote marker stops a replay
+      // for the rest of the UTC day, but a household or carrier NAT shares one
+      // client key, so its match can be someone else's report: that answer is
+      // a plain "try later", and the app's outbox sends it the next day. Both
       // markers are written only after a successful store.
       const stored = await isStoredReport(reportId, env);
-      if (stored || (await checkDedup(clientIp, normalized, type, env))) {
+      const duplicateWait = stored ? 0 : await duplicateRetryAfter(clientIp, normalized, type, env);
+      if (stored || duplicateWait > 0) {
         const answer = stored
           ? { error: "Duplicate report, already submitted", already_stored: true }
           : { error: "Duplicate report, try again later" };
@@ -860,7 +892,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
           headers: {
             ...responseHeaders,
             "Content-Type": "application/json",
-            "Retry-After": String(DEDUP_WINDOW_S),
+            "Retry-After": String(stored ? DEDUP_WINDOW_S : duplicateWait),
           },
         });
       }
@@ -944,7 +976,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 
       // Only now that the report is durably stored does the dedup marker go
       // in — a failed PUT above leaves the pair unmarked so the client's
-      // retry actually retries instead of eating a 5-minute duplicate 429.
+      // retry actually retries instead of eating a day-long duplicate 429.
       // The report is committed whatever happens here, so a failed marker
       // write must not turn into a 500 that makes the client submit it again.
       try {
