@@ -1,0 +1,30 @@
+{
+  "about": "Numbers whose community reports are set aside, because a script sent them and not people who got the call. merge_community_reports.py and generate_hot_list.py skip every report for a number listed here, so reports can't publish it, put it on the watch list or make it trend, and a row that only reports published comes back out at the next merge. A row another source backs stays as it is. Every entry needs the number, a held_at date and a note on what was seen. One entry per number. To lift a hold, delete its entry.",
+  "held": [
+    {
+      "number": "+8615017944158",
+      "held_at": "2026-11-24",
+      "note": "Chinese mobile. 180 reports on 21 days from 2026-10-27 to 2026-11-24, from several networks a day, 172 of them with no app report id. Reported in step with the four other numbers held that day."
+    },
+    {
+      "number": "+8615601654622",
+      "held_at": "2026-11-24",
+      "note": "Chinese mobile. 112 reports on 12 days from 2026-11-12 to 2026-11-24, from several networks a day, 104 of them with no app report id. Reported in step with the four other numbers held that day."
+    },
+    {
+      "number": "+8618126533736",
+      "held_at": "2026-11-24",
+      "note": "Chinese mobile. 121 reports on 13 days from 2026-11-11 to 2026-11-24, from several networks a day, 113 of them with no app report id. Reported in step with the four other numbers held that day."
+    },
+    {
+      "number": "+8618638657795",
+      "held_at": "2026-11-24",
+      "note": "Chinese mobile. 187 reports on 21 days from 2026-10-27 to 2026-11-24, from several networks a day, 178 of them with no app report id. Reported in step with the four other numbers held that day."
+    },
+    {
+      "number": "+8618957465363",
+      "held_at": "2026-11-24",
+      "note": "Chinese mobile. 162 reports on 18 days from 2026-11-02 to 2026-11-24, from several networks a day, 154 of them with no app report id. Reported in step with the four other numbers held that day."
+    }
+  ]
+}

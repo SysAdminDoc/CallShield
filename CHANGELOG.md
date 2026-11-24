@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The report service now takes one report of a number from one network a day, counted as spam or as not spam. It used to hold a repeat for five minutes, and it kept each spam type apart, so one address could send the same number every few minutes and every copy was committed. On November 24 a single address sent five numbers 34 times in two hours that way. The merge already counted an address once a day per number, so nothing it counts is lost. If a second phone on the same Wi-Fi reports the same number that day, the app queues it and it goes out after midnight UTC.
+- A number can be put on hold in `data/spam_numbers_held.json`. The merge and the hot list set its reports aside, so they can't publish it, put it on the watch list or make it trend. Five Chinese mobile numbers are held. A script has sent 762 reports for them since October 27, and from November 23 it began attaching a made-up report id to each one, which gets past the rule that counts reports without an id as one reporter. Left alone, the next merge would have shown four of them as "Reported by 2 CallShield users".
+
 ## v1.14.0 (2026-11-16)
 
 - Brazilian Portuguese and Spanish are in the app now, and the language picker lists them along with Simplified Chinese, which was already in the APK but could only be reached from Android's own per-app settings. Anything not translated yet shows in English.

@@ -1472,6 +1472,85 @@ def assert_no_id_promotions_lose_their_place(data_dir: Path) -> None:
     assert pending[counted]["bucket_quorum"] is True and pending[aged]["bucket_quorum"] is True, pending
 
 
+def assert_held_numbers_take_no_reports(data_dir: Path) -> None:
+    """From 2026-11-23 a script sent the same five +86 mobiles with a made-up
+    report id on every request and from changing addresses, which reads as a
+    crowd on every count the pipeline has. A number listed in
+    spam_numbers_held.json takes no reports: nothing publishes it, puts it on
+    the watch list or makes it trend, and a row that reports alone published
+    comes back out. A number reported the same way and not held still does all
+    three, and a held number another source lists keeps its row as it was."""
+    flooded, control = "+8613800138000", "+12122340911"
+    watched, watched_control = "+8613800138001", "+12122340912"
+    listed, backed = "+8613800138002", "+12122340913"
+    held = (flooded, watched, listed, backed)
+    early = (datetime.now(timezone.utc) - timedelta(days=3)).date().isoformat()
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports", "fcc_complaints"], "prefixes": [],
+         "numbers": [
+             {"number": listed, "type": "spam", "reports": 4, "first_seen": early, "last_seen": BASE_DAY,
+              "description": "Community reported", "sources": ["community"]},
+             {"number": backed, "type": "robocall", "reports": 2, "first_seen": early, "last_seen": BASE_DAY,
+              "description": "FCC complaint", "sources": ["fcc_complaints"]},
+         ]},
+    )
+    # One reporter two days back, then four over six hours on BASE_DAY, every
+    # one with an app id: the database's quorum and the hot list's bar, both met.
+    day_before = f"{(datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()}T04:00:00+00:00"
+    for number in (flooded, control):
+        write_report(data_dir, f"{number[1:]}-0.json", number, BUCKETS[5], day_before, device=BUCKETS[5])
+        for index, reported_at in enumerate(TIMES[:4], start=1):
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, f"0000000000b1{index:04x}", reported_at,
+                         device=f"0000000000b2{index:04x}")
+    # Two reporters on one day: enough for the watch list and nothing else.
+    for number in (watched, watched_control):
+        for index, reported_at in enumerate(TIMES[:2], start=1):
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, BUCKETS[index], reported_at, device=BUCKETS[index + 1])
+    write_report(data_dir, "flooded-vote.json", flooded, BUCKETS[0], TIMES[4], report_type="not_spam")
+    write_report(data_dir, "backed-1.json", backed, BUCKETS[0], TIMES[0], device=BUCKETS[1])
+    hold_file = data_dir / "spam_numbers_held.json"
+    write_json(hold_file, {"held": [{"number": number, "held_at": BASE_DAY, "note": "Scripted reports"} for number in held]})
+    run_drain(data_dir)
+
+    assert row_for(data_dir, control) is not None, "the same reports should publish a number that isn't held"
+    assert row_for(data_dir, flooded) is None, "a held number was published on its reports"
+    assert row_for(data_dir, listed) is None, "a held row that only reports published stayed listed"
+    assert reports_for(data_dir, backed) == 2, "a held number's FCC row took a community report"
+    feed = json.loads((data_dir / "community_watch.json").read_text(encoding="utf-8"))
+    assert [row["number"] for row in feed["numbers"]] == [watched_control], feed
+    hot = {entry["number"] for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
+    assert hot == {control}, hot
+    ledger = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert not set(held) & set(ledger), sorted(set(held) & set(ledger))
+    assert not list((data_dir / "reports").glob("*.json")), "held reports must leave the queue with the rest"
+
+    # A hold that can't be checked stops both readers, so a typo never counts
+    # as "no holds". So does a number that is approved and held at once.
+    good = {"number": flooded, "held_at": BASE_DAY, "note": "Scripted reports"}
+    for broken in (
+        [{**good, "number": "+1555"}],
+        [{**good, "held_at": "2999-01-01"}],
+        [{"number": flooded, "held_at": BASE_DAY}],
+        [good, good],
+    ):
+        write_json(hold_file, {"held": broken})
+        for script, script_args in (
+            ("merge_community_reports.py", []),
+            ("generate_hot_list.py", ["--allow-collapse", "--cleared", "numbers,ranges"]),
+        ):
+            result = run_script_result(script, data_dir, script_args)
+            assert result.returncode != 0 and "spam_numbers_held.json" in result.stderr, (script, broken, result.stderr)
+    write_json(hold_file, {"held": [good]})
+    write_json(
+        data_dir / "spam_numbers_approved.json",
+        {"approved": [{"number": flooded, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/report"}]},
+    )
+    result = run_script_result("merge_community_reports.py", data_dir)
+    assert result.returncode != 0 and "spam_numbers_held.json" in result.stderr, result.stderr
+    assert row_for(data_dir, flooded) is None, "a refused merge must not publish the number"
+
+
 def assert_maintainer_approval_publishes_a_reviewed_number(data_dir: Path) -> None:
     """Issue #27: one report of a Munich number waits for corroboration no
     imported source can give. The maintainer's review publishes it, and later
@@ -2260,6 +2339,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_no_id_promotions_lose_their_place(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_held_numbers_take_no_reports(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")

@@ -38,6 +38,7 @@ from report_dedup import (
     reporter_day_key,
     validated_report_id,
 )
+from report_holds import HELD_NUMBERS_FILENAME, load_held_numbers
 
 REPO_DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", REPO_DATA_DIR))
@@ -127,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
     # in file-glob order.
     pending: list[tuple[str, datetime, str, str, str, tuple[str, str]]] = []
     report_ids: list[tuple[str, datetime, str]] = []
+    # Read before the queue, so a hold file that doesn't check out stops the
+    # run instead of being skipped like one unreadable report.
+    held_numbers = load_held_numbers(DATA_DIR, now.date().isoformat())
+    held_reports = 0
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -137,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
                 number = validated_report_number(report.get("number", ""))
                 spam_type = report.get("type", "unknown")
                 if not number or spam_type == "not_spam":
+                    continue
+                if number in held_numbers:
+                    held_reports += 1
                     continue
 
                 reported_at_str = report.get("reported_at", "")
@@ -153,6 +161,9 @@ def main(argv: list[str] | None = None) -> int:
                 report_ids.append((validated_report_id(report.get("report_id")), reported_at, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
+
+    if held_reports:
+        print(f"  Set aside {held_reports} report(s) for numbers in {HELD_NUMBERS_FILENAME}")
 
     # Reports stored before 2026-10-30 may carry a bare foreign number read as
     # +1 (see bare_digit_misreading); the merge drops the same ones.

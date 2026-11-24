@@ -37,6 +37,7 @@ from report_dedup import (
     validated_report_id,
     validated_reporter_bucket,
 )
+from report_holds import HELD_NUMBERS_FILENAME, load_held_numbers
 from source_registry import (
     load_source_manifest,
     merge_evidence,
@@ -754,6 +755,22 @@ def validated_approvals(approvals: list[dict], today: str) -> tuple[list[dict], 
     return active, revoked
 
 
+def apply_holds(existing: dict[str, dict], pending: dict[str, dict], held: set[str]) -> int:
+    """Take held numbers out of the ledger, and out of the database when only reports put them there.
+
+    Returns how many rows were unpublished. A row with another source keeps its
+    place and its counts; it just takes no more community reports while held.
+    """
+    unpublished = 0
+    for number in sorted(held):
+        pending.pop(number, None)
+        entry = existing.get(number)
+        if entry is not None and canonical_source_ids(entry) == {"community_reports"}:
+            del existing[number]
+            unpublished += 1
+    return unpublished
+
+
 def has_maintainer_review(entry: dict) -> bool:
     return MAINTAINER_SOURCE in entry.get("sources", []) or any(
         isinstance(item, dict) and item.get("source_id") == MAINTAINER_SOURCE for item in entry.get("evidence") or []
@@ -1081,6 +1098,18 @@ def main(argv: list[str] | None = None):
     if revoked_released or revoked_removed:
         print(f"Revoked approvals: {revoked_removed} rows unpublished, {revoked_released} left to their other sources")
 
+    # Holds come after the revocations, so a revoked number that is also held
+    # is judged as the community-only row the revocation left behind.
+    held_numbers = load_held_numbers(DATA_DIR, today)
+    both = sorted(held_numbers & {approval["number"] for approval in approvals})
+    if both:
+        raise ValueError(
+            f"{', '.join(both)} is approved in {APPROVED_NUMBERS_FILE.name} and held in {HELD_NUMBERS_FILENAME}. "
+            "Revoke the approval or delete the hold"
+        )
+    held_unpublished = apply_holds(existing, pending, held_numbers)
+    held_reports: Counter[str] = Counter()
+
     # Reports the Worker stored before 2026-10-30 may carry a bare foreign
     # number read as +1. A number the database lists or a maintainer approved
     # stands on its own evidence; an unpublished ledger row doesn't. A row
@@ -1166,6 +1195,12 @@ def main(argv: list[str] | None = None):
                 implausible[raw if isinstance(raw, str) and raw else "<missing>"] += 1
                 processed_files.append(report_file)
                 skipped += 1
+                continue
+
+            if number in held_numbers:
+                # Spam or not spam, a held number's reports change nothing.
+                held_reports[number] += 1
+                processed_files.append(report_file)
                 continue
 
             parsed_at = parse_reported_at(report.get("reported_at"))
@@ -1433,6 +1468,7 @@ def main(argv: list[str] | None = None):
         or approved_updated > 0
         or revoked_released > 0
         or revoked_removed > 0
+        or held_unpublished > 0
     )
     if changed:
         db["version"] += 1
@@ -1485,6 +1521,13 @@ def main(argv: list[str] | None = None):
     if misread_reports:
         print(f"\nDropped as bare foreign numbers read as +1 ({sum(misread_reports.values())} report(s)):")
         for number, count in sorted(misread_reports.items(), key=lambda item: (-item[1], item[0])):
+            print(f"  {number} x{count}")
+    if held_reports or held_unpublished:
+        print(
+            f"\nSet aside for numbers in {HELD_NUMBERS_FILENAME} "
+            f"({sum(held_reports.values())} report(s), {held_unpublished} row(s) unpublished):"
+        )
+        for number, count in sorted(held_reports.items(), key=lambda item: (-item[1], item[0])):
             print(f"  {number} x{count}")
 
     print(
