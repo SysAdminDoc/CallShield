@@ -1920,6 +1920,14 @@
         <item quantity="one">举报过于频繁。请等待 %1$d 秒后重试。</item>
         <item quantity="other">举报过于频繁。请等待 %1$d 秒后重试。</item>
     </plurals>
+    <plurals name="contribute_rate_limited_minutes">
+        <item quantity="one">举报过于频繁。请等待 %1$d 分钟后重试。</item>
+        <item quantity="other">举报过于频繁。请等待 %1$d 分钟后重试。</item>
+    </plurals>
+    <plurals name="contribute_rate_limited_hours">
+        <item quantity="one">举报过于频繁。请等待 %1$d 小时后重试。</item>
+        <item quantity="other">举报过于频繁。请等待 %1$d 小时后重试。</item>
+    </plurals>
     <plurals name="external_blocklist_applied">
         <item quantity="one">已应用 %1$s：%2$d 个号码，+%3$d / -%4$d</item>
         <item quantity="other">已应用 %1$s：%2$d 个号码，+%3$d / -%4$d</item>

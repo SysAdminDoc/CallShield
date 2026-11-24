@@ -313,6 +313,14 @@
         <item quantity="one">Demasiados reportes. Espera %1$d segundo e inténtalo de nuevo.</item>
         <item quantity="other">Demasiados reportes. Espera %1$d segundos e inténtalo de nuevo.</item>
     </plurals>
+    <plurals name="contribute_rate_limited_minutes">
+        <item quantity="one">Demasiados reportes. Espera %1$d minuto e inténtalo de nuevo.</item>
+        <item quantity="other">Demasiados reportes. Espera %1$d minutos e inténtalo de nuevo.</item>
+    </plurals>
+    <plurals name="contribute_rate_limited_hours">
+        <item quantity="one">Demasiados reportes. Espera %1$d hora e inténtalo de nuevo.</item>
+        <item quantity="other">Demasiados reportes. Espera %1$d horas e inténtalo de nuevo.</item>
+    </plurals>
     <string name="contribute_server_error">El servidor de reportes tiene problemas. Inténtalo más tarde.</string>
     <string name="contribute_network_error">Sin conexión. El reporte no se envió.</string>
     <string name="contribute_already_submitted">Ya reportaste este número en el último día.</string>

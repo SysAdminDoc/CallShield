@@ -313,6 +313,14 @@
         <item quantity="one">Denúncias demais. Aguarde %1$d segundo e tente novamente.</item>
         <item quantity="other">Denúncias demais. Aguarde %1$d segundos e tente novamente.</item>
     </plurals>
+    <plurals name="contribute_rate_limited_minutes">
+        <item quantity="one">Denúncias demais. Aguarde %1$d minuto e tente novamente.</item>
+        <item quantity="other">Denúncias demais. Aguarde %1$d minutos e tente novamente.</item>
+    </plurals>
+    <plurals name="contribute_rate_limited_hours">
+        <item quantity="one">Denúncias demais. Aguarde %1$d hora e tente novamente.</item>
+        <item quantity="other">Denúncias demais. Aguarde %1$d horas e tente novamente.</item>
+    </plurals>
     <string name="contribute_server_error">O servidor de denúncias está com problemas. Tente novamente mais tarde.</string>
     <string name="contribute_network_error">Sem conexão. A denúncia não foi enviada.</string>
     <string name="contribute_already_submitted">Você já denunciou este número no último dia.</string>

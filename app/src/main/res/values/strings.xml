@@ -323,6 +323,14 @@
         <item quantity="one">Too many reports. Wait %1$d second and try again.</item>
         <item quantity="other">Too many reports. Wait %1$d seconds and try again.</item>
     </plurals>
+    <plurals name="contribute_rate_limited_minutes">
+        <item quantity="one">Too many reports. Wait %1$d minute and try again.</item>
+        <item quantity="other">Too many reports. Wait %1$d minutes and try again.</item>
+    </plurals>
+    <plurals name="contribute_rate_limited_hours">
+        <item quantity="one">Too many reports. Wait %1$d hour and try again.</item>
+        <item quantity="other">Too many reports. Wait %1$d hours and try again.</item>
+    </plurals>
     <string name="contribute_server_error">The report server is having trouble. Try again later.</string>
     <string name="contribute_network_error">No connection. The report wasn\'t sent.</string>
     <string name="contribute_already_submitted">You already reported this number in the last day.</string>
