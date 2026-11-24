@@ -9,7 +9,7 @@ compatibility_date = "2026-09-26"
 # ALLOW_UNLIMITED_REPORTS is intentionally absent. It is a local-test escape
 # hatch only; setting it in a deployed environment disables the KV guard.
 
-# Rate-limit KV namespace (per-client+number+type dedup markers, and the
+# Rate-limit KV namespace (per-client+number+vote dedup markers, and the
 # fallback burst counter when the limiter binding below is unavailable). A
 # client is an IPv4 address or an IPv6 /64. Wrangler provisions the namespace
 # at deploy time when this binding has no id. Keep the generated id locally;
