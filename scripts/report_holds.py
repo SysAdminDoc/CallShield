@@ -9,7 +9,9 @@ networks that report nothing else.
 
 Once a number is listed in data/spam_numbers_held.json, the two consumers that
 can put a number on phones without a review skip its reports: the merge (the
-database and the watch list) and the hot list. The hold is about the reports,
+database and the watch list) and the hot list. The report Worker reads the same
+file from GitHub and drops those reports before they're committed, along with
+everything else from the sending network until UTC midnight. The hold is about the reports,
 not the number. A row another source backs (FCC, FTC, a maintainer review)
 stays where it is, and a number can't be approved and held at once.
 """

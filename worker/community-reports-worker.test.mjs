@@ -20,6 +20,7 @@ import worker, {
   checkDedup,
   dedupTtl,
   duplicateRetryAfter,
+  heldNumbersFrom,
   deriveReporterBucket,
   deriveReporterDevice,
   recordDedup,
@@ -1054,18 +1055,31 @@ test("a report resent under its id from another network is a duplicate", async (
  * POSTs one report through the whole handler, with GitHub played by `answer`.
  * A request with an `at` (epoch ms) arrives at that moment: the clock is faked
  * for the whole run, and the KV stub expires its keys by the same clock.
+ * `held` serves a held-numbers file: a list of numbers, "fail" for an error, or
+ * a function of the fetch count returning either. `log` collects console.log.
  */
-async function postReports(requests, answer) {
+async function postReports(requests, answer, { held, log } = {}) {
   const originalFetch = globalThis.fetch;
   const originalError = console.error;
+  const originalLog = console.log;
   const stored = [];
-  globalThis.fetch = async (_url, options) => {
+  // A fresh URL per run, so the Worker's cached list from another test never answers.
+  const heldUrl = held === undefined ? undefined : `https://held.example/${randomUUID()}.json`;
+  let heldFetches = 0;
+  globalThis.fetch = async (url, options) => {
+    if (url === heldUrl) {
+      const list = typeof held === "function" ? held(heldFetches++) : (heldFetches++, held);
+      if (list === "fail") return new Response("unavailable", { status: 503 });
+      return Response.json({ about: "test", held: list.map((number) => ({ number, held_at: "2026-11-24", note: "test" })) });
+    }
     const status = answer(stored.length);
     if (status === 201) stored.push(JSON.parse(atob(JSON.parse(options.body).content)));
     return new Response("{}", { status });
   };
   console.error = () => {};
+  if (log) console.log = (...args) => log.push(args.join(" "));
   const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  if (heldUrl) env.HELD_NUMBERS_URL = heldUrl;
   const timed = requests.some((request) => request.at !== undefined);
   if (timed) mock.timers.enable({ apis: ["Date"], now: requests[0].at });
   try {
@@ -1086,11 +1100,12 @@ async function postReports(requests, answer) {
         retryAfter: response.headers.get("Retry-After"),
       });
     }
-    return { responses, stored };
+    return { responses, stored, heldFetches };
   } finally {
     if (timed) mock.timers.reset();
     globalThis.fetch = originalFetch;
     console.error = originalError;
+    console.log = originalLog;
   }
 }
 
@@ -1165,6 +1180,88 @@ test("one address stores a number once a UTC day, whatever type or report id com
       ["spam", "2026-11-25"],
     ],
   );
+});
+
+test("a held number is answered as stored and dropped, and its sender is banned for the UTC day", async () => {
+  // From 2026-11-23 a script sent five +86 mobiles from changing addresses
+  // with a made-up report id each time. Answering it exactly as a stored
+  // report leaves it nothing to change.
+  const flooded = "+8615017944158";
+  const report = (number, type = "spam") => ({ number, type, report_id: randomUUID() });
+  const log = [];
+  const { responses, stored } = await postReports(
+    [
+      { at: Date.UTC(2026, 10, 24, 18, 0, 0), ip: "203.0.113.91", body: report("+86 150 1794 4158") },
+      { at: Date.UTC(2026, 10, 24, 18, 1, 0), ip: "203.0.113.91", body: report("+12122340111") },
+      { at: Date.UTC(2026, 10, 24, 18, 2, 0), ip: "203.0.113.91", body: report("+12122340112", "not_spam") },
+      { at: Date.UTC(2026, 10, 24, 18, 3, 0), ip: "2001:db8:5:6::1", body: report(flooded, "not_spam") },
+      { at: Date.UTC(2026, 10, 24, 18, 4, 0), ip: "2001:db8:5:6:ffff::2", body: report("+12122340113") },
+      { at: Date.UTC(2026, 10, 24, 18, 5, 0), ip: "2001:db8:5:7::1", body: report("+12122340113") },
+      { at: Date.UTC(2026, 10, 24, 18, 6, 0), ip: "203.0.113.92", body: report("+12122340111") },
+      { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.91", body: report("+12122340111") },
+    ],
+    () => 201,
+    { held: [flooded, "not a number"], log },
+  );
+
+  for (const response of responses) {
+    assert.equal(response.status, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.error, undefined);
+  }
+  assert.equal(responses[0].body.number, flooded);
+  // Only another network, and the banned one after UTC midnight, get stored.
+  assert.deepEqual(
+    stored.map((entry) => [entry.number, entry.reported_at.slice(0, 10)]),
+    [
+      ["+12122340113", "2026-11-24"],
+      ["+12122340111", "2026-11-24"],
+      ["+12122340111", "2026-11-25"],
+    ],
+  );
+  assert.equal(log.filter((line) => line.startsWith("dropped report: held number")).length, 2);
+  assert.equal(log.filter((line) => line.startsWith("dropped report: banned client")).length, 3);
+  assert.equal(log.some((line) => /203\.0\.113|2001:db8/.test(line)), false, "a log line must not carry the address");
+});
+
+test("the held list is read every five minutes, and a failed read keeps the last one", async () => {
+  const report = (number) => ({ number, type: "spam", report_id: randomUUID() });
+  const at = (minute) => Date.UTC(2026, 10, 24, 18, minute, 0);
+  const { responses, stored, heldFetches } = await postReports(
+    [
+      { at: at(0), ip: "203.0.113.101", body: report("+12122340121") },
+      { at: at(4), ip: "203.0.113.102", body: report("+12122340121") },
+      { at: at(6), ip: "203.0.113.103", body: report("+12122340121") },
+      { at: at(12), ip: "203.0.113.104", body: report("+12122340121") },
+    ],
+    () => 201,
+    // First read: no holds. Second: the number is held. Then GitHub fails.
+    { held: (count) => (count === 0 ? [] : count === 1 ? ["+12122340121"] : "fail") },
+  );
+
+  assert.deepEqual(responses.map((response) => response.status), [200, 200, 200, 200]);
+  assert.deepEqual(stored.map((entry) => entry.number), ["+12122340121", "+12122340121"]);
+  assert.equal(heldFetches, 3, "one read at the start, one at six minutes, one at twelve");
+});
+
+test("a held list that never loads leaves every report to the merge", async () => {
+  const { responses, stored } = await postReports(
+    [{ ip: "203.0.113.111", body: { number: "+8615017944158", type: "spam", report_id: randomUUID() } }],
+    () => 201,
+    { held: "fail" },
+  );
+
+  assert.equal(responses[0].status, 200);
+  assert.equal(stored.length, 1);
+});
+
+test("held numbers files are read for their numbers only", () => {
+  assert.deepEqual(
+    [...heldNumbersFrom({ held: [{ number: "+86 150 1794 4158" }, { number: "+1555" }, { number: 12 }, null, {}] })],
+    ["+8615017944158"],
+  );
+  assert.deepEqual([...heldNumbersFrom({ held: "nope" })], []);
+  assert.deepEqual([...heldNumbersFrom(null)], []);
 });
 
 test("a report just before midnight still holds its number for five minutes", async () => {

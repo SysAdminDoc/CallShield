@@ -630,6 +630,71 @@ function dedupKey(ip, normalizedNumber, type) {
   return `dedup:${clientKey(ip, LIMITER_PREFIX_BITS)}:${vote}:${normalizedNumber}`;
 }
 
+// ── Held numbers and banned clients ───────────────────────────────────
+// data/spam_numbers_held.json lists numbers a script has been flooding. The
+// Worker reads it from HELD_NUMBERS_URL (unset: no holds), keeps it for five
+// minutes, and keeps the last list it read when a fetch fails. A report of a
+// held number is answered as stored and dropped, and the client that sent it
+// is banned until the next UTC midnight: everything it sends meanwhile is
+// dropped the same way. The answer matches a stored report's, so the script
+// learns nothing it could adapt to.
+const HELD_LIST_TTL_MS = 5 * 60 * 1000;
+const HELD_LIST_RETRY_MS = 60 * 1000;
+let heldList = { url: "", numbers: new Set(), expiresAt: 0 };
+
+/** The normalized numbers in a held-numbers file; anything else in it is ignored. */
+export function heldNumbersFrom(payload) {
+  const numbers = new Set();
+  const holds = payload && Array.isArray(payload.held) ? payload.held : [];
+  for (const hold of holds) {
+    const number = typeof hold?.number === "string" ? normalizePhoneNumberForReport(hold.number) : null;
+    if (number && isPlausibleReportNumber(number)) numbers.add(number);
+  }
+  return numbers;
+}
+
+/**
+ * The held numbers. A list that can't be read leaves the reports to the
+ * merge, which sets held numbers aside on its own, so this fails open and
+ * tries again a minute later instead of on every report.
+ */
+export async function heldNumbers(env, now = Date.now()) {
+  const url = env?.HELD_NUMBERS_URL;
+  if (!url) return new Set();
+  if (heldList.url === url && now < heldList.expiresAt) return heldList.numbers;
+  const last = heldList.url === url ? heldList.numbers : new Set();
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "CallShield-Worker" },
+      cf: { cacheTtl: HELD_LIST_TTL_MS / 1000, cacheEverything: true },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    heldList = { url, numbers: heldNumbersFrom(await response.json()), expiresAt: now + HELD_LIST_TTL_MS };
+  } catch (error) {
+    console.error("Unable to read the held numbers; keeping the last list", error);
+    heldList = { url, numbers: last, expiresAt: now + HELD_LIST_RETRY_MS };
+  }
+  return heldList.numbers;
+}
+
+function banKey(ip) {
+  return `ban:${clientKey(ip, LIMITER_PREFIX_BITS)}`;
+}
+
+/** True when this client reported a held number earlier in the UTC day. */
+export async function isBannedClient(ip, env) {
+  if (!hasClientIp(ip)) throw new Error("client IP is required");
+  if (!env?.RATE_LIMIT) return false;
+  return (await env.RATE_LIMIT.get(banKey(ip))) !== null;
+}
+
+/** Ban this client until the next UTC midnight, and for five minutes at least. */
+export async function banClient(ip, env, now = Date.now()) {
+  if (!hasClientIp(ip)) throw new Error("client IP is required");
+  if (!env?.RATE_LIMIT) return;
+  await env.RATE_LIMIT.put(banKey(ip), "1", { expirationTtl: dedupTtl(now) });
+}
+
 /** Seconds a dedup marker written at `now` lasts: to the next UTC midnight, and at least DEDUP_WINDOW_S. */
 export function dedupTtl(now = Date.now()) {
   const day = 24 * 60 * 60 * 1000;
@@ -739,7 +804,9 @@ export async function recordDedup(ip, normalizedNumber, type, env, reportId = ""
  * REPORT_LIMITER rate-limiting binding declared in wrangler.toml (KV counter
  * fallback when unbound), plus per-client+number+vote dedup in KV (one client
  * reports a number as spam, or as not spam, once a UTC day). A client is an
- * IPv4 address or an IPv6 /64.
+ * IPv4 address or an IPv6 /64. Reports of a held number (HELD_NUMBERS_URL)
+ * are dropped, and so is everything the client that sent one reports for the
+ * rest of the UTC day.
  */
 
 export default {
@@ -871,6 +938,35 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       if (!normalized || !isPlausibleReportNumber(normalized)) {
         return new Response(JSON.stringify({ error: "Invalid phone number" }), {
           status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // Held numbers and banned clients come before the duplicate checks, so
+      // a script's repeat gets the same answer as its first report.
+      const held = (await heldNumbers(env)).has(normalized);
+      const banned = await isBannedClient(clientIp, env);
+      if (held || banned) {
+        if (held && !banned) {
+          try {
+            await banClient(clientIp, env);
+          } catch (error) {
+            console.error("Unable to ban a client that reported a held number", error);
+          }
+        }
+        // No address: the network and user agent are what a later rule could
+        // match, and this line only shows in a live `wrangler tail`.
+        console.log(
+          `dropped report: ${held ? "held number" : "banned client"} ${normalized} ${type}`,
+          JSON.stringify({
+            asn: request.cf?.asn ?? null,
+            org: request.cf?.asOrganization ?? null,
+            country: request.cf?.country ?? null,
+            ua: request.headers.get("user-agent") || "",
+            id: Boolean(reportId),
+          }),
+        );
+        return new Response(JSON.stringify({ success: true, number: normalized }), {
+          status: 200, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
 
