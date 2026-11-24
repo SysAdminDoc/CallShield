@@ -12,8 +12,8 @@ compatibility_date = "2026-09-26"
 # until UTC midnight. Read every five minutes; unset means no holds.
 HELD_NUMBERS_URL = "https://raw.githubusercontent.com/SysAdminDoc/CallShield/master/data/spam_numbers_held.json"
 
-# Rate-limit KV namespace (per-client+number+vote dedup markers, and the
-# fallback burst counter when the limiter binding below is unavailable). A
+# Rate-limit KV namespace (the fallback burst counter when the limiter binding
+# below is unavailable, and the markers when REPORT_MARKERS is unbound). A
 # client is an IPv4 address or an IPv6 /64. Wrangler provisions the namespace
 # at deploy time when this binding has no id. Keep the generated id locally;
 # a fresh namespace starts without the previous seven-day report-id markers.
@@ -58,3 +58,17 @@ class_name = "ReportGlobalCounter"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ReportGlobalCounter"]
+
+# The duplicate, report-id and ban markers, and the daily counts GET /stats
+# reads (with STATS_TOKEN, set via `wrangler secret put STATS_TOKEN`), in one
+# SQLite object. KV on the free plan takes 1,000 writes a day, which the
+# markers were heading past; this takes 100,000 row writes. To back out,
+# remove this binding (keep the class and the migration) and the markers go
+# back to KV.
+[[durable_objects.bindings]]
+name = "REPORT_MARKERS"
+class_name = "ReportMarkers"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ReportMarkers"]

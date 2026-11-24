@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import worker, {
   normalizePhoneNumberForReport,
@@ -15,6 +16,10 @@ import worker, {
   clientKey,
   limiterGroupKey,
   ReportGlobalCounter,
+  ReportMarkers,
+  DAILY_COUNT_KINDS,
+  dailyCounts,
+  markerOps,
   takeWorkerBudget,
   getClientIp,
   checkDedup,
@@ -1058,7 +1063,56 @@ test("a report resent under its id from another network is a duplicate", async (
  * `held` serves a held-numbers file: a list of numbers, "fail" for an error, or
  * a function of the fetch count returning either. `log` collects console.log.
  */
-async function postReports(requests, answer, { held, log } = {}) {
+/** A Durable Object state whose storage.sql is an in-memory SQLite database, with the alarm API. */
+function sqliteState() {
+  const db = new DatabaseSync(":memory:");
+  const storage = {
+    alarm: null,
+    sql: {
+      exec(query, ...bindings) {
+        const statement = db.prepare(query);
+        const rows = statement.columns().length > 0 ? statement.all(...bindings) : (statement.run(...bindings), []);
+        return { toArray: () => rows };
+      },
+    },
+    async getAlarm() {
+      return storage.alarm;
+    },
+    async setAlarm(at) {
+      storage.alarm = at;
+    },
+  };
+  return { storage, db };
+}
+
+/** REPORT_MARKERS as the Worker sees it: every name reaches the one ReportMarkers object. */
+function markerNamespace() {
+  const state = sqliteState();
+  const markers = new ReportMarkers(state);
+  const names = new Set();
+  return {
+    markers,
+    state,
+    names,
+    namespace: {
+      idFromName(name) {
+        names.add(name);
+        return name;
+      },
+      get() {
+        return { fetch: (url, init) => markers.fetch(new Request(url, init)) };
+      },
+    },
+    rows: (table) => state.db.prepare(`SELECT * FROM ${table} ORDER BY 1, 2`).all().map((row) => ({ ...row })),
+  };
+}
+
+/** Marker keys in a KV stub (the burst counter's keys aren't markers). */
+function kvMarkerKeys(kv) {
+  return [...kv._store.keys()].filter((key) => key.startsWith("dedup:") || key.startsWith("ban:"));
+}
+
+async function postReports(requests, answer, { held, log, markers, before, after, env: extraEnv } = {}) {
   const originalFetch = globalThis.fetch;
   const originalError = console.error;
   const originalLog = console.log;
@@ -1077,19 +1131,27 @@ async function postReports(requests, answer, { held, log } = {}) {
     return new Response("{}", { status });
   };
   console.error = () => {};
-  if (log) console.log = (...args) => log.push(args.join(" "));
-  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  console.log = log ? (...args) => log.push(args.join(" ")) : () => {};
+  const env = {
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+    ...extraEnv,
+  };
   if (heldUrl) env.HELD_NUMBERS_URL = heldUrl;
+  const store = markers ? markerNamespace() : null;
+  if (store) env.REPORT_MARKERS = store.namespace;
   const timed = requests.some((request) => request.at !== undefined);
   if (timed) mock.timers.enable({ apis: ["Date"], now: requests[0].at });
   try {
+    if (before) await before(env);
     const responses = [];
-    for (const { ip, body, at } of requests) {
+    for (const { ip, body, at, ua } of requests) {
       if (at !== undefined) mock.timers.setTime(at);
       const response = await worker.fetch(
         new Request("https://reports.example", {
           method: "POST",
-          headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+          headers: { "content-type": "application/json", "cf-connecting-ip": ip, ...(ua ? { "user-agent": ua } : {}) },
           body: JSON.stringify(body),
         }),
         env,
@@ -1100,7 +1162,8 @@ async function postReports(requests, answer, { held, log } = {}) {
         retryAfter: response.headers.get("Retry-After"),
       });
     }
-    return { responses, stored, heldFetches };
+    if (after) await after(env);
+    return { responses, stored, heldFetches, kv: env.RATE_LIMIT, store };
   } finally {
     if (timed) mock.timers.reset();
     globalThis.fetch = originalFetch;
@@ -1146,83 +1209,90 @@ test("a second report of a number from a shared address isn't answered as alread
   assert.equal(stored.length, 1);
 });
 
-test("one address stores a number once a UTC day, whatever type or report id comes with it", async () => {
-  // What this stops: one address sending the same numbers every ten minutes
-  // with a new report id each time. The merge counts that address once a day
-  // per number, so only the first report of the day is worth a commit.
-  const report = (type) => ({ number: "+12122340101", type, report_id: randomUUID() });
-  const { responses, stored } = await postReports(
-    [
-      { at: Date.UTC(2026, 10, 24, 10, 0, 0), ip: "203.0.113.81", body: report("spam") },
-      { at: Date.UTC(2026, 10, 24, 10, 6, 0), ip: "203.0.113.81", body: report("spam") },
-      { at: Date.UTC(2026, 10, 24, 18, 30, 0), ip: "203.0.113.81", body: report("robocall") },
-      { at: Date.UTC(2026, 10, 24, 18, 31, 0), ip: "203.0.113.81", body: report("not_spam") },
-      { at: Date.UTC(2026, 10, 24, 18, 32, 0), ip: "203.0.113.82", body: report("spam") },
-      { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.81", body: report("spam") },
-    ],
-    () => 201,
-  );
+for (const markers of [false, true]) {
+  const where = markers ? "the marker store" : "KV";
 
-  assert.deepEqual(
-    responses.map((response) => response.status),
-    [200, 429, 429, 200, 200, 200],
-  );
-  // Six minutes in, past the old five-minute window, with the rest of the day still to wait.
-  assert.equal(responses[1].retryAfter, String(14 * 60 * 60 - 6 * 60));
-  assert.equal(responses[1].body.already_stored, undefined);
-  assert.equal(responses[2].retryAfter, String(5 * 60 * 60 + 30 * 60));
-  assert.deepEqual(
-    stored.map((entry) => [entry.type, entry.reported_at.slice(0, 10)]),
-    [
-      ["spam", "2026-11-24"],
-      ["not_spam", "2026-11-24"],
-      ["spam", "2026-11-24"],
-      ["spam", "2026-11-25"],
-    ],
-  );
-});
+  test(`one address stores a number once a UTC day, whatever type or report id comes with it (${where})`, async () => {
+    // What this stops: one address sending the same numbers every ten minutes
+    // with a new report id each time. The merge counts that address once a day
+    // per number, so only the first report of the day is worth a commit.
+    const report = (type) => ({ number: "+12122340101", type, report_id: randomUUID() });
+    const { responses, stored, kv } = await postReports(
+      [
+        { at: Date.UTC(2026, 10, 24, 10, 0, 0), ip: "203.0.113.81", body: report("spam") },
+        { at: Date.UTC(2026, 10, 24, 10, 6, 0), ip: "203.0.113.81", body: report("spam") },
+        { at: Date.UTC(2026, 10, 24, 18, 30, 0), ip: "203.0.113.81", body: report("robocall") },
+        { at: Date.UTC(2026, 10, 24, 18, 31, 0), ip: "203.0.113.81", body: report("not_spam") },
+        { at: Date.UTC(2026, 10, 24, 18, 32, 0), ip: "203.0.113.82", body: report("spam") },
+        { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.81", body: report("spam") },
+      ],
+      () => 201,
+      { markers },
+    );
 
-test("a held number is answered as stored and dropped, and its sender is banned for the UTC day", async () => {
-  // From 2026-11-23 a script sent five +86 mobiles from changing addresses
-  // with a made-up report id each time. Answering it exactly as a stored
-  // report leaves it nothing to change.
-  const flooded = "+8615017944158";
-  const report = (number, type = "spam") => ({ number, type, report_id: randomUUID() });
-  const log = [];
-  const { responses, stored } = await postReports(
-    [
-      { at: Date.UTC(2026, 10, 24, 18, 0, 0), ip: "203.0.113.91", body: report("+86 150 1794 4158") },
-      { at: Date.UTC(2026, 10, 24, 18, 1, 0), ip: "203.0.113.91", body: report("+12122340111") },
-      { at: Date.UTC(2026, 10, 24, 18, 2, 0), ip: "203.0.113.91", body: report("+12122340112", "not_spam") },
-      { at: Date.UTC(2026, 10, 24, 18, 3, 0), ip: "2001:db8:5:6::1", body: report(flooded, "not_spam") },
-      { at: Date.UTC(2026, 10, 24, 18, 4, 0), ip: "2001:db8:5:6:ffff::2", body: report("+12122340113") },
-      { at: Date.UTC(2026, 10, 24, 18, 5, 0), ip: "2001:db8:5:7::1", body: report("+12122340113") },
-      { at: Date.UTC(2026, 10, 24, 18, 6, 0), ip: "203.0.113.92", body: report("+12122340111") },
-      { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.91", body: report("+12122340111") },
-    ],
-    () => 201,
-    { held: [flooded, "not a number"], log },
-  );
+    assert.deepEqual(
+      responses.map((response) => response.status),
+      [200, 429, 429, 200, 200, 200],
+    );
+    // Six minutes in, past the old five-minute window, with the rest of the day still to wait.
+    assert.equal(responses[1].retryAfter, String(14 * 60 * 60 - 6 * 60));
+    assert.equal(responses[1].body.already_stored, undefined);
+    assert.equal(responses[2].retryAfter, String(5 * 60 * 60 + 30 * 60));
+    assert.deepEqual(
+      stored.map((entry) => [entry.type, entry.reported_at.slice(0, 10)]),
+      [
+        ["spam", "2026-11-24"],
+        ["not_spam", "2026-11-24"],
+        ["spam", "2026-11-24"],
+        ["spam", "2026-11-25"],
+      ],
+    );
+    if (markers) assert.deepEqual(kvMarkerKeys(kv), [], "with the marker store bound, KV holds no markers");
+  });
 
-  for (const response of responses) {
-    assert.equal(response.status, 200);
-    assert.equal(response.body.success, true);
-    assert.equal(response.body.error, undefined);
-  }
-  assert.equal(responses[0].body.number, flooded);
-  // Only another network, and the banned one after UTC midnight, get stored.
-  assert.deepEqual(
-    stored.map((entry) => [entry.number, entry.reported_at.slice(0, 10)]),
-    [
-      ["+12122340113", "2026-11-24"],
-      ["+12122340111", "2026-11-24"],
-      ["+12122340111", "2026-11-25"],
-    ],
-  );
-  assert.equal(log.filter((line) => line.startsWith("dropped report: held number")).length, 2);
-  assert.equal(log.filter((line) => line.startsWith("dropped report: banned client")).length, 3);
-  assert.equal(log.some((line) => /203\.0\.113|2001:db8/.test(line)), false, "a log line must not carry the address");
-});
+  test(`a held number is answered as stored and dropped, and its sender is banned for the UTC day (${where})`, async () => {
+    // From 2026-11-23 a script sent five +86 mobiles from changing addresses
+    // with a made-up report id each time. Answering it exactly as a stored
+    // report leaves it nothing to change.
+    const flooded = "+8615017944158";
+    const report = (number, type = "spam") => ({ number, type, report_id: randomUUID() });
+    const log = [];
+    const { responses, stored, kv } = await postReports(
+      [
+        { at: Date.UTC(2026, 10, 24, 18, 0, 0), ip: "203.0.113.91", body: report("+86 150 1794 4158") },
+        { at: Date.UTC(2026, 10, 24, 18, 1, 0), ip: "203.0.113.91", body: report("+12122340111") },
+        { at: Date.UTC(2026, 10, 24, 18, 2, 0), ip: "203.0.113.91", body: report("+12122340112", "not_spam") },
+        { at: Date.UTC(2026, 10, 24, 18, 3, 0), ip: "2001:db8:5:6::1", body: report(flooded, "not_spam") },
+        { at: Date.UTC(2026, 10, 24, 18, 4, 0), ip: "2001:db8:5:6:ffff::2", body: report("+12122340113") },
+        { at: Date.UTC(2026, 10, 24, 18, 5, 0), ip: "2001:db8:5:7::1", body: report("+12122340113") },
+        { at: Date.UTC(2026, 10, 24, 18, 6, 0), ip: "203.0.113.92", body: report("+12122340111") },
+        { at: Date.UTC(2026, 10, 25, 0, 0, 1), ip: "203.0.113.91", body: report("+12122340111") },
+      ],
+      () => 201,
+      { held: [flooded, "not a number"], log, markers },
+    );
+
+    for (const response of responses) {
+      assert.equal(response.status, 200);
+      assert.equal(response.body.success, true);
+      assert.equal(response.body.error, undefined);
+    }
+    assert.equal(responses[0].body.number, flooded);
+    // Only another network, and the banned one after UTC midnight, get stored.
+    assert.deepEqual(
+      stored.map((entry) => [entry.number, entry.reported_at.slice(0, 10)]),
+      [
+        ["+12122340113", "2026-11-24"],
+        ["+12122340111", "2026-11-24"],
+        ["+12122340111", "2026-11-25"],
+      ],
+    );
+    assert.equal(log.filter((line) => line.startsWith("dropped report: held number")).length, 2);
+    assert.equal(log.filter((line) => line.startsWith("dropped report: banned client")).length, 3);
+    assert.equal(log.some((line) => /203\.0\.113|2001:db8/.test(line)), false, "a log line must not carry the address");
+    if (markers) assert.deepEqual(kvMarkerKeys(kv), [], "with the marker store bound, KV holds no markers");
+  });
+}
 
 test("the held list is read every five minutes, and a failed read keeps the last one", async () => {
   const report = (number) => ({ number, type: "spam", report_id: randomUUID() });
@@ -1367,4 +1437,242 @@ test("a token GitHub refuses is answered as unavailable, and a GitHub rate limit
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+function markerRequest(markers, body) {
+  return markers.fetch(
+    new Request("https://report-markers/ops", {
+      method: "POST",
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    }),
+  );
+}
+
+test("the marker store writes, counts and reads in one round trip, and an expired marker reads as missing", async () => {
+  let now = Date.UTC(2026, 10, 24, 23, 0, 0);
+  const markers = new ReportMarkers(sqliteState(), {}, () => now);
+  const ops = async (body) => {
+    const response = await markerRequest(markers, body);
+    assert.equal(response.status, 200);
+    return (await response.json()).values;
+  };
+
+  assert.deepEqual(
+    await ops({
+      put: [
+        { key: "a", value: "1", ttl: 60 },
+        { key: "b", value: "x", ttl: 3600 },
+      ],
+      count: ["stored", "stored", "duplicate"],
+      get: ["a", "b", "c"],
+    }),
+    { a: "1", b: "x", c: null },
+  );
+  now += 60 * 1000;
+  assert.deepEqual(await ops({ get: ["a", "b"] }), { a: null, b: "x" });
+  // A second put replaces the value and the lifetime.
+  await ops({ put: [{ key: "b", value: "y", ttl: 2 * 3600 }] });
+  now += 3600 * 1000;
+  assert.deepEqual(await ops({ get: ["b"], count: ["held", "held_app"] }), { b: "y" });
+
+  const counts = await (await markers.fetch(new Request("https://report-markers/counts"))).json();
+  assert.deepEqual(counts, {
+    days: {
+      "2026-11-24": { duplicate: 1, stored: 2 },
+      "2026-11-25": { held: 1, held_app: 1 },
+    },
+  });
+});
+
+test("the marker store refuses malformed operations whole, and answers nothing but /ops and /counts", async () => {
+  const markers = new ReportMarkers(sqliteState());
+  for (const body of [
+    "{",
+    { put: [{ key: "a", value: "1" }] },
+    { put: [{ key: "a", value: "1", ttl: 0 }] },
+    { put: [{ key: "a", value: "1", ttl: 1.5 }] },
+    { put: [{ key: "a", value: "1", ttl: 7 * 24 * 60 * 60 + 1 }] },
+    { put: [{ key: "a", value: 1, ttl: 60 }] },
+    { put: [{ key: "k".repeat(257), value: "1", ttl: 60 }] },
+    { count: ["visits"] },
+    { get: [7] },
+  ]) {
+    assert.equal((await markerRequest(markers, body)).status, 400, JSON.stringify(body));
+  }
+  assert.equal((await markerRequest(markers, { put: [{ key: "a", value: "1", ttl: 60 }], count: ["visits"] })).status, 400);
+  assert.deepEqual((await (await markerRequest(markers, { get: ["a"] })).json()).values, { a: null }, "a refused batch writes nothing");
+  const counts = await (await markers.fetch(new Request("https://report-markers/counts"))).json();
+  assert.deepEqual(counts, { days: {} });
+
+  assert.equal((await markers.fetch(new Request("https://report-markers/ops"))).status, 404);
+  assert.equal((await markers.fetch(new Request("https://report-markers/counts", { method: "POST", body: "{}" }))).status, 404);
+  assert.equal((await markers.fetch(new Request("https://report-markers/stats"))).status, 404);
+});
+
+test("after each UTC midnight the marker store drops expired markers, and counts once they're 90 days old", async () => {
+  const day = 24 * 60 * 60 * 1000;
+  let now = Date.UTC(2026, 10, 24, 18, 0, 0);
+  const state = sqliteState();
+  const markers = new ReportMarkers(state, {}, () => now);
+  const rows = (table) => state.db.prepare(`SELECT * FROM ${table}`).all().map((row) => ({ ...row }));
+  // The runtime clears an alarm as it fires it.
+  const fire = async (at) => {
+    now = at;
+    state.storage.alarm = null;
+    await markers.alarm();
+  };
+
+  await markerRequest(markers, { get: ["a"] });
+  assert.equal(state.storage.alarm, null, "a read sets no alarm");
+  await markerRequest(markers, {
+    put: [
+      { key: "day", value: "1", ttl: 6 * 60 * 60 },
+      { key: "week", value: "1", ttl: 7 * 24 * 60 * 60 },
+    ],
+    count: ["stored"],
+  });
+  assert.equal(state.storage.alarm, Date.UTC(2026, 10, 25, 0, 5, 0));
+
+  await fire(Date.UTC(2026, 10, 25, 0, 5, 0));
+  assert.deepEqual(rows("markers").map((row) => row.key), ["week"]);
+  assert.equal(state.storage.alarm, Date.UTC(2026, 10, 26, 0, 5, 0), "rows are left, so it sweeps again the next night");
+
+  await fire(Date.UTC(2026, 11, 2, 0, 5, 0));
+  assert.deepEqual(rows("markers"), []);
+  assert.equal(rows("daily_counts").length, 1);
+
+  // The 90th day counting 2026-11-24 itself keeps it, the next one drops it.
+  await fire(Date.UTC(2026, 10, 24) + 89 * day + 5 * 60 * 1000);
+  assert.deepEqual(rows("daily_counts").map((row) => row.day), ["2026-11-24"]);
+  now = Date.UTC(2026, 10, 24) + 90 * day;
+  const counts = await (await markers.fetch(new Request("https://report-markers/counts"))).json();
+  assert.deepEqual(counts, { days: {} }, "/counts leaves out a day past 90 even before the sweep");
+  await fire(Date.UTC(2026, 10, 24) + 90 * day + 5 * 60 * 1000);
+  assert.deepEqual(rows("daily_counts"), []);
+  assert.equal(state.storage.alarm, null, "an empty store sets no alarm");
+});
+
+test("the Worker counts what became of each day's reports, and GET /stats shows that to the token only", async () => {
+  const report = (number) => ({ number, type: "spam", report_id: randomUUID() });
+  const flooded = "+8615017944158";
+  const app = "okhttp/4.12.0";
+  const at = (minute) => Date.UTC(2026, 10, 24, 10, minute, 0);
+  const token = "t".repeat(40);
+  const seen = {};
+  const stats = (env, authorization) =>
+    worker.fetch(new Request("https://reports.example/stats", { headers: authorization ? { authorization } : {} }), env);
+  const { responses, store, kv } = await postReports(
+    [
+      { at: at(0), ip: "203.0.113.121", body: report("+12122340131"), ua: app },
+      { at: at(1), ip: "203.0.113.121", body: report("+12122340131"), ua: app },
+      { at: at(2), ip: "203.0.113.122", body: report(flooded), ua: app },
+      { at: at(3), ip: "203.0.113.122", body: report("+12122340132"), ua: "curl/8.11.0" },
+      { at: at(4), ip: "203.0.113.123", body: report(flooded), ua: "python-requests/2.32.3" },
+      { at: at(5), ip: "203.0.113.123", body: report("+12122340133"), ua: app },
+      { at: Date.UTC(2026, 10, 25, 9, 0, 0), ip: "203.0.113.121", body: report("+12122340131"), ua: app },
+    ],
+    () => 201,
+    {
+      held: [flooded],
+      markers: true,
+      env: { STATS_TOKEN: token },
+      after: async (env) => {
+        seen.none = await stats(env);
+        seen.wrong = await stats(env, `Bearer ${"u".repeat(40)}`);
+        seen.short = await stats(env, `Bearer ${token.slice(1)}`);
+        seen.right = await stats(env, `Bearer ${token}`);
+        seen.unset = await stats({ ...env, STATS_TOKEN: undefined }, "Bearer ");
+        seen.noStore = await stats({ ...env, REPORT_MARKERS: undefined }, `Bearer ${token}`);
+        seen.direct = await dailyCounts(env);
+      },
+    },
+  );
+
+  assert.deepEqual(responses.map((response) => response.status), [200, 429, 200, 200, 200, 200, 200]);
+  const expected = {
+    days: {
+      "2026-11-24": { stored: 1, duplicate: 1, held: 2, held_app: 1, banned: 2, banned_app: 1 },
+      "2026-11-25": { stored: 1 },
+    },
+  };
+  assert.equal(seen.right.status, 200);
+  assert.equal(seen.right.headers.get("Cache-Control"), "no-store");
+  assert.deepEqual(await seen.right.json(), expected);
+  assert.deepEqual(seen.direct, expected);
+  for (const kinds of Object.values(expected.days)) {
+    for (const kind of Object.keys(kinds)) assert.ok(DAILY_COUNT_KINDS.includes(kind), kind);
+  }
+  for (const name of ["none", "wrong", "short", "unset", "noStore"]) {
+    assert.equal(seen[name].status, 404, name);
+    assert.deepEqual(await seen[name].json(), { error: "Not found" }, name);
+  }
+  assert.deepEqual([...store.names], ["markers"], "every Worker instance reaches the one store");
+  assert.deepEqual(kvMarkerKeys(kv), []);
+  assert.equal(await dailyCounts({ RATE_LIMIT: createMockKV() }), null);
+});
+
+test("until 2026-12-02 the markers KV held before the move still count, and after that KV isn't read for them", async () => {
+  const id = randomUUID();
+  const report = { number: "+12122340141", type: "spam", report_id: id };
+  const { responses, stored } = await postReports(
+    [
+      { at: Date.UTC(2026, 11, 1, 12, 0, 0), ip: "203.0.113.131", body: report },
+      { at: Date.UTC(2026, 11, 1, 12, 1, 0), ip: "203.0.113.130", body: { ...report, report_id: randomUUID() } },
+      { at: Date.UTC(2026, 11, 1, 12, 2, 0), ip: "203.0.113.132", body: { ...report, report_id: randomUUID() } },
+      { at: Date.UTC(2026, 11, 2, 0, 0, 1), ip: "203.0.113.132", body: report },
+    ],
+    () => 201,
+    {
+      markers: true,
+      // What the KV-backed Worker left: a stored report's markers, and a ban
+      // (kept here past the cutoff to show it isn't read after it).
+      before: async (env) => {
+        await recordDedup("203.0.113.130", report.number, "spam", { RATE_LIMIT: env.RATE_LIMIT }, id);
+        await env.RATE_LIMIT.put(`ban:${clientKey("203.0.113.132", 64)}`, "1", { expirationTtl: 3 * 24 * 60 * 60 });
+      },
+    },
+  );
+
+  assert.deepEqual(responses.map((response) => response.status), [429, 429, 200, 200]);
+  assert.equal(responses[0].body.already_stored, true);
+  assert.equal(responses[1].retryAfter, String(12 * 60 * 60 - 60));
+  assert.equal(responses[1].body.already_stored, undefined);
+  assert.deepEqual(stored.map((entry) => [entry.report_id, entry.reported_at.slice(0, 10)]), [[id, "2026-12-02"]]);
+});
+
+test("a marker store that can't answer turns a report away before it's stored, and a failed record or count doesn't", async () => {
+  const failing = (fails) => {
+    const store = markerNamespace();
+    return {
+      idFromName: store.namespace.idFromName,
+      get: () => ({
+        fetch: async (url, init) =>
+          fails(JSON.parse(init?.body ?? "{}")) ? new Response("down", { status: 500 }) : store.markers.fetch(new Request(url, init)),
+      }),
+    };
+  };
+  const report = (number) => ({ number, type: "spam", report_id: randomUUID() });
+  const flooded = "+8615017944158";
+
+  const down = await postReports([{ ip: "203.0.113.141", body: report("+12122340151") }], () => 201, {
+    env: { REPORT_MARKERS: failing(() => true) },
+  });
+  assert.equal(down.responses[0].status, 500);
+  assert.equal(down.stored.length, 0);
+
+  const writesFail = await postReports(
+    [
+      { ip: "203.0.113.142", body: report("+12122340152") },
+      { ip: "203.0.113.143", body: report(flooded) },
+    ],
+    () => 201,
+    { held: [flooded], env: { REPORT_MARKERS: failing((ops) => ops.put?.length > 0 || ops.count?.length > 0) } },
+  );
+  assert.deepEqual(writesFail.responses.map((response) => response.status), [200, 200]);
+  assert.deepEqual(writesFail.stored.map((entry) => entry.number), ["+12122340152"]);
+
+  // KV keeps no counts, so a count alone writes nothing there.
+  const kv = createMockKV();
+  assert.deepEqual(await markerOps({ RATE_LIMIT: kv }, { count: ["stored"], get: ["x"] }), { x: null });
+  assert.equal(kv._store.size, 0);
 });

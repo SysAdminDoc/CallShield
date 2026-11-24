@@ -153,17 +153,25 @@ From a clean checkout, run `npm install` in `worker/`, then:
 ```sh
 npx wrangler login
 npx wrangler secret put REPORTER_BUCKET_SECRET
+npx wrangler secret put STATS_TOKEN
 npx wrangler deploy
 ```
 
-Use at least 32 random characters for `REPORTER_BUCKET_SECRET`. An existing
+Use at least 32 random characters for `REPORTER_BUCKET_SECRET` and for
+`STATS_TOKEN`. The token unlocks `GET /stats`, the Worker's daily counts of
+reports stored, refused as repeats, dropped as held and dropped from a banned
+network, each drop also counted for the app's own user agent so you can see
+what a ban cost real users. `python scripts/report_service_stats.py` prints
+them with the token in `CALLSHIELD_STATS_TOKEN`. Without the token the endpoint
+answers 404. An existing
 deployment keeps its `GITHUB_TOKEN` secret. For a new Worker, first create a
 fine-grained GitHub token with Contents read and write access to this repo and
 run `npx wrangler secret put GITHUB_TOKEN`. Wrangler provisions the `RATE_LIMIT`
 KV namespace from `wrangler.toml` and binds the three rate limiters (per client,
-per /48 and Worker-wide). A new namespace
-starts with empty seven-day report-id dedup state, so previously accepted ids
-can be sent again until that window expires.
+per /48 and Worker-wide). The duplicate, report-id and ban markers and the
+daily counts live in the `ReportMarkers` Durable Object, created on the first
+deploy. A new object starts with empty seven-day report-id dedup state, so
+previously accepted ids can be sent again until that window expires.
 
 ## Regenerating the Database and Model (local)
 

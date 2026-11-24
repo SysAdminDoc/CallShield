@@ -525,6 +525,208 @@ export class ReportGlobalCounter {
   }
 }
 
+// ── Report markers and daily counts ───────────────────────────────────
+// The duplicate, report-id and ban markers, and a count per day of what
+// happened to reports, live in one SQLite-backed Durable Object
+// (REPORT_MARKERS, the instance named "markers"). Workers KV on the free plan
+// takes 1,000 writes a day, and each stored report wrote two: 432 on
+// 2026-11-24, up from 161 two weeks before. A refused write loses its marker
+// while the report is still stored, so the day-long dedup and the ban would
+// stop working without a sound. A SQLite object takes 100,000 row writes a
+// day. Without the binding the markers stay in KV, as before, with no counts.
+const MARKERS_NAME = "markers";
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Markers the KV store holds from before the move last seven days at most (a
+// report id), so until then a key the object doesn't have is looked up in KV.
+const LEGACY_KV_MARKERS_UNTIL = Date.UTC(2026, 11, 2);
+const DAILY_COUNT_DAYS = 90;
+// What happened to each report. "_app" counts the ones whose user agent is the
+// app's (OkHttp's default), the share a ban would cost real people.
+export const DAILY_COUNT_KINDS = ["stored", "duplicate", "held", "held_app", "banned", "banned_app"];
+const MAX_MARKER_TTL_S = REPORT_ID_DEDUP_S;
+
+function utcDay(epochMs) {
+  return new Date(epochMs).toISOString().slice(0, 10);
+}
+
+/**
+ * The marker store. Requests are POSTs to /ops with { get, put, count }: the
+ * puts are written, each count kind goes up by one for today (UTC), then the
+ * gets are read, so one round trip does a report's whole check or record. GET
+ * /counts returns { days: { "YYYY-MM-DD": { kind: n } } } for the last 90 days.
+ * An alarm after each UTC midnight drops expired markers and old counts.
+ */
+export class ReportMarkers {
+  constructor(state, _env, now = () => Date.now()) {
+    this.storage = state.storage;
+    this.sql = state.storage.sql;
+    this.now = now;
+    this.alarmSet = false;
+    // WITHOUT ROWID keeps a write to one row, where a rowid table also writes its key's index.
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS markers (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER NOT NULL) WITHOUT ROWID",
+    );
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS daily_counts (day TEXT NOT NULL, kind TEXT NOT NULL, count INTEGER NOT NULL, PRIMARY KEY (day, kind)) WITHOUT ROWID",
+    );
+  }
+
+  async fetch(request) {
+    const action = new URL(request.url).pathname.slice(1);
+    const now = this.now();
+    if (action === "counts" && request.method === "GET") {
+      const since = utcDay(now - (DAILY_COUNT_DAYS - 1) * DAY_MS);
+      const days = {};
+      for (const row of this.sql.exec("SELECT day, kind, count FROM daily_counts WHERE day >= ? ORDER BY day, kind", since).toArray()) {
+        (days[row.day] ??= {})[row.kind] = row.count;
+      }
+      return Response.json({ days });
+    }
+    if (action !== "ops" || request.method !== "POST") return new Response("Not found", { status: 404 });
+    let ops;
+    try {
+      ops = await request.json();
+    } catch (_error) {
+      return new Response("Request body must be valid JSON", { status: 400 });
+    }
+    const puts = Array.isArray(ops?.put) ? ops.put : [];
+    const counts = Array.isArray(ops?.count) ? ops.count : [];
+    const gets = Array.isArray(ops?.get) ? ops.get : [];
+    const valid =
+      puts.every(
+        (put) =>
+          typeof put?.key === "string" &&
+          put.key.length <= 256 &&
+          typeof put.value === "string" &&
+          Number.isInteger(put.ttl) &&
+          put.ttl > 0 &&
+          put.ttl <= MAX_MARKER_TTL_S,
+      ) &&
+      counts.every((kind) => DAILY_COUNT_KINDS.includes(kind)) &&
+      gets.every((key) => typeof key === "string" && key.length <= 256);
+    if (!valid) return new Response("Malformed marker operations", { status: 400 });
+
+    const seconds = Math.floor(now / 1000);
+    for (const put of puts) {
+      this.sql.exec(
+        "INSERT INTO markers (key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at",
+        put.key,
+        put.value,
+        seconds + put.ttl,
+      );
+    }
+    for (const kind of counts) {
+      this.sql.exec(
+        "INSERT INTO daily_counts (day, kind, count) VALUES (?, ?, 1) ON CONFLICT (day, kind) DO UPDATE SET count = count + 1",
+        utcDay(now),
+        kind,
+      );
+    }
+    const values = {};
+    for (const key of gets) {
+      const [row] = this.sql.exec("SELECT value FROM markers WHERE key = ? AND expires_at > ?", key, seconds).toArray();
+      values[key] = row ? row.value : null;
+    }
+    if (puts.length > 0 || counts.length > 0) await this.scheduleSweep(now);
+    return Response.json({ values });
+  }
+
+  async scheduleSweep(now) {
+    if (this.alarmSet) return;
+    if ((await this.storage.getAlarm()) === null) {
+      await this.storage.setAlarm(Math.floor(now / DAY_MS) * DAY_MS + DAY_MS + 5 * 60 * 1000);
+    }
+    this.alarmSet = true;
+  }
+
+  async alarm() {
+    const now = this.now();
+    this.sql.exec("DELETE FROM markers WHERE expires_at <= ?", Math.floor(now / 1000));
+    this.sql.exec("DELETE FROM daily_counts WHERE day < ?", utcDay(now - (DAILY_COUNT_DAYS - 1) * DAY_MS));
+    const [left] = this.sql.exec(
+      "SELECT (SELECT COUNT(*) FROM markers) + (SELECT COUNT(*) FROM daily_counts) AS n",
+    ).toArray();
+    this.alarmSet = false;
+    if (left && left.n > 0) await this.scheduleSweep(now);
+  }
+}
+
+/**
+ * One round trip to the marker store: write `put` ({ key, value, ttl }), count
+ * each `count` kind for today, then read `get`. Returns key -> value or null.
+ * Without REPORT_MARKERS it uses KV, which keeps no counts. With neither store
+ * it throws, unless ALLOW_UNLIMITED_REPORTS is set for local runs.
+ */
+export async function markerOps(env, { get = [], put = [], count = [] } = {}, now = Date.now()) {
+  const namespace = env?.REPORT_MARKERS;
+  if (namespace) {
+    const stub = namespace.get(namespace.idFromName(MARKERS_NAME));
+    const response = await stub.fetch("https://report-markers/ops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ get, put, count }),
+    });
+    if (!response.ok) throw new Error(`The report marker store answered ${response.status}`);
+    const answer = await response.json();
+    const values = {};
+    for (const key of get) values[key] = typeof answer?.values?.[key] === "string" ? answer.values[key] : null;
+    if (now < LEGACY_KV_MARKERS_UNTIL && env.RATE_LIMIT) {
+      const missing = get.filter((key) => values[key] === null);
+      const legacy = await Promise.all(missing.map((key) => env.RATE_LIMIT.get(key)));
+      missing.forEach((key, index) => {
+        values[key] = legacy[index];
+      });
+    }
+    return values;
+  }
+  if (!env?.RATE_LIMIT) {
+    if (allowsUnlimitedReports(env)) return Object.fromEntries(get.map((key) => [key, null]));
+    throw new Error("RATE_LIMIT binding is required");
+  }
+  await Promise.all(put.map(({ key, value, ttl }) => env.RATE_LIMIT.put(key, value, { expirationTtl: ttl })));
+  const values = {};
+  for (const key of get) values[key] = await env.RATE_LIMIT.get(key);
+  return values;
+}
+
+/** Equal strings, compared in time that doesn't depend on where they differ. */
+function sameSecret(given, expected) {
+  if (typeof given !== "string" || typeof expected !== "string" || expected.length === 0) return false;
+  const a = new TextEncoder().encode(given);
+  const b = new TextEncoder().encode(expected);
+  let difference = a.length ^ b.length;
+  for (let index = 0; index < b.length; index += 1) difference |= (a[index] ?? 0) ^ b[index];
+  return difference === 0;
+}
+
+/**
+ * GET /stats with `Authorization: Bearer <STATS_TOKEN>`: the daily counts as
+ * JSON. A missing or wrong token, or a Worker with no token or no marker store,
+ * gets the same 404, so the endpoint tells a script nothing about the drops.
+ */
+async function statsResponse(request, env, responseHeaders) {
+  const headers = { ...responseHeaders, "Content-Type": "application/json" };
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!sameSecret(token, env?.STATS_TOKEN) || !env?.REPORT_MARKERS) {
+    return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers });
+  }
+  try {
+    return new Response(JSON.stringify(await dailyCounts(env)), { status: 200, headers });
+  } catch (error) {
+    console.error("Unable to read the daily report counts", error);
+    return new Response(JSON.stringify({ error: "Counts are unavailable" }), { status: 503, headers });
+  }
+}
+
+/** The daily counts from the marker store, or null when there's no store to keep them. */
+export async function dailyCounts(env) {
+  const namespace = env?.REPORT_MARKERS;
+  if (!namespace) return null;
+  const response = await namespace.get(namespace.idFromName(MARKERS_NAME)).fetch("https://report-markers/counts");
+  if (!response.ok) throw new Error(`The report marker store answered ${response.status}`);
+  return response.json();
+}
+
 /** Take one request from a budget: the atomic limiter binding when bound, else a KV counter. */
 async function consumeBudget({ limiter, key: limiterKey, kvKey: key, max }, env) {
   if (limiter) {
@@ -684,15 +886,18 @@ function banKey(ip) {
 /** True when this client reported a held number earlier in the UTC day. */
 export async function isBannedClient(ip, env) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
-  if (!env?.RATE_LIMIT) return false;
-  return (await env.RATE_LIMIT.get(banKey(ip))) !== null;
+  const key = banKey(ip);
+  return (await markerOps(env, { get: [key] }))[key] !== null;
+}
+
+function banPut(ip, now) {
+  return { key: banKey(ip), value: "1", ttl: dedupTtl(now) };
 }
 
 /** Ban this client until the next UTC midnight, and for five minutes at least. */
 export async function banClient(ip, env, now = Date.now()) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
-  if (!env?.RATE_LIMIT) return;
-  await env.RATE_LIMIT.put(banKey(ip), "1", { expirationTtl: dedupTtl(now) });
+  await markerOps(env, { put: [banPut(ip, now)] }, now);
 }
 
 /** Seconds a dedup marker written at `now` lasts: to the next UTC midnight, and at least DEDUP_WINDOW_S. */
@@ -721,34 +926,30 @@ export function validatedReportId(value) {
  */
 export async function duplicateRetryAfter(ip, normalizedNumber, type, env) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
-  if (!env?.RATE_LIMIT) {
-    if (allowsUnlimitedReports(env)) return 0;
-    throw new Error("RATE_LIMIT binding is required");
-  }
+  const key = dedupKey(ip, normalizedNumber, type);
+  return waitFromDedupMarker((await markerOps(env, { get: [key] }))[key]);
+}
 
-  const existing = await env.RATE_LIMIT.get(dedupKey(ip, normalizedNumber, type));
-  if (existing === null) return 0;
-  const expiresAt = Number(existing);
-  const now = Math.floor(Date.now() / 1000);
+/** Seconds a dedup marker's value still holds the number, or 0 when there's no marker. */
+function waitFromDedupMarker(value, nowMs = Date.now()) {
+  if (value === null || value === undefined) return 0;
+  const expiresAt = Number(value);
+  const now = Math.floor(nowMs / 1000);
   if (!Number.isInteger(expiresAt) || expiresAt <= now || expiresAt - now > 24 * 60 * 60) return DEDUP_WINDOW_S;
   return expiresAt - now;
 }
 
 /**
- * Check per-client + per-number + per-vote dedup against KV (read-only).
- * Returns true if this client already reported the number with this vote
- * today. The marker is written by recordDedup ONLY after the report is
- * durably stored — writing it up front turned any failed GitHub PUT into a
- * "Duplicate report" lockout that silently dropped the report on retry.
+ * Check per-client + per-number + per-vote dedup (read-only). Returns true if
+ * this client already reported the number with this vote today, or a report
+ * with this id was stored. The markers are written by recordDedup ONLY after
+ * the report is durably stored — writing them up front turned any failed
+ * GitHub PUT into a "Duplicate report" lockout that silently dropped the
+ * report on retry.
  */
 export async function checkDedup(ip, normalizedNumber, type, env, reportId = "") {
   if ((await duplicateRetryAfter(ip, normalizedNumber, type, env)) > 0) return true;
-  if (!env?.RATE_LIMIT) return false;
-  // The handler calls isStoredReport(reportId) first, so when the handler
-  // reaches checkDedup the reportId is always empty (its default). The
-  // branch below is retained for direct callers and test coverage.
-  if (!reportId) return false;
-  return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
+  return isStoredReport(reportId, env);
 }
 
 /**
@@ -758,28 +959,50 @@ export async function checkDedup(ip, normalizedNumber, type, env, reportId = "")
  */
 export async function isStoredReport(reportId, env) {
   if (!reportId) return false;
-  if (!env?.RATE_LIMIT) {
-    if (allowsUnlimitedReports(env)) return false;
-    throw new Error("RATE_LIMIT binding is required");
-  }
-  return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
+  const key = reportIdKey(reportId);
+  return (await markerOps(env, { get: [key] }))[key] !== null;
 }
 
-/** Mark this (client, number, vote), and the report's id, as reported. Call after a successful store. */
-export async function recordDedup(ip, normalizedNumber, type, env, reportId = "") {
+/**
+ * The handler's whole check in one round trip: whether this report's id is
+ * stored, how long this client must wait to report the number with this vote
+ * again, and whether the client is banned.
+ */
+async function reportState(ip, normalizedNumber, type, reportId, env) {
+  const keys = { ban: banKey(ip), dedup: dedupKey(ip, normalizedNumber, type), id: reportId ? reportIdKey(reportId) : "" };
+  const values = await markerOps(env, { get: [keys.ban, keys.dedup, ...(keys.id ? [keys.id] : [])] });
+  const stored = keys.id ? values[keys.id] !== null : false;
+  return {
+    stored,
+    duplicateWait: stored ? 0 : waitFromDedupMarker(values[keys.dedup]),
+    banned: values[keys.ban] !== null,
+  };
+}
+
+/**
+ * Mark this (client, number, vote), and the report's id, as reported, and
+ * count each of `count` for today. Call after a successful store.
+ */
+export async function recordDedup(ip, normalizedNumber, type, env, reportId = "", count = []) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
-  if (!env?.RATE_LIMIT) {
-    if (allowsUnlimitedReports(env)) return;
-    throw new Error("RATE_LIMIT binding is required");
-  }
   const now = Date.now();
   const ttl = dedupTtl(now);
-  await env.RATE_LIMIT.put(dedupKey(ip, normalizedNumber, type), String(Math.floor(now / 1000) + ttl), {
-    expirationTtl: ttl,
-  });
-  if (reportId) {
-    await env.RATE_LIMIT.put(reportIdKey(reportId), "1", { expirationTtl: REPORT_ID_DEDUP_S });
+  const put = [{ key: dedupKey(ip, normalizedNumber, type), value: String(Math.floor(now / 1000) + ttl), ttl }];
+  if (reportId) put.push({ key: reportIdKey(reportId), value: "1", ttl: REPORT_ID_DEDUP_S });
+  await markerOps(env, { put, count }, now);
+}
+
+/** Count events for today, where the store keeps counts. A failure costs the count, never the request. */
+async function countReport(env, count, put = []) {
+  try {
+    await markerOps(env, { put, count });
+  } catch (error) {
+    console.error("Unable to update the report markers", error);
   }
+}
+
+function sentByTheApp(request) {
+  return /^okhttp\//i.test(request.headers.get("user-agent") || "");
 }
 
 /**
@@ -818,6 +1041,10 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 405, headers: { ...responseHeaders, "Allow": "GET, POST" } });
+    }
+
+    if (request.method === "GET" && new URL(request.url).pathname === "/stats") {
+      return statsResponse(request, env, responseHeaders);
     }
 
     if (request.method === "GET") {
@@ -942,17 +1169,17 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       }
 
       // Held numbers and banned clients come before the duplicate checks, so
-      // a script's repeat gets the same answer as its first report.
+      // a script's repeat gets the same answer as its first report. One read
+      // of the marker store answers all three.
       const held = (await heldNumbers(env)).has(normalized);
-      const banned = await isBannedClient(clientIp, env);
+      const { stored, duplicateWait, banned } = await reportState(clientIp, normalized, type, reportId, env);
       if (held || banned) {
-        if (held && !banned) {
-          try {
-            await banClient(clientIp, env);
-          } catch (error) {
-            console.error("Unable to ban a client that reported a held number", error);
-          }
-        }
+        const kind = held ? "held" : "banned";
+        await countReport(
+          env,
+          sentByTheApp(request) ? [kind, `${kind}_app`] : [kind],
+          held && !banned ? [banPut(clientIp, Date.now())] : [],
+        );
         // No address: the network and user agent are what a later rule could
         // match, and this line only shows in a live `wrangler tail`.
         console.log(
@@ -977,9 +1204,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // client key, so its match can be someone else's report: that answer is
       // a plain "try later", and the app's outbox sends it the next day. Both
       // markers are written only after a successful store.
-      const stored = await isStoredReport(reportId, env);
-      const duplicateWait = stored ? 0 : await duplicateRetryAfter(clientIp, normalized, type, env);
       if (stored || duplicateWait > 0) {
+        await countReport(env, ["duplicate"]);
         const answer = stored
           ? { error: "Duplicate report, already submitted", already_stored: true }
           : { error: "Duplicate report, try again later" };
@@ -1076,7 +1302,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // The report is committed whatever happens here, so a failed marker
       // write must not turn into a 500 that makes the client submit it again.
       try {
-        await recordDedup(clientIp, normalized, type, env, reportId);
+        await recordDedup(clientIp, normalized, type, env, reportId, ["stored"]);
       } catch (error) {
         console.error("Report stored, but its dedup marker could not be written", error);
       }
