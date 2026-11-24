@@ -1,0 +1,14 @@
+{
+  "number": "+16232440907",
+  "type": "sms_spam",
+  "reported_at": "2026-11-24T18:09:37.197Z",
+  "source": "community_app",
+  "reporter_bucket": "13b9ab020722d8a0",
+  "reporter_device": "2d638486829e4754",
+  "sms_domains": [
+    "giffords.org"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
