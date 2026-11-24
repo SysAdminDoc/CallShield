@@ -220,6 +220,13 @@ python scripts/extract_spam_domains.py --allow-collapse --cleared domains
 #    junk/fictional numbers are dropped, unreadable reports quarantined to data/reports/rejected/)
 python scripts/merge_community_reports.py
 
+# The hot list and the merge stop before writing anything (exit 2) when the
+# reports look scripted: a number at least four reporters sent, half of whom
+# also sent one same other number. The hot list reads the queue, the merge the
+# queue and two weeks of its ledger. Each stop lists the numbers; hold them in
+# spam_numbers_held.json and rerun, or pass --allow-floods to both once you've
+# checked that real people sent them.
+
 # 4. Retrain the on-device GBT scorer and emit versioned weights
 python scripts/train_spam_model.py --output data/spam_model_weights.json
 

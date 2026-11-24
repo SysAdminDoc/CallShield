@@ -38,7 +38,7 @@ from report_dedup import (
     reporter_day_key,
     validated_report_id,
 )
-from report_holds import HELD_NUMBERS_FILENAME, load_held_numbers
+from report_holds import HELD_NUMBERS_FILENAME, flood_candidates, flood_report, load_held_numbers, reporter_day
 
 REPO_DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", REPO_DATA_DIR))
@@ -110,6 +110,11 @@ def main(argv: list[str] | None = None) -> int:
             "treat an empty feed without cleared=true as an outage."
         ),
     )
+    parser.add_argument(
+        "--allow-floods",
+        action="store_true",
+        help="publish even when the flood check lists numbers that aren't held, once a review found real reporters",
+    )
     args = parser.parse_args(argv)
     try:
         cleared_feeds = parse_cleared_feeds(args.cleared, known=frozenset({"numbers", "ranges"}))
@@ -132,6 +137,8 @@ def main(argv: list[str] | None = None) -> int:
     # run instead of being skipped like one unreadable report.
     held_numbers = load_held_numbers(DATA_DIR, now.date().isoformat())
     held_reports = 0
+    # Every queued report, any vote or age, for the flood check below.
+    flood_pairs: list[tuple[str, tuple | None]] = []
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -140,6 +147,8 @@ def main(argv: list[str] | None = None) -> int:
                     report = json.load(f)
 
                 number = validated_report_number(report.get("number", ""))
+                if number:
+                    flood_pairs.append((number, reporter_day(report)))
                 spam_type = report.get("type", "unknown")
                 if not number or spam_type == "not_spam":
                     continue
@@ -164,6 +173,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if held_reports:
         print(f"  Set aside {held_reports} report(s) for numbers in {HELD_NUMBERS_FILENAME}")
+    if not args.allow_floods:
+        flood_message = flood_report(flood_candidates(flood_pairs), held_numbers)
+        if flood_message:
+            print(flood_message, file=sys.stderr)
+            return 2
 
     # Reports stored before 2026-10-30 may carry a bare foreign number read as
     # +1 (see bare_digit_misreading); the merge drops the same ones.

@@ -27,11 +27,20 @@ BUCKETS = [f"{index:016x}" for index in range(1, 7)]
 APP_REPORT_ID = "app"
 
 
+FLOOD_CHECKED_SCRIPTS = ("generate_hot_list.py", "merge_community_reports.py")
+
+
 def run_script_result(
     name: str,
     data_dir: Path,
     args: list[str] | None = None,
+    flood_check: bool = False,
 ) -> subprocess.CompletedProcess[str]:
+    # Most fixtures here have a few reporter buckets send several numbers, the
+    # shape the flood check stops on, so only the tests that are about it run it.
+    args = list(args or [])
+    if name in FLOOD_CHECKED_SCRIPTS and not flood_check and "--allow-floods" not in args:
+        args.append("--allow-floods")
     env = os.environ.copy()
     env["CALLSHIELD_DATA_DIR"] = str(data_dir)
     env["CALLSHIELD_NOW"] = NOW
@@ -42,7 +51,7 @@ def run_script_result(
     # reports dated TODAY after it, whatever day the suite runs.
     env["CALLSHIELD_BARE_DIGIT_FIX_DAY"] = TODAY
     result = subprocess.run(
-        [sys.executable, str(SCRIPTS_DIR / name), *(args or [])],
+        [sys.executable, str(SCRIPTS_DIR / name), *args],
         cwd=ROOT,
         env=env,
         text=True,
@@ -56,8 +65,8 @@ def fcc_complaints_file(data_dir: Path) -> Path:
     return data_dir.parent / "fcc_complaints.json"
 
 
-def run_script(name: str, data_dir: Path, args: list[str] | None = None) -> None:
-    result = run_script_result(name, data_dir, args)
+def run_script(name: str, data_dir: Path, args: list[str] | None = None, flood_check: bool = False) -> None:
+    result = run_script_result(name, data_dir, args, flood_check)
     if result.returncode != 0:
         raise AssertionError(
             f"{name} failed with {result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
@@ -1141,13 +1150,13 @@ def assert_pending_pool_listed_by_calling_code(data_dir: Path) -> None:
     ], lines[start : start + 10]
 
 
-def run_drain(data_dir: Path) -> None:
+def run_drain(data_dir: Path, flood_check: bool = False) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish without being told, and an empty feed has to be
     # published cleared.
     run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
-    run_script("merge_community_reports.py", data_dir)
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"], flood_check)
+    run_script("merge_community_reports.py", data_dir, None, flood_check)
 
 
 def reports_for(data_dir: Path, number: str) -> int:
@@ -1472,6 +1481,83 @@ def assert_no_id_promotions_lose_their_place(data_dir: Path) -> None:
     assert pending[counted]["bucket_quorum"] is True and pending[aged]["bucket_quorum"] is True, pending
 
 
+FLOODED = ("+8613800138010", "+8613800138011", "+8613800138012")
+
+
+def write_flood(data_dir: Path, numbers, reporters: range, tag: str) -> None:
+    """Each reporter in `reporters` sends every number in `numbers`, with an app id, two hours apart."""
+    for index in reporters:
+        for number in numbers:
+            write_report(data_dir, f"{tag}-{number[1:]}-{index}.json", number, f"00000000000f{index:04x}",
+                         TIMES[index % 4], device=f"0000000000f2{index:04x}")
+
+
+def assert_flood_shaped_numbers_stop_both_scripts(data_dir: Path) -> None:
+    """Numbers the same reporters keep sending together are the shape the
+    2026-11 script left. Before anything is published, watch-listed or made to
+    trend, the hot list and the merge list them and stop, so a hold can go in
+    first. A number four people reported among other numbers is no flood."""
+    real, others = "+12122340921", [f"+1212234093{index}" for index in range(1, 5)]
+    write_json(data_dir / "spam_numbers.json",
+               {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "prefixes": [], "numbers": []})
+    database = (data_dir / "spam_numbers.json").read_bytes()
+    write_flood(data_dir, FLOODED, range(4), "flood")
+    # The real number: one reporter two days back, then four that each also
+    # reported a number of their own, enough for the database's quorum.
+    day_before = f"{(datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()}T04:00:00+00:00"
+    write_report(data_dir, "real-early.json", real, BUCKETS[5], day_before, device=BUCKETS[5])
+    for index, other in enumerate(others):
+        for number in (real, other):
+            write_report(data_dir, f"real-{number[1:]}-{index}.json", number, BUCKETS[index], TIMES[index], device=BUCKETS[index + 1])
+    hot_args = ["--allow-collapse", "--cleared", "numbers,ranges"]
+
+    result = run_script_result("generate_hot_list.py", data_dir, hot_args, flood_check=True)
+    assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+    for number in FLOODED:
+        assert f"  {number}: 4 reporters" in result.stderr, result.stderr
+    assert real not in result.stderr and "--allow-floods" in result.stderr, result.stderr
+    assert not (data_dir / "hot_numbers.json").exists(), "a stopped hot list wrote its feed"
+
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, [*hot_args, "--allow-floods"], flood_check=True)
+    result = run_script_result("merge_community_reports.py", data_dir, None, flood_check=True)
+    assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+    assert all(number in result.stderr for number in FLOODED) and real not in result.stderr, result.stderr
+    assert (data_dir / "spam_numbers.json").read_bytes() == database, "a stopped merge wrote the database"
+    assert not (data_dir / "community_pending.json").exists(), "a stopped merge wrote the ledger"
+    assert len(list((data_dir / "reports").glob("*.json"))) == 21, "a stopped merge took reports off the queue"
+
+    # A hold on two leaves the third listed, with the held ones it came with.
+    hold_file = data_dir / "spam_numbers_held.json"
+    write_json(hold_file, {"held": [{"number": n, "held_at": BASE_DAY, "note": "Scripted reports"} for n in FLOODED[:2]]})
+    result = run_script_result("generate_hot_list.py", data_dir, hot_args, flood_check=True)
+    assert result.returncode == 2 and f"  {FLOODED[2]}: 4 reporters" in result.stderr, result.stderr
+    assert f"  {FLOODED[0]}:" not in result.stderr and f"{FLOODED[0]} (held) by 4" in result.stderr, result.stderr
+
+    write_json(hold_file, {"held": [{"number": n, "held_at": BASE_DAY, "note": "Scripted reports"} for n in FLOODED]})
+    run_drain(data_dir, flood_check=True)
+    assert row_for(data_dir, real) is not None, "four real reporters should still publish a number"
+    assert all(row_for(data_dir, number) is None for number in FLOODED)
+
+
+def assert_a_flood_spread_over_merges_is_seen_whole(data_dir: Path) -> None:
+    """Two reporters a merge stay under the flood check's four, so the merge
+    also reads the reporters its ledger kept from the last two weeks."""
+    write_json(data_dir / "spam_numbers.json",
+               {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "prefixes": [], "numbers": []})
+    write_flood(data_dir, FLOODED[:2], range(2), "first")
+    run_drain(data_dir, flood_check=True)
+    write_flood(data_dir, FLOODED[:2], range(2, 4), "second")
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"], flood_check=True)
+    result = run_script_result("merge_community_reports.py", data_dir, None, flood_check=True)
+    assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+    assert f"  {FLOODED[0]}: 4 reporters" in result.stderr and f"  {FLOODED[1]}: 4 reporters" in result.stderr, result.stderr
+    assert len(list((data_dir / "reports").glob("*.json"))) == 4
+    run_script("merge_community_reports.py", data_dir, ["--allow-floods"], flood_check=True)
+    assert not list((data_dir / "reports").glob("*.json")), "--allow-floods should merge the queue"
+
+
 def assert_held_numbers_take_no_reports(data_dir: Path) -> None:
     """From 2026-11-23 a script sent the same five +86 mobiles with a made-up
     report id on every request and from changing addresses, which reads as a
@@ -1497,12 +1583,14 @@ def assert_held_numbers_take_no_reports(data_dir: Path) -> None:
     )
     # One reporter two days back, then four over six hours on BASE_DAY, every
     # one with an app id: the database's quorum and the hot list's bar, both met.
+    # Each from reporters of its own: the same reporters sending both would be
+    # the flood check's shape, and the check would stop the run.
     day_before = f"{(datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()}T04:00:00+00:00"
-    for number in (flooded, control):
-        write_report(data_dir, f"{number[1:]}-0.json", number, BUCKETS[5], day_before, device=BUCKETS[5])
+    for number, early_bucket, prefix in ((flooded, BUCKETS[5], "b"), (control, BUCKETS[4], "c")):
+        write_report(data_dir, f"{number[1:]}-0.json", number, early_bucket, day_before, device=early_bucket)
         for index, reported_at in enumerate(TIMES[:4], start=1):
-            write_report(data_dir, f"{number[1:]}-{index}.json", number, f"0000000000b1{index:04x}", reported_at,
-                         device=f"0000000000b2{index:04x}")
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, f"0000000000{prefix}1{index:04x}", reported_at,
+                         device=f"0000000000{prefix}2{index:04x}")
     # Two reporters on one day: enough for the watch list and nothing else.
     for number in (watched, watched_control):
         for index, reported_at in enumerate(TIMES[:2], start=1):
@@ -1511,7 +1599,7 @@ def assert_held_numbers_take_no_reports(data_dir: Path) -> None:
     write_report(data_dir, "backed-1.json", backed, BUCKETS[0], TIMES[0], device=BUCKETS[1])
     hold_file = data_dir / "spam_numbers_held.json"
     write_json(hold_file, {"held": [{"number": number, "held_at": BASE_DAY, "note": "Scripted reports"} for number in held]})
-    run_drain(data_dir)
+    run_drain(data_dir, flood_check=True)
 
     assert row_for(data_dir, control) is not None, "the same reports should publish a number that isn't held"
     assert row_for(data_dir, flooded) is None, "a held number was published on its reports"
@@ -1539,14 +1627,14 @@ def assert_held_numbers_take_no_reports(data_dir: Path) -> None:
             ("merge_community_reports.py", []),
             ("generate_hot_list.py", ["--allow-collapse", "--cleared", "numbers,ranges"]),
         ):
-            result = run_script_result(script, data_dir, script_args)
+            result = run_script_result(script, data_dir, script_args, flood_check=True)
             assert result.returncode != 0 and "spam_numbers_held.json" in result.stderr, (script, broken, result.stderr)
     write_json(hold_file, {"held": [good]})
     write_json(
         data_dir / "spam_numbers_approved.json",
         {"approved": [{"number": flooded, "type": "scam", "reviewed_at": BASE_DAY, "reference": "https://example.org/report"}]},
     )
-    result = run_script_result("merge_community_reports.py", data_dir)
+    result = run_script_result("merge_community_reports.py", data_dir, None, flood_check=True)
     assert result.returncode != 0 and "spam_numbers_held.json" in result.stderr, result.stderr
     assert row_for(data_dir, flooded) is None, "a refused merge must not publish the number"
 
@@ -2342,6 +2430,12 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_held_numbers_take_no_reports(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_flood_shaped_numbers_stop_both_scripts(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_a_flood_spread_over_merges_is_seen_whole(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_spam_issues_listed_with_pool_state(Path(tmp) / "data")

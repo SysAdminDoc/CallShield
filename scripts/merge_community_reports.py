@@ -9,6 +9,7 @@ import http.client
 import json
 import os
 import subprocess
+import sys
 import urllib.parse
 import urllib.request
 from collections import Counter
@@ -37,7 +38,14 @@ from report_dedup import (
     validated_report_id,
     validated_reporter_bucket,
 )
-from report_holds import HELD_NUMBERS_FILENAME, load_held_numbers
+from report_holds import (
+    FLOOD_LOOKBACK_DAYS,
+    HELD_NUMBERS_FILENAME,
+    flood_candidates,
+    flood_report,
+    load_held_numbers,
+    reporter_day,
+)
 from source_registry import (
     load_source_manifest,
     merge_evidence,
@@ -957,6 +965,22 @@ def sanitize_dates(db: dict, today: str) -> None:
             entry["last_seen"] = fs2 if lo <= fs2 <= hi else hi
 
 
+def flood_reporters(peeked, pending: dict, today: str) -> list[tuple[str, tuple | None]]:
+    """(number, reporter-day) for every queued report and the ledger's last FLOOD_LOOKBACK_DAYS.
+
+    The ledger's watch events keep each merged report's day and buckets, so a
+    flood spread over several merges is seen whole.
+    """
+    since = (date.fromisoformat(today) - timedelta(days=FLOOD_LOOKBACK_DAYS)).isoformat()
+    pairs = [(number, reporter_day(report)) for _, number, report in peeked]
+    for number, state in pending.items():
+        for event in state.get("watch_events", []):
+            if event["day"] >= since:
+                identity = NO_ID_REPORTER if event.get("no_id") else (event["bucket"], event["device"])
+                pairs.append((number, (event["day"], *identity)))
+    return pairs
+
+
 def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -971,6 +995,11 @@ def main(argv: list[str] | None = None):
         metavar="ISSUES_JSON",
         help="list open [SPAM] issues with their pool state, read through gh or from a saved "
         "`gh issue list --json number,title,createdAt` file; they never change the counts",
+    )
+    parser.add_argument(
+        "--allow-floods",
+        action="store_true",
+        help="merge even when the flood check lists numbers that aren't held, once a review found real reporters",
     )
     args = parser.parse_args(argv)
     print("=== Merge Community Reports ===\n")
@@ -1107,6 +1136,14 @@ def main(argv: list[str] | None = None):
             f"{', '.join(both)} is approved in {APPROVED_NUMBERS_FILE.name} and held in {HELD_NUMBERS_FILENAME}. "
             "Revoke the approval or delete the hold"
         )
+    # The flood check sees every queued report and the ledger's recent days,
+    # held numbers included (a number sent alongside them is what it looks for),
+    # before a hold or a count touches them. Nothing has been written yet.
+    if not args.allow_floods:
+        flood_message = flood_report(flood_candidates(flood_reporters(peeked, pending, today)), held_numbers)
+        if flood_message:
+            print(flood_message, file=sys.stderr)
+            return 2
     held_unpublished = apply_holds(existing, pending, held_numbers)
     held_reports: Counter[str] = Counter()
 
@@ -1557,4 +1594,4 @@ def main(argv: list[str] | None = None):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
