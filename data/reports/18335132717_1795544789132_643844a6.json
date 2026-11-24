@@ -1,0 +1,15 @@
+{
+  "number": "+18335132717",
+  "type": "sms_spam",
+  "reported_at": "2026-11-24T18:26:29.132Z",
+  "source": "community_app",
+  "reporter_bucket": "43883a67c280ca39",
+  "reporter_device": "ffadbd147655fb48",
+  "report_id": "9830d5a7-9e82-4201-aa8c-6972f52a4f49",
+  "sms_domains": [
+    "homeownerhelpoptions.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
