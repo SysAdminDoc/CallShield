@@ -1,0 +1,14 @@
+{
+  "number": "+12254458660",
+  "type": "sms_spam",
+  "reported_at": "2026-11-25T04:49:15.895Z",
+  "source": "community_app",
+  "reporter_bucket": "d12ff387030211d6",
+  "reporter_device": "7222da1820927532",
+  "sms_domains": [
+    "secure.actblue.com"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
