@@ -1496,6 +1496,10 @@ test("the marker store refuses malformed operations whole, and answers nothing b
     { put: [{ key: "k".repeat(257), value: "1", ttl: 60 }] },
     { count: ["visits"] },
     { get: [7] },
+    { claim: [{ key: "a", value: "pending" }] },
+    { claim: [{ key: "a", value: "pending", ttl: 7 * 24 * 60 * 60 + 1 }] },
+    { release: ["a"] },
+    { release: [{ key: "a", value: 1 }] },
   ]) {
     assert.equal((await markerRequest(markers, body)).status, 400, JSON.stringify(body));
   }
@@ -1507,6 +1511,32 @@ test("the marker store refuses malformed operations whole, and answers nothing b
   assert.equal((await markers.fetch(new Request("https://report-markers/ops"))).status, 404);
   assert.equal((await markers.fetch(new Request("https://report-markers/counts", { method: "POST", body: "{}" }))).status, 404);
   assert.equal((await markers.fetch(new Request("https://report-markers/stats"))).status, 404);
+});
+
+test("the marker store takes a claim only where a key holds nothing, reads before it claims, and releases only its own value", async () => {
+  let now = Date.UTC(2026, 10, 25, 12, 0, 0);
+  const markers = new ReportMarkers(sqliteState(), {}, () => now);
+  const ops = async (body) => {
+    const response = await markerRequest(markers, body);
+    assert.equal(response.status, 200);
+    return (await response.json()).values;
+  };
+  const claim = (key, value) => ({ get: [key], claim: [{ key, value, ttl: 120 }] });
+
+  assert.deepEqual(await ops(claim("id", "pending")), { id: null }, "the first claim reads nothing, so it holds the key");
+  assert.deepEqual(await ops(claim("id", "other")), { id: "pending" }, "a second claim reads the first");
+  assert.deepEqual(await ops({ get: ["id"] }), { id: "pending" }, "and takes nothing");
+  // A stored marker isn't a claim's to replace, or a release's to drop.
+  await ops({ put: [{ key: "id", value: "1", ttl: 3600 }] });
+  assert.deepEqual(await ops(claim("id", "pending")), { id: "1" });
+  assert.deepEqual(await ops({ release: [{ key: "id", value: "pending" }], get: ["id"] }), { id: "1" });
+
+  // A claim whose request died lapses, and the next claim takes the key.
+  assert.deepEqual(await ops(claim("dead", "pending")), { dead: null });
+  now += 120 * 1000;
+  assert.deepEqual(await ops(claim("dead", "pending")), { dead: null });
+  assert.deepEqual(await ops({ get: ["dead"] }), { dead: "pending" });
+  assert.deepEqual(await ops({ release: [{ key: "dead", value: "pending" }], get: ["dead"] }), { dead: null });
 });
 
 test("after each UTC midnight the marker store drops expired markers, and counts once they're 90 days old", async () => {
@@ -1675,4 +1705,118 @@ test("a marker store that can't answer turns a report away before it's stored, a
   const kv = createMockKV();
   assert.deepEqual(await markerOps({ RATE_LIMIT: kv }, { count: ["stored"], get: ["x"] }), { x: null });
   assert.equal(kv._store.size, 0);
+});
+
+/** Lets pending promises run until `check` holds. */
+async function until(check) {
+  for (let turn = 0; turn < 1000 && !check(); turn++) await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(check(), "the condition never held");
+}
+
+test("a copy that arrives while GitHub stores the first waits, and the first gets its markers under waitUntil", async () => {
+  // 2026-11-25: twice a phone hung up mid-store (Cloudflare logged a client
+  // disconnect), the Worker was cancelled after GitHub took the report, and the
+  // app's resend was stored again. Before that, OkHttp's retry on another route
+  // reached the Worker two to five seconds in, while the first was still storing.
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  const store = markerNamespace();
+  const env = {
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+    REPORT_MARKERS: store.namespace,
+  };
+  const id = "8f4a5b6c-7d8e-4f9a-8b1c-2d3e4f5a6b7c";
+  let commits = 0;
+  let finishFirst;
+  globalThis.fetch = () => {
+    commits += 1;
+    const answer = new Response("{}", { status: 201 });
+    if (commits > 1) return Promise.resolve(answer);
+    return new Promise((resolve) => {
+      finishFirst = () => resolve(answer);
+    });
+  };
+  console.error = () => {};
+  const held = [];
+  const ctx = { waitUntil: (promise) => held.push(promise) };
+  const send = (ip) =>
+    worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ number: "+12122340161", type: "spam", report_id: id }),
+      }),
+      env,
+      ctx,
+    );
+  try {
+    const first = send("2001:db8:5:1::a");
+    await until(() => commits === 1);
+    assert.equal(held.length, 1, "the store runs under waitUntil");
+    let released = false;
+    held[0].then(() => {
+      released = true;
+    });
+
+    const copy = await send("198.51.100.61");
+    assert.equal(copy.status, 429);
+    assert.equal((await copy.json()).already_stored, undefined, "not stored yet, so the app keeps it to send again");
+    assert.equal(copy.headers.get("Retry-After"), "60");
+    assert.equal(commits, 1, "the copy never reaches GitHub");
+    assert.equal(released, false, "the request is held open while GitHub writes");
+
+    finishFirst();
+    assert.equal((await first).status, 200);
+    await held[0];
+    assert.equal(store.rows("markers").find((row) => row.key === `dedup:report:${id}`).value, "1");
+
+    const resend = await send("203.0.113.61");
+    assert.equal(resend.status, 429);
+    assert.equal((await resend.json()).already_stored, true);
+    assert.equal(commits, 1);
+    assert.deepEqual(store.rows("daily_counts").map((row) => [row.kind, row.count]), [
+      ["duplicate", 2],
+      ["stored", 1],
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
+test("a report id's claim is let go when the report isn't stored, so the app's retry goes through at once", async () => {
+  const report = { number: "+12122340162", type: "spam", report_id: "9a5b6c7d-8e9f-4a0b-9c2d-3e4f5a6b7c8d" };
+  let calls = 0;
+  const refused = await postReports(
+    [
+      { ip: "203.0.113.162", body: report },
+      { ip: "203.0.113.162", body: report },
+    ],
+    () => (calls++ === 0 ? 500 : 201),
+    { markers: true },
+  );
+  assert.deepEqual(refused.responses.map((response) => response.status), [500, 200]);
+  assert.equal(refused.stored.length, 1);
+  assert.deepEqual(refused.store.rows("markers").filter((row) => row.value === "pending"), []);
+
+  // The Worker-wide budget filling after the peek, once the id is claimed.
+  const counter = new ReportGlobalCounter();
+  const fetchCounter = counter.fetch.bind(counter);
+  let filled = false;
+  counter.fetch = async (request) => {
+    if (new URL(request.url).pathname === "/take" && !filled) {
+      filled = true;
+      for (let i = 0; i < 30; i++) await fetchCounter(new Request("https://global-counter/take"));
+    }
+    return fetchCounter(request);
+  };
+  const full = await postReports([{ ip: "203.0.113.163", body: { ...report, report_id: randomUUID() } }], () => 201, {
+    markers: true,
+    env: { REPORT_GLOBAL_COUNTER: counterNamespace(counter) },
+  });
+  assert.equal(full.responses[0].status, 429);
+  assert.equal(full.stored.length, 0);
+  assert.deepEqual(full.store.rows("markers").filter((row) => row.value === "pending"), []);
 });

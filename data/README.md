@@ -171,7 +171,11 @@ KV namespace from `wrangler.toml` and binds the three rate limiters (per client,
 per /48 and Worker-wide). The duplicate, report-id and ban markers and the
 daily counts live in the `ReportMarkers` Durable Object, created on the first
 deploy. A new object starts with empty seven-day report-id dedup state, so
-previously accepted ids can be sent again until that window expires.
+previously accepted ids can be sent again until that window expires. While a
+report is being written to GitHub, its id is held there for up to two minutes,
+so a copy that arrives in the meantime is asked to retry in a minute instead
+of being stored twice. The Worker keeps running after the app hangs up, so a
+stored report always gets its marks.
 
 ## Regenerating the Database and Model (local)
 

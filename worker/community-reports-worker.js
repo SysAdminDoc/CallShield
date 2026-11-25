@@ -544,17 +544,29 @@ const DAILY_COUNT_DAYS = 90;
 // app's (OkHttp's default), the share a ban would cost real people.
 export const DAILY_COUNT_KINDS = ["stored", "duplicate", "held", "held_app", "banned", "banned_app"];
 const MAX_MARKER_TTL_S = REPORT_ID_DEDUP_S;
+// A report id's marker while its store runs. GitHub takes about 2 s (6 s at
+// worst), so a claim older than two minutes belongs to a request that died.
+const REPORT_CLAIM = "pending";
+const REPORT_CLAIM_TTL_S = 120;
+// How long a copy that arrived mid-store is asked to wait. By then the first
+// copy is stored, and the retry is answered as already stored.
+const IN_FLIGHT_RETRY_S = 60;
 
 function utcDay(epochMs) {
   return new Date(epochMs).toISOString().slice(0, 10);
 }
 
 /**
- * The marker store. Requests are POSTs to /ops with { get, put, count }: the
- * puts are written, each count kind goes up by one for today (UTC), then the
- * gets are read, so one round trip does a report's whole check or record. GET
- * /counts returns { days: { "YYYY-MM-DD": { kind: n } } } for the last 90 days.
- * An alarm after each UTC midnight drops expired markers and old counts.
+ * The marker store. Requests are POSTs to /ops with { get, put, count, claim,
+ * release }: the puts are written, each release ({ key, value }) deletes its
+ * key if it still holds that value, each count kind goes up by one for today
+ * (UTC), the gets are read, and then each claim ({ key, value, ttl }) is
+ * written only where its key holds no live value. Gets read before claims, so
+ * a claimed key that reads null is now this request's. One round trip does a
+ * report's whole check or record, and the object answers one request at a
+ * time, so two requests can't both take a claim. GET /counts returns
+ * { days: { "YYYY-MM-DD": { kind: n } } } for the last 90 days. An alarm after
+ * each UTC midnight drops expired markers and old counts.
  */
 export class ReportMarkers {
   constructor(state, _env, now = () => Date.now()) {
@@ -589,21 +601,21 @@ export class ReportMarkers {
     } catch (_error) {
       return new Response("Request body must be valid JSON", { status: 400 });
     }
-    const puts = Array.isArray(ops?.put) ? ops.put : [];
-    const counts = Array.isArray(ops?.count) ? ops.count : [];
-    const gets = Array.isArray(ops?.get) ? ops.get : [];
+    const list = (name) => (Array.isArray(ops?.[name]) ? ops[name] : []);
+    const puts = list("put");
+    const claims = list("claim");
+    const releases = list("release");
+    const counts = list("count");
+    const gets = list("get");
+    const isKey = (key) => typeof key === "string" && key.length <= 256;
+    const isMarker = (put) =>
+      isKey(put?.key) && typeof put.value === "string" && Number.isInteger(put.ttl) && put.ttl > 0 && put.ttl <= MAX_MARKER_TTL_S;
     const valid =
-      puts.every(
-        (put) =>
-          typeof put?.key === "string" &&
-          put.key.length <= 256 &&
-          typeof put.value === "string" &&
-          Number.isInteger(put.ttl) &&
-          put.ttl > 0 &&
-          put.ttl <= MAX_MARKER_TTL_S,
-      ) &&
+      puts.every(isMarker) &&
+      claims.every(isMarker) &&
+      releases.every((release) => isKey(release?.key) && typeof release.value === "string") &&
       counts.every((kind) => DAILY_COUNT_KINDS.includes(kind)) &&
-      gets.every((key) => typeof key === "string" && key.length <= 256);
+      gets.every(isKey);
     if (!valid) return new Response("Malformed marker operations", { status: 400 });
 
     const seconds = Math.floor(now / 1000);
@@ -614,6 +626,9 @@ export class ReportMarkers {
         put.value,
         seconds + put.ttl,
       );
+    }
+    for (const release of releases) {
+      this.sql.exec("DELETE FROM markers WHERE key = ? AND value = ?", release.key, release.value);
     }
     for (const kind of counts) {
       this.sql.exec(
@@ -627,7 +642,16 @@ export class ReportMarkers {
       const [row] = this.sql.exec("SELECT value FROM markers WHERE key = ? AND expires_at > ?", key, seconds).toArray();
       values[key] = row ? row.value : null;
     }
-    if (puts.length > 0 || counts.length > 0) await this.scheduleSweep(now);
+    for (const claim of claims) {
+      this.sql.exec(
+        "INSERT INTO markers (key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at WHERE markers.expires_at <= ?",
+        claim.key,
+        claim.value,
+        seconds + claim.ttl,
+        seconds,
+      );
+    }
+    if (puts.length > 0 || claims.length > 0 || counts.length > 0) await this.scheduleSweep(now);
     return Response.json({ values });
   }
 
@@ -652,19 +676,21 @@ export class ReportMarkers {
 }
 
 /**
- * One round trip to the marker store: write `put` ({ key, value, ttl }), count
- * each `count` kind for today, then read `get`. Returns key -> value or null.
- * Without REPORT_MARKERS it uses KV, which keeps no counts. With neither store
- * it throws, unless ALLOW_UNLIMITED_REPORTS is set for local runs.
+ * One round trip to the marker store: write `put` ({ key, value, ttl }), drop
+ * each `release` ({ key, value }) still holding its value, count each `count`
+ * kind for today, read `get`, then take each `claim` ({ key, value, ttl })
+ * whose key holds nothing. Returns key -> value or null for the gets. Without
+ * REPORT_MARKERS it uses KV, which keeps no counts and takes no claims. With
+ * neither store it throws, unless ALLOW_UNLIMITED_REPORTS is set for local runs.
  */
-export async function markerOps(env, { get = [], put = [], count = [] } = {}, now = Date.now()) {
+export async function markerOps(env, { get = [], put = [], count = [], claim = [], release = [] } = {}, now = Date.now()) {
   const namespace = env?.REPORT_MARKERS;
   if (namespace) {
     const stub = namespace.get(namespace.idFromName(MARKERS_NAME));
     const response = await stub.fetch("https://report-markers/ops", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ get, put, count }),
+      body: JSON.stringify({ get, put, count, claim, release }),
     });
     if (!response.ok) throw new Error(`The report marker store answered ${response.status}`);
     const answer = await response.json();
@@ -960,7 +986,39 @@ export async function checkDedup(ip, normalizedNumber, type, env, reportId = "")
 export async function isStoredReport(reportId, env) {
   if (!reportId) return false;
   const key = reportIdKey(reportId);
-  return (await markerOps(env, { get: [key] }))[key] !== null;
+  return isStoredMarker((await markerOps(env, { get: [key] }))[key]);
+}
+
+/** A report-id marker that says the report is stored; a claim only says a store is under way. */
+function isStoredMarker(value) {
+  return value !== null && value !== undefined && value !== REPORT_CLAIM;
+}
+
+/**
+ * Take a report's id for the store that's about to run. "claimed" means this
+ * request holds it, "in_flight" that another request is storing this report
+ * right now, and "stored" that it's stored. The marker store takes the claim
+ * atomically, so of two copies sent at once only one reaches GitHub. KV can't,
+ * so without the marker store every report is "claimed".
+ */
+async function claimReportId(reportId, env) {
+  const key = reportIdKey(reportId);
+  const value = (await markerOps(env, { get: [key], claim: [{ key, value: REPORT_CLAIM, ttl: REPORT_CLAIM_TTL_S }] }))[key];
+  if (value === null) return "claimed";
+  if (value === REPORT_CLAIM) return "in_flight";
+  // Only KV knew it was stored, so the marker store took the claim. Let it go.
+  await releaseReportId(reportId, env);
+  return "stored";
+}
+
+/** Drop this request's claim on a report id, where the store didn't take the report. */
+async function releaseReportId(reportId, env) {
+  try {
+    await markerOps(env, { release: [{ key: reportIdKey(reportId), value: REPORT_CLAIM }] });
+  } catch (error) {
+    // The claim then lapses after REPORT_CLAIM_TTL_S, and the app's retry stores the report.
+    console.error("Unable to release a report id claim", error);
+  }
 }
 
 /**
@@ -971,7 +1029,7 @@ export async function isStoredReport(reportId, env) {
 async function reportState(ip, normalizedNumber, type, reportId, env) {
   const keys = { ban: banKey(ip), dedup: dedupKey(ip, normalizedNumber, type), id: reportId ? reportIdKey(reportId) : "" };
   const values = await markerOps(env, { get: [keys.ban, keys.dedup, ...(keys.id ? [keys.id] : [])] });
-  const stored = keys.id ? values[keys.id] !== null : false;
+  const stored = keys.id ? isStoredMarker(values[keys.id]) : false;
   return {
     stored,
     duplicateWait: stored ? 0 : waitFromDedupMarker(values[keys.dedup]),
@@ -1033,7 +1091,7 @@ function sentByTheApp(request) {
  */
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const responseHeaders = {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
@@ -1081,6 +1139,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       });
     }
 
+    // Settles when this request's work is done; see the store below.
+    let finished = () => {};
     try {
       // The client is a native Android app and needs no CORS. Requiring JSON
       // and refusing browser-originated requests prevents cross-site pages
@@ -1219,8 +1279,36 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
+      // From here the report may be stored, and the app can hang up while
+      // GitHub is still writing it (a dropped connection, a switch to another
+      // network, OkHttp retrying on another route). Cloudflare cancels a
+      // request's work when its client goes, which stored the report without
+      // its markers, so the app's resend was stored again. waitUntil holds the
+      // request until this work ends (30 s at most after the hang-up).
+      ctx?.waitUntil?.(new Promise((resolve) => {
+        finished = resolve;
+      }));
+      if (reportId) {
+        const claim = await claimReportId(reportId, env);
+        if (claim !== "claimed") {
+          await countReport(env, ["duplicate"]);
+          const answer = claim === "stored"
+            ? { error: "Duplicate report, already submitted", already_stored: true }
+            : { error: "Duplicate report, try again later" };
+          return new Response(JSON.stringify(answer), {
+            status: 429,
+            headers: {
+              ...responseHeaders,
+              "Content-Type": "application/json",
+              "Retry-After": String(claim === "stored" ? DEDUP_WINDOW_S : IN_FLIGHT_RETRY_S),
+            },
+          });
+        }
+      }
+
       const worldwide = await takeWorkerBudget(env);
       if (!worldwide.allowed) {
+        if (reportId) await releaseReportId(reportId, env);
         return budgetRefusal(worldwide, responseHeaders);
       }
 
@@ -1277,6 +1365,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       if (!githubResponse.ok) {
         const err = await githubResponse.text();
         console.error("GitHub API error:", githubResponse.status, err);
+        // GitHub didn't take it, so the app's retry must be free to store it.
+        if (reportId) await releaseReportId(reportId, env);
         // Surface rate limiting to the client so it can back off
         const retryAfter = githubRetryAfter(githubResponse, err);
         if (retryAfter !== null) {
@@ -1316,6 +1406,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
         status: 500, headers: { ...responseHeaders, "Content-Type": "application/json" }
       });
+    } finally {
+      finished();
     }
   }
 };
