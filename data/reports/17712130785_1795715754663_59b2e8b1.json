@@ -1,0 +1,14 @@
+{
+  "number": "+17712130785",
+  "type": "sms_spam",
+  "reported_at": "2026-11-26T17:55:54.663Z",
+  "source": "community_app",
+  "reporter_bucket": "ca10ab5b0d71429d",
+  "reporter_device": "477664f24e10db26",
+  "sms_domains": [
+    "lil.ms"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
