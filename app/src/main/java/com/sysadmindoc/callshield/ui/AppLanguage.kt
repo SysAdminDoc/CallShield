@@ -22,6 +22,7 @@ object AppLanguage {
     const val CHINESE_SIMPLIFIED_TAG = "zh-CN"
     const val PORTUGUESE_BRAZIL_TAG = "pt-BR"
     const val SPANISH_TAG = "es"
+    const val TURKISH_TAG = "tr"
     const val ACCENTED_PSEUDO_TAG = "en-XA"
     const val RTL_PSEUDO_TAG = "ar-XB"
 
@@ -32,6 +33,7 @@ object AppLanguage {
             add(AppLanguageOption(CHINESE_SIMPLIFIED_TAG, R.string.settings_language_chinese_simplified))
             add(AppLanguageOption(PORTUGUESE_BRAZIL_TAG, R.string.settings_language_portuguese_brazil))
             add(AppLanguageOption(SPANISH_TAG, R.string.settings_language_spanish))
+            add(AppLanguageOption(TURKISH_TAG, R.string.settings_language_turkish))
             if (includePseudoLocales) {
                 add(AppLanguageOption(ACCENTED_PSEUDO_TAG, R.string.settings_language_pseudo_accented))
                 add(AppLanguageOption(RTL_PSEUDO_TAG, R.string.settings_language_pseudo_rtl))
@@ -88,6 +90,8 @@ object AppLanguage {
 
             // values-es has no region, so Android's own picker can hand back es-MX.
             tag == SPANISH_TAG || tag.startsWith("$SPANISH_TAG-") -> SPANISH_TAG
+
+            tag == TURKISH_TAG || tag.startsWith("$TURKISH_TAG-") -> TURKISH_TAG
 
             tag == ACCENTED_PSEUDO_TAG -> ACCENTED_PSEUDO_TAG
 
