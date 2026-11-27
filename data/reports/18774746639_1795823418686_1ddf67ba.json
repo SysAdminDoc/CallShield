@@ -1,0 +1,15 @@
+{
+  "number": "+18774746639",
+  "type": "sms_spam",
+  "reported_at": "2026-11-27T23:50:18.686Z",
+  "source": "community_app",
+  "reporter_bucket": "7226ce58b3bb993c",
+  "reporter_device": "dd40771cf2ab58b8",
+  "report_id": "a084d698-43b9-4d0b-9c3d-79ec34391c0e",
+  "sms_domains": [
+    "ovtn.io"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
