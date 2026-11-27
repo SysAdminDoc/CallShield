@@ -1,0 +1,15 @@
+{
+  "number": "+18337541700",
+  "type": "sms_spam",
+  "reported_at": "2026-11-27T19:00:50.203Z",
+  "source": "community_app",
+  "reporter_bucket": "b91a7c6d1ca7d5a9",
+  "reporter_device": "8ede22edc658da68",
+  "report_id": "7713a672-ab04-460e-9793-a5c47a0e6352",
+  "sms_domains": [
+    "victra.me"
+  ],
+  "sms_url_indicators": [
+    "url_present"
+  ]
+}
